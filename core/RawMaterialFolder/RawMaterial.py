@@ -1,0 +1,127 @@
+from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django_jalali.db import models as jmodels
+
+
+class RawMaterial(models.Model):
+    """مواد اولیه - Raw Materials"""
+    
+    PHYSICAL_FORM_CHOICES = [
+        ('solid', 'جامد'),
+        ('liquid', 'مایع'),
+        ('powder', 'پودر'),
+        ('granular', 'دانه‌ای'),
+        ('paste', 'خمیری'),
+        ('gas', 'گاز'),
+        ('other', 'سایر'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'فعال'),
+        ('inactive', 'غیرفعال'),
+    ]
+    
+    # اطلاعات پایه - Basic Information (placed directly in main model)
+    raw_material_id = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="شناسه ماده اولیه",
+        db_index=True
+    )
+    name = models.CharField(
+        max_length=255,
+        verbose_name="نام ماده اولیه"
+    )
+    technical_description = models.TextField(
+        verbose_name="توضیحات و مشخصات فنی",
+        null=True,
+        blank=True
+    )
+    physical_form = models.CharField(
+        max_length=50,
+        choices=PHYSICAL_FORM_CHOICES,
+        verbose_name="شکل فیزیکی",
+        default='solid'
+    )
+    primary_unit = models.CharField(
+        max_length=50,
+        verbose_name="واحد شمارش اصلی (مبنای خرید)",
+        help_text="مثال: کیلوگرم، لیتر، تن"
+    )
+    secondary_unit = models.CharField(
+        max_length=50,
+        verbose_name="واحد شمارش فرعی (مبنای سنجش انبار)",
+        null=True,
+        blank=True,
+        help_text="مثال: گرم، میلی‌لیتر"
+    )
+    conversion_factor = models.DecimalField(
+        max_digits=15,
+        decimal_places=6,
+        verbose_name="ضریب تبدیل واحد اصلی به فرعی (دیفالت)",
+        default=1.0,
+        help_text="مثال: 1 کیلوگرم = 1000 گرم"
+    )
+    hs_code = models.CharField(
+        max_length=50,
+        verbose_name="HS Code",
+        null=True,
+        blank=True,
+        help_text="کد هماهنگ تعرفه گمرکی"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='active',
+        verbose_name="وضعیت فعال یا غیرفعال بودن ماده اولیه"
+    )
+    attachments = models.FileField(
+        upload_to='raw_materials/attachments/%Y/%m/',
+        verbose_name="پیوست‌ها",
+        null=True,
+        blank=True
+    )
+    veterinary_health_id = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name="شناسه یکتا در سیستم دامپزشکی/بهداشت",
+        null=True,
+        blank=True,
+        db_index=True
+    )
+    standard_loss_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        verbose_name="درصد افت استاندارد",
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        null=True,
+        blank=True
+    )
+    expiration_date = jmodels.jDateField(
+        verbose_name="تاریخ انقضا",
+        null=True,
+        blank=True
+    )
+    
+    # Timestamps
+    created_at = jmodels.jDateTimeField(
+        auto_now_add=True,
+        verbose_name="تاریخ ایجاد"
+    )
+    updated_at = jmodels.jDateTimeField(
+        auto_now=True,
+        verbose_name="تاریخ آخرین بروزرسانی"
+    )
+
+    class Meta:
+        verbose_name = "ماده اولیه"
+        verbose_name_plural = "مواد اولیه"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['raw_material_id']),
+            models.Index(fields=['status']),
+            models.Index(fields=['-created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.raw_material_id} - {self.name}"
