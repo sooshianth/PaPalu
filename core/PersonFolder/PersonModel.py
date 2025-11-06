@@ -86,12 +86,10 @@ class Person(models.Model):
         blank=True)
     
     # فیلد معرف
-    introducer = models.ForeignKey(
-        'self',
-        on_delete=models.SET_NULL,
+    introducer = models.CharField(
+        max_length=100,
         null=True,
         blank=True,
-        related_name='introduced_persons',
         verbose_name='معرف'
     )
 
