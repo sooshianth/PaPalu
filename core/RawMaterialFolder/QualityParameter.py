@@ -6,7 +6,9 @@ class QualityParameter(models.Model):
     
     name = models.CharField(
         max_length=255,
-        verbose_name="نام پارامتر"
+        verbose_name="نام پارامتر",
+        null=True,
+        blank=True
     )
     
     class Meta:
@@ -15,4 +17,4 @@ class QualityParameter(models.Model):
         ordering = ['name']
     
     def __str__(self):
-        return self.name
+        return self.name or "نامشخص"

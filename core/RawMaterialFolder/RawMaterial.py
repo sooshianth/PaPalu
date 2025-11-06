@@ -26,11 +26,15 @@ class RawMaterial(models.Model):
         max_length=100,
         unique=True,
         verbose_name="شناسه ماده اولیه",
-        db_index=True
+        db_index=True,
+        null=True,
+        blank=True
     )
     name = models.CharField(
         max_length=255,
-        verbose_name="نام ماده اولیه"
+        verbose_name="نام ماده اولیه",
+        null=True,
+        blank=True
     )
     technical_description = models.TextField(
         verbose_name="توضیحات و مشخصات فنی",
@@ -41,12 +45,16 @@ class RawMaterial(models.Model):
         max_length=50,
         choices=PHYSICAL_FORM_CHOICES,
         verbose_name="شکل فیزیکی",
-        default='solid'
+        default='solid',
+        null=True,
+        blank=True
     )
     primary_unit = models.CharField(
         max_length=50,
         verbose_name="واحد شمارش اصلی (مبنای خرید)",
-        help_text="مثال: کیلوگرم، لیتر، تن"
+        help_text="مثال: کیلوگرم، لیتر، تن",
+        null=True,
+        blank=True
     )
     secondary_unit = models.CharField(
         max_length=50,
@@ -60,7 +68,9 @@ class RawMaterial(models.Model):
         decimal_places=6,
         verbose_name="ضریب تبدیل واحد اصلی به فرعی (دیفالت)",
         default=1.0,
-        help_text="مثال: 1 کیلوگرم = 1000 گرم"
+        help_text="مثال: 1 کیلوگرم = 1000 گرم",
+        null=True,
+        blank=True
     )
     hs_code = models.CharField(
         max_length=50,
@@ -73,7 +83,9 @@ class RawMaterial(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default='active',
-        verbose_name="وضعیت فعال یا غیرفعال بودن ماده اولیه"
+        verbose_name="وضعیت فعال یا غیرفعال بودن ماده اولیه",
+        null=True,
+        blank=True
     )
     attachments = models.FileField(
         upload_to='raw_materials/attachments/%Y/%m/',
@@ -124,4 +136,6 @@ class RawMaterial(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.raw_material_id} - {self.name}"
+        raw_id = self.raw_material_id or "No ID"
+        name = self.name or "No Name"
+        return f"{raw_id} - {name}"

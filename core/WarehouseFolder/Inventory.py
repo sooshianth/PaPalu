@@ -1,4 +1,5 @@
 from django.db import models
+from django_jalali.db import models as jmodels
 from .WarehouseModel import Warehouse
 
 
@@ -12,21 +13,29 @@ class Inventory(models.Model):
         Warehouse,
         on_delete=models.CASCADE,
         related_name='inventories',
-        verbose_name='انبار'
+        verbose_name='انبار',
+        blank=True,
+        null=True
     )
     
-    date = models.DateField(
-        verbose_name='تاریخ'
+    date = jmodels.jDateField(
+        verbose_name='تاریخ',
+        blank=True,
+        null=True
     )
     
-    created_at = models.DateTimeField(
+    created_at = jmodels.jDateTimeField(
         auto_now_add=True,
-        verbose_name='تاریخ ایجاد'
+        verbose_name='تاریخ ایجاد',
+        blank=True,
+        null=True
     )
     
-    updated_at = models.DateTimeField(
+    updated_at = jmodels.jDateTimeField(
         auto_now=True,
-        verbose_name='تاریخ بروزرسانی'
+        verbose_name='تاریخ بروزرسانی',
+        blank=True,
+        null=True
     )
     
     class Meta:
@@ -36,4 +45,6 @@ class Inventory(models.Model):
         unique_together = ['warehouse', 'date']
     
     def __str__(self):
-        return f"{self.warehouse.warehouse_id} - {self.date}"
+        warehouse_id = self.warehouse.warehouse_id if self.warehouse else 'N/A'
+        date = self.date or 'N/A'
+        return f"{warehouse_id} - {date}"

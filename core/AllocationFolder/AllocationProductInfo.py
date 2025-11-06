@@ -1,5 +1,6 @@
 from django.db import models
 from .Allocation import Allocation
+from ..ProductFolder.ProductModel import Product
 
 
 class AllocationProductInfo(models.Model):
@@ -13,8 +14,10 @@ class AllocationProductInfo(models.Model):
         null=True,
         blank=True
     )
-    product = models.CharField(
-        max_length=255,
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.SET_NULL,
+        related_name='allocation_product_infos',
         verbose_name="محصول",
         blank=True,
         null=True
@@ -38,4 +41,7 @@ class AllocationProductInfo(models.Model):
         verbose_name_plural = "اطلاعات محصولات تخصیص"
     
     def __str__(self):
-        return f"{self.product} - {self.quantity} {self.unit}"
+        product_display = self.product or "نامشخص"
+        quantity_display = self.quantity or "نامشخص"
+        unit_display = self.unit or "نامشخص"
+        return f"{product_display} - {quantity_display} {unit_display}"

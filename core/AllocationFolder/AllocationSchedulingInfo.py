@@ -1,4 +1,5 @@
 from django.db import models
+from django_jalali.db import models as jmodels
 from .Allocation import Allocation
 
 
@@ -13,27 +14,27 @@ class AllocationSchedulingInfo(models.Model):
         null=True,
         blank=True
     )
-    allocation_received_time = models.DateTimeField(
+    allocation_received_time = jmodels.jDateTimeField(
         verbose_name="زمان دریافت تخصیص",
         blank=True,
         null=True
     )
-    production_start_time = models.DateTimeField(
+    production_start_time = jmodels.jDateTimeField(
         verbose_name="زمان شروع تولید",
         blank=True,
         null=True
     )
-    warehouse_availability_announcement_time = models.DateTimeField(
+    warehouse_availability_announcement_time = jmodels.jDateTimeField(
         verbose_name="زمان اعلام موجودیت در انبار",
         blank=True,
         null=True
     )
-    shipping_announcement_time = models.DateTimeField(
+    shipping_announcement_time = jmodels.jDateTimeField(
         verbose_name="زمان اعلام بار به باربری",
         blank=True,
         null=True
     )
-    total_allocation_delivery_time = models.DateTimeField(
+    total_allocation_delivery_time = jmodels.jDateTimeField(
         verbose_name="زمان تحویل کل تخصیص",
         blank=True,
         null=True

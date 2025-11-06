@@ -1,4 +1,6 @@
 from django.db import models
+from django_jalali.db import models as jmodels
+from ..OrderFolder.OrderModel import Order
 
 
 class Allocation(models.Model):
@@ -18,11 +20,15 @@ class Allocation(models.Model):
     allocation_number = models.CharField(
         max_length=100,
         unique=True,
-        verbose_name="شماره تخصیص"
+        verbose_name="شماره تخصیص",
+        null=True,
+        blank=True
     )
-    order_number = models.CharField(
-        max_length=100,
-        verbose_name="شماره سفارش",
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        related_name='allocations',
+        verbose_name="سفارش",
         blank=True,
         null=True
     )
@@ -42,7 +48,9 @@ class Allocation(models.Model):
         max_length=20,
         choices=STATUS_CHOICES,
         default='planned',
-        verbose_name="وضعیت تخصیص"
+        verbose_name="وضعیت تخصیص",
+        null=True,
+        blank=True
     )
     requested_machine = models.CharField(
         max_length=255,
@@ -52,11 +60,11 @@ class Allocation(models.Model):
     )
     
     # Timestamps
-    created_at = models.DateTimeField(
+    created_at = jmodels.jDateTimeField(
         auto_now_add=True,
         verbose_name="تاریخ ایجاد"
     )
-    updated_at = models.DateTimeField(
+    updated_at = jmodels.jDateTimeField(
         auto_now=True,
         verbose_name="تاریخ بروزرسانی"
     )
@@ -67,4 +75,6 @@ class Allocation(models.Model):
         ordering = ['-allocation_priority', '-created_at']
     
     def __str__(self):
-        return f"{self.allocation_number} - {self.get_allocation_status_display()}"
+        allocation_num = self.allocation_number or "نامشخص"
+        status_display = self.get_allocation_status_display() if self.allocation_status else "نامشخص"
+        return f"{allocation_num} - {status_display}"

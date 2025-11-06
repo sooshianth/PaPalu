@@ -6,7 +6,9 @@ class Supplier(models.Model):
     
     name = models.CharField(
         max_length=255,
-        verbose_name="نام تامین‌کننده"
+        verbose_name="نام تامین‌کننده",
+        null=True,
+        blank=True
     )
     
     class Meta:
@@ -15,4 +17,4 @@ class Supplier(models.Model):
         ordering = ['name']
     
     def __str__(self):
-        return self.name
+        return self.name or "نامشخص"

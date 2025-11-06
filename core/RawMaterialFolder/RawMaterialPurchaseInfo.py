@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from .Supplier import Supplier
 from .RawMaterial import RawMaterial
+from ..WarehouseFolder.WarehouseModel import Warehouse
 
 
 class RawMaterialPurchaseInfo(models.Model):
@@ -15,11 +16,13 @@ class RawMaterialPurchaseInfo(models.Model):
         null=True,
         blank=True
     )
-    suppliers = models.ManyToManyField(
+    supplier = models.ForeignKey(
         Supplier,
+        on_delete=models.SET_NULL,
         related_name='purchase_infos',
         verbose_name="تامین‌کنندگان",
-        blank=True
+        blank=True,
+        null=True
     )
     minimum_order_quantity = models.DecimalField(
         max_digits=15,
@@ -29,8 +32,8 @@ class RawMaterialPurchaseInfo(models.Model):
         blank=True
     )
     vat_percentage = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+        max_digits=6,
+        decimal_places=3,
         verbose_name="درصد مالیات بر ارزش افزوده",
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         null=True,
@@ -62,10 +65,13 @@ class RawMaterialPurchaseInfo(models.Model):
         null=True,
         blank=True
     )
-    default_warehouse = models.TextField(
-        verbose_name="انبار پیش‌فرض نگهداری",
+    default_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
+        related_name='default_for_rawmaterial_purchase',
+        verbose_name="انبار پیش‌فرض نگهداری"
     )
     transportation_conditions = models.TextField(
         verbose_name="شرایط حمل",
@@ -77,18 +83,15 @@ class RawMaterialPurchaseInfo(models.Model):
         null=True,
         blank=True
     )
-    notes = models.TextField(
-        verbose_name="توضیحات",
-        null=True,
-        blank=True
-    )
 
     class Meta:
         verbose_name = "اطلاعات خرید"
         verbose_name_plural = "اطلاعات خرید"
 
     def __str__(self):
-        supplier_names = ", ".join([s.name for s in self.suppliers.all()[:3]])
-        if self.suppliers.count() > 3:
-            supplier_names += "..."
-        return f"اطلاعات خرید - {supplier_names or 'بدون تامین‌کننده'}"
+        if self.raw_material:
+            name = getattr(self.raw_material, 'name', None)
+            if not name:
+                name = str(self.raw_material)
+            return f"اطلاعات خرید - {name}"
+        return "اطلاعات خرید - بدون ماده اولیه"
