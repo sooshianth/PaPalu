@@ -33,6 +33,7 @@ class TruckInfo(models.Model):
     plate_number = models.CharField(
         max_length=20,
         verbose_name='پلاک',
+        primary_key=True,
         null=True,
         blank=True
     )
