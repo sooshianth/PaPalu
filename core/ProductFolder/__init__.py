@@ -1,8 +1,8 @@
-from .Product import Product
-from .ProductionInfo import ProductionInfo
-from .BOM import BOM
-from .QualityControl import QualityControl
-from .ProductSales import ProductSales
+from .ProductModel import Product
+from .ProductionInfoModel import ProductionInfo
+from .BOMModel import BOM
+from .QualityControlModel import QualityControl
+from .ProductSalesModel import ProductSales
 
 __all__ = [
     'Product',

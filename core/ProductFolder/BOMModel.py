@@ -1,5 +1,5 @@
 from django.db import models
-from .ProductionInfo import ProductionInfo
+from .ProductionInfoModel import ProductionInfo
 
 
 class BOM(models.Model):
@@ -14,6 +14,7 @@ class BOM(models.Model):
         verbose_name='اطلاعات تولید'
     )
     
+    # بعدا باید فارین کی بشه به کلاس مواد اولیه
     raw_material = models.CharField(
         max_length=255,
         verbose_name='ماده اولیه (ها)'
