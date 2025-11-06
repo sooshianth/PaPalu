@@ -11,16 +11,22 @@ class QualityControl(models.Model):
         Product,
         on_delete=models.CASCADE,
         related_name='quality_control',
-        verbose_name='محصول'
+        verbose_name='محصول',
+        blank=True,
+        null=True,
     )
     
     requires_post_production_test = models.BooleanField(
         default=False,
-        verbose_name='نیاز به آزمایش بعد تولید؟'
+        verbose_name='نیاز به آزمایش بعد تولید؟',
+        blank=True,
+        null=True,
     )
     
     standard_key_parameters = models.TextField(
-        verbose_name='پارامترهای کلیدی استاندارد هر پالاستر'
+        verbose_name='پارامترهای کلیدی استاندارد هر پالاستر',
+        blank=True,
+        null=True,
     )
     
     upper_limit = models.DecimalField(
@@ -95,7 +101,9 @@ class QualityControl(models.Model):
     )
     
     storage_conditions = models.TextField(
-        verbose_name='شرایط نگهداری'
+        verbose_name='شرایط نگهداری',
+        blank=True,
+        null=True,
     )
     
     storage_temperature = models.CharField(
@@ -107,7 +115,9 @@ class QualityControl(models.Model):
     
     light_sensitive = models.BooleanField(
         default=False,
-        verbose_name='حساسیت به نور؟'
+        verbose_name='حساسیت به نور؟',
+        blank=True,
+        null=True,
     )
     
     class Meta:

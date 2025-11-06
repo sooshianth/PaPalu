@@ -2,17 +2,34 @@ from django.db import models
 from django_jalali.db import models as jmodels
 
 
+class PhysicalShape(models.Model):
+    """
+    کلاس شکل فیزیکی محصول تا توسط ادمین مدیریت شود
+    """
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name='نام شکل فیزیکی'
+    )
+
+    description = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='توضیحات شکل فیزیکی'
+    )
+
+    class Meta:
+        verbose_name = 'شکل فیزیکی'
+        verbose_name_plural = 'اشکال فیزیکی'
+
+    def __str__(self):
+        return self.name
+
+
 class Product(models.Model):
     """
     مدل اصلی محصول - اطلاعات پایه
     """
-    
-    PHYSICAL_SHAPE_CHOICES = [
-        ('mesh', 'مش'),
-        ('pellet', 'پلت'),
-        ('granule', 'گرانول'),
-        ('achil', 'آچیل'),
-    ]
     
     # اطلاعات پایه
     name = models.CharField(
@@ -38,10 +55,13 @@ class Product(models.Model):
         verbose_name='زیر گروه محصول'
     )
     
-    physical_shape = models.CharField(
-        max_length=20,
-        choices=PHYSICAL_SHAPE_CHOICES,
-        verbose_name='شکل فیزیکی'
+    physical_shape = models.ForeignKey(
+        PhysicalShape,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name='شکل فیزیکی',
+        related_name='products'
     )
     
     pellet_granule_diameter = models.DecimalField(
