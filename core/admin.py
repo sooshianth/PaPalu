@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .ProductModel import Product, ProductionInfo, BOM, QualityControl, ProductSales
+from .ProductFolder import Product, ProductionInfo, BOM, QualityControl, ProductSales
 
 
 class BOMInline(admin.TabularInline):
