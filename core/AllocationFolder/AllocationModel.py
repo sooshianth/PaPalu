@@ -20,6 +20,7 @@ class Allocation(models.Model):
     allocation_number = models.CharField(
         max_length=100,
         unique=True,
+        primary_key=True,
         verbose_name="شماره تخصیص",
         null=True,
         blank=True

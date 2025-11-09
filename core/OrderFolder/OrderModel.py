@@ -35,6 +35,7 @@ class Order(models.Model):
         unique=True,
         null=True,
         blank=True,
+        primary_key=True,
         verbose_name='شماره سفارش'
     )
     

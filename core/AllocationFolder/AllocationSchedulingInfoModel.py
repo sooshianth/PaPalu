@@ -1,6 +1,6 @@
 from django.db import models
 from django_jalali.db import models as jmodels
-from .Allocation import Allocation
+from .AllocationModel import Allocation
 
 
 class AllocationSchedulingInfo(models.Model):

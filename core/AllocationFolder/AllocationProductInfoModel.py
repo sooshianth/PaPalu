@@ -1,5 +1,5 @@
 from django.db import models
-from .Allocation import Allocation
+from .AllocationModel import Allocation
 from ..ProductFolder.ProductModel import Product
 
 
