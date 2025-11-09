@@ -3,6 +3,7 @@ from .PersonModel import Person
 
 
 class SocialNetwork(models.Model):
+    """مدل شبکه اجتماعی"""
 
     person = models.ForeignKey(
         Person,

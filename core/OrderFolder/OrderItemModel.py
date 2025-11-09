@@ -3,6 +3,8 @@ from .OrderModel import Order
 
 
 class OrderItem(models.Model):
+    """مدل اقلام سفارش"""
+
     # Foreign key to Order
     order = models.ForeignKey(
         Order,

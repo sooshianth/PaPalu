@@ -4,6 +4,7 @@ from core.TransportFolder import Transport
 
 
 class Settlement(models.Model):
+    """مدل تسویه"""
 
     SETTLEMENT_TYPE_CHOICES = [
         ('purchase', 'خرید'),

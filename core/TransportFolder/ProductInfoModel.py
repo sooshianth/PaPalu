@@ -1,10 +1,11 @@
 from django.db import models
 from .TransportModel import Transport
 from core.ProductFolder import Product
-from core.RawMaterialModel import RawMaterial
+from core.RawMaterialFolder import RawMaterial
 
 
 class ProductInfo(models.Model):
+    """مدل اطلاعات محصول"""
 
     ITEM_TYPE_CHOICES = [
         #TODO

@@ -3,6 +3,7 @@ from .PersonModel import Person
 
 
 class FinancialBanking(models.Model):
+    """مدل مالی بانکی"""
 
     TAX_GROUP_CHOICES = [
         ('type1', 'نوع 1'),

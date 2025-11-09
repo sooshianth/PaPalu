@@ -3,6 +3,7 @@ from django_jalali.db import models as jmodels
 
 
 class Person(models.Model):
+    """مدل شخص"""
 
     TYPE_CHOICES = [
         ('customer', 'مشتری'),

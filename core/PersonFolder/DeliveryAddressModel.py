@@ -3,6 +3,7 @@ from .PersonModel import Person
 
 
 class DeliveryAddress(models.Model):
+    """مدل آدرس تحویل"""
 
     RECIPIENT_TYPE_CHOICES = [
         ('person', 'شخص'),

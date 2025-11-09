@@ -3,6 +3,7 @@ from .FinancialBankingModel import FinancialBanking
 
 
 class BankAccount(models.Model):
+    """مدل حساب بانکی"""
 
     financial_banking = models.ForeignKey(
         FinancialBanking,

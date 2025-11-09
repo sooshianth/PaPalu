@@ -3,6 +3,7 @@ from .PersonModel import Person
 
 
 class Representative(models.Model):
+    """مدل نماینده"""
 
     person = models.ForeignKey(
         Person,
