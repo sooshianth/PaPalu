@@ -2,7 +2,544 @@
 
 {% block title %}Roles - Permission Manager{% endblock %}
 
+{% block extra_css %}
+<style>
+    .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+    }
+    
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+    }
+    
+    thead {
+        background-color: #f8f9fa;
+    }
+    
+    th {
+        padding: 1rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: #555;
+        border-bottom: 2px solid #e0e0e0;
+        font-size: 0.9rem;
+    }
+    
+    td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    
+    tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .new-row {
+        background-color: #f9f9f9 !important;
+    }
+    
+    .new-row input, .new-row select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    
+    .new-row input::placeholder {
+        color: #999;
+        font-style: italic;
+    }
+    
+    .add-btn {
+        background-color: #2d7a4f;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1.2rem;
+        line-height: 1;
+        transition: all 0.2s;
+    }
+    
+    .add-btn:hover {
+        background-color: #246741;
+    }
+    
+    .add-btn:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+    
+    .delete-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 0.3rem 0.6rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.2s;
+    }
+    
+    .delete-btn:hover {
+        background-color: #c82333;
+    }
+    
+    .role-name-cell {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    select.task-perm-select {
+        width: 100%;
+        padding: 0.4rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        background-color: white;
+        cursor: pointer;
+    }
+    
+    select.task-perm-select:focus {
+        outline: 2px solid #2d7a4f;
+        border-color: #2d7a4f;
+    }
+    
+    .description-cell {
+        max-width: 300px;
+        position: relative;
+    }
+    
+    .description-display {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .description-text {
+        color: #666;
+        font-size: 0.9rem;
+        flex: 1;
+    }
+    
+    .description-input {
+        width: 100%;
+        padding: 0.4rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    
+    .description-edit {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .edit-description-btn {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        margin-left: 0.5rem;
+        transition: all 0.2s;
+    }
+    
+    .edit-description-btn:hover {
+        background-color: #5a6268;
+    }
+    
+    .save-description-btn {
+        background-color: #2d7a4f;
+        color: white;
+        border: none;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+    }
+    
+    .save-description-btn:hover {
+        background-color: #246741;
+    }
+    
+    .cancel-description-btn {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        padding: 0.2rem 0.5rem;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+    }
+    
+    .cancel-description-btn:hover {
+        background-color: #5a6268;
+    }
+    
+    #message {
+        display: none;
+    }
+    
+    .role-changed {
+        background-color: #fff3cd !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h2>Roles Management</h2>
-<p style="color: #666; font-size: 1rem;">This page is under construction.</p>
+
+<div id="message"></div>
+
+<div class="actions">
+    <div>
+        <span style="color: #666; font-size: 0.9rem;">Manage roles and their task permissions</span>
+    </div>
+    <button class="btn btn-primary" id="saveBtn">Save Changes</button>
+</div>
+
+<div class="table-container">
+    <table id="rolesTable">
+        <thead>
+            <tr>
+                <th style="width: 25%;">Role Name</th>
+                <th style="width: 30%;">Task Permission</th>
+                <th style="width: 45%;">Description (set at creation)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- New role row -->
+            <tr class="new-row">
+                <td>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="text" id="newRoleName" placeholder="Add new role name..." />
+                        <button class="add-btn" id="addBtn" title="Add new role">+</button>
+                    </div>
+                </td>
+                <td>
+                    <select id="newRoleTaskPerm">
+                        <option value="">-- No Permission --</option>
+                        {% for tp in task_permissions %}
+                        <option value="{{ tp.id }}">{{ tp.name|escape }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
+                    <input type="text" id="newRoleDescription" placeholder="Optional description..." />
+                </td>
+            </tr>
+            
+            <!-- Existing roles -->
+            {% for role in roles %}
+            <tr data-id="{{ role.id }}">
+                <td>
+                    <div class="role-name-cell">
+                        <span>{{ role.name|escape }}</span>
+                        <button class="delete-btn" data-id="{{ role.id }}" data-name="{{ role.name|escape }}">Delete</button>
+                    </div>
+                </td>
+                <td>
+                    <select class="task-perm-select" data-role-id="{{ role.id }}">
+                        <option value="">-- No Permission --</option>
+                        {% for tp in task_permissions %}
+                        <option value="{{ tp.id }}" {% if role.task_permission and role.task_permission.id == tp.id %}selected{% endif %}>
+                            {{ tp.name|escape }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="description-cell">
+                    <div class="description-display">
+                        <span class="description-text">{{ role.description|default:"No description"|escape }}</span>
+                        <button class="edit-description-btn" data-role-id="{{ role.id }}">Edit</button>
+                    </div>
+                    <div class="description-edit" style="display: none;">
+                        <input type="text" class="description-input" data-role-id="{{ role.id }}" data-original="{{ role.description|default:""|escape }}" value="{{ role.description|default:""|escape }}" placeholder="Enter description..." />
+                        <button class="save-description-btn" data-role-id="{{ role.id }}">OK</button>
+                        <button class="cancel-description-btn" data-role-id="{{ role.id }}">Cancel</button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const csrfToken = '{{ csrf_token }}';
+    const addBtn = document.getElementById('addBtn');
+    const saveBtn = document.getElementById('saveBtn');
+    const newRoleName = document.getElementById('newRoleName');
+    const newRoleTaskPerm = document.getElementById('newRoleTaskPerm');
+    const newRoleDescription = document.getElementById('newRoleDescription');
+    const messageDiv = document.getElementById('message');
+    
+    // Track changes
+    const changes = new Map(); // roleId -> {task_permission_id, description}
+    
+    function showMessage(text, type = 'success') {
+        messageDiv.textContent = text;
+        messageDiv.className = `alert alert-${type}`;
+        messageDiv.style.display = 'block';
+        setTimeout(() => {
+            messageDiv.style.display = 'none';
+        }, 3000);
+    }
+    
+    function markRowChanged(roleId) {
+        const row = document.querySelector(`tr[data-id="${roleId}"]`);
+        if (row) {
+            row.classList.add('role-changed');
+        }
+    }
+    
+    function unmarkRowChanged(roleId) {
+        const row = document.querySelector(`tr[data-id="${roleId}"]`);
+        if (row) {
+            row.classList.remove('role-changed');
+        }
+    }
+    
+    // Add new role
+    addBtn.addEventListener('click', async () => {
+        const name = newRoleName.value.trim();
+        const taskPermId = newRoleTaskPerm.value;
+        const description = newRoleDescription.value.trim();
+        
+        if (!name) {
+            showMessage('Please enter a role name', 'error');
+            return;
+        }
+        
+        // Client-side validation
+        if (name.length > 50) {
+            showMessage('Name too long (max 50 characters)', 'error');
+            return;
+        }
+        
+        if (/[<>"']/.test(name)) {
+            showMessage('Name contains invalid characters', 'error');
+            return;
+        }
+        
+        addBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/permissions/api/add-role/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    name: name,
+                    task_permission_id: taskPermId || null,
+                    description: description
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                showMessage('Role added successfully! Reloading...', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showMessage('Error: ' + result.message, 'error');
+                addBtn.disabled = false;
+            }
+        } catch (error) {
+            showMessage('Error adding role: ' + error.message, 'error');
+            addBtn.disabled = false;
+        }
+    });
+    
+    // Enable add button when name is entered
+    newRoleName.addEventListener('input', () => {
+        addBtn.disabled = !newRoleName.value.trim();
+    });
+    
+    // Initialize add button state
+    addBtn.disabled = true;
+    
+    // Handle task permission dropdown changes - track but don't save
+    document.querySelectorAll('.task-perm-select').forEach(select => {
+        const roleId = select.dataset.roleId;
+        const originalValue = select.value;
+        
+        select.addEventListener('change', function() {
+            const newValue = this.value;
+            
+            if (!changes.has(roleId)) {
+                changes.set(roleId, {});
+            }
+            
+            changes.get(roleId).task_permission_id = newValue;
+            markRowChanged(roleId);
+        });
+    });
+    
+    // Delete role function
+    async function deleteRole(roleId, roleName) {
+        if (!confirm(`Are you sure you want to delete role "${roleName}"? This action cannot be undone.`)) {
+            return;
+        }
+        
+        try {
+            const response = await fetch('/permissions/api/delete-role/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({ id: parseInt(roleId) })
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                showMessage('Role deleted successfully! Reloading...', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showMessage('Error: ' + result.message, 'error');
+            }
+        } catch (error) {
+            showMessage('Error deleting role: ' + error.message, 'error');
+        }
+    }
+    
+    // Attach delete handlers
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const roleId = this.dataset.id;
+            const roleName = this.dataset.name;
+            deleteRole(roleId, roleName);
+        });
+    });
+    
+    // Save all changes button
+    saveBtn.addEventListener('click', async () => {
+        if (changes.size === 0) {
+            showMessage('No changes to save', 'error');
+            return;
+        }
+        
+        saveBtn.disabled = true;
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const [roleId, changeData] of changes.entries()) {
+            try {
+                const response = await fetch('/permissions/api/update-role/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        id: parseInt(roleId),
+                        task_permission_id: changeData.task_permission_id,
+                        description: changeData.description
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    successCount++;
+                    unmarkRowChanged(roleId);
+                } else {
+                    errorCount++;
+                }
+            } catch (error) {
+                errorCount++;
+            }
+        }
+        
+        saveBtn.disabled = false;
+        
+        if (errorCount === 0) {
+            showMessage(`All changes saved successfully! (${successCount} roles updated)`, 'success');
+            changes.clear();
+        } else {
+            showMessage(`Saved ${successCount} roles, ${errorCount} failed`, 'error');
+        }
+    });
+    
+    // Edit description handlers
+    document.querySelectorAll('.edit-description-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const cell = this.closest('.description-cell');
+            cell.querySelector('.description-display').style.display = 'none';
+            cell.querySelector('.description-edit').style.display = 'flex';
+            cell.querySelector('.description-input').focus();
+        });
+    });
+    
+    // Save description handlers (OK button)
+    document.querySelectorAll('.save-description-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const roleId = this.dataset.roleId;
+            const cell = this.closest('.description-cell');
+            const input = cell.querySelector('.description-input');
+            const description = input.value.trim();
+            const textSpan = cell.querySelector('.description-text');
+            
+            // Update display
+            textSpan.textContent = description || 'No description';
+            
+            // Track change
+            if (!changes.has(roleId)) {
+                changes.set(roleId, {});
+            }
+            changes.get(roleId).description = description;
+            markRowChanged(roleId);
+            
+            // Hide edit mode
+            cell.querySelector('.description-display').style.display = 'flex';
+            cell.querySelector('.description-edit').style.display = 'none';
+        });
+    });
+    
+    // Cancel description handlers
+    document.querySelectorAll('.cancel-description-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const cell = this.closest('.description-cell');
+            const input = cell.querySelector('.description-input');
+            
+            // Restore original value
+            input.value = input.dataset.original;
+            
+            // Hide edit mode
+            cell.querySelector('.description-display').style.display = 'flex';
+            cell.querySelector('.description-edit').style.display = 'none';
+        });
+    });
+</script>
 {% endblock %}

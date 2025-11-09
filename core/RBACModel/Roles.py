@@ -5,7 +5,8 @@ from .TaskPermission import TaskPermission
 
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
-    task_permission = models.ForeignKey(TaskPermission, on_delete=models.SET_NULL, null=True)
+    task_permission = models.ForeignKey(TaskPermission, on_delete=models.SET_NULL, null=True, blank=True)
+    description = models.TextField(blank=True, null=True)
     users = models.ManyToManyField(User, related_name='roles', blank=True)
 
     def __str__(self):
