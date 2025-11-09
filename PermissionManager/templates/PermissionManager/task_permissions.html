@@ -199,15 +199,15 @@
             <tr data-id="{{ perm.id }}">
                 <td>
                     <div class="perm-name-cell">
-                        <span>{{ perm.name }}</span>
-                        <button class="delete-btn" data-id="{{ perm.id }}" onclick="deletePermission({{ perm.id }})">Delete</button>
+                        <span>{{ perm.name|escape }}</span>
+                        <button class="delete-btn" data-id="{{ perm.id }}" data-name="{{ perm.name|escape }}">Delete</button>
                     </div>
                 </td>
                 {% for code, label in task_choices %}
                 <td class="checkbox-cell">
                     <input type="checkbox" 
                            data-perm-id="{{ perm.id }}" 
-                           data-task="{{ code }}"
+                           data-task="{{ code|escape }}"
                            {% if code in perm.tasks %}checked{% endif %}>
                 </td>
                 {% endfor %}
@@ -288,6 +288,18 @@
             return;
         }
         
+        // Client-side validation
+        if (name.length > 100) {
+            showMessage('Name too long (max 100 characters)', 'error');
+            return;
+        }
+        
+        // Check for dangerous characters
+        if (/[<>"']/.test(name)) {
+            showMessage('Name contains invalid characters', 'error');
+            return;
+        }
+        
         addBtn.disabled = true;
         
         try {
@@ -326,8 +338,8 @@
     addBtn.disabled = true;
     
     // Delete permission function
-    async function deletePermission(permId) {
-        if (!confirm('Are you sure you want to delete this permission? This action cannot be undone.')) {
+    async function deletePermission(permId, permName) {
+        if (!confirm(`Are you sure you want to delete "${permName}"? This action cannot be undone.`)) {
             return;
         }
         
@@ -338,7 +350,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken
                 },
-                body: JSON.stringify({ id: permId })
+                body: JSON.stringify({ id: parseInt(permId) })
             });
             
             const result = await response.json();
@@ -355,5 +367,15 @@
             showMessage('Error deleting permission: ' + error.message, 'error');
         }
     }
+    
+    // Attach delete handlers to all delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const permId = this.dataset.id;
+            const permName = this.dataset.name;
+            deletePermission(permId, permName);
+        });
+    });
 </script>
 {% endblock %}

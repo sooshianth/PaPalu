@@ -32,19 +32,34 @@ def save_task_permissions(request):
     """API endpoint to save task permission changes"""
     try:
         data = json.loads(request.body)
+        valid_task_codes = [code for code, _ in TaskChoices.choices]
         
         for perm_data in data:
             perm_id = perm_data.get('id')
             tasks = perm_data.get('tasks', [])
             
-            if perm_id:
+            # Validate permission ID
+            if not perm_id or not isinstance(perm_id, int):
+                continue
+            
+            # Validate tasks - only allow valid TaskChoices
+            if not isinstance(tasks, list):
+                continue
+            
+            validated_tasks = [task for task in tasks if task in valid_task_codes]
+            
+            try:
                 perm = TaskPermission.objects.get(id=perm_id)
-                perm.tasks = tasks
+                perm.tasks = validated_tasks
                 perm.save()
+            except TaskPermission.DoesNotExist:
+                continue
         
         return JsonResponse({'status': 'success'})
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=400)
 
 
 @superuser_required
@@ -55,8 +70,16 @@ def add_task_permission(request):
         data = json.loads(request.body)
         name = data.get('name', '').strip()
         
+        # Validate name
         if not name:
             return JsonResponse({'status': 'error', 'message': 'Name is required'}, status=400)
+        
+        if len(name) > 100:
+            return JsonResponse({'status': 'error', 'message': 'Name too long (max 100 characters)'}, status=400)
+        
+        # Check for dangerous characters (basic validation)
+        if any(char in name for char in ['<', '>', '"', "'"]):
+            return JsonResponse({'status': 'error', 'message': 'Invalid characters in name'}, status=400)
         
         if TaskPermission.objects.filter(name=name).exists():
             return JsonResponse({'status': 'error', 'message': 'Name already exists'}, status=400)
@@ -68,8 +91,10 @@ def add_task_permission(request):
             'id': perm.id,
             'name': perm.name
         })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=400)
 
 
 @superuser_required
@@ -80,8 +105,9 @@ def delete_task_permission(request):
         data = json.loads(request.body)
         perm_id = data.get('id')
         
-        if not perm_id:
-            return JsonResponse({'status': 'error', 'message': 'ID is required'}, status=400)
+        # Validate ID
+        if not perm_id or not isinstance(perm_id, int):
+            return JsonResponse({'status': 'error', 'message': 'Valid ID is required'}, status=400)
         
         perm = TaskPermission.objects.get(id=perm_id)
         perm.delete()
@@ -89,8 +115,10 @@ def delete_task_permission(request):
         return JsonResponse({'status': 'success'})
     except TaskPermission.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Permission not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=400)
 
 
 @superuser_required
