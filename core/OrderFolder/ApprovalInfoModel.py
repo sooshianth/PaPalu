@@ -4,6 +4,8 @@ from .OrderModel import Order
 
 
 class ApprovalInfo(models.Model):
+    """مدل اطلاعات تأییدیه"""
+
     # Foreign key to Order
     order = models.ForeignKey(
         Order,

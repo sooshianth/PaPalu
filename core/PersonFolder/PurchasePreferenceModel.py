@@ -3,6 +3,7 @@ from .PersonModel import Person
 
 
 class PurchasePreference(models.Model):
+    """مدل ترجیحات خرید"""
 
     person = models.ForeignKey(
         Person,

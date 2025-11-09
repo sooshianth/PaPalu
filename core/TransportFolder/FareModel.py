@@ -3,6 +3,7 @@ from .TransportModel import Transport
 
 
 class Fare(models.Model):
+    """مدل کرایه"""
 
     FARE_TYPE_CHOICES = [
         #TODO

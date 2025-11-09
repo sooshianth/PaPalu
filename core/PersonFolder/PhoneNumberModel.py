@@ -4,6 +4,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 
 
 class PhoneNumber(models.Model):
+    """مدل شماره تلفن"""
 
     PHONE_TYPE_CHOICES = [
         ('landline', 'شماره ثابت'),

@@ -3,6 +3,7 @@ from .PersonModel import Person
 
 
 class Attachment(models.Model):
+    """مدل پیوست"""
 
     person = models.ForeignKey(
         Person,

@@ -3,6 +3,7 @@ from .TransportModel import Transport
 
 
 class TruckInfo(models.Model):
+    """مدل اطلاعات کامیون"""
 
     VEHICLE_TYPE_CHOICES = [
         ('truck', 'کامیون'),

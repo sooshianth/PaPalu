@@ -6,6 +6,8 @@ from ..PersonFolder.PersonModel import Person
 
 
 class DocumentRelation(models.Model):
+    """مدل ارتباط با اسناد"""
+
     # Foreign key to Order
     order = models.ForeignKey(
         Order,

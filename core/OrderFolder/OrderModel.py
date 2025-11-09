@@ -4,6 +4,8 @@ from django_jalali.db import models as jmodels
 
 
 class Order(models.Model):
+    """مدل سفارش"""
+
     ORDER_TYPE_CHOICES = [
         ('purchase', 'خرید'),
         ('sale', 'فروش'),

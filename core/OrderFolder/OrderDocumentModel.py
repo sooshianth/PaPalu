@@ -4,6 +4,8 @@ from .OrderModel import Order
 
 
 class OrderDocument(models.Model):
+    """مدل اسناد سفارش"""
+
     # Foreign key to Order
     order = models.ForeignKey(
         Order,

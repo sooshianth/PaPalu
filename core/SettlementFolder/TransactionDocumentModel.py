@@ -5,6 +5,7 @@ from core.PersonFolder import BankAccount
 
 
 class TransactionDocument(models.Model):
+    """مدل سند تراکنش"""
 
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'در انتظار وصول'),

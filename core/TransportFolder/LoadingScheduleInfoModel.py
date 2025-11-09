@@ -4,6 +4,7 @@ from .TransportModel import Transport
 
 
 class LoadingScheduleInfo(models.Model):
+    """مدل اطلاعات زمانبندی"""
 
     transport = models.ForeignKey(
         Transport,

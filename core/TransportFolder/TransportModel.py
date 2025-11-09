@@ -4,6 +4,7 @@ from core.PersonFolder import Person, DeliveryAddress
 
 
 class Transport(models.Model):
+    """مدل حمل"""
 
     DIRECTION_CHOICES = [
         ('inbound', 'ورودی'),
