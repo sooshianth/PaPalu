@@ -2,7 +2,349 @@
 
 {% block title %}Users - Permission Manager{% endblock %}
 
+{% block extra_css %}
+<style>
+    .actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        min-height: 500px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+    }
+
+    thead {
+        background-color: #f8f9fa;
+    }
+
+    th {
+        padding: 1rem 0.75rem;
+        text-align: left;
+        font-weight: 600;
+        color: #555;
+        border-bottom: 2px solid #e0e0e0;
+        font-size: 0.9rem;
+    }
+
+    td {
+        padding: 0.75rem;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .task-permission-select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 0.95rem;
+    }
+
+    /* Custom Multi-Select Dropdown */
+    .roles-dropdown {
+        position: relative;
+        width: 100%;
+    }
+
+    .roles-btn {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background-color: white;
+        cursor: pointer;
+        font-size: 0.95rem;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .roles-btn:hover {
+        background-color: #f8f9fa;
+        border-color: #2d7a4f;
+    }
+
+    .roles-text {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .arrow {
+        margin-left: 10px;
+        font-size: 10px;
+        color: #666;
+    }
+
+    .roles-dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: white;
+        min-width: 100%;
+        box-shadow: 0px 4px 8px rgba(0,0,0,0.15);
+        z-index: 1000;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        max-height: 250px;
+        overflow-y: auto;
+        margin-top: 2px;
+    }
+
+    .role-checkbox-label {
+        display: block;
+        padding: 0.6rem 1rem;
+        cursor: pointer;
+        user-select: none;
+        transition: background-color 0.2s;
+    }
+
+    .role-checkbox-label:hover {
+        background-color: #f8f9fa;
+    }
+
+    .role-checkbox-label input[type="checkbox"] {
+        margin-right: 8px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <h2>Users Management</h2>
-<p style="color: #666; font-size: 1rem;">This page is under construction.</p>
+
+<div class="actions">
+    <div>
+        <span style="color: #666; font-size: 0.9rem;">Assign roles and special task permissions to users</span>
+    </div>
+    <button class="btn btn-primary" id="saveBtn">Save Changes</button>
+</div>
+
+<div class="table-container">
+
+<table>
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>-</th>
+            <th>-</th>
+            <th>Roles</th>
+            <th>Special Task Permission</th>
+        </tr>
+    </thead>
+    <tbody id="usersTableBody">
+        {% for user_data in users_data %}
+        <tr data-user-id="{{ user_data.user.id }}">
+            <td>{{ user_data.user.username|escape }}</td>
+            <td>-</td>
+            <td>-</td>
+            <td>
+                <div class="roles-dropdown">
+                    <button class="roles-btn" type="button">
+                        <span class="roles-text">Select Roles...</span>
+                        <span class="arrow">▼</span>
+                    </button>
+                    <div class="roles-dropdown-content">
+                        {% for role in all_roles %}
+                        <label class="role-checkbox-label">
+                            <input type="checkbox" 
+                                   value="{{ role.id }}" 
+                                   {% if role in user_data.roles %}checked{% endif %}>
+                            {{ role.name|escape }}
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </td>
+            <td>
+                <select class="task-permission-select">
+                    <option value="">None</option>
+                    {% for tp in task_permissions %}
+                    <option value="{{ tp.id }}" 
+                        {% if user_data.task_permission_id == tp.id %}selected{% endif %}>
+                        {{ tp.name|escape }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const changes = new Map();
+    const originalStates = new Map();
+
+    // Store original states
+    document.querySelectorAll('#usersTableBody tr').forEach(row => {
+        const userId = row.dataset.userId;
+        const roleCheckboxes = row.querySelectorAll('.role-checkbox-label input[type="checkbox"]');
+        const taskPermSelect = row.querySelector('.task-permission-select');
+        
+        originalStates.set(userId, {
+            roles: Array.from(roleCheckboxes).filter(cb => cb.checked).map(cb => cb.value),
+            taskPermission: taskPermSelect.value
+        });
+        
+        // Update display text
+        updateRolesButtonText(row);
+    });
+
+    // Update roles button text
+    function updateRolesButtonText(row) {
+        const roleCheckboxes = row.querySelectorAll('.role-checkbox-label input[type="checkbox"]');
+        const selectedRoles = Array.from(roleCheckboxes).filter(cb => cb.checked);
+        const rolesText = row.querySelector('.roles-text');
+        
+        if (selectedRoles.length === 0) {
+            rolesText.textContent = 'Select Roles...';
+        } else if (selectedRoles.length === 1) {
+            const label = selectedRoles[0].parentElement.textContent.trim();
+            rolesText.textContent = label;
+        } else {
+            rolesText.textContent = `${selectedRoles.length} roles selected`;
+        }
+    }
+
+    // Track changes
+    function checkIfChanged(row) {
+        const userId = row.dataset.userId;
+        const roleCheckboxes = row.querySelectorAll('.role-checkbox-label input[type="checkbox"]');
+        const taskPermSelect = row.querySelector('.task-permission-select');
+        
+        const currentRoles = Array.from(roleCheckboxes).filter(cb => cb.checked).map(cb => cb.value).sort();
+        const originalRoles = originalStates.get(userId).roles.sort();
+        const currentTaskPerm = taskPermSelect.value;
+        const originalTaskPerm = originalStates.get(userId).taskPermission;
+        
+        const rolesChanged = JSON.stringify(currentRoles) !== JSON.stringify(originalRoles);
+        const taskPermChanged = currentTaskPerm !== originalTaskPerm;
+        const hasChanges = rolesChanged || taskPermChanged;
+        
+        if (hasChanges) {
+            changes.set(userId, {
+                roles: currentRoles,
+                taskPermission: currentTaskPerm
+            });
+            row.style.backgroundColor = '#fff3cd';
+        } else {
+            changes.delete(userId);
+            row.style.backgroundColor = '';
+        }
+    }
+
+    // Toggle dropdown
+    document.querySelectorAll('.roles-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const dropdown = this.nextElementSibling;
+            const isVisible = dropdown.style.display === 'block';
+            
+            // Close all dropdowns
+            document.querySelectorAll('.roles-dropdown-content').forEach(d => {
+                d.style.display = 'none';
+            });
+            
+            // Toggle this dropdown
+            dropdown.style.display = isVisible ? 'none' : 'block';
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', function() {
+        document.querySelectorAll('.roles-dropdown-content').forEach(d => {
+            d.style.display = 'none';
+        });
+    });
+
+    // Prevent dropdown from closing when clicking inside
+    document.querySelectorAll('.roles-dropdown-content').forEach(content => {
+        content.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+    });
+
+    // Handle checkbox changes
+    document.querySelectorAll('.role-checkbox-label input[type="checkbox"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const row = this.closest('tr');
+            updateRolesButtonText(row);
+            checkIfChanged(row);
+        });
+    });
+
+    // Handle task permission changes
+    document.querySelectorAll('.task-permission-select').forEach(select => {
+        select.addEventListener('change', function() {
+            checkIfChanged(this.closest('tr'));
+        });
+    });
+
+    // Save button
+    document.getElementById('saveBtn').addEventListener('click', async function() {
+        if (changes.size === 0) {
+            alert('No changes to save');
+            return;
+        }
+
+        try {
+            const changesArray = Array.from(changes.entries()).map(([userId, data]) => ({
+                user_id: parseInt(userId),
+                role_ids: data.roles.map(id => parseInt(id)),
+                task_permission_id: data.taskPermission ? parseInt(data.taskPermission) : null
+            }));
+
+            const response = await fetch('{% url "permission_manager:save_user_assignments" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ users: changesArray })
+            });
+
+            const result = await response.json();
+            
+            if (result.status === 'success') {
+                alert('Changes saved successfully');
+                
+                // Update original states
+                changes.forEach((data, userId) => {
+                    originalStates.set(userId, {
+                        roles: [...data.roles],
+                        taskPermission: data.taskPermission
+                    });
+                });
+                
+                changes.clear();
+                document.querySelectorAll('#usersTableBody tr').forEach(row => {
+                    row.style.backgroundColor = '';
+                });
+            } else {
+                alert('Error: ' + result.message);
+            }
+        } catch (error) {
+            alert('Failed to save changes: ' + error.message);
+        }
+    });
+</script>
 {% endblock %}

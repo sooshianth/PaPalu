@@ -16,4 +16,5 @@ urlpatterns = [
     path('api/add-role/', views.add_role, name='api_add_role'),
     path('api/update-role/', views.update_role, name='api_update_role'),
     path('api/delete-role/', views.delete_role, name='api_delete_role'),
+    path('api/save-user-assignments/', views.save_user_assignments, name='save_user_assignments'),
 ]
