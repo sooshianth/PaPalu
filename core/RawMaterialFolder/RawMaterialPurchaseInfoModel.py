@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from .Supplier import Supplier
-from .RawMaterial import RawMaterial
+from .SupplierModel import Supplier
+from .RawMaterialModel import RawMaterial
 from ..WarehouseFolder.WarehouseModel import Warehouse
 
 

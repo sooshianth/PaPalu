@@ -6,7 +6,6 @@ from .AttachmentModel import Attachment
 from .SocialNetworkModel import SocialNetwork
 from .FinancialBankingModel import FinancialBanking
 from .BankAccountModel import BankAccount
-from .ShabaNumberModel import ShabaNumber
 from .RepresentativeModel import Representative
 from .DeliveryAddressModel import DeliveryAddress
 

@@ -1,8 +1,8 @@
-from .Supplier import Supplier
-from .QualityParameter import QualityParameter
-from .RawMaterialPurchaseInfo import RawMaterialPurchaseInfo
-from .RawMaterialQualityControl import RawMaterialQualityControl
-from .RawMaterial import RawMaterial
+from .SupplierModel import Supplier
+from .QualityParameterModel import QualityParameter
+from .RawMaterialPurchaseInfoModel import RawMaterialPurchaseInfo
+from .RawMaterialQualityControlModel import RawMaterialQualityControl
+from .RawMaterialModel import RawMaterial
 
 __all__ = [
     'Supplier',

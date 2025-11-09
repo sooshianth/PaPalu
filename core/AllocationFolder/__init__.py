@@ -1,6 +1,6 @@
-from .AllocationProductInfo import AllocationProductInfo
-from .AllocationSchedulingInfo import AllocationSchedulingInfo
-from .Allocation import Allocation
+from .AllocationProductInfoModel import AllocationProductInfo
+from .AllocationSchedulingInfoModel import AllocationSchedulingInfo
+from .AllocationModel import Allocation
 
 __all__ = [
     'AllocationProductInfo',

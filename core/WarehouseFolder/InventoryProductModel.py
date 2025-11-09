@@ -1,6 +1,6 @@
 from django.db import models
 from django_jalali.db import models as jmodels
-from .Inventory import Inventory
+from .InventoryModel import Inventory
 from ..ProductFolder import Product
 
 

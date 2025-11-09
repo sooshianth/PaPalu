@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from .QualityParameter import QualityParameter
-from .RawMaterial import RawMaterial
+from .QualityParameterModel import QualityParameter
+from .RawMaterialModel import RawMaterial
 
 
 class RawMaterialQualityControl(models.Model):

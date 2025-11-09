@@ -1,6 +1,6 @@
 from django.db import models
 from django_jalali.db import models as jmodels
-from .DefaultItem import DefaultItem
+from .DefaultItemModel import DefaultItem
 
 
 class Warehouse(models.Model):
