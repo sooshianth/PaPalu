@@ -21,16 +21,23 @@ class UserTaskPermission(models.Model):
 
 
 def user_has_task(user, task_code):
+    # Handle None or anonymous user
+    if not user or not user.is_authenticated:
+        return False
+    
     # Check roles
     for role in user.roles.all():
-        if role.task_permission and task_code in role.task_permission.tasks:
+        if role.task_permission and role.task_permission.tasks and task_code in role.task_permission.tasks:
             return True
     
     # Check user's own task permission
     try:
-        if user.task_permission.task_permission and task_code in user.task_permission.task_permission.tasks:
+        user_perm = user.task_permission
+        if user_perm and user_perm.task_permission and user_perm.task_permission.tasks and task_code in user_perm.task_permission.tasks:
             return True
     except UserTaskPermission.DoesNotExist:
+        pass
+    except AttributeError:
         pass
     
     return False
