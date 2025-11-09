@@ -131,12 +131,16 @@ class Order(models.Model):
     # Timestamps
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
-        verbose_name='تاریخ ایجاد'
+        verbose_name='تاریخ ایجاد',
+        null=True,
+        blank=True
     )
     
     updated_at = jmodels.jDateTimeField(
         auto_now=True,
-        verbose_name='تاریخ بروزرسانی'
+        verbose_name='تاریخ بروزرسانی',
+        null=True,
+        blank=True
     )
     
     class Meta:

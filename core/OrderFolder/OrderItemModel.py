@@ -16,7 +16,7 @@ class OrderItem(models.Model):
     # محصول
     product = models.ForeignKey(
         'ProductFolder.Product',
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='order_items',
