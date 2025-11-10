@@ -22,6 +22,12 @@ urlpatterns = [
     path('authentication/', include('authentication.urls')),
     path('home/', home_view, name='home'),
     path('', redirect_to_login, name='root'),
+    path('accounting/', include('accounting.urls')),
+    path('custody/', include('custody.urls')),
+    path('distribution/', include('distribution.urls')),
+    path('production/', include('production.urls')),
+    path('sales/', include('sales.urls')),
+    path('warehousing/', include('warehousing.urls')),
 ]
 
 # Serve media files in development

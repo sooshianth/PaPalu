@@ -37,6 +37,12 @@ INSTALLED_APPS = [
     'authentication',
     'perm_manager',
     'access',
+    'accounting',
+    'custody',
+    'distribution',
+    'production',
+    'sales',
+    'warehousing',
 ]
 
 MIDDLEWARE = [
