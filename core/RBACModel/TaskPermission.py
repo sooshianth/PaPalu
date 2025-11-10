@@ -21,11 +21,12 @@ class TaskChoices(models.TextChoices):
     SALES_TRACK_DISCREPANCY = 'sales.track_discrepancy', 'پیگیری اختلاف فروش'
     SALES_APPROVE_TRANSACTION = 'sales.approve_transaction', 'تایید تراکنش فروش'
     SALES_APPROVE_SETTLEMENT = 'sales.approve_settlement', 'تایید تسویه کامل فروش'
+    SALES_ISSUE_INVOICE = 'sales.issue_invoice', 'صدور فاکتور فروش'
     SALES_DEFINE_PRODUCT = 'sales.define_product', 'تعریف محصول'
     SALES_APPROVE_ALLOCATION = 'sales.approve_allocation', 'تایید تخصیص فروش'
     SALES_APPROVE_PROFORMA_PRICE = 'sales.approve_proforma_price', 'تایید پیش فاکتور فروش(قیمت و مشخصات)'
     SALES_PRODUCT_PRICE_LIST = 'sales.product_price_list', 'لیست قیمت محصولات'
-    SALES_ISSUE_INVOICE = 'sales.issue_invoice', 'صدور فاکتور فروش'
+    
     
     # Supply (تامین)
     SUPPLY_CREATE_SUPPLIER = 'supply.create_supplier', 'ایجاد شخص فروشنده'

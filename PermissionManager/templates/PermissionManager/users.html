@@ -1,6 +1,6 @@
 {% extends 'PermissionManager/base.html' %}
 
-{% block title %}Users - Permission Manager{% endblock %}
+{% block title %}کاربران - مدیریت دسترسی‌ها{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -8,50 +8,64 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
     
     .table-container {
         overflow-x: auto;
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
+        border: 2px solid #e8eef5;
+        border-radius: 16px;
         min-height: 500px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }
 
     table {
         width: 100%;
         border-collapse: collapse;
         background-color: white;
+        direction: rtl;
     }
 
     thead {
-        background-color: #f8f9fa;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     }
 
     th {
-        padding: 1rem 0.75rem;
-        text-align: left;
-        font-weight: 600;
-        color: #555;
-        border-bottom: 2px solid #e0e0e0;
-        font-size: 0.9rem;
+        padding: 1.25rem 1rem;
+        text-align: right;
+        font-weight: 700;
+        color: #2c3e50;
+        border-bottom: 3px solid #2d7a4f;
+        font-size: 0.95rem;
     }
 
     td {
-        padding: 0.75rem;
-        border-bottom: 1px solid #f0f0f0;
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid #f0f5f9;
+        transition: all 0.2s ease;
     }
 
     tbody tr:hover {
-        background-color: #f8f9fa;
+        background: linear-gradient(90deg, #f0f5f9 0%, #f8f9fa 100%);
     }
 
     .task-permission-select {
         width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e8eef5;
+        border-radius: 12px;
         font-size: 0.95rem;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .task-permission-select:focus {
+        outline: none;
+        border-color: #2d7a4f;
+        box-shadow: 0 0 0 4px rgba(45, 122, 79, 0.1);
     }
 
     /* Custom Multi-Select Dropdown */
@@ -62,21 +76,25 @@
 
     .roles-btn {
         width: 100%;
-        padding: 0.5rem 0.75rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e8eef5;
+        border-radius: 12px;
         background-color: white;
         cursor: pointer;
         font-size: 0.95rem;
-        text-align: left;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        text-align: right;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        transition: all 0.3s ease;
     }
 
     .roles-btn:hover {
         background-color: #f8f9fa;
         border-color: #2d7a4f;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(45, 122, 79, 0.15);
     }
 
     .roles-text {
@@ -84,12 +102,14 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        color: #2c3e50;
+        font-weight: 500;
     }
 
     .arrow {
-        margin-left: 10px;
+        margin-right: 10px;
         font-size: 10px;
-        color: #666;
+        color: #5a6c7d;
     }
 
     .roles-dropdown-content {
@@ -97,42 +117,48 @@
         position: absolute;
         background-color: white;
         min-width: 100%;
-        box-shadow: 0px 4px 8px rgba(0,0,0,0.15);
+        box-shadow: 0px 8px 20px rgba(0,0,0,0.15);
         z-index: 1000;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        max-height: 250px;
+        border: 2px solid #e8eef5;
+        border-radius: 12px;
+        max-height: 280px;
         overflow-y: auto;
-        margin-top: 2px;
+        margin-top: 4px;
     }
 
     .role-checkbox-label {
         display: block;
-        padding: 0.6rem 1rem;
+        padding: 0.75rem 1.25rem;
         cursor: pointer;
         user-select: none;
-        transition: background-color 0.2s;
+        transition: all 0.2s ease;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        font-weight: 500;
+        color: #2c3e50;
     }
 
     .role-checkbox-label:hover {
-        background-color: #f8f9fa;
+        background: linear-gradient(90deg, #f0f5f9 0%, #f8f9fa 100%);
     }
 
     .role-checkbox-label input[type="checkbox"] {
-        margin-right: 8px;
+        margin-left: 10px;
         cursor: pointer;
+        width: 18px;
+        height: 18px;
+        accent-color: #2d7a4f;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<h2>Users Management</h2>
+<h2>مدیریت کاربران</h2>
 
 <div class="actions">
     <div>
-        <span style="color: #666; font-size: 0.9rem;">Assign roles and special task permissions to users</span>
+        <span style="color: #5a6c7d; font-size: 1rem; font-weight: 500;">تخصیص نقش‌ها و مجوزهای ویژه وظیفه به کاربران</span>
     </div>
-    <button class="btn btn-primary" id="saveBtn">Save Changes</button>
+    <button class="btn btn-primary" id="saveBtn">ذخیره تغییرات</button>
 </div>
 
 <div class="table-container">
@@ -140,11 +166,11 @@
 <table>
     <thead>
         <tr>
-            <th>Username</th>
+            <th>نام کاربری</th>
             <th>-</th>
             <th>-</th>
-            <th>Roles</th>
-            <th>Special Task Permission</th>
+            <th>نقش‌ها</th>
+            <th>مجوز ویژه وظیفه</th>
         </tr>
     </thead>
     <tbody id="usersTableBody">
@@ -156,8 +182,8 @@
             <td>
                 <div class="roles-dropdown">
                     <button class="roles-btn" type="button">
-                        <span class="roles-text">Select Roles...</span>
                         <span class="arrow">▼</span>
+                        <span class="roles-text">انتخاب نقش‌ها...</span>
                     </button>
                     <div class="roles-dropdown-content">
                         {% for role in all_roles %}
@@ -173,7 +199,7 @@
             </td>
             <td>
                 <select class="task-permission-select">
-                    <option value="">None</option>
+                    <option value="">هیچ‌کدام</option>
                     {% for tp in task_permissions %}
                     <option value="{{ tp.id }}" 
                         {% if user_data.task_permission_id == tp.id %}selected{% endif %}>
@@ -216,12 +242,12 @@
         const rolesText = row.querySelector('.roles-text');
         
         if (selectedRoles.length === 0) {
-            rolesText.textContent = 'Select Roles...';
+            rolesText.textContent = 'انتخاب نقش‌ها...';
         } else if (selectedRoles.length === 1) {
             const label = selectedRoles[0].parentElement.textContent.trim();
             rolesText.textContent = label;
         } else {
-            rolesText.textContent = `${selectedRoles.length} roles selected`;
+            rolesText.textContent = `${selectedRoles.length} نقش انتخاب شده`;
         }
     }
 
@@ -302,7 +328,7 @@
     // Save button
     document.getElementById('saveBtn').addEventListener('click', async function() {
         if (changes.size === 0) {
-            alert('No changes to save');
+            alert('تغییری برای ذخیره وجود ندارد');
             return;
         }
 
@@ -325,7 +351,7 @@
             const result = await response.json();
             
             if (result.status === 'success') {
-                alert('Changes saved successfully');
+                alert('تغییرات با موفقیت ذخیره شد');
                 
                 // Update original states
                 changes.forEach((data, userId) => {
@@ -340,10 +366,10 @@
                     row.style.backgroundColor = '';
                 });
             } else {
-                alert('Error: ' + result.message);
+                alert('خطا: ' + result.message);
             }
         } catch (error) {
-            alert('Failed to save changes: ' + error.message);
+            alert('خطا در ذخیره تغییرات: ' + error.message);
         }
     });
 </script>

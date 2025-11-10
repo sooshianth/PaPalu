@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Permission Manager{% endblock %}</title>
+    <title>{% block title %}مدیریت دسترسی‌ها{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
     <style>
         * {
             margin: 0;
@@ -12,33 +13,38 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #ffffff;
-            color: #333;
+            font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+            color: #2c3e50;
+            direction: rtl;
         }
         
         .header {
-            background-color: #2d7a4f;
+            background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
             color: white;
-            padding: 1rem 2rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 12px rgba(45, 122, 79, 0.2);
+            border-radius: 0 0 20px 20px;
         }
         
         .header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
+            font-size: 1.75rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
         }
         
         .nav {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #e0e0e0;
+            background-color: #ffffff;
+            border-bottom: 2px solid #e8eef5;
             padding: 0 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
         
         .nav ul {
             list-style: none;
             display: flex;
-            gap: 0;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
         }
         
         .nav li {
@@ -47,101 +53,123 @@
         
         .nav a {
             display: block;
-            padding: 1rem 1.5rem;
-            color: #555;
+            padding: 0.875rem 1.75rem;
+            color: #5a6c7d;
             text-decoration: none;
-            border-bottom: 3px solid transparent;
-            transition: all 0.2s;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            position: relative;
         }
         
         .nav a:hover {
-            background-color: #e9ecef;
+            background-color: #f0f5f9;
             color: #2d7a4f;
+            transform: translateY(-2px);
         }
         
         .nav a.active {
-            color: #2d7a4f;
-            border-bottom-color: #2d7a4f;
+            background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
+            color: white;
             font-weight: 600;
+            box-shadow: 0 4px 12px rgba(45, 122, 79, 0.3);
         }
         
         .container {
             max-width: 1400px;
-            margin: 2rem auto;
+            margin: 2.5rem auto;
             padding: 0 2rem;
         }
         
         .content {
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            padding: 2.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .content:hover {
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
         }
         
         h2 {
-            color: #333;
-            margin-bottom: 1.5rem;
-            font-size: 1.75rem;
+            color: #2c3e50;
+            margin-bottom: 2rem;
+            font-size: 2rem;
+            font-weight: 700;
+            border-right: 5px solid #2d7a4f;
+            padding-right: 1rem;
         }
         
         .btn {
-            padding: 0.5rem 1.5rem;
+            padding: 0.75rem 2rem;
             border: none;
-            border-radius: 4px;
+            border-radius: 12px;
             cursor: pointer;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-            font-weight: 500;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         }
         
         .btn-primary {
-            background-color: #2d7a4f;
+            background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
             color: white;
         }
         
         .btn-primary:hover {
-            background-color: #246741;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(45, 122, 79, 0.3);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
         }
         
         .btn-secondary {
-            background-color: #6c757d;
+            background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
             color: white;
         }
         
         .btn-secondary:hover {
-            background-color: #5a6268;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(108, 117, 125, 0.3);
         }
         
         .alert {
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
+            padding: 1.25rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
         
         .alert-success {
-            background-color: #d4edda;
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
             color: #155724;
-            border: 1px solid #c3e6cb;
+            border-right: 4px solid #28a745;
         }
         
         .alert-error {
-            background-color: #f8d7da;
+            background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
             color: #721c24;
-            border: 1px solid #f5c6cb;
+            border-right: 4px solid #dc3545;
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <div class="header">
-        <h1>Permission Manager</h1>
+        <h1>مدیریت دسترسی‌ها و نقش‌ها</h1>
     </div>
     
     <nav class="nav">
         <ul>
-            <li><a href="{% url 'permission_manager:task_permissions' %}" class="{% if active_page == 'taskpermissions' %}active{% endif %}">Task Permissions</a></li>
-            <li><a href="{% url 'permission_manager:roles' %}" class="{% if active_page == 'roles' %}active{% endif %}">Roles</a></li>
-            <li><a href="{% url 'permission_manager:users' %}" class="{% if active_page == 'users' %}active{% endif %}">Users</a></li>
+            <li><a href="{% url 'permission_manager:task_permissions' %}" class="{% if active_page == 'taskpermissions' %}active{% endif %}">مجوزهای وظیفه</a></li>
+            <li><a href="{% url 'permission_manager:roles' %}" class="{% if active_page == 'roles' %}active{% endif %}">نقش‌ها</a></li>
+            <li><a href="{% url 'permission_manager:users' %}" class="{% if active_page == 'users' %}active{% endif %}">کاربران</a></li>
         </ul>
     </nav>
     

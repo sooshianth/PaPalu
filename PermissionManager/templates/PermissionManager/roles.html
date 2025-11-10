@@ -1,6 +1,6 @@
 {% extends 'PermissionManager/base.html' %}
 
-{% block title %}Roles - Permission Manager{% endblock %}
+{% block title %}نقش‌ها - مدیریت دسترسی‌ها{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -8,192 +8,243 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
     }
     
     .table-container {
         overflow-x: auto;
-        border: 1px solid #e0e0e0;
-        border-radius: 4px;
+        border: 2px solid #e8eef5;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
     }
     
     table {
         width: 100%;
         border-collapse: collapse;
         background-color: white;
+        direction: rtl;
     }
     
     thead {
-        background-color: #f8f9fa;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     }
     
     th {
-        padding: 1rem 0.75rem;
-        text-align: left;
-        font-weight: 600;
-        color: #555;
-        border-bottom: 2px solid #e0e0e0;
-        font-size: 0.9rem;
+        padding: 1.25rem 1rem;
+        text-align: right;
+        font-weight: 700;
+        color: #2c3e50;
+        border-bottom: 3px solid #2d7a4f;
+        font-size: 0.95rem;
     }
     
     td {
-        padding: 0.75rem;
-        border-bottom: 1px solid #f0f0f0;
+        padding: 1rem 0.75rem;
+        border-bottom: 1px solid #f0f5f9;
+        transition: all 0.2s ease;
     }
     
     tbody tr:hover {
-        background-color: #f8f9fa;
+        background: linear-gradient(90deg, #f0f5f9 0%, #f8f9fa 100%);
     }
     
     .new-row {
-        background-color: #f9f9f9 !important;
+        background: linear-gradient(135deg, #f0f5f9 0%, #e8eef5 100%) !important;
     }
     
     .new-row input, .new-row select {
         width: 100%;
-        padding: 0.5rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 0.9rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e8eef5;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        transition: all 0.3s ease;
+    }
+    
+    .new-row input:focus, .new-row select:focus {
+        outline: none;
+        border-color: #2d7a4f;
+        box-shadow: 0 0 0 4px rgba(45, 122, 79, 0.1);
     }
     
     .new-row input::placeholder {
-        color: #999;
-        font-style: italic;
+        color: #95a5b8;
+        font-style: normal;
     }
     
     .add-btn {
-        background-color: #2d7a4f;
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
         color: white;
         border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
+        padding: 0.75rem 1.25rem;
+        border-radius: 12px;
         cursor: pointer;
-        font-size: 1.2rem;
+        font-size: 1.3rem;
         line-height: 1;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(45, 122, 79, 0.3);
     }
     
     .add-btn:hover {
-        background-color: #246741;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(45, 122, 79, 0.4);
+    }
+    
+    .add-btn:active {
+        transform: translateY(0);
     }
     
     .add-btn:disabled {
-        background-color: #ccc;
+        background: #cbd5e0;
         cursor: not-allowed;
+        box-shadow: none;
+        transform: none;
     }
     
     .delete-btn {
-        background-color: #dc3545;
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
         color: white;
         border: none;
-        padding: 0.3rem 0.6rem;
-        border-radius: 4px;
+        padding: 0.5rem 1rem;
+        border-radius: 10px;
         cursor: pointer;
-        font-size: 0.85rem;
-        transition: all 0.2s;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        font-weight: 600;
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
     }
     
     .delete-btn:hover {
-        background-color: #c82333;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(220, 53, 69, 0.3);
+    }
+    
+    .delete-btn:active {
+        transform: translateY(0);
     }
     
     .role-name-cell {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 1rem;
     }
     
     select.task-perm-select {
         width: 100%;
-        padding: 0.4rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 0.9rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e8eef5;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
         background-color: white;
         cursor: pointer;
+        transition: all 0.3s ease;
     }
     
     select.task-perm-select:focus {
-        outline: 2px solid #2d7a4f;
+        outline: none;
         border-color: #2d7a4f;
+        box-shadow: 0 0 0 4px rgba(45, 122, 79, 0.1);
     }
     
     .description-cell {
-        max-width: 300px;
+        max-width: 350px;
         position: relative;
     }
     
     .description-display {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
     }
     
     .description-text {
-        color: #666;
-        font-size: 0.9rem;
+        color: #5a6c7d;
+        font-size: 0.95rem;
         flex: 1;
+        font-weight: 500;
     }
     
     .description-input {
         width: 100%;
-        padding: 0.4rem;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        font-size: 0.9rem;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e8eef5;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        transition: all 0.3s ease;
+    }
+    
+    .description-input:focus {
+        outline: none;
+        border-color: #2d7a4f;
+        box-shadow: 0 0 0 4px rgba(45, 122, 79, 0.1);
     }
     
     .description-edit {
         display: flex;
-        gap: 0.5rem;
+        gap: 0.75rem;
         align-items: center;
     }
     
     .edit-description-btn {
-        background-color: #6c757d;
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
         color: white;
         border: none;
-        padding: 0.2rem 0.5rem;
-        border-radius: 3px;
+        padding: 0.4rem 0.75rem;
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 0.75rem;
-        margin-left: 0.5rem;
-        transition: all 0.2s;
+        font-size: 0.8rem;
+        margin-right: 0.5rem;
+        transition: all 0.3s ease;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        font-weight: 600;
     }
     
     .edit-description-btn:hover {
-        background-color: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
     }
     
     .save-description-btn {
-        background-color: #2d7a4f;
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
         color: white;
         border: none;
-        padding: 0.2rem 0.5rem;
-        border-radius: 3px;
+        padding: 0.4rem 0.75rem;
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 0.75rem;
-        transition: all 0.2s;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        font-weight: 600;
     }
     
     .save-description-btn:hover {
-        background-color: #246741;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(45, 122, 79, 0.3);
     }
     
     .cancel-description-btn {
-        background-color: #6c757d;
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
         color: white;
         border: none;
-        padding: 0.2rem 0.5rem;
-        border-radius: 3px;
+        padding: 0.4rem 0.75rem;
+        border-radius: 8px;
         cursor: pointer;
-        font-size: 0.75rem;
-        transition: all 0.2s;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        font-weight: 600;
     }
     
     .cancel-description-btn:hover {
-        background-color: #5a6268;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
     }
     
     #message {
@@ -201,51 +252,52 @@
     }
     
     .role-changed {
-        background-color: #fff3cd !important;
+        background: linear-gradient(90deg, #fff3cd 0%, #ffeeba 100%) !important;
+        border-right: 4px solid #ffc107;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<h2>Roles Management</h2>
+<h2>مدیریت نقش‌ها</h2>
 
 <div id="message"></div>
 
 <div class="actions">
     <div>
-        <span style="color: #666; font-size: 0.9rem;">Manage roles and their task permissions</span>
+        <span style="color: #5a6c7d; font-size: 1rem; font-weight: 500;">مدیریت نقش‌ها و مجوزهای وظیفه آن‌ها</span>
     </div>
-    <button class="btn btn-primary" id="saveBtn">Save Changes</button>
+    <button class="btn btn-primary" id="saveBtn">ذخیره تغییرات</button>
 </div>
 
 <div class="table-container">
     <table id="rolesTable">
         <thead>
             <tr>
-                <th style="width: 25%;">Role Name</th>
-                <th style="width: 30%;">Task Permission</th>
-                <th style="width: 45%;">Description (set at creation)</th>
+                <th style="width: 25%;">نام نقش</th>
+                <th style="width: 30%;">مجوز وظیفه</th>
+                <th style="width: 45%;">توضیحات (در زمان ایجاد تنظیم می‌شود)</th>
             </tr>
         </thead>
         <tbody>
             <!-- New role row -->
             <tr class="new-row">
                 <td>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <input type="text" id="newRoleName" placeholder="Add new role name..." />
-                        <button class="add-btn" id="addBtn" title="Add new role">+</button>
+                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                        <input type="text" id="newRoleName" placeholder="نام نقش جدید را وارد کنید..." />
+                        <button class="add-btn" id="addBtn" title="افزودن نقش جدید">+</button>
                     </div>
                 </td>
                 <td>
                     <select id="newRoleTaskPerm">
-                        <option value="">-- No Permission --</option>
+                        <option value="">-- بدون مجوز --</option>
                         {% for tp in task_permissions %}
                         <option value="{{ tp.id }}">{{ tp.name|escape }}</option>
                         {% endfor %}
                     </select>
                 </td>
                 <td>
-                    <input type="text" id="newRoleDescription" placeholder="Optional description..." />
+                    <input type="text" id="newRoleDescription" placeholder="توضیحات اختیاری..." />
                 </td>
             </tr>
             
@@ -329,18 +381,18 @@
         const description = newRoleDescription.value.trim();
         
         if (!name) {
-            showMessage('Please enter a role name', 'error');
+            showMessage('لطفاً نام نقش را وارد کنید', 'error');
             return;
         }
         
         // Client-side validation
         if (name.length > 50) {
-            showMessage('Name too long (max 50 characters)', 'error');
+            showMessage('نام خیلی طولانی است (حداکثر ۵۰ کاراکتر)', 'error');
             return;
         }
         
         if (/[<>"']/.test(name)) {
-            showMessage('Name contains invalid characters', 'error');
+            showMessage('نام حاوی کاراکترهای نامعتبر است', 'error');
             return;
         }
         
@@ -363,16 +415,16 @@
             const result = await response.json();
             
             if (result.status === 'success') {
-                showMessage('Role added successfully! Reloading...', 'success');
+                showMessage('نقش با موفقیت اضافه شد! در حال بارگذاری مجدد...', 'success');
                 setTimeout(() => {
                     location.reload();
                 }, 1000);
             } else {
-                showMessage('Error: ' + result.message, 'error');
+                showMessage('خطا: ' + result.message, 'error');
                 addBtn.disabled = false;
             }
         } catch (error) {
-            showMessage('Error adding role: ' + error.message, 'error');
+            showMessage('خطا در افزودن نقش: ' + error.message, 'error');
             addBtn.disabled = false;
         }
     });
@@ -404,7 +456,7 @@
     
     // Delete role function
     async function deleteRole(roleId, roleName) {
-        if (!confirm(`Are you sure you want to delete role "${roleName}"? This action cannot be undone.`)) {
+        if (!confirm(`آیا مطمئن هستید که می‌خواهید نقش "${roleName}" را حذف کنید؟ این عملیات قابل بازگشت نیست.`)) {
             return;
         }
         
@@ -421,15 +473,15 @@
             const result = await response.json();
             
             if (result.status === 'success') {
-                showMessage('Role deleted successfully! Reloading...', 'success');
+                showMessage('نقش با موفقیت حذف شد! در حال بارگذاری مجدد...', 'success');
                 setTimeout(() => {
                     location.reload();
                 }, 1000);
             } else {
-                showMessage('Error: ' + result.message, 'error');
+                showMessage('خطا: ' + result.message, 'error');
             }
         } catch (error) {
-            showMessage('Error deleting role: ' + error.message, 'error');
+            showMessage('خطا در حذف نقش: ' + error.message, 'error');
         }
     }
     
@@ -446,7 +498,7 @@
     // Save all changes button
     saveBtn.addEventListener('click', async () => {
         if (changes.size === 0) {
-            showMessage('No changes to save', 'error');
+            showMessage('تغییری برای ذخیره وجود ندارد', 'error');
             return;
         }
         
@@ -485,10 +537,10 @@
         saveBtn.disabled = false;
         
         if (errorCount === 0) {
-            showMessage(`All changes saved successfully! (${successCount} roles updated)`, 'success');
+            showMessage(`همه تغییرات با موفقیت ذخیره شد! (${successCount} نقش به‌روزرسانی شد)`, 'success');
             changes.clear();
         } else {
-            showMessage(`Saved ${successCount} roles, ${errorCount} failed`, 'error');
+            showMessage(`${successCount} نقش ذخیره شد، ${errorCount} نقش با خطا مواجه شد`, 'error');
         }
     });
     
