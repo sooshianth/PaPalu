@@ -2,6 +2,11 @@ from django.db import models
 
 
 class TaskChoices(models.TextChoices):
+    """
+    Task choices organized by category.
+    Format: CATEGORY_TASK_NAME = 'category.task_name', 'Display Label'
+    """
+    
     # General
     GENERAL_VIEW_DASHBOARD = 'general.view_dashboard', 'View Dashboard'
     
@@ -29,6 +34,10 @@ class TaskChoices(models.TextChoices):
     # Administration
     ADMIN_MANAGE_USERS = 'administration.manage_users', 'Manage Users'
     ADMIN_VIEW_REPORTS = 'administration.view_reports', 'View Admin Reports'
+
+
+# Add category order as a class attribute after class definition
+TaskChoices.CATEGORY_ORDER = ['sales', 'general', 'production', 'warehouse', 'financial', 'administration']
 
 
 class TaskPermission(models.Model):
