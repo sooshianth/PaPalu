@@ -26,13 +26,18 @@ def task_permissions_view(request):
         grouped_tasks[category].append((code, label))
     
     # Sort categories using the order defined in TaskChoices
-    # First add categories in the defined order
-    grouped_choices = [(cat, grouped_tasks[cat]) for cat in TaskChoices.CATEGORY_ORDER if cat in grouped_tasks]
+    # First add categories in the defined order with display names
+    grouped_choices = []
+    ordered_category_ids = set()
+    
+    for cat_id, cat_display in TaskChoices.CATEGORY_ORDER:
+        if cat_id in grouped_tasks:
+            grouped_choices.append((cat_display, grouped_tasks[cat_id]))
+            ordered_category_ids.add(cat_id)
     
     # Then add any remaining categories not in the order (at the end)
-    ordered_categories = set(TaskChoices.CATEGORY_ORDER)
-    remaining_categories = sorted([cat for cat in grouped_tasks.keys() if cat not in ordered_categories])
-    grouped_choices.extend([(cat, grouped_tasks[cat]) for cat in remaining_categories])
+    remaining_categories = sorted([cat for cat in grouped_tasks.keys() if cat not in ordered_category_ids])
+    grouped_choices.extend([(cat.capitalize(), grouped_tasks[cat]) for cat in remaining_categories])
     
     context = {
         'task_permissions': task_permissions,
