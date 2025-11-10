@@ -1,0 +1,221 @@
+{% extends 'base.html' %}
+
+{% block title %}مدیریت دسترسی‌ها - پاپالو{% endblock %}
+
+{% block extra_css %}
+<style>
+    .permissions-dashboard {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    
+    .dashboard-header {
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+    }
+    
+    .dashboard-header h1 {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    
+    .dashboard-header p {
+        font-size: 1.1rem;
+        opacity: 0.95;
+    }
+    
+    .cards-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .dashboard-card {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        text-decoration: none;
+        display: block;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(40, 167, 69, 0.2);
+        border-color: #28a745;
+    }
+    
+    .card-icon {
+        width: 60px;
+        height: 60px;
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+    
+    .card-icon svg {
+        width: 35px;
+        height: 35px;
+        color: #28a745;
+    }
+    
+    .card-title {
+        font-size: 1.5rem;
+        color: #212529;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+    
+    .card-description {
+        color: #6c757d;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+    
+    .card-count {
+        display: inline-block;
+        background: #28a745;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    
+    .info-section {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-section h3 {
+        color: #28a745;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+    }
+    
+    .info-section ul {
+        list-style: none;
+        padding-right: 0;
+    }
+    
+    .info-section li {
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+        color: #343a40;
+        line-height: 1.6;
+    }
+    
+    .info-section li:last-child {
+        border-bottom: none;
+    }
+    
+    .info-section li::before {
+        content: "✓";
+        color: #28a745;
+        font-weight: bold;
+        margin-left: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .dashboard-header p {
+            font-size: 1rem;
+        }
+        
+        .cards-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .dashboard-card {
+            padding: 20px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="permissions-dashboard">
+    <div class="dashboard-header">
+        <h1>مدیریت دسترسی‌ها و نقش‌ها</h1>
+        <p>از این بخش می‌توانید مجوزهای وظایف، نقش‌ها و کاربران را مدیریت کنید.</p>
+    </div>
+    
+    <div class="cards-container">
+        <a href="{% url 'permission_manager:task_permissions' %}" class="dashboard-card">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5C15 6.10457 14.1046 7 13 7H11C9.89543 7 9 6.10457 9 5Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h3 class="card-title">مجوزهای وظیفه</h3>
+            <p class="card-description">
+                تعریف و مدیریت مجوزهای مختلف برای وظایف سیستم. مشخص کنید هر مجوز شامل چه وظایفی است.
+            </p>
+            {% if task_permissions %}
+                <span class="card-count">{{ task_permissions|length }} مجوز</span>
+            {% endif %}
+        </a>
+        
+        <a href="{% url 'permission_manager:roles' %}" class="dashboard-card">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h3 class="card-title">نقش‌ها</h3>
+            <p class="card-description">
+                تعریف نقش‌های مختلف و تخصیص مجوزهای وظیفه به هر نقش. مثل مدیر، کارمند، حسابدار و...
+            </p>
+            {% if roles %}
+                <span class="card-count">{{ roles|length }} نقش</span>
+            {% endif %}
+        </a>
+        
+        <a href="{% url 'permission_manager:users' %}" class="dashboard-card">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9 11C11.2091 11 13 9.20914 13 7C13 4.79086 11.2091 3 9 3C6.79086 3 5 4.79086 5 7C5 9.20914 6.79086 11 9 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M23 21V19C22.9993 18.1137 22.7044 17.2528 22.1614 16.5523C21.6184 15.8519 20.8581 15.3516 20 15.13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16 3.13C16.8604 3.35031 17.623 3.85071 18.1676 4.55232C18.7122 5.25392 19.0078 6.11683 19.0078 7.005C19.0078 7.89318 18.7122 8.75608 18.1676 9.45769C17.623 10.1593 16.8604 10.6597 16 10.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h3 class="card-title">کاربران</h3>
+            <p class="card-description">
+                مدیریت کاربران سیستم و تخصیص نقش‌ها به آنها. کنترل دسترسی کاربران به بخش‌های مختلف.
+            </p>
+            {% if users %}
+                <span class="card-count">{{ users|length }} کاربر</span>
+            {% endif %}
+        </a>
+    </div>
+    
+    <div class="info-section">
+        <h3>راهنمای استفاده</h3>
+        <ul>
+            <li>ابتدا مجوزهای وظیفه را تعریف کنید و مشخص کنید هر مجوز شامل چه وظایفی است</li>
+            <li>سپس نقش‌های مختلف را ایجاد کرده و مجوزهای مورد نیاز را به آنها اختصاص دهید</li>
+            <li>در نهایت کاربران را ایجاد کرده و نقش‌های مناسب را به آنها تخصیص دهید</li>
+            <li>هر کاربر می‌تواند چندین نقش داشته باشد و دسترسی‌های او از ترکیب نقش‌هایش حاصل می‌شود</li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

@@ -4,7 +4,7 @@ from . import views
 app_name = 'permission_manager'
 
 urlpatterns = [
-    path('', views.task_permissions_view, name='home'),
+    path('', views.permissions_home_view, name='home'),
     path('task-permissions/', views.task_permissions_view, name='task_permissions'),
     path('roles/', views.roles_view, name='roles'),
     path('users/', views.users_view, name='users'),

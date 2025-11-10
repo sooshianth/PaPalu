@@ -13,6 +13,24 @@ def superuser_required(view_func):
 
 
 @superuser_required
+def permissions_home_view(request):
+    """Home view for permissions dashboard"""
+    from django.contrib.auth.models import User
+    from core.RBACModel import Role
+    
+    task_permissions = TaskPermission.objects.all()
+    roles = Role.objects.all()
+    users = User.objects.all()
+    
+    context = {
+        'task_permissions': task_permissions,
+        'roles': roles,
+        'users': users,
+    }
+    return render(request, 'PermissionManager/permissions_home.html', context)
+
+
+@superuser_required
 def task_permissions_view(request):
     """View for managing TaskPermissions"""
     task_permissions = TaskPermission.objects.all().order_by('name')
