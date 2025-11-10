@@ -4,3 +4,5 @@
 *.sql
 *.sqlite3
 */migrations/
+logs/
+!logs/.gitkeep

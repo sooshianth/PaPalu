@@ -1,0 +1,146 @@
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from core.RBACModel import TaskPermission
+from .decorators import superuser_required
+import json
+
+
+@superuser_required
+def roles_view(request):
+    """View for managing Roles"""
+    from core.RBACModel import Role
+    
+    roles = Role.objects.all().select_related('task_permission').order_by('name')
+    task_permissions = TaskPermission.objects.all().order_by('name')
+    
+    context = {
+        'roles': roles,
+        'task_permissions': task_permissions,
+        'active_page': 'roles'
+    }
+    return render(request, 'perm_manager/roles.html', context)
+
+
+@superuser_required
+@require_http_methods(["POST"])
+def add_role(request):
+    """API endpoint to add a new role"""
+    from core.RBACModel import Role
+    
+    try:
+        data = json.loads(request.body)
+        name = data.get('name', '').strip()
+        description = data.get('description', '').strip()
+        task_permission_id = data.get('task_permission_id')
+        
+        # Validate name
+        if not name:
+            return JsonResponse({'status': 'error', 'message': 'Name is required'}, status=400)
+        
+        if len(name) > 50:
+            return JsonResponse({'status': 'error', 'message': 'Name too long (max 50 characters)'}, status=400)
+        
+        # Check for dangerous characters
+        if any(char in name for char in ['<', '>', '"', "'"]):
+            return JsonResponse({'status': 'error', 'message': 'Invalid characters in name'}, status=400)
+        
+        if Role.objects.filter(name=name).exists():
+            return JsonResponse({'status': 'error', 'message': 'Name already exists'}, status=400)
+        
+        # Validate task permission
+        task_permission = None
+        if task_permission_id:
+            try:
+                task_permission = TaskPermission.objects.get(id=int(task_permission_id))
+            except (TaskPermission.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': 'Invalid task permission'}, status=400)
+        
+        role = Role.objects.create(
+            name=name,
+            task_permission=task_permission,
+            description=description if description else None
+        )
+        
+        return JsonResponse({
+            'status': 'success',
+            'id': role.id,
+            'name': role.name,
+            'description': role.description or ''
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=400)
+
+
+@superuser_required
+@require_http_methods(["POST"])
+def update_role(request):
+    """API endpoint to update role task permission or description"""
+    from core.RBACModel import Role
+    
+    try:
+        data = json.loads(request.body)
+        role_id = data.get('id')
+        task_permission_id = data.get('task_permission_id')
+        description = data.get('description', '').strip()
+        
+        # Validate ID
+        if not role_id or not isinstance(role_id, int):
+            return JsonResponse({'status': 'error', 'message': 'Valid ID is required'}, status=400)
+        
+        try:
+            role = Role.objects.get(id=role_id)
+        except Role.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Role not found'}, status=404)
+        
+        # Update task permission if provided
+        if task_permission_id is not None:
+            if task_permission_id == '':
+                role.task_permission = None
+            else:
+                try:
+                    task_permission = TaskPermission.objects.get(id=int(task_permission_id))
+                    role.task_permission = task_permission
+                except (TaskPermission.DoesNotExist, ValueError):
+                    return JsonResponse({'status': 'error', 'message': 'Invalid task permission'}, status=400)
+        
+        # Update description if provided
+        if 'description' in data:
+            role.description = description if description else None
+        
+        role.save()
+        
+        return JsonResponse({'status': 'success'})
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=400)
+
+
+@superuser_required
+@require_http_methods(["POST"])
+def delete_role(request):
+    """API endpoint to delete a role"""
+    from core.RBACModel import Role
+    
+    try:
+        data = json.loads(request.body)
+        role_id = data.get('id')
+        
+        # Validate ID
+        if not role_id or not isinstance(role_id, int):
+            return JsonResponse({'status': 'error', 'message': 'Valid ID is required'}, status=400)
+        
+        role = Role.objects.get(id=role_id)
+        role.delete()
+        
+        return JsonResponse({'status': 'success'})
+    except Role.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Role not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': 'Server error'}, status=400)
+

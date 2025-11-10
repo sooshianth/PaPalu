@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize
     initSidebar();
     initNavigation();
+    initUserMenu();
     
     /**
      * Initialize sidebar toggle functionality
@@ -174,6 +175,36 @@ document.addEventListener('DOMContentLoaded', function() {
             addRippleEffect(this, e);
         });
     });
+    
+    /**
+     * Initialize user menu dropdown
+     */
+    function initUserMenu() {
+        const userMenuToggle = document.getElementById('userMenuToggle');
+        const userMenu = document.getElementById('userMenu');
+        
+        if (!userMenuToggle || !userMenu) return;
+        
+        // Toggle dropdown on button click
+        userMenuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            userMenu.classList.toggle('active');
+        });
+        
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!userMenu.contains(e.target)) {
+                userMenu.classList.remove('active');
+            }
+        });
+        
+        // Close dropdown on escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && userMenu.classList.contains('active')) {
+                userMenu.classList.remove('active');
+            }
+        });
+    }
     
     /**
      * Handle mobile menu behavior

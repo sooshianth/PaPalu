@@ -1,18 +1,23 @@
 
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load environment variables from .env file
+load_dotenv(BASE_DIR / '.env')
+
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3vlymx-erfjbe&*g(z)8)q1o*!!nr%l@v&nvejmmwuuhm!qh6i'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-3vlymx-erfjbe&*g(z)8)q1o*!!nr%l@v&nvejmmwuuhm!qh6i')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = ['192.168.100.17']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '192.168.100.17').split(',')
 
 
 
@@ -29,7 +34,8 @@ INSTALLED_APPS = [
     
     # Local apps
     'core',
-    'PermissionManager',
+    'authentication',
+    'perm_manager',
     'access',
 ]
 
@@ -107,6 +113,73 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/admin/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# شماره‌های تلفن ادمین‌ها (برای دسترسی superuser)
+# می‌توانید این لیست را در فایل .env تنظیم کنید
+# مثال در .env: ADMIN_PHONE_NUMBERS=09123456789,09987654321
+admin_phones_str = os.getenv('ADMIN_PHONE_NUMBERS', '')
+ADMIN_PHONE_NUMBERS = [phone.strip() for phone in admin_phones_str.split(',') if phone.strip()] if admin_phones_str else []
+
+# تنظیمات SMS برای ارسال کد تایید
+SMS_API_KEY = os.getenv('SMS_API_KEY', '')
+SMS_LINE_NUMBER = os.getenv('SMS_LINE_NUMBER', '')
+
+# کد مستر برای ورود (برای تست و دسترسی اضطراری)
+# اگر این کد وارد شود، بدون نیاز به OTP می‌توان وارد شد
+OTP_MASTER_KEY = os.getenv('OTP_MASTER_KEY', '')
+
+# ایجاد پوشه logs در صورت عدم وجود
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple'
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'auth_form': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'auth_logout': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
 
 # Security settings
 SECURE_BROWSER_XSS_FILTER = True

@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class PermissionmanagerConfig(AppConfig):
+class PermManagerConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'PermissionManager'
+    name = 'perm_manager'

@@ -16,11 +16,68 @@
                 <span class="hamburger-icon"></span>
             </button>
             <div class="logo">
-                <h1>پاپالو</h1>
+                <h1>سیمرغ‌افزار</h1>
             </div>
             <div class="header-actions">
-                <!-- Add user profile, notifications, etc. here -->
-                <span class="user-greeting">خوش آمدید</span>
+                <!-- User Profile Dropdown -->
+                <div class="user-menu" id="userMenu">
+                    <button class="user-menu-toggle" id="userMenuToggle" aria-label="User Menu">
+                        <div class="user-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                        <span class="user-name">
+                            {% if user.is_authenticated %}
+                                {{ user.get_full_name|default:user.username }}
+                            {% else %}
+                                کاربر
+                            {% endif %}
+                        </span>
+                        <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                    <div class="user-menu-dropdown" id="userMenuDropdown">
+                        <div class="user-menu-header">
+                            <div class="user-menu-info">
+                                <div class="user-menu-name">
+                                    {% if user.is_authenticated %}
+                                        {{ user.get_full_name|default:user.username }}
+                                    {% else %}
+                                        کاربر
+                                    {% endif %}
+                                </div>
+                                <div class="user-menu-email">
+                                    {% if user.is_authenticated %}
+                                        {{ user.email|default:"ایمیل ثبت نشده" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="user-menu-divider"></div>
+                        <div class="user-menu-items">
+                            <a href="{% url 'home' %}" class="user-menu-item">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span>صفحه اصلی</span>
+                            </a>
+                            <a href="{% url 'logout' %}" class="user-menu-item user-menu-item-danger">
+                                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span>خروج</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
@@ -97,12 +154,12 @@
         </div>
     </main>
 
-    <!-- Footer -->
+    {% comment %} <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
             <p>&copy; 2025 پاپالو. تمامی حقوق محفوظ است.</p>
         </div>
-    </footer>
+    </footer> {% endcomment %}
 
     <!-- Mobile Bottom Navigation -->
     <nav class="mobile-nav">
