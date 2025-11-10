@@ -16,11 +16,22 @@ def superuser_required(view_func):
 def task_permissions_view(request):
     """View for managing TaskPermissions"""
     task_permissions = TaskPermission.objects.all().order_by('name')
-    task_choices = [(code, label) for code, label in TaskChoices.choices]
+    
+    # Group tasks by category for display
+    grouped_tasks = {}
+    for code, label in TaskChoices.choices:
+        category = code.split('.')[0] if '.' in code else 'general'
+        if category not in grouped_tasks:
+            grouped_tasks[category] = []
+        grouped_tasks[category].append((code, label))
+    
+    # Sort categories for consistent display
+    category_order = ['general', 'sales', 'production', 'warehouse', 'financial', 'administration']
+    grouped_choices = [(cat, grouped_tasks.get(cat, [])) for cat in category_order if cat in grouped_tasks]
     
     context = {
         'task_permissions': task_permissions,
-        'task_choices': task_choices,
+        'grouped_choices': grouped_choices,
         'active_page': 'taskpermissions'
     }
     return render(request, 'PermissionManager/task_permissions.html', context)

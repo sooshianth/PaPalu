@@ -177,10 +177,20 @@
 <div class="table-container">
     <table id="permissionsTable">
         <thead>
+            <tr style="background-color: #e9ecef;">
+                <th style="font-size: 0.8rem; color: #666; font-style: italic;">Categories →</th>
+                {% for category, tasks in grouped_choices %}
+                <th colspan="{{ tasks|length }}" style="font-size: 0.85rem; color: #2d7a4f; font-weight: 600; border-left: 2px solid #2d7a4f; text-align: center; text-transform: capitalize;">
+                    {{ category }}
+                </th>
+                {% endfor %}
+            </tr>
             <tr>
                 <th>Permission Name</th>
-                {% for code, label in task_choices %}
-                <th class="task-label" title="{{ label }}">{{ label }}</th>
+                {% for category, tasks in grouped_choices %}
+                    {% for code, label in tasks %}
+                    <th class="task-label" title="{{ label }}">{{ label }}</th>
+                    {% endfor %}
                 {% endfor %}
             </tr>
         </thead>
@@ -193,8 +203,10 @@
                         <button class="add-btn" id="addBtn" title="Add new permission">+</button>
                     </div>
                 </td>
-                {% for code, label in task_choices %}
-                <td></td>
+                {% for category, tasks in grouped_choices %}
+                    {% for code, label in tasks %}
+                    <td></td>
+                    {% endfor %}
                 {% endfor %}
             </tr>
             
@@ -207,13 +219,15 @@
                         <button class="delete-btn" data-id="{{ perm.id }}" data-name="{{ perm.name|escape }}">Delete</button>
                     </div>
                 </td>
-                {% for code, label in task_choices %}
-                <td class="checkbox-cell">
-                    <input type="checkbox" 
-                           data-perm-id="{{ perm.id }}" 
-                           data-task="{{ code|escape }}"
-                           {% if code in perm.tasks %}checked{% endif %}>
-                </td>
+                {% for category, tasks in grouped_choices %}
+                    {% for code, label in tasks %}
+                    <td class="checkbox-cell">
+                        <input type="checkbox" 
+                               data-perm-id="{{ perm.id }}" 
+                               data-task="{{ code|escape }}"
+                               {% if code in perm.tasks %}checked{% endif %}>
+                    </td>
+                    {% endfor %}
                 {% endfor %}
             </tr>
             {% endfor %}
@@ -453,6 +467,20 @@
                     unmarkPermChanged(permId);
                 }
             });
+        });
+    });
+    
+    // Make entire cell clickable
+    document.querySelectorAll('.checkbox-cell').forEach(cell => {
+        cell.addEventListener('click', function(e) {
+            // Don't trigger if clicking directly on the checkbox
+            if (e.target.type === 'checkbox') return;
+            
+            const checkbox = this.querySelector('input[type="checkbox"]');
+            if (checkbox) {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            }
         });
     });
 </script>
