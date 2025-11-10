@@ -17,7 +17,7 @@ class OrderItem(models.Model):
     
     # محصول
     product = models.ForeignKey(
-        'ProductFolder.Product',
+        'Product',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

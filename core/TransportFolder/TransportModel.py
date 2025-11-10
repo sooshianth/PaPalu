@@ -15,9 +15,7 @@ class Transport(models.Model):
     waybill_number = models.CharField(
         max_length=50,
         primary_key=True,
-        verbose_name='شماره بارنامه',
-        null=True,
-        blank=True
+        verbose_name='شماره بارنامه'
     )
     
     allocation_id = models.CharField(
@@ -33,9 +31,7 @@ class Transport(models.Model):
         null=True,
         blank=True,
         related_name='transports',
-        verbose_name='شخص راننده',
-        null=True,
-        blank=True
+        verbose_name='شخص راننده'
     )
     
     delivery_postal_code = models.CharField(

@@ -62,9 +62,7 @@ class ProductInfo(models.Model):
         null=True,
         blank=True,
         related_name='transport_product_infos',
-        verbose_name='محصول',
-        null=True,
-        blank=True
+        verbose_name='محصول'
     )
     
     raw_material = models.ForeignKey(
@@ -73,9 +71,7 @@ class ProductInfo(models.Model):
         null=True,
         blank=True,
         related_name='transport_product_infos',
-        verbose_name='مواد اولیه',
-        null=True,
-        blank=True
+        verbose_name='مواد اولیه'
     )
     
     packaging_type = models.CharField(

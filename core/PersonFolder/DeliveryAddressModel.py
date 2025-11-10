@@ -21,8 +21,6 @@ class DeliveryAddress(models.Model):
     postal_code = models.CharField(
         max_length=10,
         verbose_name='کد پستی تحویل',
-        null=True,
-        blank=True,
         primary_key=True
     )
     recipient_name = models.CharField(

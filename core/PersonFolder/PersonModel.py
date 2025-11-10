@@ -27,10 +27,8 @@ class Person(models.Model):
     # فیلدهای پایه
     national_id = models.CharField(
         max_length=10,
-        primary_key=True, 
-        verbose_name='کد ملی', 
-        null=True, 
-        blank=True)
+        primary_key=True,
+        verbose_name='کد ملی')
         
     type = models.CharField(
         max_length=20, 

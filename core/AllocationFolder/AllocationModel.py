@@ -19,11 +19,8 @@ class Allocation(models.Model):
     # Basic Info fields (directly in main model)
     allocation_number = models.CharField(
         max_length=100,
-        unique=True,
         primary_key=True,
-        verbose_name="شماره تخصیص",
-        null=True,
-        blank=True
+        verbose_name="شماره تخصیص"
     )
     order = models.ForeignKey(
         Order,

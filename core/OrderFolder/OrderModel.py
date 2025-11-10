@@ -34,9 +34,6 @@ class Order(models.Model):
     # شماره سفارش
     order_number = models.CharField(
         max_length=100,
-        unique=True,
-        null=True,
-        blank=True,
         primary_key=True,
         verbose_name='شماره سفارش'
     )

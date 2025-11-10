@@ -18,9 +18,7 @@ class TransactionDocument(models.Model):
     accounting_document_number = models.CharField(
         max_length=50,
         primary_key=True,
-        verbose_name='شماره سند حسابداری',
-        null=True,
-        blank=True
+        verbose_name='شماره سند حسابداری'
     )
 
     # ForeignKey به Settlement
