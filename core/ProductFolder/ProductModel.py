@@ -73,7 +73,9 @@ class Product(models.Model):
     )
     
     invoice_description = models.TextField(
-        verbose_name='شرح محصول برای پیش فاکتور'
+        verbose_name='شرح محصول برای پیش فاکتور',
+        null=True,
+        blank=True
     )
     
     image = models.ImageField(
@@ -84,25 +86,35 @@ class Product(models.Model):
     )
     
     full_description = models.TextField(
-        verbose_name='شرح کامل محصول'
+        verbose_name='شرح کامل محصول',
+        null=True,
+        blank=True
     )
     
     lab_analysis = models.TextField(
-        verbose_name='آنالیز آزمایشگاهی محصول'
+        verbose_name='آنالیز آزمایشگاهی محصول',
+        null=True,
+        blank=True
     )
     
     original_selection = models.TextField(
-        verbose_name='گزیده اصلی(مثلا: موردی روز 1 تا 10 مقدار ماده اولیه)'
+        verbose_name='گزیده اصلی(مثلا: موردی روز 1 تا 10 مقدار ماده اولیه)',
+        null=True,
+        blank=True
     )
     
     is_custom = models.BooleanField(
         default=False,
-        verbose_name='محصول سفارشی است؟'
+        verbose_name='محصول سفارشی است؟',
+        null=True,
+        blank=True
     )
     
     main_unit = models.CharField(
         max_length=50,
-        verbose_name='واحد شمارش اصلی'
+        verbose_name='واحد شمارش اصلی',
+        null=True,
+        blank=True
     )
     
     secondary_unit = models.CharField(

@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"ایجاد سفارش" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--light-green);
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .mb-3 { margin-bottom: 1rem; }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-4 {
+        flex: 0 0 33.3333%;
+        max-width: 33.3333%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-6, .col-md-4, .col-md-3 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        .form-card { padding: 20px; }
+        .form-section { padding: 15px; }
+        .form-actions { flex-direction: column; }
+        .btn { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title|default:"ایجاد سفارش جدید" }}</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- بخش اطلاعات اجباری -->
+        <div class="form-section">
+            <h5>اطلاعات اجباری</h5>
+            <div class="row">
+                {% if accessible_fields_main.order_number %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.order_number.label }}</label>
+                    {{ form.order_number }}
+                    {% if form.order_number.errors %}
+                        <div class="text-danger">{{ form.order_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields_main.freight_payment_type %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.freight_payment_type.label }}</label>
+                    {{ form.freight_payment_type }}
+                    {% if form.freight_payment_type.errors %}
+                        <div class="text-danger">{{ form.freight_payment_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- بخش اطلاعات اختیاری -->
+        <div class="form-section">
+            <h5>اطلاعات اختیاری</h5>
+            <div class="row">
+                {% if accessible_fields_main.order_type %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.order_type.label }}</label>
+                    {{ form.order_type }}
+                    {% if form.order_type.errors %}
+                        <div class="text-danger">{{ form.order_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields_main.registration_source %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.registration_source.label }}</label>
+                    {{ form.registration_source }}
+                    {% if form.registration_source.errors %}
+                        <div class="text-danger">{{ form.registration_source.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- بخش اطلاعات دیدنی -->
+        <div class="form-section">
+            <h5>اطلاعات نمایشی</h5>
+            <div class="row">
+                {% if accessible_fields_main.status %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.status.label }}</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="text-danger">{{ form.status.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields_main.total_order_weight %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.total_order_weight.label }}</label>
+                    {{ form.total_order_weight }}
+                    {% if form.total_order_weight.errors %}
+                        <div class="text-danger">{{ form.total_order_weight.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- بخش اقلام سفارش -->
+        <div class="form-section">
+            <h5>اقلام سفارش</h5>
+
+            {{ item_formset.management_form }}
+
+            {% for f in item_formset.forms %}
+                <div class="row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px;">
+                    <!-- اجباری های قلم -->
+                    {% if accessible_fields_item.product %}
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label required-field">{{ f.product.label }}</label>
+                        {{ f.product }}
+                        {% if f.product.errors %}
+                            <div class="text-danger">{{ f.product.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if accessible_fields_item.requested_unit %}
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label required-field">{{ f.requested_unit.label }}</label>
+                        {{ f.requested_unit }}
+                        {% if f.requested_unit.errors %}
+                            <div class="text-danger">{{ f.requested_unit.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if accessible_fields_item.quantity %}
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label required-field">{{ f.quantity.label }}</label>
+                        {{ f.quantity }}
+                        {% if f.quantity.errors %}
+                            <div class="text-danger">{{ f.quantity.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if accessible_fields_item.unit_price %}
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label required-field">{{ f.unit_price.label }}</label>
+                        {{ f.unit_price }}
+                        {% if f.unit_price.errors %}
+                            <div class="text-danger">{{ f.unit_price.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- اختیاری های قلم -->
+                    {% if accessible_fields_item.discount %}
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ f.discount.label }}</label>
+                        {{ f.discount }}
+                        {% if f.discount.errors %}
+                            <div class="text-danger">{{ f.discount.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if accessible_fields_item.additional_charges %}
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ f.additional_charges.label }}</label>
+                        {{ f.additional_charges }}
+                        {% if f.additional_charges.errors %}
+                            <div class="text-danger">{{ f.additional_charges.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if accessible_fields_item.vat %}
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">{{ f.vat.label }}</label>
+                        {{ f.vat }}
+                        {% if f.vat.errors %}
+                            <div class="text-danger">{{ f.vat.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            {% if item_formset.non_form_errors %}
+                {% for err in item_formset.non_form_errors %}
+                    <div class="text-danger">{{ err }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- دکمه‌ها -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ثبت سفارش</button>
+            <a href="{% url 'sales:customer_list' %}" class="btn btn-secondary">انصراف</a>
+        </div>
+
+        <!-- تسک بعد -->
+        <div class="form-section" style="margin-top: 25px;">
+            <h5>تسک بعد</h5>
+            <div>{{ next_task_label|default:"صدور پیش فاکتور" }}</div>
+        </div>
+    </form>
+</div>
+{% endblock %}
