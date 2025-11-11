@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
+from django.db.models import Sum
 from core.RBACModel import user_has_task, TaskChoices
 from sales.forms.create_order_form import (
     CreateOrderForm,
@@ -10,6 +11,9 @@ from sales.forms.create_order_form import (
     get_accessible_order_fields,
 )
 from core.OrderFolder.OrderModel import Order
+from core.OrderFolder.OrderItemModel import OrderItem
+from access.models.FieldAccessUserModel import FieldAccessRule
+from django.contrib.contenttypes.models import ContentType
 
 
 @login_required
@@ -104,5 +108,66 @@ def create_order_view(request):
         'next_task_code': TaskChoices.SALES_ISSUE_PROFORMA.value,
     }
     return render(request, 'sales/create_order.html', context)
+
+
+def get_accessible_order_list_fields(user):
+    """
+    بررسی دسترسی کاربر به فیلدهای نمایش سفارش
+    """
+    if user.is_superuser:
+        return {
+            'status': True,
+            'total_purchase_cost': True,
+            'total_order_weight': True,
+        }
+
+    # مدل‌ها
+    from core.OrderFolder.OrderModel import Order as OrderModel
+    from core.OrderFolder.OrderItemModel import OrderItem as OrderItemModel
+
+    mapping = {
+        'status': (OrderModel, 'status'),
+        'total_order_weight': (OrderModel, 'total_order_weight'),
+        'total_purchase_cost': (OrderItemModel, 'total_purchase_cost'),
+    }
+
+    accessible = {}
+    for display_name, (model_class, model_field_name) in mapping.items():
+        content_type = ContentType.objects.get_for_model(model_class)
+        rule = FieldAccessRule.objects.filter(
+            user=user,
+            content_type=content_type,
+            field_name=model_field_name,
+            access_type='view'
+        ).first()
+        accessible[display_name] = True if rule is None else rule.allowed
+    return accessible
+
+
+@login_required
+def order_list_view(request):
+    """
+    لیست سفارش‌ها با کنترل دسترسی و نمایش فیلدهای قابل مشاهده
+    """
+    if not user_has_task(request.user, TaskChoices.SALES_VIEW_ORDER_LIST.value):
+        messages.error(request, 'شما دسترسی به مشاهده لیست سفارش‌ها ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
+    if request.user.is_superuser:
+        orders_qs = Order.objects.all().order_by('-created_at')
+    else:
+        orders_qs = Order.objects.filter(registered_by=request.user).order_by('-created_at')
+
+    # محاسبه مجموع بهای تمام شده خرید برای هر سفارش با annotate
+    orders_qs = orders_qs.annotate(total_purchase_cost=Sum('order_items__total_purchase_cost'))
+
+    accessible_fields = get_accessible_order_list_fields(request.user)
+
+    context = {
+        'orders': orders_qs,
+        'accessible_fields': accessible_fields,
+        'page_title': 'لیست سفارش‌ها',
+    }
+    return render(request, 'sales/order_list.html', context)
 
 

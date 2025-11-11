@@ -9,4 +9,5 @@ urlpatterns = [
     path('customer/list/', customer_views.customer_list_view, name='customer_list'),
     # مسیرهای سفارش
     path('order/create/', order_views.create_order_view, name='order_create'),
+    path('order/list/', order_views.order_list_view, name='order_list'),
 ]
