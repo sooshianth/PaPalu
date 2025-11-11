@@ -52,7 +52,7 @@ class CustomUserAdmin(UserAdmin):
         try:
             user = User.objects.get(pk=user_id)
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-            return redirect('/CRM/')
+            return redirect('/home/')
         except User.DoesNotExist:
             return redirect('/admin/auth/user/')
 
