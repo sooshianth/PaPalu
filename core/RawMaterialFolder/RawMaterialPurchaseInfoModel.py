@@ -85,8 +85,8 @@ class RawMaterialPurchaseInfo(models.Model):
     )
 
     class Meta:
-        verbose_name = "اطلاعات خرید"
-        verbose_name_plural = "اطلاعات خرید"
+        verbose_name = "مواد اولیه | اطلاعات خرید"
+        verbose_name_plural = "مواد اولیه | اطلاعات خرید"
 
     def __str__(self):
         if self.raw_material:

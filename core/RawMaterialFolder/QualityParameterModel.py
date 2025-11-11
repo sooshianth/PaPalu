@@ -12,8 +12,8 @@ class QualityParameter(models.Model):
     )
     
     class Meta:
-        verbose_name = "پارامتر کیفیت"
-        verbose_name_plural = "پارامترهای کیفیت"
+        verbose_name = "مواد اولیه | پارامتر کیفیت"
+        verbose_name_plural = "مواد اولیه | پارامترهای کیفیت"
         ordering = ['name']
     
     def __str__(self):

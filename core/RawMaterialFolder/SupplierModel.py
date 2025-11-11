@@ -12,8 +12,8 @@ class Supplier(models.Model):
     )
     
     class Meta:
-        verbose_name = "تامین‌کننده"
-        verbose_name_plural = "تامین‌کنندگان"
+        verbose_name = "مواد اولیه | تامین‌کننده"
+        verbose_name_plural = "مواد اولیه | تامین‌کنندگان"
         ordering = ['name']
     
     def __str__(self):

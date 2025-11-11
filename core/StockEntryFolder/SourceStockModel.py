@@ -53,8 +53,8 @@ class SourceStock(models.Model):
     )
     
     class Meta:
-        verbose_name = 'صب بخیر (منبع)'
-        verbose_name_plural = 'صب بخیرها (منبع)'
+        verbose_name = 'انبار | صب بخیر (منبع)'
+        verbose_name_plural = 'انبار | صب بخیرها (منبع)'
     
     def __str__(self):
         source = self.from_product or self.from_raw_material

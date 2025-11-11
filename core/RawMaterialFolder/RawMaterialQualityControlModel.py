@@ -143,8 +143,8 @@ class RawMaterialQualityControl(models.Model):
     )
 
     class Meta:
-        verbose_name = "کنترل کیفیت"
-        verbose_name_plural = "کنترل کیفیت"
+        verbose_name = "مواد اولیه | کنترل کیفیت"
+        verbose_name_plural = "مواد اولیه | کنترل کیفیت"
 
     def __str__(self):
         parameter_names = ", ".join([p.name for p in self.quality_parameters.all()[:3]])

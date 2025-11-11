@@ -38,8 +38,8 @@ class BOM(models.Model):
     )
     
     class Meta:
-        verbose_name = 'ماده اولیه'
-        verbose_name_plural = 'مواد اولیه (BOM)'
+        verbose_name = 'محصول | ماده اولیه'
+        verbose_name_plural = 'محصول | ماده اولیه (BOM)'
     
     def __str__(self):
         return f"{self.raw_material} - {self.production_info.product.name}"

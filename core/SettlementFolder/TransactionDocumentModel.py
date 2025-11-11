@@ -100,8 +100,8 @@ class TransactionDocument(models.Model):
     )
 
     class Meta:
-        verbose_name = 'سند تراکنش'
-        verbose_name_plural = 'اسناد تراکنش'
+        verbose_name = 'تسویه | سند تراکنش'
+        verbose_name_plural = 'تسویه | اسناد تراکنش'
         ordering = ['-accounting_document_number', 'document_number']
 
     def __str__(self):

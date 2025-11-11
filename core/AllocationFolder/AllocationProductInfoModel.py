@@ -37,8 +37,8 @@ class AllocationProductInfo(models.Model):
     )
     
     class Meta:
-        verbose_name = "اطلاعات محصولات تخصیص"
-        verbose_name_plural = "اطلاعات محصولات تخصیص"
+        verbose_name = "تخصیص | اطلاعات محصولات"
+        verbose_name_plural = "تخصیص | اطلاعات محصولات"
     
     def __str__(self):
         product_display = self.product or "نامشخص"

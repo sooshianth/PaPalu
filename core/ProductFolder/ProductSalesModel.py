@@ -70,8 +70,8 @@ class ProductSales(models.Model):
     )
     
     class Meta:
-        verbose_name = 'اطلاعات فروش'
-        verbose_name_plural = 'اطلاعات فروش'
+        verbose_name = 'محصول | اطلاعات فروش'
+        verbose_name_plural = 'محصول | اطلاعات فروش'
     
     def __str__(self):
         return f"اطلاعات فروش - {self.product.name}"

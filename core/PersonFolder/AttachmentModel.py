@@ -13,8 +13,8 @@ class Attachment(models.Model):
     )
 
     class Meta:
-        verbose_name = 'پیوست'
-        verbose_name_plural = 'پیوست ها'
+        verbose_name = 'شخص | پیوست'
+        verbose_name_plural = 'شخص | پیوست ها'
         ordering = ['person']
     
 

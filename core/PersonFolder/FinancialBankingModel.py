@@ -62,8 +62,8 @@ class FinancialBanking(models.Model):
     )
 
     class Meta:
-        verbose_name = 'مالی بانکی'
-        verbose_name_plural = 'مالی بانکی'
+        verbose_name = 'شخص | مالی بانکی'
+        verbose_name_plural = 'شخص | مالی بانکی'
         ordering = ['person']
 
     def __str__(self):

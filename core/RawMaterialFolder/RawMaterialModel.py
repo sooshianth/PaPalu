@@ -126,8 +126,8 @@ class RawMaterial(models.Model):
     )
 
     class Meta:
-        verbose_name = "ماده اولیه"
-        verbose_name_plural = "مواد اولیه"
+        verbose_name = "مواد اولیه | مواد اولیه"
+        verbose_name_plural = "مواد اولیه | مواد اولیه"
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['raw_material_id']),

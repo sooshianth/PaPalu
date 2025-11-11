@@ -117,8 +117,8 @@ class Transport(models.Model):
     )
 
     class Meta:
-        verbose_name = 'حمل'
-        verbose_name_plural = 'حمل‌ها'
+        verbose_name = 'حمل | حمل ها'
+        verbose_name_plural = 'حمل | حمل ها'
         ordering = ['-waybill_date', 'waybill_number']
 
     def __str__(self):

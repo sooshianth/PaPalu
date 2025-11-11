@@ -34,8 +34,8 @@ class BankAccount(models.Model):
     )
 
     class Meta:
-        verbose_name = 'شماره حساب بانکی'
-        verbose_name_plural = 'شماره حساب‌های بانکی'
+        verbose_name = 'شخص | حساب بانکی'
+        verbose_name_plural = 'شخص | حساب بانکی'
         ordering = ['account_number']
 
 

@@ -13,8 +13,8 @@ class SocialNetwork(models.Model):
     )
 
     class Meta:
-        verbose_name = 'شبکه اجتماعی'
-        verbose_name_plural = 'شبکه های اجتماعی'
+        verbose_name = 'شخص | شبکه اجتماعی'
+        verbose_name_plural = 'شخص | شبکه های اجتماعی'
         ordering = ['person']
     
 

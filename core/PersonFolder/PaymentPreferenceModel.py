@@ -13,8 +13,8 @@ class PaymentPreference(models.Model):
     )
 
     class Meta:
-        verbose_name = 'ترجیحات پرداخت'
-        verbose_name_plural = 'ترجیحات پرداخت'
+        verbose_name = 'شخص | ترجیحات پرداخت'
+        verbose_name_plural = 'شخص | ترجیحات پرداخت'
         ordering = ['person']
     
 

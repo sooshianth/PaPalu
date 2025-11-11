@@ -99,8 +99,8 @@ class DocumentRelation(models.Model):
     )
     
     class Meta:
-        verbose_name = 'ارتباط با اسناد'
-        verbose_name_plural = 'ارتباطات با اسناد'
+        verbose_name = 'سفارش | ارتباط با اسناد'
+        verbose_name_plural = 'سفارش | ارتباطات با اسناد'
         ordering = ['-created_at']
     
     def __str__(self):

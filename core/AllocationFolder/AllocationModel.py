@@ -72,8 +72,8 @@ class Allocation(models.Model):
     )
     
     class Meta:
-        verbose_name = "تخصیص"
-        verbose_name_plural = "تخصیص‌ها"
+        verbose_name = "تخصیص | تخصیص "
+        verbose_name_plural = "تخصیص | تخصیص ها"
         ordering = ['-allocation_priority', '-created_at']
     
     def __str__(self):

@@ -19,8 +19,8 @@ class PhysicalShape(models.Model):
     )
 
     class Meta:
-        verbose_name = 'شکل فیزیکی'
-        verbose_name_plural = 'اشکال فیزیکی'
+        verbose_name = 'محصول | شکل فیزیکی'
+        verbose_name_plural = 'محصول | اشکال فیزیکی'
 
     def __str__(self):
         return self.name
@@ -137,8 +137,8 @@ class Product(models.Model):
     )
     
     class Meta:
-        verbose_name = 'محصول'
-        verbose_name_plural = 'محصولات'
+        verbose_name = 'محصول | محصولات'
+        verbose_name_plural = 'محصول | محصولات'
         ordering = ['-created_at']
     
     def __str__(self):

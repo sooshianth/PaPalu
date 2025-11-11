@@ -41,8 +41,8 @@ class AllocationSchedulingInfo(models.Model):
     )
     
     class Meta:
-        verbose_name = "اطلاعات زمانبندی و برنامه اجرا"
-        verbose_name_plural = "اطلاعات زمانبندی و برنامه اجرا"
+        verbose_name = "تخصیص | اطلاعات زمانبندی و برنامه اجرا"
+        verbose_name_plural = "تخصیص | اطلاعات زمانبندی و برنامه اجرا"
     
     def __str__(self):
         if self.allocation_received_time:

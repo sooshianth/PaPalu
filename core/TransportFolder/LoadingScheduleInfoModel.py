@@ -40,8 +40,8 @@ class LoadingScheduleInfo(models.Model):
     )
 
     class Meta:
-        verbose_name = 'اطلاعات زمانبندی'
-        verbose_name_plural = 'اطلاعات زمانبندی‌ها'
+        verbose_name = 'حمل | اطلاعات زمانبندی'
+        verbose_name_plural = 'حمل | اطلاعات زمانبندی‌ها'
         ordering = ['transport', 'vehicle_entry_time']
 
     def __str__(self):

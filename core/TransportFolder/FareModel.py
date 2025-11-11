@@ -99,8 +99,8 @@ class Fare(models.Model):
     )
 
     class Meta:
-        verbose_name = 'کرایه'
-        verbose_name_plural = 'کرایه‌ها'
+        verbose_name = 'حمل | کرایه'
+        verbose_name_plural = 'حمل | کرایه‌ها'
         ordering = ['transport']
 
     def __str__(self):

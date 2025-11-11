@@ -21,8 +21,8 @@ class Representative(models.Model):
     )
 
     class Meta:
-        verbose_name = 'نماینده'
-        verbose_name_plural = 'نمایندگان'
+        verbose_name = 'شخص | نماینده'
+        verbose_name_plural = 'شخص | نمایندگان'
         ordering = ['person', 'name']
 
     def __str__(self):

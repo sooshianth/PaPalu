@@ -13,8 +13,8 @@ class PurchasePreference(models.Model):
     )
 
     class Meta:
-        verbose_name = 'ترجیحات خرید'
-        verbose_name_plural = 'ترجیحات خرید'
+        verbose_name = 'شخص | ترجیحات خرید'
+        verbose_name_plural = 'شخص | ترجیحات خرید'
         ordering = ['person']
     
 

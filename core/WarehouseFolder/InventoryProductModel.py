@@ -58,8 +58,8 @@ class InventoryProduct(models.Model):
     )
     
     class Meta:
-        verbose_name = 'محصول موجودیت'
-        verbose_name_plural = 'محصولات موجودیت'
+        verbose_name = 'انبار | محصول موجودیت'
+        verbose_name_plural = 'انبار | محصولات موجودیت'
         ordering = ['product']
         unique_together = ['inventory', 'product']
     

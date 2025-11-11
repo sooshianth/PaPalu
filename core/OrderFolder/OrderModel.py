@@ -143,8 +143,8 @@ class Order(models.Model):
     )
     
     class Meta:
-        verbose_name = 'سفارش'
-        verbose_name_plural = 'سفارش‌ها'
+        verbose_name = 'سفارش | سفارش ها'
+        verbose_name_plural = 'سفارش | سفارش ها'
         ordering = ['-created_at']
     
     def __str__(self):

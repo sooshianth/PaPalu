@@ -65,8 +65,8 @@ class DeliveryAddress(models.Model):
     )
 
     class Meta:
-        verbose_name = 'آدرس تحویل'
-        verbose_name_plural = 'آدرس های تحویل'
+        verbose_name = 'شخص | آدرس تحویل'
+        verbose_name_plural = 'شخص | آدرس های تحویل'
         ordering = ['person', 'province', 'city']
 
     def __str__(self):

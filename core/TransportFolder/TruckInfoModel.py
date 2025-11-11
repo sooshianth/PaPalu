@@ -68,8 +68,8 @@ class TruckInfo(models.Model):
     )
 
     class Meta:
-        verbose_name = 'اطلاعات کامیون'
-        verbose_name_plural = 'اطلاعات کامیون‌ها'
+        verbose_name = 'حمل | اطلاعات کامیون'
+        verbose_name_plural = 'حمل | اطلاعات کامیون‌ها'
         ordering = ['transport', 'plate_number']
 
     def __str__(self):

@@ -126,8 +126,8 @@ class OrderItem(models.Model):
     )
     
     class Meta:
-        verbose_name = 'قلم سفارش'
-        verbose_name_plural = 'اقلام سفارش'
+        verbose_name = 'سفارش | اقلام'
+        verbose_name_plural = 'سفارش | اقلام'
         ordering = ['id']
     
     def __str__(self):

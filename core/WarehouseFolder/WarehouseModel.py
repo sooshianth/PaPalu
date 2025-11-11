@@ -78,8 +78,8 @@ class Warehouse(models.Model):
     )
     
     class Meta:
-        verbose_name = 'انبار'
-        verbose_name_plural = 'انبارها'
+        verbose_name = 'انبار | انبارها'
+        verbose_name_plural = 'انبار | انبارها'
         ordering = ['-created_at']
     
     def __str__(self):

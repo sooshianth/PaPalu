@@ -93,8 +93,8 @@ class Person(models.Model):
     )
 
     class Meta:
-        verbose_name = 'شخص'
-        verbose_name_plural = 'اشخاص'
+        verbose_name = 'شخص | اشخاص'
+        verbose_name_plural = 'شخص | اشخاص'
         ordering = ['name']
 
     def __str__(self):

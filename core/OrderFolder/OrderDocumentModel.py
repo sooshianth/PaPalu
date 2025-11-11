@@ -33,8 +33,8 @@ class OrderDocument(models.Model):
     )
     
     class Meta:
-        verbose_name = 'سند سفارش'
-        verbose_name_plural = 'اسناد سفارش'
+        verbose_name = 'سفارش | اسناد'
+        verbose_name_plural = 'سفارش | اسناد'
     
     def __str__(self):
         return f"اسناد سفارش {self.order.order_number}"

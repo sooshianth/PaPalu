@@ -29,8 +29,8 @@ class PhoneNumber(models.Model):
     is_primary = models.BooleanField(default=False, verbose_name='شماره اصلی')
 
     class Meta:
-        verbose_name = 'شماره تلفن'
-        verbose_name_plural = 'شماره های تلفن'
+        verbose_name = 'شخص | شماره تلفن'
+        verbose_name_plural = 'شخص | شماره های تلفن'
         ordering = ['-is_primary', 'phone_type']
 
 

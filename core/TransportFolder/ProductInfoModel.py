@@ -97,8 +97,8 @@ class ProductInfo(models.Model):
     )
 
     class Meta:
-        verbose_name = 'اطلاعات محصول'
-        verbose_name_plural = 'اطلاعات محصولات'
+        verbose_name = 'حمل | اطلاعات محصول'
+        verbose_name_plural = 'حمل | اطلاعات محصولات'
         ordering = ['transport']
 
     def __str__(self):

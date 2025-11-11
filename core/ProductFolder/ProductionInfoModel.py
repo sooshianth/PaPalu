@@ -92,8 +92,8 @@ class ProductionInfo(models.Model):
     )
     
     class Meta:
-        verbose_name = 'اطلاعات تولید'
-        verbose_name_plural = 'اطلاعات تولید'
+        verbose_name = 'محصول | اطلاعات تولید'
+        verbose_name_plural = 'محصول | اطلاعات تولید'
     
     def __str__(self):
         return f"اطلاعات تولید - {self.product.name}"

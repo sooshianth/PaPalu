@@ -44,8 +44,8 @@ class TargetStock(models.Model):
     )
     
     class Meta:
-        verbose_name = 'شب بخیر (مقصد)'
-        verbose_name_plural = 'شب بخیرها (مقصد)'
+        verbose_name = 'انبار | شب بخیر (مقصد)'
+        verbose_name_plural = 'انبار | شب بخیرها (مقصد)'
     
     def __str__(self):
         destination = self.to_product or 'انبار'

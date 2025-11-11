@@ -51,8 +51,8 @@ class DefaultItem(models.Model):
     )
     
     class Meta:
-        verbose_name = 'آیتم پیشفرض'
-        verbose_name_plural = 'آیتم‌های پیشفرض'
+        verbose_name = 'انبار | آیتم پیشفرض'
+        verbose_name_plural = 'انبار | آیتم‌های پیشفرض'
         ordering = ['-created_at']
         # جلوگیری از ایجاد آیتم تکراری برای یک محصول/ماده اولیه
         unique_together = [['content_type', 'object_id']]

@@ -121,8 +121,8 @@ class QualityControl(models.Model):
     )
     
     class Meta:
-        verbose_name = 'کنترل کیفیت'
-        verbose_name_plural = 'کنترل کیفیت'
+        verbose_name = 'محصول | کنترل کیفیت'
+        verbose_name_plural = 'محصول | کنترل کیفیت'
     
     def __str__(self):
         return f"کنترل کیفیت - {self.product.name}"

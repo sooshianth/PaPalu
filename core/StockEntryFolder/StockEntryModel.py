@@ -31,8 +31,8 @@ class StockEntry(models.Model):
     )
     
     class Meta:
-        verbose_name = 'لاگ انبار'
-        verbose_name_plural = 'لاگ‌های انبار'
+        verbose_name = 'انبار | لاگ انبار'
+        verbose_name_plural = 'انبار | لاگ‌های انبار'
         ordering = ['-transaction_date']
         indexes = [
             models.Index(fields=['transaction_date']),

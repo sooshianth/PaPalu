@@ -39,8 +39,8 @@ class Inventory(models.Model):
     )
     
     class Meta:
-        verbose_name = 'موجودیت'
-        verbose_name_plural = 'موجودیت‌ها'
+        verbose_name = 'انبار | موجودیت'
+        verbose_name_plural = 'انبار | موجودیت‌ها'
         ordering = ['-date']
         unique_together = ['warehouse', 'date']
     

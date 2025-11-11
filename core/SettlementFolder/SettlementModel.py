@@ -92,8 +92,8 @@ class Settlement(models.Model):
     )
 
     class Meta:
-        verbose_name = 'تسویه'
-        verbose_name_plural = 'تسویه‌ها'
+        verbose_name = 'تسویه | تسویه ها'
+        verbose_name_plural = 'تسویه | تسویه ها'
         ordering = ['-id', 'order_number']
 
     def __str__(self):

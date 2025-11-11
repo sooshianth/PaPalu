@@ -80,8 +80,8 @@ class ApprovalInfo(models.Model):
     )
     
     class Meta:
-        verbose_name = 'اطلاعات تأییدیه'
-        verbose_name_plural = 'اطلاعات تأییدیه‌ها'
+        verbose_name = 'سفارش | اطلاعات تأییدیه'
+        verbose_name_plural = 'سفارش | اطلاعات تأییدیه'
         ordering = ['-order_registration_time']
     
     def __str__(self):
