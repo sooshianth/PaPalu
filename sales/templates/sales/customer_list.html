@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .badge-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .badge-success {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .badge-secondary {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .empty-state svg {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+    <a href="{% url 'sales:create_customer' %}" class="btn btn-primary">
+        <svg style="width: 20px; height: 20px; margin-left: 8px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        ایجاد مشتری جدید
+    </a>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if customers %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>کد ملی</th>
+                        <th>نام</th>
+                        <th>نوع</th>
+                        <th>کد حسابداری</th>
+                        <th>کارشناس فروش</th>
+                        <th>توضیحات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for customer in customers %}
+                        <tr>
+                            <td>{{ customer.national_id }}</td>
+                            <td>{{ customer.name|default:"-" }}</td>
+                            <td>
+                                {% if customer.nature == 'legal' %}
+                                    <span class="badge badge-primary">حقوقی</span>
+                                {% elif customer.nature == 'natural' %}
+                                    <span class="badge badge-success">حقیقی</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">-</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ customer.accounting_code|default:"-" }}</td>
+                            <td>{{ customer.sales_expert|default:"-" }}</td>
+                            <td>{{ customer.description|truncatewords:10|default:"-" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>هیچ مشتری‌ای یافت نشد.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">برای ایجاد مشتری جدید روی دکمه بالا کلیک کنید.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
