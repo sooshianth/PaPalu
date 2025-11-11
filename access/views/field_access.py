@@ -1,5 +1,5 @@
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib.contenttypes.models import ContentType
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render, redirect
@@ -16,17 +16,48 @@ try:
 except Exception:  # pragma: no cover
     openpyxl = None
 
-
-def _is_admin(user):
-    return user.is_staff or user.is_superuser
-
+from django.apps import apps
+from core.RBACModel import user_has_task, TaskChoices
 
 @login_required
-@user_passes_test(_is_admin)
 def field_access_bulk_upload_view(request):
     """
     صفحه آپلود فایل اکسل برای ایجاد/به‌روزرسانی دسته‌ای قوانین FieldAccessRule
     """
+    # Access control via RBAC task or staff/superuser
+    if not (request.user.is_staff or request.user.is_superuser or user_has_task(request.user, TaskChoices.ACCESS_FIELD_ACCESS_BULK_UPLOAD)):
+        messages.error(request, _('دسترسی لازم برای این بخش را ندارید'))
+        return redirect('home')
+
+    # Build models and fields guide
+    models_info = []
+    for model in apps.get_models():
+        try:
+            model_meta = model._meta
+            app_label = model_meta.app_label
+            model_name = model_meta.object_name
+            # Filter to concrete field names (exclude reverse/auto)
+            field_names = []
+            for f in model_meta.get_fields():
+                if getattr(f, 'auto_created', False) and not getattr(f, 'concrete', False):
+                    continue
+                if getattr(f, 'many_to_many', False) and getattr(f, 'auto_created', False):
+                    continue
+                # Prefer actual field attribute name
+                name = getattr(f, 'name', None) or getattr(f, 'attname', None)
+                if name and name not in field_names:
+                    field_names.append(name)
+            field_names.sort()
+            models_info.append({
+                'app_label': app_label,
+                'model_name': model_name,
+                'fields': field_names
+            })
+        except Exception:
+            continue
+    # Sort by app then model
+    models_info.sort(key=lambda x: (x['app_label'], x['model_name']))
+
     context = {
         'template_url': reverse('access:field_access_template'),
         'post_url': reverse('access:field_access_bulk_upload'),
@@ -39,6 +70,7 @@ def field_access_bulk_upload_view(request):
             ('access_type', 'نوع دسترسی: view | edit | delete (الزامی)'),
             ('allowed', 'True/False یا 1/0 (پیش‌فرض: True)'),
         ],
+        'models_info': models_info,
     }
 
     if request.method == 'GET':
@@ -139,11 +171,12 @@ def field_access_bulk_upload_view(request):
 
 
 @login_required
-@user_passes_test(_is_admin)
 def download_field_access_template(request):
     """
     تولید و دانلود فایل نمونه اکسل برای بارگذاری دسته‌ای
     """
+    if not (request.user.is_staff or request.user.is_superuser or user_has_task(request.user, TaskChoices.ACCESS_FIELD_ACCESS_BULK_UPLOAD)):
+        return HttpResponseBadRequest(_('دسترسی ندارید.'))
     if openpyxl is None:
         return HttpResponseBadRequest(_('ماژول openpyxl نصب نیست.'))
 

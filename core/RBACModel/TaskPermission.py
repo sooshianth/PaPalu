@@ -77,6 +77,9 @@ class TaskChoices(models.TextChoices):
     DISTRIBUTION_CREATE_DRIVER = 'distribution.create_driver', 'ایجاد شخص راننده'
     DISTRIBUTION_SEND_WEIGHT_INFO = 'distribution.send_weight_info', 'ارسال اطلاعات وزنی به باربری'
 
+    # Access (دسترسی‌ها)
+    ACCESS_FIELD_ACCESS_BULK_UPLOAD = 'access.field_access_bulk_upload', 'آپلود دسته‌ای دسترسی فیلدها'
+
 
 # Add category order as a class attribute after class definition
 # Format: (category_id, display_name)
@@ -86,6 +89,7 @@ TaskChoices.CATEGORY_ORDER = [
     ('supply', 'تامین'),
     ('production', 'تولید'),
     ('distribution', 'توزیع'),
+    ('access', 'دسترسی‌ها'),
 ]
 
 

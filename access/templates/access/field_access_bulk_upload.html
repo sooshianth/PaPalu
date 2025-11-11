@@ -115,6 +115,45 @@
         </p>
     </div>
 </div>
+
+<div class="card">
+    <div class="section-title">راهنمای جامع فیلدهای مدل‌ها</div>
+    <div class="helper" style="max-height: 520px; overflow: auto;">
+        <p class="note" style="margin-bottom: 10px;">
+            برای تکمیل دقیق ستون‌های <b>app_label</b>، <b>model</b> و <b>field_name</b>، از فهرست زیر کمک بگیرید:
+        </p>
+        <div>
+            {% regroup models_info by app_label as apps %}
+            {% for app in apps %}
+                <div style="margin: 12px 0; padding: 12px; border: 1px solid var(--gray-300); border-radius: 12px; background: #fff;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <div style="font-weight: 800; color: var(--dark-green);">
+                            اپ: {{ app.grouper }}
+                        </div>
+                        <div class="pill">{{ app.list|length }} مدل</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+                        {% for item in app.list %}
+                            <div style="border: 1px solid var(--gray-200); border-radius: 10px; padding: 10px; background: var(--gray-100);">
+                                <div style="font-weight:700; color:#2c3e50; margin-bottom:6px;">
+                                    مدل: <code>{{ item.model_name }}</code>
+                                </div>
+                                <div style="font-size: 0.9rem; color: var(--gray-800);">
+                                    فیلدها:
+                                    <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px;">
+                                        {% for fname in item.fields %}
+                                            <span class="pill" style="background:#eef7f0; color:#1e7e34;">{{ fname }}</span>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 
