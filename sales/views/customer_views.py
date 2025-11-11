@@ -23,7 +23,10 @@ def create_customer_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     if request.method == 'POST':
-        form = CreateCustomerForm(request.POST, request.FILES)
+        # ابتدا map دسترسی فیلدها را به دست آوریم و سپس فرم را با آن بسازیم
+        temp_form_for_access = CreateCustomerForm()
+        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        form = CreateCustomerForm(request.POST, request.FILES, user=request.user, accessible_fields=accessible_fields)
         
         if form.is_valid():
             try:
@@ -36,10 +39,15 @@ def create_customer_view(request):
             except Exception as e:
                 messages.error(request, f'خطا در ایجاد مشتری: {str(e)}')
     else:
-        form = CreateCustomerForm()
+        # در GET نیز فیلدهای غیرمجاز را از فرم حذف کن تا در UI نمایش داده نشوند
+        temp_form_for_access = CreateCustomerForm()
+        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        form = CreateCustomerForm(user=request.user, accessible_fields=accessible_fields)
     
     # گرفتن فیلدهای قابل دسترسی برای کاربر
-    accessible_fields = get_accessible_form_fields(request.user, form)
+    # اگر در بالا محاسبه نشده بود (به‌ویژه در مسیر POST با خطای ولیدیشن)، محاسبه کن
+    if 'accessible_fields' not in locals():
+        accessible_fields = get_accessible_form_fields(request.user, form)
     
     context = {
         'form': form,
@@ -134,23 +142,30 @@ def get_accessible_form_fields(user, form):
                     accessible_fields[form_field_name] = False
                     continue
                 
-                # بررسی دسترسی به فیلد با استفاده از متد استاتیک موجود
+                # بررسی دسترسی به فیلد: اولویت با قانون edit است، اگر نبود، قانون view بررسی شود
                 content_type = ContentType.objects.get_for_model(model_class)
                 
-                # بررسی آیا قانونی برای این فیلد وجود دارد
-                rule = FieldAccessRule.objects.filter(
+                rule_edit = FieldAccessRule.objects.filter(
                     user=user,
                     content_type=content_type,
                     field_name=model_field_name,
                     access_type='edit'
                 ).first()
                 
-                if rule is None:
-                    # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
-                    accessible_fields[form_field_name] = True
+                if rule_edit is not None:
+                    accessible_fields[form_field_name] = rule_edit.allowed
                 else:
-                    # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
-                    accessible_fields[form_field_name] = rule.allowed
+                    rule_view = FieldAccessRule.objects.filter(
+                        user=user,
+                        content_type=content_type,
+                        field_name=model_field_name,
+                        access_type='view'
+                    ).first()
+                    if rule_view is not None:
+                        accessible_fields[form_field_name] = rule_view.allowed
+                    else:
+                        # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
+                        accessible_fields[form_field_name] = True
                 
             except Exception as e:
                 # در صورت بروز خطا، به طور پیش‌فرض دسترسی داده نمی‌شود

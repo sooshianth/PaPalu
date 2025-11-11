@@ -22,6 +22,18 @@ def clean_empty_to_none(value):
 class CreateCustomerForm(forms.Form):
     """فرم ایجاد مشتری"""
     
+    def __init__(self, *args, **kwargs):
+        # پارامترهای سفارشی
+        self.request_user = kwargs.pop('user', None)
+        accessible_fields = kwargs.pop('accessible_fields', None)
+        super().__init__(*args, **kwargs)
+        
+        # اگر map دسترسی‌ها داده شده، فیلدهای غیرمجاز را از فرم حذف کن
+        if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
+            for field_name, allowed in list(accessible_fields.items()):
+                if not allowed and field_name in self.fields:
+                    del self.fields[field_name]
+    
     # فیلدهای اجباری
     national_id = forms.CharField(
         max_length=10,
@@ -387,10 +399,18 @@ class CreateCustomerForm(forms.Form):
         """ذخیره اطلاعات مشتری"""
         
         # ایجاد شخص
+        national_id = self.cleaned_data.get('national_id')
+        name = self.cleaned_data.get('name')
+        nature = self.cleaned_data.get('nature')
+        
+        # اگر به دلیل عدم دسترسی، فیلدهای ضروری موجود نباشند، از ادامه جلوگیری کن
+        if not national_id or not name or not nature:
+            raise forms.ValidationError('شما دسترسی لازم برای ثبت تمامی فیلدهای ضروری را ندارید.')
+        
         person = Person.objects.create(
-            national_id=self.cleaned_data['national_id'],
-            name=self.cleaned_data['name'],
-            nature=self.cleaned_data['nature'],
+            national_id=national_id,
+            name=name,
+            nature=nature,
             type='customer',  # نوع شخص مشتری
             registration_number=clean_empty_to_none(self.cleaned_data.get('registration_number')),
             birth_date=clean_empty_to_none(self.cleaned_data.get('birth_date')),
@@ -402,13 +422,19 @@ class CreateCustomerForm(forms.Form):
         
         # ایجاد شماره موبایل
         person_content_type = ContentType.objects.get_for_model(Person)
-        PhoneNumber.objects.create(
-            content_type=person_content_type,
-            object_id=person.national_id,
-            phone_type='mobile',
-            number=self.cleaned_data['mobile_number'],
-            is_primary=True
-        )
+        mobile_number = self.cleaned_data.get('mobile_number')
+        if not mobile_number:
+            # اگر دسترسی به فیلد موبایل نبوده، ثبت مشتری بدون موبایل انجام شده است
+            # (اجباری بودن فقط در صورت وجود فیلد بررسی می‌شود)
+            pass
+        else:
+            PhoneNumber.objects.create(
+                content_type=person_content_type,
+                object_id=person.national_id,
+                phone_type='mobile',
+                number=mobile_number,
+                is_primary=True
+            )
         
         # ایجاد شماره ثابت (در صورت وجود)
         if self.cleaned_data.get('landline_number'):
