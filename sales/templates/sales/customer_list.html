@@ -172,19 +172,36 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        {% if accessible_fields.national_id %}
                         <th>کد ملی</th>
+                        {% endif %}
+                        {% if accessible_fields.name %}
                         <th>نام</th>
+                        {% endif %}
+                        {% if accessible_fields.nature %}
                         <th>نوع</th>
+                        {% endif %}
+                        {% if accessible_fields.accounting_code %}
                         <th>کد حسابداری</th>
+                        {% endif %}
+                        {% if accessible_fields.sales_expert %}
                         <th>کارشناس فروش</th>
+                        {% endif %}
+                        {% if accessible_fields.description %}
                         <th>توضیحات</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for customer in customers %}
                         <tr>
+                            {% if accessible_fields.national_id %}
                             <td>{{ customer.national_id }}</td>
+                            {% endif %}
+                            {% if accessible_fields.name %}
                             <td>{{ customer.name|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_fields.nature %}
                             <td>
                                 {% if customer.nature == 'legal' %}
                                     <span class="badge badge-primary">حقوقی</span>
@@ -194,9 +211,16 @@
                                     <span class="badge badge-secondary">-</span>
                                 {% endif %}
                             </td>
+                            {% endif %}
+                            {% if accessible_fields.accounting_code %}
                             <td>{{ customer.accounting_code|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_fields.sales_expert %}
                             <td>{{ customer.sales_expert|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_fields.description %}
                             <td>{{ customer.description|truncatewords:10|default:"-" }}</td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>

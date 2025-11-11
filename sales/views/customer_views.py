@@ -130,31 +130,88 @@ def get_accessible_form_fields(user, form):
                     from core.PersonFolder.RepresentativeModel import Representative
                     model_class = Representative
                 else:
-                    # اگر مدل شناخته شده نباشد، دسترسی داده می‌شود
-                    accessible_fields[form_field_name] = True
+                    # اگر مدل شناخته شده نباشد، به طور پیش‌فرض دسترسی داده نمی‌شود
+                    accessible_fields[form_field_name] = False
                     continue
                 
-                # بررسی دسترسی به فیلد
-                # برای 'edit' چون داریم ایجاد می‌کنیم (که نوعی ویرایش است)
+                # بررسی دسترسی به فیلد با استفاده از متد استاتیک موجود
                 content_type = ContentType.objects.get_for_model(model_class)
                 
-                has_access = FieldAccessRule.objects.filter(
+                # بررسی آیا قانونی برای این فیلد وجود دارد
+                rule = FieldAccessRule.objects.filter(
                     user=user,
                     content_type=content_type,
                     field_name=model_field_name,
-                    access_type='edit',
-                    allowed=False
-                ).exists()
+                    access_type='edit'
+                ).first()
                 
-                # اگر قانونی که دسترسی را رد کند وجود نداشته باشد، دسترسی داده می‌شود
-                accessible_fields[form_field_name] = not has_access
+                if rule is None:
+                    # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
+                    accessible_fields[form_field_name] = True
+                else:
+                    # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
+                    accessible_fields[form_field_name] = rule.allowed
                 
             except Exception as e:
-                # در صورت بروز خطا، به طور پیش‌فرض دسترسی داده می‌شود
-                accessible_fields[form_field_name] = True
+                # در صورت بروز خطا، به طور پیش‌فرض دسترسی داده نمی‌شود
+                accessible_fields[form_field_name] = False
         else:
             # اگر فیلد در mapping نباشد، به طور پیش‌فرض دسترسی داده می‌شود
             accessible_fields[form_field_name] = True
+    
+    return accessible_fields
+
+
+def get_accessible_customer_fields(user):
+    """
+    بررسی دسترسی کاربر به فیلدهای نمایش مشتری
+    
+    Returns:
+        dict: دیکشنری از نام فیلد به دسترسی (True/False)
+    """
+    
+    if user.is_superuser:
+        # superuser به همه فیلدها دسترسی دارد
+        return {
+            'national_id': True,
+            'name': True,
+            'nature': True,
+            'accounting_code': True,
+            'sales_expert': True,
+            'description': True,
+        }
+    
+    # import مدل Person
+    from core.PersonFolder import Person as PersonModel
+    
+    # فیلدهایی که در لیست نمایش داده می‌شوند
+    display_fields = {
+        'national_id': 'national_id',
+        'name': 'name',
+        'nature': 'nature',
+        'accounting_code': 'accounting_code',
+        'sales_expert': 'sales_expert',
+        'description': 'description',
+    }
+    
+    accessible_fields = {}
+    content_type = ContentType.objects.get_for_model(PersonModel)
+    
+    for display_name, model_field_name in display_fields.items():
+        # بررسی آیا قانونی برای این فیلد وجود دارد
+        rule = FieldAccessRule.objects.filter(
+            user=user,
+            content_type=content_type,
+            field_name=model_field_name,
+            access_type='view'
+        ).first()
+        
+        if rule is None:
+            # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
+            accessible_fields[display_name] = True
+        else:
+            # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
+            accessible_fields[display_name] = rule.allowed
     
     return accessible_fields
 
@@ -181,8 +238,12 @@ def customer_list_view(request):
             sales_expert=request.user.username
         ).order_by('-name')
     
+    # گرفتن فیلدهای قابل دسترسی برای کاربر
+    accessible_fields = get_accessible_customer_fields(request.user)
+    
     context = {
         'customers': customers,
+        'accessible_fields': accessible_fields,
         'page_title': 'لیست مشتریان'
     }
     
