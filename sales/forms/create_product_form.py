@@ -1,7 +1,7 @@
 from django import forms
-from django.forms import BaseFormSet, formset_factory, inlineformset_factory
+from django.forms import BaseFormSet, formset_factory, modelformset_factory
 from django.contrib.contenttypes.models import ContentType
-from core.ProductFolder.ProductModel import Product, PhysicalShape
+from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from django_jalali.db import models as jmodels
@@ -27,25 +27,24 @@ class CreateProductForm(forms.ModelForm):
         accessible_fields = kwargs.pop('accessible_fields', None)
         super().__init__(*args, **kwargs)
 
-        # تنظیم فیلد physical_shape به صورت ModelChoiceField
-        self.fields['physical_shape'] = forms.ModelChoiceField(
-            queryset=PhysicalShape.objects.all(),
+        # تنظیم فیلد physical_shape به صورت CharField
+        self.fields['physical_shape'] = forms.CharField(
+            max_length=100,
             required=True,
             label='شکل فیزیکی',
-            widget=forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            empty_label='انتخاب شکل فیزیکی'
-        )
-
-        # تنظیم فیلد main_application
-        self.fields['main_application'] = forms.CharField(
-            max_length=255,
-            required=True,
-            label='کاربرد اصلی',
             widget=forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'مثال: جوجه گوشتی روز 1 تا 10'
+                'placeholder': 'مثال: مش-پلت-کرامبل-آجیلی'
+            })
+        )
+
+        # تنظیم فیلد main_application به ChoiceField
+        self.fields['main_application'] = forms.ChoiceField(
+            choices=Product.PRODUCT_APPLICATION_CHOICES,
+            required=True,
+            label='کاربرد اصلی',
+            widget=forms.Select(attrs={
+                'class': 'form-control'
             })
         )
 
@@ -337,16 +336,12 @@ class ProductionInfoForm(forms.ModelForm):
 
     class Meta:
         model = ProductionInfo
-        fields = ['formula_id', 'name', 'min_batch_production', 'specific_production_instruction']
+        fields = ['formula_id', 'min_batch_production', 'specific_production_instruction']
         widgets = {
             'formula_id': forms.TextInput(attrs={
                 'class': 'form-control',
                 'dir': 'ltr',
                 'placeholder': 'شناسه فرمول'
-            }),
-            'name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'نام محصول'
             }),
             'min_batch_production': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -364,7 +359,6 @@ class ProductionInfoForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         # تنظیم فیلدهای اجباری
         self.fields['formula_id'].required = False  # در formset، فیلدها اختیاری هستند
-        self.fields['name'].required = False
         self.fields['min_batch_production'].required = False
         self.fields['specific_production_instruction'].required = False
 
@@ -384,7 +378,6 @@ class ProductionInfoForm(forms.ModelForm):
         # بررسی اینکه آیا حداقل یک فیلد پر شده است
         has_data = any([
             cleaned_data.get('formula_id'),
-            cleaned_data.get('name'),
             cleaned_data.get('min_batch_production'),
             cleaned_data.get('specific_production_instruction'),
         ])
@@ -393,8 +386,6 @@ class ProductionInfoForm(forms.ModelForm):
         if has_data:
             if not cleaned_data.get('formula_id'):
                 self.add_error('formula_id', 'شناسه فرمول الزامی است.')
-            if not cleaned_data.get('name'):
-                self.add_error('name', 'نام محصول الزامی است.')
             if not cleaned_data.get('min_batch_production'):
                 self.add_error('min_batch_production', 'حداقل بچ تولید الزامی است.')
             if not cleaned_data.get('specific_production_instruction'):
@@ -475,7 +466,7 @@ class BOMForm(forms.ModelForm):
         return cleaned_data
 
 
-# ایجاد formset برای ProductionInfo
+# ایجاد formset برای ProductionInfo (برای ایجاد)
 ProductionInfoFormSet = formset_factory(
     ProductionInfoForm,
     extra=1,
@@ -484,9 +475,29 @@ ProductionInfoFormSet = formset_factory(
     validate_min=False
 )
 
-# ایجاد formset برای BOM
+# ایجاد formset برای BOM (برای ایجاد)
 BOMFormSet = formset_factory(
     BOMForm,
+    extra=1,
+    can_delete=True,
+    min_num=0,
+    validate_min=False
+)
+
+# ایجاد modelformset برای ProductionInfo (برای ویرایش)
+ProductionInfoModelFormSet = modelformset_factory(
+    ProductionInfo,
+    form=ProductionInfoForm,
+    extra=1,
+    can_delete=True,
+    min_num=0,
+    validate_min=False
+)
+
+# ایجاد modelformset برای BOM (برای ویرایش)
+BOMModelFormSet = modelformset_factory(
+    BOM,
+    form=BOMForm,
     extra=1,
     can_delete=True,
     min_num=0,
@@ -525,19 +536,21 @@ def get_accessible_product_fields(user, product_form: CreateProductForm):
     }
 
     from access.models.FieldAccessUserModel import FieldAccessRule
+    from core.ProductFolder.ProductModel import Product
+    
     accessible = {}
-
+    
+    # استفاده از متد get_accessible_fields برای دریافت فیلدهای قابل دسترسی
+    # برای ایجاد/ویرایش محصول از access_type='edit' استفاده می‌کنیم
+    accessible_fields = FieldAccessRule.get_accessible_fields(
+        user=user,
+        model_class=Product,
+        access_type='edit'
+    )
+    
+    # تبدیل لیست فیلدها به دیکشنری
     for field_name, (model_name, field_db_name) in field_mapping.items():
-        try:
-            ct = ContentType.objects.get(model=model_name.lower())
-            rule = FieldAccessRule.objects.filter(
-                user=user,
-                content_type=ct,
-                field_name=field_db_name
-            ).first()
-            
-            accessible[field_name] = rule.can_create if rule else False
-        except ContentType.DoesNotExist:
-            accessible[field_name] = False
+        # بررسی اینکه آیا فیلد در لیست فیلدهای قابل دسترسی است
+        accessible[field_name] = field_db_name in accessible_fields
 
     return accessible

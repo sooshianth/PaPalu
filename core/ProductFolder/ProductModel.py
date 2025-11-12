@@ -33,7 +33,7 @@ class Product(models.Model):
     """
     
     PRODUCT_APPLICATION_CHOICES = [
-        #TODO
+        ('3 year khar', 'خر 3 ساله'),
     ]
     
     # اطلاعات پایه
@@ -67,11 +67,9 @@ class Product(models.Model):
         blank=True
     )
     
-    physical_shape = models.ForeignKey(
-        PhysicalShape,
-        on_delete=models.SET_NULL,
+    physical_shape = models.CharField(
+        max_length=100,
         verbose_name='شکل فیزیکی',
-        related_name='products',
         null=True,
         blank=True
     )

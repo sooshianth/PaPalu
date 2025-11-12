@@ -23,13 +23,6 @@ class ProductionInfo(models.Model):
         blank=True,
     )
     
-    name = models.CharField(
-        max_length=255,
-        verbose_name='نام محصول',
-        null=True,
-        blank=True,
-    )
-    
     production_time = models.DurationField(
         verbose_name='زمان تولید',
         null=True,
