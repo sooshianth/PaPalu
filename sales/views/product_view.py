@@ -319,7 +319,7 @@ def edit_product_view(request, product_id):
         )
         
         # دریافت ProductionInfo های موجود
-        production_infos = ProductionInfo.objects.filter(product=product)
+        production_infos = ProductionInfo.objects.filter(product=product).prefetch_related('bom_items')
         
         # ایجاد modelformset با داده‌های موجود
         production_info_formset = ProductionInfoModelFormSet(
@@ -328,12 +328,8 @@ def edit_product_view(request, product_id):
             queryset=production_infos
         )
         
-        # دریافت BOM های موجود (از اولین ProductionInfo)
-        first_production_info = production_infos.first()
-        if first_production_info:
-            boms = BOM.objects.filter(production_info=first_production_info)
-        else:
-            boms = BOM.objects.none()
+        # دریافت همه BOM های موجود (از همه ProductionInfo های این محصول)
+        boms = BOM.objects.filter(production_info__product=product).select_related('production_info')
         
         # ایجاد modelformset با داده‌های موجود
         bom_formset = BOMModelFormSet(
@@ -402,9 +398,8 @@ def edit_product_view(request, product_id):
                                 if production_info_form.instance and production_info_form.instance.pk:
                                     production_info_form.instance.delete()
                         
-                        # ذخیره BOM ها - لینک به اولین ProductionInfo
+                        # ذخیره BOM ها - حفظ لینک به ProductionInfo مربوطه
                         if production_infos_saved:
-                            first_production_info = production_infos_saved[0]
                             for bom_form in bom_formset:
                                 if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
                                     if all([
@@ -413,16 +408,28 @@ def edit_product_view(request, product_id):
                                         bom_form.cleaned_data.get('unit_used'),
                                         bom_form.cleaned_data.get('quantity') is not None,
                                     ]):
-                                        # اگر instance وجود دارد (ویرایش)، بروزرسانی می‌کنیم
+                                        bom = bom_form.save(commit=False)
+                                        
+                                        # اگر instance وجود دارد (ویرایش)، ProductionInfo موجود را حفظ می‌کنیم
                                         if bom_form.instance and bom_form.instance.pk:
-                                            bom = bom_form.save(commit=False)
-                                            bom.production_info = first_production_info
-                                            bom.save()
+                                            # ProductionInfo موجود را از instance حفظ می‌کنیم
+                                            # اگر ProductionInfo حذف شده باشد، به اولین ProductionInfo لینک می‌کنیم
+                                            original_production_info = bom_form.instance.production_info
+                                            if original_production_info and original_production_info.product == product:
+                                                # بررسی اینکه آیا این ProductionInfo هنوز وجود دارد
+                                                if original_production_info in production_infos_saved:
+                                                    bom.production_info = original_production_info
+                                                else:
+                                                    # ProductionInfo حذف شده، به اولین ProductionInfo لینک می‌کنیم
+                                                    bom.production_info = production_infos_saved[0]
+                                            else:
+                                                # ProductionInfo موجود معتبر نیست، به اولین ProductionInfo لینک می‌کنیم
+                                                bom.production_info = production_infos_saved[0]
                                         else:
-                                            # اگر instance وجود ندارد (جدید)، ایجاد می‌کنیم
-                                            bom = bom_form.save(commit=False)
-                                            bom.production_info = first_production_info
-                                            bom.save()
+                                            # اگر instance وجود ندارد (جدید)، به اولین ProductionInfo لینک می‌کنیم
+                                            bom.production_info = production_infos_saved[0]
+                                        
+                                        bom.save()
                         
                         # حذف BOM های حذف شده (که DELETE=True هستند)
                         for bom_form in bom_formset:
@@ -474,7 +481,7 @@ def edit_product_view(request, product_id):
         )
         
         # دریافت ProductionInfo های موجود
-        production_infos = ProductionInfo.objects.filter(product=product)
+        production_infos = ProductionInfo.objects.filter(product=product).prefetch_related('bom_items')
         
         # ایجاد modelformset با داده‌های موجود
         production_info_formset = ProductionInfoModelFormSet(
@@ -482,12 +489,8 @@ def edit_product_view(request, product_id):
             queryset=production_infos
         )
         
-        # دریافت BOM های موجود (از اولین ProductionInfo)
-        first_production_info = production_infos.first()
-        if first_production_info:
-            boms = BOM.objects.filter(production_info=first_production_info)
-        else:
-            boms = BOM.objects.none()
+        # دریافت همه BOM های موجود (از همه ProductionInfo های این محصول)
+        boms = BOM.objects.filter(production_info__product=product).select_related('production_info')
         
         # ایجاد modelformset با داده‌های موجود
         bom_formset = BOMModelFormSet(

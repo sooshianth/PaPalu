@@ -400,7 +400,7 @@
                 {{ production_info_formset.management_form }}
                 {% for form in production_info_formset %}
                 <div class="formset-row" data-form-index="{{ forloop.counter0 }}">
-                    {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
+                    {{ form.id }}
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label required-field">{{ form.formula_id.label }}</label>
