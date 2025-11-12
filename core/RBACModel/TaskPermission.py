@@ -32,6 +32,7 @@ class TaskChoices(models.TextChoices):
     SALES_APPROVE_ALLOCATION = 'sales.approve_allocation', 'تایید تخصیص فروش'
     SALES_APPROVE_PROFORMA_PRICE = 'sales.approve_proforma_price', 'تایید پیش فاکتور فروش(قیمت و مشخصات)'
     SALES_PRODUCT_PRICE_LIST = 'sales.product_price_list', 'لیست قیمت محصولات'
+    SALES_SET_PRODUCT_PRICE = 'sales.set_product_price', 'قیمت‌گذاری محصول'
     
     
     # Supply (تامین)

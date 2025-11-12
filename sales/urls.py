@@ -1,5 +1,5 @@
 from django.urls import path
-from sales.views import customer_views, order_views, product_view
+from sales.views import customer_views, order_views, product_view, product_price_view
 
 app_name = 'sales'
 
@@ -25,6 +25,11 @@ urlpatterns = [
     
     # حذف محصول
     path('<int:product_id>/delete/', product_view.delete_product_view, name='delete_product'),
+    
+    # قیمت‌گذاری محصول
+    path('price/list/', product_price_view.product_price_list_view, name='product_price_list'),
+    path('price/create/', product_price_view.set_product_price_view, name='set_product_price'),
+    path('<int:product_id>/set-price/', product_price_view.set_product_price_view, name='set_product_price_with_id'),
     
     # جستجوی AJAX
     path('search/ajax/', product_view.product_search_ajax, name='product_search_ajax'),
