@@ -33,16 +33,16 @@ INSTALLED_APPS = [
     'django_jalali',
     
     # Local apps
-    'core',
-    'authentication',
-    'perm_manager',
-    'access',
-    'accounting',
-    'custody',
-    'distribution',
-    'production',
-    'sales',
-    'warehousing',
+    'core.apps.CoreConfig',
+    'authentication.apps.AuthenticationConfig',
+    'perm_manager.apps.PermManagerConfig',
+    'access.apps.AccessConfig',
+    'accounting.apps.AccountingConfig',
+    'custody.apps.CustodyConfig',
+    'distribution.apps.DistributionConfig',
+    'production.apps.ProductionConfig',
+    'sales.apps.SalesConfig',
+    'warehousing.apps.WarehousingConfig',
 ]
 
 MIDDLEWARE = [
