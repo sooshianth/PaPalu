@@ -238,42 +238,55 @@
     <!-- اطلاعات اصلی محصول -->
     <div class="detail-section">
         <h5>اطلاعات اصلی محصول</h5>
-        {% if product.image %}
+        {% if accessible_fields.image and product.image %}
         <div style="text-align: center; margin-bottom: 20px;">
             <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-image">
         </div>
         {% endif %}
         
+        {% if accessible_fields.code %}
         <div class="detail-row">
             <div class="detail-label">شناسه محصول:</div>
             <div class="detail-value"><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ product.code }}</code></div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.name %}
         <div class="detail-row">
             <div class="detail-label">نام محصول:</div>
             <div class="detail-value">{{ product.name }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.category %}
         <div class="detail-row">
             <div class="detail-label">گروه محصول:</div>
             <div class="detail-value">{{ product.category }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.subcategory %}
         <div class="detail-row">
             <div class="detail-label">زیر گروه محصول:</div>
             <div class="detail-value">{{ product.subcategory|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.grade %}
         <div class="detail-row">
             <div class="detail-label">گرید:</div>
             <div class="detail-value">{{ product.grade|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.physical_shape %}
         <div class="detail-row">
             <div class="detail-label">شکل فیزیکی:</div>
             <div class="detail-value">{{ product.physical_shape|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.main_application %}
         <div class="detail-row">
             <div class="detail-label">کاربرد اصلی:</div>
             <div class="detail-value">
@@ -284,7 +297,9 @@
                 {% endif %}
             </div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.is_custom %}
         <div class="detail-row">
             <div class="detail-label">محصول سفارشی است؟:</div>
             <div class="detail-value">
@@ -295,46 +310,63 @@
                 {% endif %}
             </div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.full_description %}
         <div class="detail-row">
             <div class="detail-label">شرح کامل محصول:</div>
             <div class="detail-value">{{ product.full_description|default:"-"|linebreaks }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.main_unit %}
         <div class="detail-row">
             <div class="detail-label">واحد شمارش اصلی:</div>
             <div class="detail-value">{{ product.main_unit|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.secondary_unit %}
         <div class="detail-row">
             <div class="detail-label">واحد شمارش فرعی:</div>
             <div class="detail-value">{{ product.secondary_unit|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.conversion_coefficient %}
         <div class="detail-row">
             <div class="detail-label">ضریب تبدیل اصلی به فرعی:</div>
             <div class="detail-value">{{ product.conversion_coefficient|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.expiration_date %}
         <div class="detail-row">
             <div class="detail-label">تاریخ انقضا:</div>
             <div class="detail-value">{{ product.expiration_date|date:"Y/m/d"|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.pellet_granule_diameter %}
         <div class="detail-row">
             <div class="detail-label">قطر پلت یا گرانول:</div>
             <div class="detail-value">{{ product.pellet_granule_diameter|default:"-" }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.lab_analysis %}
         <div class="detail-row">
             <div class="detail-label">آنالیز آزمایشگاهی:</div>
             <div class="detail-value">{{ product.lab_analysis|default:"-"|linebreaks }}</div>
         </div>
+        {% endif %}
         
+        {% if accessible_fields.invoice_description %}
         <div class="detail-row">
             <div class="detail-label">شرح محصول برای پیش فاکتور:</div>
             <div class="detail-value">{{ product.invoice_description|default:"-"|linebreaks }}</div>
         </div>
+        {% endif %}
         
         <div class="detail-row">
             <div class="detail-label">تاریخ ایجاد:</div>

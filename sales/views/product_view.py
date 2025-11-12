@@ -10,6 +10,8 @@ from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from core.RBACModel import user_has_task, TaskChoices
+from access.models.FieldAccessUserModel import FieldAccessRule
+from django.contrib.contenttypes.models import ContentType
 from sales.forms.create_product_form import (
     CreateProductForm, 
     ProductionInfoFormSet,
@@ -33,16 +35,16 @@ def create_product_view(request):
         messages.error(request, 'شما دسترسی به ایجاد محصول ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
+    # دریافت فیلدهای قابل دسترسی برای کاربر
+    accessible_fields = get_accessible_product_fields(request.user)
+    
     if request.method == 'POST':
         # ایجاد فرم با داده‌های ارسالی
         product_form = CreateProductForm(
             request.POST,
             request.FILES,
             user=request.user,
-            accessible_fields=get_accessible_product_fields(
-                request.user,
-                CreateProductForm(user=request.user)
-            )
+            accessible_fields=accessible_fields
         )
         
         # ایجاد formset برای ProductionInfo
@@ -159,21 +161,12 @@ def create_product_view(request):
         # ایجاد فرم خالی
         product_form = CreateProductForm(
             user=request.user,
-            accessible_fields=get_accessible_product_fields(
-                request.user,
-                CreateProductForm(user=request.user)
-            )
+            accessible_fields=accessible_fields
         )
         
         # ایجاد formset خالی
         production_info_formset = ProductionInfoFormSet(prefix='production_info')
         bom_formset = BOMFormSet(prefix='bom')
-    
-    # گرفتن فیلدهای قابل دسترسی برای کاربر
-    accessible_fields = get_accessible_product_fields(
-        request.user,
-        product_form
-    )
     
     context = {
         'product_form': product_form,
@@ -244,6 +237,9 @@ def product_list_view(request):
         'category', flat=True
     ).distinct()
     
+    # دریافت فیلدهای قابل دسترسی برای کاربر
+    accessible_fields = get_accessible_product_fields_for_view(request.user)
+    
     context = {
         'page_obj': page_obj,
         'products': page_obj,
@@ -252,6 +248,7 @@ def product_list_view(request):
         'category_filter': category_filter,
         'application_filter': application_filter,
         'custom_filter': custom_filter,
+        'accessible_fields': accessible_fields,
         'page_title': 'لیست محصولات',
     }
     
@@ -281,10 +278,14 @@ def product_detail_view(request, product_id):
     # دریافت BOM های مرتبط
     boms = BOM.objects.filter(production_info__product=product).select_related('production_info')
     
+    # دریافت فیلدهای قابل دسترسی برای کاربر
+    accessible_fields = get_accessible_product_fields_for_view(request.user)
+    
     context = {
         'product': product,
         'production_infos': production_infos,
         'boms': boms,
+        'accessible_fields': accessible_fields,
         'page_title': f'جزئیات محصول: {product.name}',
     }
     
@@ -306,16 +307,16 @@ def edit_product_view(request, product_id):
     
     product = get_object_or_404(Product, id=product_id)
     
+    # دریافت فیلدهای قابل دسترسی برای کاربر
+    accessible_fields = get_accessible_product_fields(request.user)
+    
     if request.method == 'POST':
         product_form = CreateProductForm(
             request.POST,
             request.FILES,
             instance=product,
             user=request.user,
-            accessible_fields=get_accessible_product_fields(
-                request.user,
-                CreateProductForm(user=request.user)
-            )
+            accessible_fields=accessible_fields
         )
         
         # دریافت ProductionInfo های موجود
@@ -474,10 +475,7 @@ def edit_product_view(request, product_id):
         product_form = CreateProductForm(
             instance=product,
             user=request.user,
-            accessible_fields=get_accessible_product_fields(
-                request.user,
-                CreateProductForm(user=request.user)
-            )
+            accessible_fields=accessible_fields
         )
         
         # دریافت ProductionInfo های موجود
@@ -497,12 +495,6 @@ def edit_product_view(request, product_id):
             prefix='bom',
             queryset=boms
         )
-    
-    # گرفتن فیلدهای قابل دسترسی برای کاربر
-    accessible_fields = get_accessible_product_fields(
-        request.user,
-        product_form
-    )
     
     context = {
         'product_form': product_form,
@@ -591,3 +583,59 @@ def product_search_ajax(request):
         return JsonResponse({'results': results})
     
     return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+def get_accessible_product_fields_for_view(user):
+    """
+    بررسی دسترسی کاربر به فیلدهای نمایش محصول
+    
+    Returns:
+        dict: دیکشنری از نام فیلد به دسترسی (True/False)
+    """
+    
+    # فیلدهایی که باید در لیست/جزئیات نمایش داده شوند
+    display_fields = {
+        'code': 'code',
+        'name': 'name',
+        'category': 'category',
+        'subcategory': 'subcategory',
+        'grade': 'grade',
+        'physical_shape': 'physical_shape',
+        'main_application': 'main_application',
+        'is_custom': 'is_custom',
+        'full_description': 'full_description',
+        'main_unit': 'main_unit',
+        'secondary_unit': 'secondary_unit',
+        'conversion_coefficient': 'conversion_coefficient',
+        'expiration_date': 'expiration_date',
+        'pellet_granule_diameter': 'pellet_granule_diameter',
+        'image': 'image',
+        'lab_analysis': 'lab_analysis',
+        'invoice_description': 'invoice_description',
+    }
+    
+    if user.is_superuser:
+        # superuser به همه فیلدها دسترسی دارد
+        return {field: True for field in display_fields.keys()}
+    
+    # استفاده از ContentType برای بررسی دسترسی
+    content_type = ContentType.objects.get_for_model(Product)
+    accessible_fields = {}
+    
+    for display_name, model_field_name in display_fields.items():
+        # بررسی آیا قانونی برای این فیلد وجود دارد
+        rule = FieldAccessRule.objects.filter(
+            user=user,
+            content_type=content_type,
+            field_name=model_field_name,
+            access_type='view'
+        ).first()
+        
+        if rule is None:
+            # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
+            accessible_fields[display_name] = True
+        else:
+            # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
+            accessible_fields[display_name] = rule.allowed
+    
+    return accessible_fields

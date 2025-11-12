@@ -393,15 +393,15 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>تصویر</th>
-                        <th>کد محصول</th>
-                        <th>نام محصول</th>
-                        <th>گروه</th>
-                        <th>گرید</th>
-                        <th>شکل فیزیکی</th>
-                        <th>کاربرد</th>
-                        <th>واحد اصلی</th>
-                        <th>نوع</th>
+                        {% if accessible_fields.image %}<th>تصویر</th>{% endif %}
+                        {% if accessible_fields.code %}<th>کد محصول</th>{% endif %}
+                        {% if accessible_fields.name %}<th>نام محصول</th>{% endif %}
+                        {% if accessible_fields.category %}<th>گروه</th>{% endif %}
+                        {% if accessible_fields.grade %}<th>گرید</th>{% endif %}
+                        {% if accessible_fields.physical_shape %}<th>شکل فیزیکی</th>{% endif %}
+                        {% if accessible_fields.main_application %}<th>کاربرد</th>{% endif %}
+                        {% if accessible_fields.main_unit %}<th>واحد اصلی</th>{% endif %}
+                        {% if accessible_fields.is_custom %}<th>نوع</th>{% endif %}
                         <th>تاریخ ایجاد</th>
                         <th>عملیات</th>
                     </tr>
@@ -409,6 +409,7 @@
                 <tbody>
                     {% for product in products %}
                     <tr>
+                        {% if accessible_fields.image %}
                         <td>
                             {% if product.image %}
                             <img src="{{ product.image.url }}" 
@@ -420,29 +421,45 @@
                             </div>
                             {% endif %}
                         </td>
+                        {% endif %}
+                        {% if accessible_fields.code %}
                         <td><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ product.code }}</code></td>
+                        {% endif %}
+                        {% if accessible_fields.name %}
                         <td>
                             <a href="{% url 'sales:product_detail' product.id %}" 
                                style="color: var(--primary-green); text-decoration: none; font-weight: 500;">
                                 {{ product.name }}
                             </a>
                         </td>
+                        {% endif %}
+                        {% if accessible_fields.category %}
                         <td>
                             {{ product.category }}
-                            {% if product.subcategory %}
+                            {% if accessible_fields.subcategory and product.subcategory %}
                             <br><small style="color: var(--gray-600);">{{ product.subcategory }}</small>
                             {% endif %}
                         </td>
+                        {% endif %}
+                        {% if accessible_fields.grade %}
                         <td>{{ product.grade|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.physical_shape %}
                         <td>{{ product.physical_shape|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.main_application %}
                         <td>
                             {% if product.main_application %}
-                            <span class="badge badge-info">{{ product.main_application }}</span>
+                            <span class="badge badge-info">{{ product.get_main_application_display }}</span>
                             {% else %}
                             <span class="badge badge-secondary">-</span>
                             {% endif %}
                         </td>
+                        {% endif %}
+                        {% if accessible_fields.main_unit %}
                         <td>{{ product.main_unit|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.is_custom %}
                         <td>
                             {% if product.is_custom %}
                             <span class="badge badge-warning">سفارشی</span>
@@ -450,6 +467,7 @@
                             <span class="badge badge-secondary">استاندارد</span>
                             {% endif %}
                         </td>
+                        {% endif %}
                         <td>{{ product.created_at|date:"Y/m/d" }}</td>
                         <td>
                             <div class="btn-group">

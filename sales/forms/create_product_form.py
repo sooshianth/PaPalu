@@ -27,53 +27,56 @@ class CreateProductForm(forms.ModelForm):
         accessible_fields = kwargs.pop('accessible_fields', None)
         super().__init__(*args, **kwargs)
 
-        # تنظیم فیلد physical_shape به صورت CharField
-        self.fields['physical_shape'] = forms.CharField(
-            max_length=100,
-            required=True,
-            label='شکل فیزیکی',
-            widget=forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'مثال: مش-پلت-کرامبل-آجیلی'
-            })
-        )
-
-        # تنظیم فیلد main_application به ChoiceField
-        self.fields['main_application'] = forms.ChoiceField(
-            choices=Product.PRODUCT_APPLICATION_CHOICES,
-            required=True,
-            label='کاربرد اصلی',
-            widget=forms.Select(attrs={
-                'class': 'form-control'
-            })
-        )
-
-        # تنظیم فیلدهای اجباری
-        self.fields['code'].required = True
-        self.fields['name'].required = True
-        self.fields['category'].required = True
-        self.fields['subcategory'].required = True
-        self.fields['grade'].required = True
-        self.fields['physical_shape'].required = True
-        self.fields['main_application'].required = True
-        self.fields['full_description'].required = True
-        self.fields['main_unit'].required = True
-        self.fields['expiration_date'].required = True
-
-        # تنظیم فیلدهای اختیاری
-        self.fields['secondary_unit'].required = False
-        self.fields['conversion_coefficient'].required = False
-        self.fields['pellet_granule_diameter'].required = False
-        self.fields['image'].required = False
-        self.fields['lab_analysis'].required = False
-        self.fields['invoice_description'].required = False
-        self.fields['is_custom'].required = False
-
-        # اعمال محدودیت‌های دسترسی فیلدی
+        # اعمال محدودیت‌های دسترسی فیلدی - باید قبل از تنظیمات دیگر انجام شود
         if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
+            # فیلدهایی که دسترسی ندارند را حذف می‌کنیم
+            fields_to_remove = []
             for field_name, allowed in list(accessible_fields.items()):
                 if not allowed and field_name in self.fields:
-                    del self.fields[field_name]
+                    fields_to_remove.append(field_name)
+            
+            # حذف فیلدها
+            for field_name in fields_to_remove:
+                del self.fields[field_name]
+
+        # تنظیم فیلد physical_shape به صورت CharField (اگر دسترسی داشته باشد)
+        if 'physical_shape' in self.fields:
+            self.fields['physical_shape'] = forms.CharField(
+                max_length=100,
+                required=True,
+                label='شکل فیزیکی',
+                widget=forms.TextInput(attrs={
+                    'class': 'form-control',
+                    'placeholder': 'مثال: مش-پلت-کرامبل-آجیلی'
+                })
+            )
+
+        # تنظیم فیلد main_application به ChoiceField (اگر دسترسی داشته باشد)
+        if 'main_application' in self.fields:
+            self.fields['main_application'] = forms.ChoiceField(
+                choices=Product.PRODUCT_APPLICATION_CHOICES,
+                required=True,
+                label='کاربرد اصلی',
+                widget=forms.Select(attrs={
+                    'class': 'form-control'
+                })
+            )
+
+        # تنظیم فیلدهای اجباری (فقط برای فیلدهایی که دسترسی دارند و هنوز در فرم هستند)
+        required_fields = ['code', 'name', 'category', 'subcategory', 'grade', 
+                          'physical_shape', 'main_application', 'full_description', 
+                          'main_unit', 'expiration_date']
+        for field_name in required_fields:
+            if field_name in self.fields:
+                self.fields[field_name].required = True
+
+        # تنظیم فیلدهای اختیاری (فقط برای فیلدهایی که دسترسی دارند و هنوز در فرم هستند)
+        optional_fields = ['secondary_unit', 'conversion_coefficient', 
+                          'pellet_granule_diameter', 'image', 'lab_analysis', 
+                          'invoice_description', 'is_custom']
+        for field_name in optional_fields:
+            if field_name in self.fields:
+                self.fields[field_name].required = False
 
     # فیلدهای اجباری
     code = forms.CharField(
@@ -505,52 +508,65 @@ BOMModelFormSet = modelformset_factory(
 )
 
 
-def get_accessible_product_fields(user, product_form: CreateProductForm):
+def get_accessible_product_fields(user, product_form: CreateProductForm = None):
     """
-    محاسبه دسترسی فیلدهای فرم محصول
+    محاسبه دسترسی فیلدهای فرم محصول برای ایجاد/ویرایش
+    
+    Args:
+        user: کاربر
+        product_form: فرم محصول (اختیاری - اگر None باشد، از فیلدهای پیش‌فرض استفاده می‌شود)
+    
+    Returns:
+        dict: دیکشنری از نام فیلد به دسترسی (True/False)
     """
-    if user.is_superuser:
-        return {name: True for name in product_form.fields.keys()}
-
-    # نقشه‌برداری فیلدها به مدل‌ها
-    field_mapping = {
-        # فیلدهای اصلی محصول
-        'code': ('Product', 'code'),
-        'name': ('Product', 'name'),
-        'category': ('Product', 'category'),
-        'subcategory': ('Product', 'subcategory'),
-        'grade': ('Product', 'grade'),
-        'physical_shape': ('Product', 'physical_shape'),
-        'main_application': ('Product', 'main_application'),
-        'is_custom': ('Product', 'is_custom'),
-        'full_description': ('Product', 'full_description'),
-        'main_unit': ('Product', 'main_unit'),
-        'secondary_unit': ('Product', 'secondary_unit'),
-        'conversion_coefficient': ('Product', 'conversion_coefficient'),
-        'expiration_date': ('Product', 'expiration_date'),
-        # فیلدهای اختیاری
-        'pellet_granule_diameter': ('Product', 'pellet_granule_diameter'),
-        'image': ('Product', 'image'),
-        'lab_analysis': ('Product', 'lab_analysis'),
-        'invoice_description': ('Product', 'invoice_description'),
+    
+    # فیلدهایی که در فرم نمایش داده می‌شوند
+    display_fields = {
+        'code': 'code',
+        'name': 'name',
+        'category': 'category',
+        'subcategory': 'subcategory',
+        'grade': 'grade',
+        'physical_shape': 'physical_shape',
+        'main_application': 'main_application',
+        'is_custom': 'is_custom',
+        'full_description': 'full_description',
+        'main_unit': 'main_unit',
+        'secondary_unit': 'secondary_unit',
+        'conversion_coefficient': 'conversion_coefficient',
+        'expiration_date': 'expiration_date',
+        'pellet_granule_diameter': 'pellet_granule_diameter',
+        'image': 'image',
+        'lab_analysis': 'lab_analysis',
+        'invoice_description': 'invoice_description',
     }
-
+    
+    if user.is_superuser:
+        # superuser به همه فیلدها دسترسی دارد
+        return {field: True for field in display_fields.keys()}
+    
     from access.models.FieldAccessUserModel import FieldAccessRule
+    from django.contrib.contenttypes.models import ContentType
     from core.ProductFolder.ProductModel import Product
     
-    accessible = {}
+    # استفاده از ContentType برای بررسی دسترسی
+    content_type = ContentType.objects.get_for_model(Product)
+    accessible_fields = {}
     
-    # استفاده از متد get_accessible_fields برای دریافت فیلدهای قابل دسترسی
-    # برای ایجاد/ویرایش محصول از access_type='edit' استفاده می‌کنیم
-    accessible_fields = FieldAccessRule.get_accessible_fields(
-        user=user,
-        model_class=Product,
-        access_type='edit'
-    )
+    for display_name, model_field_name in display_fields.items():
+        # بررسی آیا قانونی برای این فیلد وجود دارد
+        rule = FieldAccessRule.objects.filter(
+            user=user,
+            content_type=content_type,
+            field_name=model_field_name,
+            access_type='edit'
+        ).first()
+        
+        if rule is None:
+            # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
+            accessible_fields[display_name] = True
+        else:
+            # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
+            accessible_fields[display_name] = rule.allowed
     
-    # تبدیل لیست فیلدها به دیکشنری
-    for field_name, (model_name, field_db_name) in field_mapping.items():
-        # بررسی اینکه آیا فیلد در لیست فیلدهای قابل دسترسی است
-        accessible[field_name] = field_db_name in accessible_fields
-
-    return accessible
+    return accessible_fields

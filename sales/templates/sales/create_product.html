@@ -242,6 +242,7 @@
         <div class="form-section">
             <h5>اطلاعات اجباری محصول</h5>
             <div class="row">
+                {% if accessible_fields.code and 'code' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.code.label }}</label>
                     {{ product_form.code }}
@@ -249,7 +250,9 @@
                         <div class="text-danger">{{ product_form.code.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.name and 'name' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.name.label }}</label>
                     {{ product_form.name }}
@@ -257,7 +260,9 @@
                         <div class="text-danger">{{ product_form.name.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.category and 'category' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.category.label }}</label>
                     {{ product_form.category }}
@@ -265,7 +270,9 @@
                         <div class="text-danger">{{ product_form.category.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.subcategory and 'subcategory' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.subcategory.label }}</label>
                     {{ product_form.subcategory }}
@@ -273,7 +280,9 @@
                         <div class="text-danger">{{ product_form.subcategory.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.grade and 'grade' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.grade.label }}</label>
                     {{ product_form.grade }}
@@ -281,7 +290,9 @@
                         <div class="text-danger">{{ product_form.grade.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.physical_shape and 'physical_shape' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.physical_shape.label }}</label>
                     {{ product_form.physical_shape }}
@@ -289,7 +300,9 @@
                         <div class="text-danger">{{ product_form.physical_shape.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.main_application and 'main_application' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.main_application.label }}</label>
                     {{ product_form.main_application }}
@@ -297,7 +310,9 @@
                         <div class="text-danger">{{ product_form.main_application.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.is_custom and 'is_custom' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <div class="form-check">
                         {{ product_form.is_custom }}
@@ -307,7 +322,9 @@
                         <div class="text-danger">{{ product_form.is_custom.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.full_description and 'full_description' in product_form.fields %}
                 <div class="col-12 mb-3">
                     <label class="form-label required-field">{{ product_form.full_description.label }}</label>
                     {{ product_form.full_description }}
@@ -315,7 +332,9 @@
                         <div class="text-danger">{{ product_form.full_description.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.main_unit and 'main_unit' in product_form.fields %}
                 <div class="col-md-4 mb-3">
                     <label class="form-label required-field">{{ product_form.main_unit.label }}</label>
                     {{ product_form.main_unit }}
@@ -323,7 +342,9 @@
                         <div class="text-danger">{{ product_form.main_unit.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.secondary_unit and 'secondary_unit' in product_form.fields %}
                 <div class="col-md-4 mb-3">
                     <label class="form-label">{{ product_form.secondary_unit.label }}</label>
                     {{ product_form.secondary_unit }}
@@ -331,7 +352,9 @@
                         <div class="text-danger">{{ product_form.secondary_unit.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.conversion_coefficient and 'conversion_coefficient' in product_form.fields %}
                 <div class="col-md-4 mb-3">
                     <label class="form-label">{{ product_form.conversion_coefficient.label }}</label>
                     {{ product_form.conversion_coefficient }}
@@ -339,7 +362,9 @@
                         <div class="text-danger">{{ product_form.conversion_coefficient.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.expiration_date and 'expiration_date' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.expiration_date.label }}</label>
                     {{ product_form.expiration_date }}
@@ -347,6 +372,7 @@
                         <div class="text-danger">{{ product_form.expiration_date.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -354,6 +380,7 @@
         <div class="form-section">
             <h5>اطلاعات اختیاری محصول</h5>
             <div class="row">
+                {% if accessible_fields.pellet_granule_diameter and 'pellet_granule_diameter' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ product_form.pellet_granule_diameter.label }}</label>
                     {{ product_form.pellet_granule_diameter }}
@@ -361,7 +388,9 @@
                         <div class="text-danger">{{ product_form.pellet_granule_diameter.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.image and 'image' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ product_form.image.label }}</label>
                     {{ product_form.image }}
@@ -369,7 +398,9 @@
                         <div class="text-danger">{{ product_form.image.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.lab_analysis and 'lab_analysis' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ product_form.lab_analysis.label }}</label>
                     {{ product_form.lab_analysis }}
@@ -377,7 +408,9 @@
                         <div class="text-danger">{{ product_form.lab_analysis.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
 
+                {% if accessible_fields.invoice_description and 'invoice_description' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ product_form.invoice_description.label }}</label>
                     {{ product_form.invoice_description }}
@@ -385,6 +418,7 @@
                         <div class="text-danger">{{ product_form.invoice_description.errors.0 }}</div>
                     {% endif %}
                 </div>
+                {% endif %}
             </div>
         </div>
 
