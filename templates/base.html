@@ -874,6 +874,15 @@
                                 <span class="nav-text">محصولات</span>
                             </a>
                         </li>
+                        <li class="submenu-item">
+                            <a href="{% url 'sales:product_price_list' %}" class="nav-link submenu-link" title="قیمت‌گذاری محصولات">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">قیمت‌گذاری محصولات</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 <li class="nav-item">
@@ -1041,6 +1050,15 @@
                 </a>
             </li>
             <li class="mobile-nav-item">
+                <a href="{% url 'sales:product_price_list' %}" class="mobile-nav-link" title="قیمت‌گذاری محصولات">
+                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="mobile-nav-text">قیمت‌گذاری</span>
+                </a>
+            </li>
+            <li class="mobile-nav-item">
                 <a href="#" class="mobile-nav-link" title="تامین">
                     <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1197,7 +1215,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check if current page is in sales section
         const currentPath = window.location.pathname;
-        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/'];
+        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/'];
         const isSalesPage = salesPaths.some(path => currentPath.includes(path));
         
         // Auto-expand if on sales page
