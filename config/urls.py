@@ -9,19 +9,21 @@ def redirect_to_login(request):
     """هدایت به صفحه لاگین برای کاربران غیر لاگین شده"""
     return redirect('unified_login')
 
-@login_required
 def home_view(request):
     """صفحه اصلی بعد از لاگین"""
-    return render(request, 'home.html', {
-        'user': request.user
-    })
-
+    if request.user.is_authenticated:
+        return render(request, 'home.html', {
+            'user': request.user
+        })
+    else:
+        return redirect_to_login(request)
+        
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('permissions/', include('perm_manager.urls')),
     path('authentication/', include('authentication.urls')),
     path('home/', home_view, name='home'),
-    path('', redirect_to_login, name='root'),
+    path('', home_view, name='root'),
     path('accounting/', include('accounting.urls')),
     path('custody/', include('custody.urls')),
     path('distribution/', include('distribution.urls')),
