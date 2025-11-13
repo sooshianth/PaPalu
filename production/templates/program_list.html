@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{% block content %}
+<h2>لیست برنامه های تولید</h2>
+<table border="1" cellpadding="4" cellspacing="0">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>محصول</th>
+            <th>فرمول</th>
+            <th>وزن برنامه</th>
+            <th>وضعیت</th>
+            <th>اولویت</th>
+            <th>درصد تحقق</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for p in programs %}
+        <tr>
+            <td>{{ p.id }}</td>
+            <td>{{ p.product }}</td>
+            <td>{{ p.formula_id }}</td>
+            <td>{{ p.planned_weight_ton }}</td>
+            <td>{{ p.get_status_display }}</td>
+            <td>{{ p.priority_index }}</td>
+            <td>{{ p.fulfillment_percentage }}%</td>
+            <td><a href="{% url 'production:program_edit' p.id %}">ویرایش</a></td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="8">هیچ برنامه ای ثبت نشده است.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+<p><a href="{% url 'production:program_create' %}">ایجاد برنامه جدید</a></p>
+{% endblock %}

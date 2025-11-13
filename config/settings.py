@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-3vlymx-erfjbe&*g(z)8)q1o*!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS','127.0.0.1').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS','localhost').split(',')
 
 # Session timeout configuration
 SESSION_COOKIE_AGE = 1200  # 20 minutes in seconds
@@ -243,6 +243,8 @@ LOGGING = {
             'class': 'core.logging_filters.CircularBufferHandler',
             'capacity': 10000,
             'formatter': 'verbose',
+            # Add userinfo filter so formatter fields like {username} are always present
+            'filters': ['userinfo'],
         },
         'null': {
             'class': 'logging.NullHandler',  # Ignores messages

@@ -1,0 +1,286 @@
+{% extends 'base.html' %}
+{% block title %}برنامه تولید | ثبت{% endblock %}
+
+{% block extra_css %}
+<style>
+	.card {background:#fff;border:1px solid #e9ecef;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+	.card-header {padding:14px 18px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between}
+	.card-body {padding:18px}
+	.form-grid {display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+	.form-row {display:flex;flex-direction:column}
+	.form-row label {font-size:.95rem;color:#343a40;margin-bottom:6px}
+	.form-actions {display:flex;gap:8px;flex-wrap:wrap}
+	.status-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#f8f9fa;border:1px solid #e9ecef;font-size:.9rem}
+	.table-wrap{overflow:auto}
+	table.datatable{width:100%;border-collapse:collapse}
+	table.datatable th,table.datatable td{border:1px solid #e9ecef;padding:8px 10px;text-align:center}
+	table.datatable th{background:#f8f9fa}
+	@media (max-width:768px){.form-grid{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card" id="program-form">
+	<div class="card-header">
+		<h3 style="font-size:1.1rem">ثبت برنامه تولید</h3>
+		{% if program %}
+			<span class="status-chip">وضعیت: {{ program.get_status_display }}</span>
+		{% endif %}
+	</div>
+	<div class="card-body">
+		<form method="post" novalidate>
+			{% csrf_token %}
+
+			{% if form.non_field_errors %}
+				<div class="alert alert-danger">{{ form.non_field_errors }}</div>
+			{% endif %}
+
+			{% if db_integrity_issue %}
+			<div class="alert alert-warning" style="font-size:.85rem">⚠️ مشکل پایگاه داده: جدول برنامه تولید وجود ندارد در حالی که مهاجرت ثبت شده است. برای رفع: یا فایل db.sqlite3 را حذف و دوباره migrate اجرا کنید، یا جدول را به صورت دستی ایجاد نمایید. (موقتاً داشبورد با دادهٔ خالی نمایش داده می‌شود.)</div>
+			{% endif %}
+
+			<div class="form-grid">
+			<div class="form-row">{{ form.production_info.label_tag }}{{ form.production_info }}</div>
+			<div class="form-row">{{ form.product.label_tag }}{{ form.product }}</div>
+			<div class="form-row">{{ form.formula_id.label_tag }}{{ form.formula_id }}</div>
+			<div class="form-row">{{ form.planned_weight_ton.label_tag }}{{ form.planned_weight_ton }}</div>
+			<div class="form-row">{{ form.predicted_start_time.label_tag }}{{ form.predicted_start_time }}</div>
+			<div class="form-row">{{ form.predicted_end_time.label_tag }}{{ form.predicted_end_time }}</div>
+			<div class="form-row">{{ form.execution_date.label_tag }}{{ form.execution_date }}</div>
+			<div class="form-row">{{ form.packaging_type.label_tag }}{{ form.packaging_type }}</div>
+			<div class="form-row">{{ form.extra_description.label_tag }}{{ form.extra_description }}</div>
+			<div class="form-row">{{ form.inventory_snapshot.label_tag }}{{ form.inventory_snapshot }}</div>
+			<div class="form-row">{{ form.net_unplanned_requirement.label_tag }}{{ form.net_unplanned_requirement }}</div>
+			<div class="form-row" style="display:none">{{ form.status }}</div>
+			<div class="form-row">{{ form.produced_weight_ton.label_tag }}{{ form.produced_weight_ton }}</div>
+			</div>
+
+			<div class="form-actions" style="margin-top:16px">
+				<button class="btn btn-secondary btn-sm" type="submit" name="action" value="draft">ذخیره پیش نویس</button>
+				{% if not program or program.status == 'draft' %}
+					<button class="btn btn-primary btn-sm" type="submit" name="action" value="confirm">تایید برنامه</button>
+				{% endif %}
+				{% if program and program.status == 'confirmed' %}
+					<button class="btn btn-success btn-sm" type="submit" name="action" value="start">شروع تولید</button>
+				{% endif %}
+				{% if program and program.status == 'in_progress' %}
+					<button class="btn btn-primary btn-sm" type="submit" name="action" value="complete">تکمیل برنامه</button>
+				{% endif %}
+				<a class="btn btn-secondary btn-sm" href="{% url 'production:program_list' %}">بازگشت به لیست</a>
+			</div>
+		</form>
+
+		<!-- Dashboard Tables Section -->
+		<hr style="margin:24px 0">
+		<h4>جدول ۱: موجودی مواد اولیه</h4>
+		<div class="table-wrap">
+			<table id="inventoryTable" class="datatable">
+				<thead>
+					<tr>
+						<th>کد ماده اولیه</th>
+						<th>نام ماده اولیه</th>
+						<th>موجودی فعلی</th>
+						<th>واحد</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for item in raw_material_inventory %}
+					<tr>
+						<td>{{ item.raw_material_id }}</td>
+						<td>{{ item.raw_material }}</td>
+						<td>{{ item.current_inventory }}</td>
+						<td>{{ item.unit_used }}</td>
+					</tr>
+					{% empty %}
+					<tr><td colspan="4">داده‌ای موجود نیست.</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+
+		<h4 style="margin-top:32px">جدول ۲: نمای کلی جریان محصولات</h4>
+		<div class="table-wrap">
+			<table id="productFlowTable" class="datatable">
+				<thead>
+					<tr>
+						<th>محصول</th>
+						<th>فرمول</th>
+						<th>موجودی انبار</th>
+						<th>موجودی برنامه‌ریزی شده</th>
+						<th>نیاز برنامه‌ریزی نشده</th>
+						<th>وضعیت</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for flow in product_flow_status %}
+					<tr>
+						<td>{{ flow.product }}</td>
+						<td>{{ flow.formula_id }}</td>
+						<td>{{ flow.inventory }}</td>
+						<td>{{ flow.planned_inventory }}</td>
+						<td>{{ flow.net_unplanned_requirement }}</td>
+						<td>{{ flow.status }}</td>
+					</tr>
+					{% empty %}
+					<tr><td colspan="6">داده‌ای موجود نیست.</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+
+		<h4 style="margin-top:32px">جدول ۳: لیست تخصیص‌های نیازمند برنامه‌ریزی</h4>
+		<div class="table-wrap">
+			<table id="allocationTable" class="datatable">
+				<thead>
+					<tr>
+						<th>شناسه تخصیص</th>
+						<th>وضعیت تخصیص</th>
+						<th>مجموع وزن</th>
+						<th>جزئیات محصولات</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for alloc in allocations %}
+					<tr class="parent-row">
+						<td>{{ alloc.id }}</td>
+						<td>{{ alloc.status }}</td>
+						<td>{{ alloc.total_weight }}</td>
+						<td>
+							<button type="button" onclick="toggleChildRows('{{ alloc.id }}')">جزئیات</button>
+						</td>
+					</tr>
+					{% for child in alloc.products %}
+					<tr class="child-row child-{{ alloc.id }}" style="display:none">
+						<td colspan="2">{{ child.product }}</td>
+						<td>{{ child.weight }}</td>
+						<td>{{ child.status }}</td>
+					</tr>
+					{% endfor %}
+					{% empty %}
+					<tr><td colspan="4">داده‌ای موجود نیست.</td></tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+
+		<h4 style="margin-top:32px">ایجاد گروهی برنامه‌ها (Batch Creation)</h4>
+		<div class="table-wrap">
+			<table id="batchTable" class="datatable">
+				<thead>
+					<tr>
+						<th>محصول</th>
+						<th>فرمول</th>
+						<th>وزن برنامه</th>
+						<th>ساعت برنامه</th>
+						<th>وضعیت</th>
+						<th>عملیات</th>
+					</tr>
+				</thead>
+				<tbody id="batchTableBody">
+					<!-- Placeholder for batch entry rows -->
+				</tbody>
+			</table>
+			<button class="btn btn-secondary btn-sm" type="button" onclick="addBatchRow()">افزودن ردیف</button>
+			<button class="btn btn-primary btn-sm" type="button" onclick="saveBatchPrograms()">ذخیره گروهی</button>
+		</div>
+
+		{% if program %}
+			<hr style="margin:20px 0">
+					<h4 style="margin-bottom:10px">خلاصه مصرف مواد اولیه</h4>
+			<div class="table-wrap">
+				<table id="consumptionTable" class="datatable">
+					<thead>
+						<tr>
+							<th>کد ماده اولیه</th>
+							<th>مقدار مورد نیاز</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% if program.consumption_summary %}
+							{% for key, val in program.consumption_summary.items %}
+								<tr>
+									<td>{{ key }}</td>
+									<td>{{ val }}</td>
+								</tr>
+							{% endfor %}
+						{% else %}
+							<tr><td colspan="2">هنوز محاسبه نشده است. پس از تایید یا شروع تولید محاسبه میشود.</td></tr>
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+					<p style="margin-top:10px">ساعت برنامه: {% if program.planned_hours %}{{ program.planned_hours }}{% else %}-{% endif %}</p>
+		{% endif %}
+	</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+	// Toggle child rows for allocations
+	function toggleChildRows(id) {
+		var rows = document.querySelectorAll('.child-' + id);
+		rows.forEach(function(row){
+			row.style.display = (row.style.display === 'none') ? '' : 'none';
+		});
+	}
+
+	// Batch creation functionality
+	function addBatchRow() {
+		var tbody = document.getElementById('batchTableBody');
+		var row = tbody.insertRow();
+		row.innerHTML = `
+			<td><input type="text" class="form-control form-control-sm" name="batch_product[]"></td>
+			<td><input type="text" class="form-control form-control-sm" name="batch_formula[]"></td>
+			<td><input type="number" class="form-control form-control-sm" name="batch_weight[]" step="0.001"></td>
+			<td><input type="number" class="form-control form-control-sm" name="batch_hours[]" step="0.01"></td>
+			<td><select class="form-control form-control-sm" name="batch_status[]">
+				<option value="draft">پیش‌نویس</option>
+				<option value="confirmed">تأیید شده</option>
+			</select></td>
+			<td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">حذف</button></td>
+		`;
+	}
+
+	function saveBatchPrograms() {
+		// Collect all batch rows data and submit
+		alert('قابلیت ذخیره گروهی در حال توسعه است.');
+		// TODO: Implement AJAX submission for batch creation
+	}
+
+	// Initialize DataTables
+	document.addEventListener('DOMContentLoaded', function(){
+		if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+			jQuery('#consumptionTable').DataTable({
+				paging: false,
+				searching: false,
+				info: false,
+				language: { url: '/static/i18n/datatables/fa.json' }
+			});
+			
+			// Product Flow Table with sorting by Net Unplanned Requirement
+			jQuery('#productFlowTable').DataTable({
+				paging: false,
+				searching: true,
+				info: false,
+				order: [[4, 'desc']], // Sort by column 4 (Net Unplanned Requirement) descending
+				language: { url: '/static/i18n/datatables/fa.json' }
+			});
+			
+			jQuery('#inventoryTable').DataTable({
+				paging: true,
+				searching: true,
+				info: true,
+				language: { url: '/static/i18n/datatables/fa.json' }
+			});
+			
+			jQuery('#allocationTable').DataTable({
+				paging: false,
+				searching: false,
+				info: false,
+				language: { url: '/static/i18n/datatables/fa.json' }
+			});
+		}
+	});
+</script>
+{% endblock %}

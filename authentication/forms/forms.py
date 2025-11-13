@@ -3,7 +3,10 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from sms_ir import SmsIr
+try:
+    from sms_ir import SmsIr  # External SMS provider
+except ImportError:  # Graceful degradation if library not installed during dev/migrations
+    SmsIr = None
 from django.core.cache import cache
 import time
 from django.conf import settings
@@ -120,8 +123,16 @@ def send_verify_code(number:str):
         logger.debug(f"{number} !@# DEBUG MODE: SMS not sent for {number}. The code is: {code}")
         return code, True
 
-    api_key = settings.SMS_API_KEY
-    linenumber = settings.SMS_LINE_NUMBER
+    # If SMS library missing, skip real send (useful for local dev / migrations)
+    if SmsIr is None:
+        logger.warning(f"{number} !@# sms_ir library not installed; returning generated code without sending")
+        return code, False
+
+    api_key = getattr(settings, 'SMS_API_KEY', None)
+    linenumber = getattr(settings, 'SMS_LINE_NUMBER', None)
+    if not api_key or not linenumber:
+        logger.warning(f"{number} !@# SMS credentials missing; returning code without sending")
+        return code, False
     sms_account = SmsIr(api_key, linenumber)
     
     message = f"کد ورود به سیمرغ افزار : \n  {code}  \n پشتیبانی: 021-66562216"

@@ -12,3 +12,4 @@ from .WarehouseFolder.admin import *
 from .StockEntryFolder.admin import *
 from .SettlementFolder.admin import *
 from .RBACModel.admin import *
+from .ProductionFolder.admin import *
