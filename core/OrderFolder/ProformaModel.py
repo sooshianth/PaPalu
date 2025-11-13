@@ -31,7 +31,7 @@ class Proforma(models.Model):
     customer = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
-        related_name='proformas',
+        related_name='customer_proformas',
         verbose_name='مشتری',
         null=True,
         blank=True,
@@ -40,7 +40,7 @@ class Proforma(models.Model):
     company = models.ForeignKey(
         Person,
         on_delete=models.CASCADE,
-        related_name='proformas',
+        related_name='company_proformas',
         verbose_name='شرکت',
         null=True,
         blank=True,
