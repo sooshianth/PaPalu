@@ -334,13 +334,20 @@
                 <span class="detail-label">شاخص اولویت:</span>
                 <span class="detail-value">{{ program.priority_index|default:"-" }}</span>
             </div>
+            {% endif %}
+            <!-- زمان شروع واقعی (visible when not draft) -->
+            {% if not is_create and program and program.status != 'draft' %}
             <div class="detail-row">
-                <span class="detail-label">زمان شروع واقعی:</span>
-                <span class="detail-value">{{ program.started_at|date:"Y/m/d H:i"|default:"-" }}</span>
+                <span class="detail-label">{{ form.started_at.label }}:</span>
+                <span class="detail-value">{{ form.started_at }}</span>
             </div>
+            {% endif %}
+            
+            <!-- زمان تکمیل (visible when in_progress or completed) -->
+            {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
             <div class="detail-row">
-                <span class="detail-label">زمان تکمیل:</span>
-                <span class="detail-value">{{ program.completed_at|date:"Y/m/d H:i"|default:"-" }}</span>
+                <span class="detail-label">{{ form.completed_at.label }}:</span>
+                <span class="detail-value">{{ form.completed_at }}</span>
             </div>
             {% endif %}
         </div>
@@ -359,16 +366,18 @@
     <!-- دکمه‌های عملیات -->
     {{ form.status }}
     <div class="form-actions" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px;">
-        <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
-        {% if is_create or program.status == 'draft' %}
+        {% if program.status == 'draft' or is_create %}
+            <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
             <button class="btn btn-secondary" type="submit" name="action" value="save_draft">ذخیره پیش‌نویس</button>
             <button class="btn btn-primary" type="submit" name="action" value="confirm">تایید برنامه</button>
-        {% endif %}
-        {% if not is_create and program.status == 'confirmed' %}
+        {% elif program.status == 'confirmed' %}
+            <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
             <button class="btn btn-primary" type="submit" name="action" value="start">شروع تولید</button>
-        {% endif %}
-        {% if not is_create and program.status == 'in_progress' %}
+        {% elif program.status == 'in_progress' %}
+            <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
             <button class="btn btn-primary" type="submit" name="action" value="complete">تکمیل برنامه</button>
+        {% elif program.status == 'completed' %}
+            <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
         {% endif %}
     </div>
 

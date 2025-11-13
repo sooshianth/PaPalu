@@ -3,6 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.contrib import messages
 from django.urls import reverse
+from django.utils import timezone
 
 import logging
 from core.logging_levels import *
@@ -12,6 +13,7 @@ from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from production.forms.program_form import ProductionProgramForm
+from production.forms.production_form import ProductionForm
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -162,10 +164,10 @@ def production_program_crud_view(request, program_id=None):
             action = request.POST.get('action', 'save')
             
             if is_create:
-                form = ProductionProgramForm(request.POST)
+                form = ProductionForm(request.POST)
                 audit_logger.info("ارسال فرم ایجاد برنامه تولید جدید")
             else:
-                form = ProductionProgramForm(request.POST, instance=program)
+                form = ProductionForm(request.POST, instance=program)
                 audit_logger.info(f"ارسال فرم ویرایش برنامه تولید {program_id}")
             
             if form.is_valid():
@@ -179,8 +181,14 @@ def production_program_crud_view(request, program_id=None):
                         instance.status = ProductionProgram.Status.CONFIRMED
                     elif action == 'start':
                         instance.status = ProductionProgram.Status.IN_PROGRESS
+                        # Auto-fill started_at to now if not already set
+                        if not instance.started_at:
+                            instance.started_at = timezone.now()
                     elif action == 'complete':
                         instance.status = ProductionProgram.Status.COMPLETED
+                        # Auto-fill completed_at to now if not already set
+                        if not instance.completed_at:
+                            instance.completed_at = timezone.now()
                     
                     instance.save()
                     
@@ -202,9 +210,9 @@ def production_program_crud_view(request, program_id=None):
         else:
             # GET request
             if is_create:
-                form = ProductionProgramForm()
+                form = ProductionForm()
             else:
-                form = ProductionProgramForm(instance=program)
+                form = ProductionForm(instance=program)
         
         # دریافت موجودی مواد اولیه از انبارهای اولیه
         raw_materials_inventory = []
@@ -267,7 +275,7 @@ def production_program_crud_view(request, program_id=None):
         audit_logger.alert(f"خطای کلی در دسترسی به صفحه برنامه تولید")
         
         context = {
-            'form': ProductionProgramForm(),
+            'form': ProductionForm(),
             'program': None,
             'is_create': is_create,
             'raw_materials_inventory': [],

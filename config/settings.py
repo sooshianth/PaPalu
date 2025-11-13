@@ -163,6 +163,10 @@ LOGGING = {
             'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
+        'message_only': {
+            'format': '{message}',
+            'style': '{',
+        },
         'security': {
             'format': '{levelname} !@# {asctime} !@# {user_id} !@# {username} !@# {action} !@# {method} !@# {endpoint} !@# {ip_address} !@# {user_agent} !@# {payload_summary} !@# {status_code} !@# {duration_ms} !@# {message} !@# {user_phone}',
             'style': '{',
@@ -196,7 +200,7 @@ LOGGING = {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+            'formatter': 'message_only',
             'filters': ['exclude_runserver_and_http_protocol', 'userinfo'],
         },
         'django_errors_file': {
