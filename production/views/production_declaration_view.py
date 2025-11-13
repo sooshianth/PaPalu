@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
+from django.http import JsonResponse
 
 import logging
 from core.logging_levels import *
@@ -12,8 +13,12 @@ from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
+from core.ProductFolder.ProductionInfoModel import ProductionInfo
+from core.ProductFolder.BOMModel import BOM
+from core.ProductFolder.ProductModel import Product
 from production.forms.program_form import ProductionProgramForm
 from production.forms.production_form import ProductionForm
+import json
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -256,11 +261,51 @@ def production_program_crud_view(request, program_id=None):
         except Exception as e:
             bug_logger.error(f"خطای کلی در دریافت موجودی مواد اولیه: {str(e)}")
         
+        # Prepare production info and BOM data for JavaScript
+        production_infos_data = {}
+        bom_data = {}
+        
+        try:
+            all_production_infos = ProductionInfo.objects.all().select_related('product').prefetch_related('bom_items__raw_material')
+            for prod_info in all_production_infos:
+                product_id = prod_info.product.id if prod_info.product else None
+                if product_id:
+                    if product_id not in production_infos_data:
+                        production_infos_data[product_id] = []
+                    
+                    production_infos_data[product_id].append({
+                        'id': prod_info.id,
+                        'formula_id': prod_info.formula_id or '',
+                        'min_batch_production': str(prod_info.min_batch_production) if prod_info.min_batch_production else '',
+                        'specific_production_instruction': prod_info.specific_production_instruction or '',
+                    })
+                    
+                    # Prepare BOM data
+                    bom_items = []
+                    for bom in prod_info.bom_items.all():
+                        bom_items.append({
+                            'raw_material_id': bom.raw_material.raw_material_id if bom.raw_material else '-',
+                            'raw_material_name': bom.raw_material.name if bom.raw_material else '-',
+                            'quantity': str(bom.quantity) if bom.quantity else '0',
+                            'unit_used': bom.unit_used or '-',
+                        })
+                    
+                    bom_data[prod_info.id] = {
+                        'formula_id': prod_info.formula_id or '',
+                        'min_batch_production': str(prod_info.min_batch_production) if prod_info.min_batch_production else '',
+                        'specific_production_instruction': prod_info.specific_production_instruction or '',
+                        'bom_items': bom_items
+                    }
+        except Exception as e:
+            bug_logger.error(f"خطا در آماده‌سازی داده‌های BOM: {str(e)}")
+        
         context = {
             'form': form,
             'program': program,
             'is_create': is_create,
             'raw_materials_inventory': raw_materials_inventory,
+            'production_infos_json': json.dumps(production_infos_data),
+            'bom_data_json': json.dumps(bom_data),
         }
         
         if is_create:

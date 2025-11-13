@@ -248,11 +248,54 @@
     </a>
 </div>
 
-<form method="post" novalidate>
-    {% csrf_token %}
+<!-- Main layout with sidebar -->
+<div style="display: flex; gap: 24px; align-items: flex-start; flex-direction: row-reverse;">
+    <!-- Left sidebar: Raw Materials Inventory (1/3 width) -->
+    <div style="flex: 0 0 32%; position: sticky; top: 20px; max-height: calc(100vh - 100px); overflow-y: auto;">
+        <div class="section">
+            <div class="section-title">موجودی مواد اولیه</div>
+            <div class="card">
+                <div class="card-body">
+                    {% if raw_materials_inventory %}
+                    <div class="table-wrap">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>کد</th>
+                                    <th>نام</th>
+                                    <th>موجودی</th>
+                                    <th>واحد</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in raw_materials_inventory %}
+                                <tr>
+                                    <td>{{ item.raw_material_id }}</td>
+                                    <td>{{ item.name }}</td>
+                                    <td>{{ item.quantity|floatformat:2 }}</td>
+                                    <td>{{ item.unit }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="empty-state">
+                        <p>هیچ موجودی ماده اولیه‌ای یافت نشد</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <!-- فیلدهای فرم -->
-    <div class="detail-grid">
+    <!-- Main content area (2/3 width) -->
+    <div style="flex: 1;">
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            <!-- فیلدهای فرم -->
+            <div class="detail-grid">
         <div class="detail-card">
             <div class="detail-card-title">اطلاعات کلی</div>
             {% if not is_create %}
@@ -355,6 +398,18 @@
         </div>
     </div>
 
+    <!-- BOM Details Section (shown when production_info is selected) -->
+    <div id="bom-details-section" class="section" style="display: none;">
+        <div class="section-title">جزئیات فرمول (BOM)</div>
+        <div class="card">
+            <div class="card-body">
+                <div id="bom-details-content">
+                    <!-- BOM details will be loaded here dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- توضیحات اضافی -->
     <div class="section">
         <div class="section-title">{{ form.extra_description.label }}</div>
@@ -381,50 +436,109 @@
         {% endif %}
     </div>
 
-</form>
-
-<!-- موجودی مواد اولیه -->
-<div class="section">
-    <div class="section-title">موجودی مواد اولیه در انبارهای اولیه</div>
-    <div class="card">
-        <div class="card-body">
-            {% if raw_materials_inventory %}
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>کد ماده</th>
-                            <th>نام ماده اولیه</th>
-                            <th>انبار</th>
-                            <th>موجودی</th>
-                            <th>واحد</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in raw_materials_inventory %}
-                        <tr>
-                            <td>{{ item.raw_material_id }}</td>
-                            <td>{{ item.name }}</td>
-                            <td>{{ item.warehouse }}</td>
-                            <td>{{ item.quantity|floatformat:2 }}</td>
-                            <td>{{ item.unit }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                    <path d="M3 9H21" stroke="currentColor" stroke-width="2"/>
-                    <path d="M9 21V9" stroke="currentColor" stroke-width="2"/>
-                </svg>
-                <p>هیچ موجودی ماده اولیه‌ای در انبارهای اولیه یافت نشد</p>
-            </div>
-            {% endif %}
-        </div>
+        </form>
     </div>
+    <!-- End main content area -->
 </div>
+<!-- End main layout -->
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.querySelector('#id_product');
+    const productionInfoSelect = document.querySelector('#id_production_info');
+    const bomDetailsSection = document.getElementById('bom-details-section');
+    const bomDetailsContent = document.getElementById('bom-details-content');
+    
+    // Parse context data
+    const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
+    const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
+    
+    // Filter production_info based on selected product
+    if (productSelect) {
+        productSelect.addEventListener('change', function() {
+            const selectedProductId = this.value;
+            
+            // Clear current options (except the first empty one)
+            productionInfoSelect.innerHTML = '<option value="">---------</option>';
+            
+            if (selectedProductId && productionInfosData[selectedProductId]) {
+                // Add filtered options from context data
+                productionInfosData[selectedProductId].forEach(item => {
+                    const option = new Option(
+                        `${item.formula_id} - ${item.specific_production_instruction || ''}`,
+                        item.id
+                    );
+                    productionInfoSelect.add(option);
+                });
+            }
+        });
+    }
+    
+    // Show BOM details when production_info is selected
+    if (productionInfoSelect) {
+        productionInfoSelect.addEventListener('change', function() {
+            const selectedProductionInfoId = this.value;
+            
+            if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
+                // Display BOM details from context data
+                displayBOMDetails(bomData[selectedProductionInfoId]);
+                bomDetailsSection.style.display = 'block';
+            } else {
+                bomDetailsSection.style.display = 'none';
+            }
+        });
+    }
+    
+    function displayBOMDetails(data) {
+        if (!data || !data.bom_items || data.bom_items.length === 0) {
+            bomDetailsContent.innerHTML = '<p style="text-align: center; color: #6c757d;">هیچ ماده اولیه‌ای برای این فرمول یافت نشد</p>';
+            return;
+        }
+        
+        let html = `
+            <div style="margin-bottom: 16px;">
+                <strong>شناسه فرمول:</strong> ${data.formula_id || '-'}<br>
+                <strong>حداقل تناژ تولید:</strong> ${data.min_batch_production || '-'} تن<br>
+                <strong>دستورالعمل تولید:</strong> ${data.specific_production_instruction || '-'}
+            </div>
+            <table class="data-table" style="width: 100%; margin-top: 16px;">
+                <thead>
+                    <tr>
+                        <th>کد ماده اولیه</th>
+                        <th>نام ماده اولیه</th>
+                        <th>مقدار</th>
+                        <th>واحد</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        data.bom_items.forEach(item => {
+            html += `
+                <tr>
+                    <td>${item.raw_material_id || '-'}</td>
+                    <td>${item.raw_material_name || '-'}</td>
+                    <td>${item.quantity || 0}</td>
+                    <td>${item.unit_used || '-'}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                </tbody>
+            </table>
+        `;
+        
+        bomDetailsContent.innerHTML = html;
+    }
+    
+    // Trigger change event on page load if there's already a selected value
+    if (productionInfoSelect && productionInfoSelect.value) {
+        productionInfoSelect.dispatchEvent(new Event('change'));
+    }
+});
+</script>
 {% endblock %}
