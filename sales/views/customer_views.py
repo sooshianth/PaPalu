@@ -2,11 +2,25 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
+from django.db import transaction
 from core.RBACModel import user_has_task, TaskChoices
 from access.models.FieldAccessUserModel import FieldAccessRule
-from sales.forms.create_customer_form import CreateCustomerForm
+from sales.forms.create_customer_form import (
+    CreateCustomerForm,
+    build_delivery_address_formset,
+    build_representative_formset,
+    build_bank_account_formset,
+    DeliveryAddressForm,
+    RepresentativeForm,
+    BankAccountForm
+)
 from core.PersonFolder import Person
+from core.PersonFolder.PhoneNumberModel import PhoneNumber
+from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
+from core.PersonFolder.RepresentativeModel import Representative
+from core.PersonFolder.BankAccountModel import BankAccount
 from django.contrib.contenttypes.models import ContentType
+from sales.forms.create_customer_form import clean_empty_to_none
 
 
 @login_required
@@ -25,33 +39,195 @@ def create_customer_view(request):
     if request.method == 'POST':
         # ابتدا map دسترسی فیلدها را به دست آوریم و سپس فرم را با آن بسازیم
         temp_form_for_access = CreateCustomerForm()
-        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
-        form = CreateCustomerForm(request.POST, request.FILES, user=request.user, accessible_fields=accessible_fields)
+        temp_delivery_form = DeliveryAddressForm()
+        temp_rep_form = RepresentativeForm()
+        temp_bank_form = BankAccountForm()
         
-        if form.is_valid():
+        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        accessible_delivery_fields = get_accessible_delivery_fields(request.user, temp_delivery_form)
+        accessible_rep_fields = get_accessible_representative_fields(request.user, temp_rep_form)
+        accessible_bank_fields = get_accessible_bank_account_fields(request.user, temp_bank_form)
+        
+        form = CreateCustomerForm(request.POST, request.FILES, user=request.user, accessible_fields=accessible_fields)
+        delivery_formset = build_delivery_address_formset(request.POST, request.FILES, accessible_fields=accessible_delivery_fields)
+        rep_formset = build_representative_formset(request.POST, request.FILES, accessible_fields=accessible_rep_fields)
+        bank_formset = build_bank_account_formset(request.POST, request.FILES, accessible_fields=accessible_bank_fields)
+        
+        if form.is_valid() and delivery_formset.is_valid() and rep_formset.is_valid() and bank_formset.is_valid():
             try:
-                # ذخیره مشتری
-                person = form.save_customer(request.user)
+                with transaction.atomic():
+                    # ذخیره مشتری
+                    person = form.save_customer(request.user)
+                    
+                    # ایجاد اطلاعات مالیاتی (در صورت وجود هر یک از فیلدها)
+                    financial_banking = None
+                    if any([
+                        form.cleaned_data.get('economic_code'),
+                        form.cleaned_data.get('tax_postal_code'),
+                        form.cleaned_data.get('tax_province'),
+                        form.cleaned_data.get('tax_city'),
+                        form.cleaned_data.get('tax_address')
+                    ]):
+                        from core.PersonFolder.FinancialBankingModel import FinancialBanking
+                        financial_banking = FinancialBanking.objects.create(
+                            person=person,
+                            economic_code=clean_empty_to_none(form.cleaned_data.get('economic_code')),
+                            tax_postal_code=clean_empty_to_none(form.cleaned_data.get('tax_postal_code')),
+                            tax_province=clean_empty_to_none(form.cleaned_data.get('tax_province')),
+                            tax_city=clean_empty_to_none(form.cleaned_data.get('tax_city')),
+                            tax_address=clean_empty_to_none(form.cleaned_data.get('tax_address'))
+                        )
+                    
+                    # ذخیره حساب‌های بانکی (در صورت وجود FinancialBanking)
+                    if financial_banking:
+                        for bank_form in bank_formset:
+                            if not getattr(bank_form, 'cleaned_data', None):
+                                continue
+                            if bank_form.cleaned_data.get('DELETE', False):
+                                continue
+                            account_number = bank_form.cleaned_data.get('account_number')
+                            if not account_number:
+                                continue
+                            
+                            BankAccount.objects.create(
+                                financial_banking=financial_banking,
+                                account_number=account_number,
+                                shaba_number=clean_empty_to_none(bank_form.cleaned_data.get('shaba_number')),
+                                bank_name=clean_empty_to_none(bank_form.cleaned_data.get('bank_name'))
+                            )
+                    
+                    # ذخیره آدرس‌های تحویل
+                    for delivery_form in delivery_formset:
+                        if not getattr(delivery_form, 'cleaned_data', None):
+                            continue
+                        if delivery_form.cleaned_data.get('DELETE', False):
+                            continue
+                        postal_code = delivery_form.cleaned_data.get('postal_code')
+                        if not postal_code:
+                            continue
+                        
+                        delivery_address = DeliveryAddress.objects.create(
+                            person=person,
+                            postal_code=postal_code,
+                            recipient_name=delivery_form.cleaned_data.get('recipient_name', person.name),
+                            recipient_national_id=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_national_id')),
+                            unique_delivery_id=clean_empty_to_none(delivery_form.cleaned_data.get('unique_delivery_id')),
+                            province=delivery_form.cleaned_data.get('province', ''),
+                            city=delivery_form.cleaned_data.get('city', ''),
+                            address=delivery_form.cleaned_data.get('address', ''),
+                            delivery_limit=clean_empty_to_none(delivery_form.cleaned_data.get('delivery_limit')),
+                            recipient_type=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_type'))
+                        )
+                        
+                        # اضافه کردن شماره‌های تماس آدرس تحویل
+                        delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+                        
+                        if delivery_form.cleaned_data.get('delivery_mobile'):
+                            PhoneNumber.objects.create(
+                                content_type=delivery_content_type,
+                                object_id=delivery_address.postal_code,
+                                phone_type='mobile',
+                                number=delivery_form.cleaned_data['delivery_mobile'],
+                                is_primary=True
+                            )
+                        
+                        if delivery_form.cleaned_data.get('delivery_landline'):
+                            PhoneNumber.objects.create(
+                                content_type=delivery_content_type,
+                                object_id=delivery_address.postal_code,
+                                phone_type='landline',
+                                number=delivery_form.cleaned_data['delivery_landline'],
+                                is_primary=False
+                            )
+                    
+                    # ذخیره نمایندگان
+                    for rep_form in rep_formset:
+                        if not getattr(rep_form, 'cleaned_data', None):
+                            continue
+                        if rep_form.cleaned_data.get('DELETE', False):
+                            continue
+                        rep_name = rep_form.cleaned_data.get('name')
+                        if not rep_name:
+                            continue
+                        
+                        representative = Representative.objects.create(
+                            person=person,
+                            name=rep_name,
+                            position=rep_form.cleaned_data.get('position') or '',
+                            confirmation_letter=rep_form.cleaned_data.get('confirmation_letter')
+                        )
+                        
+                        # اضافه کردن شماره‌های تماس نماینده
+                        rep_content_type = ContentType.objects.get_for_model(Representative)
+                        
+                        if rep_form.cleaned_data.get('mobile'):
+                            PhoneNumber.objects.create(
+                                content_type=rep_content_type,
+                                object_id=representative.name,
+                                phone_type='mobile',
+                                number=rep_form.cleaned_data['mobile'],
+                                is_primary=True
+                            )
+                        
+                        if rep_form.cleaned_data.get('landline'):
+                            PhoneNumber.objects.create(
+                                content_type=rep_content_type,
+                                object_id=representative.name,
+                                phone_type='landline',
+                                number=rep_form.cleaned_data['landline'],
+                                is_primary=False
+                            )
                 
                 messages.success(request, f'مشتری "{person.name}" با موفقیت ایجاد شد.')
-                return redirect('sales:customer_list')  # فرض می‌کنیم این URL را بعداً تعریف می‌کنیم
+                return redirect('sales:customer_list')
                 
             except Exception as e:
                 messages.error(request, f'خطا در ایجاد مشتری: {str(e)}')
     else:
         # در GET نیز فیلدهای غیرمجاز را از فرم حذف کن تا در UI نمایش داده نشوند
         temp_form_for_access = CreateCustomerForm()
+        temp_delivery_form = DeliveryAddressForm()
+        temp_rep_form = RepresentativeForm()
+        temp_bank_form = BankAccountForm()
+        
         accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        accessible_delivery_fields = get_accessible_delivery_fields(request.user, temp_delivery_form)
+        accessible_rep_fields = get_accessible_representative_fields(request.user, temp_rep_form)
+        accessible_bank_fields = get_accessible_bank_account_fields(request.user, temp_bank_form)
+        
         form = CreateCustomerForm(user=request.user, accessible_fields=accessible_fields)
+        delivery_formset = build_delivery_address_formset(accessible_fields=accessible_delivery_fields)
+        rep_formset = build_representative_formset(accessible_fields=accessible_rep_fields)
+        bank_formset = build_bank_account_formset(accessible_fields=accessible_bank_fields)
     
     # گرفتن فیلدهای قابل دسترسی برای کاربر
     # اگر در بالا محاسبه نشده بود (به‌ویژه در مسیر POST با خطای ولیدیشن)، محاسبه کن
     if 'accessible_fields' not in locals():
-        accessible_fields = get_accessible_form_fields(request.user, form)
+        temp_form_for_access = CreateCustomerForm()
+        temp_delivery_form = DeliveryAddressForm()
+        temp_rep_form = RepresentativeForm()
+        temp_bank_form = BankAccountForm()
+        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        accessible_delivery_fields = get_accessible_delivery_fields(request.user, temp_delivery_form)
+        accessible_rep_fields = get_accessible_representative_fields(request.user, temp_rep_form)
+        accessible_bank_fields = get_accessible_bank_account_fields(request.user, temp_bank_form)
+    
+    if 'delivery_formset' not in locals():
+        delivery_formset = build_delivery_address_formset(accessible_fields=accessible_delivery_fields)
+    if 'rep_formset' not in locals():
+        rep_formset = build_representative_formset(accessible_fields=accessible_rep_fields)
+    if 'bank_formset' not in locals():
+        bank_formset = build_bank_account_formset(accessible_fields=accessible_bank_fields)
     
     context = {
         'form': form,
+        'delivery_formset': delivery_formset,
+        'rep_formset': rep_formset,
+        'bank_formset': bank_formset,
         'accessible_fields': accessible_fields,
+        'accessible_delivery_fields': accessible_delivery_fields,
+        'accessible_rep_fields': accessible_rep_fields,
+        'accessible_bank_fields': accessible_bank_fields,
         'page_title': 'ایجاد مشتری جدید'
     }
     
@@ -172,6 +348,173 @@ def get_accessible_form_fields(user, form):
                 accessible_fields[form_field_name] = False
         else:
             # اگر فیلد در mapping نباشد، به طور پیش‌فرض دسترسی داده می‌شود
+            accessible_fields[form_field_name] = True
+    
+    return accessible_fields
+
+
+def get_accessible_delivery_fields(user, form):
+    """بررسی دسترسی کاربر به فیلدهای فرم آدرس تحویل"""
+    if user.is_superuser:
+        return {field_name: True for field_name in form.fields.keys()}
+    
+    field_mapping = {
+        'postal_code': ('DeliveryAddress', 'postal_code'),
+        'recipient_name': ('DeliveryAddress', 'recipient_name'),
+        'recipient_national_id': ('DeliveryAddress', 'recipient_national_id'),
+        'unique_delivery_id': ('DeliveryAddress', 'unique_delivery_id'),
+        'province': ('DeliveryAddress', 'province'),
+        'city': ('DeliveryAddress', 'city'),
+        'address': ('DeliveryAddress', 'address'),
+        'delivery_limit': ('DeliveryAddress', 'delivery_limit'),
+        'recipient_type': ('DeliveryAddress', 'recipient_type'),
+        'delivery_mobile': ('PhoneNumber', 'number'),
+        'delivery_landline': ('PhoneNumber', 'number'),
+    }
+    
+    accessible_fields = {}
+    for form_field_name in form.fields.keys():
+        if form_field_name in field_mapping:
+            model_name, model_field_name = field_mapping[form_field_name]
+            try:
+                if model_name == 'DeliveryAddress':
+                    from core.PersonFolder.DeliveryAddressModel import DeliveryAddress as ModelClass
+                elif model_name == 'PhoneNumber':
+                    from core.PersonFolder.PhoneNumberModel import PhoneNumber as ModelClass
+                else:
+                    accessible_fields[form_field_name] = False
+                    continue
+                
+                content_type = ContentType.objects.get_for_model(ModelClass)
+                rule_edit = FieldAccessRule.objects.filter(
+                    user=user,
+                    content_type=content_type,
+                    field_name=model_field_name,
+                    access_type='edit'
+                ).first()
+                
+                if rule_edit is not None:
+                    accessible_fields[form_field_name] = rule_edit.allowed
+                else:
+                    rule_view = FieldAccessRule.objects.filter(
+                        user=user,
+                        content_type=content_type,
+                        field_name=model_field_name,
+                        access_type='view'
+                    ).first()
+                    if rule_view is not None:
+                        accessible_fields[form_field_name] = rule_view.allowed
+                    else:
+                        accessible_fields[form_field_name] = True
+            except Exception:
+                accessible_fields[form_field_name] = False
+        else:
+            accessible_fields[form_field_name] = True
+    
+    return accessible_fields
+
+
+def get_accessible_representative_fields(user, form):
+    """بررسی دسترسی کاربر به فیلدهای فرم نماینده"""
+    if user.is_superuser:
+        return {field_name: True for field_name in form.fields.keys()}
+    
+    field_mapping = {
+        'name': ('Representative', 'name'),
+        'position': ('Representative', 'position'),
+        'confirmation_letter': ('Representative', 'confirmation_letter'),
+        'mobile': ('PhoneNumber', 'number'),
+        'landline': ('PhoneNumber', 'number'),
+    }
+    
+    accessible_fields = {}
+    for form_field_name in form.fields.keys():
+        if form_field_name in field_mapping:
+            model_name, model_field_name = field_mapping[form_field_name]
+            try:
+                if model_name == 'Representative':
+                    from core.PersonFolder.RepresentativeModel import Representative as ModelClass
+                elif model_name == 'PhoneNumber':
+                    from core.PersonFolder.PhoneNumberModel import PhoneNumber as ModelClass
+                else:
+                    accessible_fields[form_field_name] = False
+                    continue
+                
+                content_type = ContentType.objects.get_for_model(ModelClass)
+                rule_edit = FieldAccessRule.objects.filter(
+                    user=user,
+                    content_type=content_type,
+                    field_name=model_field_name,
+                    access_type='edit'
+                ).first()
+                
+                if rule_edit is not None:
+                    accessible_fields[form_field_name] = rule_edit.allowed
+                else:
+                    rule_view = FieldAccessRule.objects.filter(
+                        user=user,
+                        content_type=content_type,
+                        field_name=model_field_name,
+                        access_type='view'
+                    ).first()
+                    if rule_view is not None:
+                        accessible_fields[form_field_name] = rule_view.allowed
+                    else:
+                        accessible_fields[form_field_name] = True
+            except Exception:
+                accessible_fields[form_field_name] = False
+        else:
+            accessible_fields[form_field_name] = True
+    
+    return accessible_fields
+
+
+def get_accessible_bank_account_fields(user, form):
+    """بررسی دسترسی کاربر به فیلدهای فرم حساب بانکی"""
+    if user.is_superuser:
+        return {field_name: True for field_name in form.fields.keys()}
+    
+    field_mapping = {
+        'account_number': ('BankAccount', 'account_number'),
+        'shaba_number': ('BankAccount', 'shaba_number'),
+        'bank_name': ('BankAccount', 'bank_name'),
+    }
+    
+    accessible_fields = {}
+    for form_field_name in form.fields.keys():
+        if form_field_name in field_mapping:
+            model_name, model_field_name = field_mapping[form_field_name]
+            try:
+                if model_name == 'BankAccount':
+                    from core.PersonFolder.BankAccountModel import BankAccount as ModelClass
+                else:
+                    accessible_fields[form_field_name] = False
+                    continue
+                
+                content_type = ContentType.objects.get_for_model(ModelClass)
+                rule_edit = FieldAccessRule.objects.filter(
+                    user=user,
+                    content_type=content_type,
+                    field_name=model_field_name,
+                    access_type='edit'
+                ).first()
+                
+                if rule_edit is not None:
+                    accessible_fields[form_field_name] = rule_edit.allowed
+                else:
+                    rule_view = FieldAccessRule.objects.filter(
+                        user=user,
+                        content_type=content_type,
+                        field_name=model_field_name,
+                        access_type='view'
+                    ).first()
+                    if rule_view is not None:
+                        accessible_fields[form_field_name] = rule_view.allowed
+                    else:
+                        accessible_fields[form_field_name] = True
+            except Exception:
+                accessible_fields[form_field_name] = False
+        else:
             accessible_fields[form_field_name] = True
     
     return accessible_fields

@@ -1,14 +1,17 @@
 from django import forms
+from django.forms import BaseFormSet, formset_factory
 from core.PersonFolder import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
+from core.PersonFolder.BankAccountModel import BankAccount
 from core.PersonFolder.RepresentativeModel import Representative
 from core.PersonFolder.PurchasePreferenceModel import PurchasePreference
 from core.PersonFolder.PaymentPreferenceModel import PaymentPreference
 from core.PersonFolder.SocialNetworkModel import SocialNetwork
 from core.PersonFolder.AttachmentModel import Attachment
 from django.contrib.contenttypes.models import ContentType
+from typing import Dict, Any, Optional
 import re
 
 
@@ -17,6 +20,196 @@ def clean_empty_to_none(value):
     if value == '' or value is None:
         return None
     return value
+
+
+class DeliveryAddressForm(forms.Form):
+    """فرم آدرس تحویل"""
+    
+    def __init__(self, *args, **kwargs):
+        accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
+        super().__init__(*args, **kwargs)
+        
+        if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
+            for field_name, allowed in list(accessible_fields.items()):
+                if not allowed and field_name in self.fields:
+                    del self.fields[field_name]
+    
+    postal_code = forms.CharField(
+        max_length=10,
+        required=False,
+        label='کد پستی تحویل',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
+    )
+    recipient_name = forms.CharField(
+        max_length=100,
+        required=False,
+        label='نام تحویل گیرنده',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    recipient_national_id = forms.CharField(
+        max_length=10,
+        required=False,
+        label='کد ملی تحویل گیرنده',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
+    )
+    unique_delivery_id = forms.CharField(
+        max_length=50,
+        required=False,
+        label='شناسه یکتا تحویل',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
+    )
+    province = forms.CharField(
+        max_length=50,
+        required=False,
+        label='استان تحویل',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    city = forms.CharField(
+        max_length=50,
+        required=False,
+        label='شهر تحویل',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    address = forms.CharField(
+        required=False,
+        label='آدرس پستی تحویل',
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2})
+    )
+    delivery_landline = forms.CharField(
+        max_length=11,
+        required=False,
+        label='شماره ثابت هماهنگی تحویل',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '02112345678', 'dir': 'ltr'})
+    )
+    delivery_mobile = forms.CharField(
+        max_length=11,
+        required=False,
+        label='شماره همراه هماهنگی تحویل',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '09123456789', 'dir': 'ltr'})
+    )
+    delivery_limit = forms.CharField(
+        max_length=200,
+        required=False,
+        label='محدودیت تحویل',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    recipient_type = forms.ChoiceField(
+        choices=[('', 'انتخاب کنید')] + DeliveryAddress.RECIPIENT_TYPE_CHOICES,
+        required=False,
+        label='نوع تحویل گیرنده',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+
+class RepresentativeForm(forms.Form):
+    """فرم نماینده"""
+    
+    def __init__(self, *args, **kwargs):
+        accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
+        super().__init__(*args, **kwargs)
+        
+        if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
+            for field_name, allowed in list(accessible_fields.items()):
+                if not allowed and field_name in self.fields:
+                    del self.fields[field_name]
+    
+    name = forms.CharField(
+        max_length=100,
+        required=False,
+        label='نام نماینده',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    position = forms.CharField(
+        max_length=100,
+        required=False,
+        label='سمت نماینده',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    mobile = forms.CharField(
+        max_length=11,
+        required=False,
+        label='شماره موبایل نماینده',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '09123456789', 'dir': 'ltr'})
+    )
+    landline = forms.CharField(
+        max_length=11,
+        required=False,
+        label='شماره ثابت نماینده',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '02112345678', 'dir': 'ltr'})
+    )
+    confirmation_letter = forms.FileField(
+        required=False,
+        label='نامه تایید نماینده',
+        widget=forms.FileInput(attrs={'class': 'form-control'})
+    )
+
+
+def build_delivery_address_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None):
+    """سازنده فرم‌ست آدرس‌های تحویل"""
+    DeliveryFormSet = formset_factory(
+        form=DeliveryAddressForm,
+        extra=1,
+        can_delete=True
+    )
+    if data is None:
+        return DeliveryFormSet(form_kwargs={'accessible_fields': accessible_fields})
+    return DeliveryFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
+
+
+def build_representative_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None):
+    """سازنده فرم‌ست نمایندگان"""
+    RepresentativeFormSet = formset_factory(
+        form=RepresentativeForm,
+        extra=1,
+        can_delete=True
+    )
+    if data is None:
+        return RepresentativeFormSet(form_kwargs={'accessible_fields': accessible_fields})
+    return RepresentativeFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
+
+
+class BankAccountForm(forms.Form):
+    """فرم حساب بانکی"""
+    
+    def __init__(self, *args, **kwargs):
+        accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
+        super().__init__(*args, **kwargs)
+        
+        if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
+            for field_name, allowed in list(accessible_fields.items()):
+                if not allowed and field_name in self.fields:
+                    del self.fields[field_name]
+    
+    account_number = forms.CharField(
+        max_length=50,
+        required=False,
+        label='شماره حساب بانکی',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
+    )
+    shaba_number = forms.CharField(
+        max_length=50,
+        required=False,
+        label='شماره شبا',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
+    )
+    bank_name = forms.CharField(
+        max_length=50,
+        required=False,
+        label='نام بانک',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+
+
+def build_bank_account_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None):
+    """سازنده فرم‌ست حساب‌های بانکی"""
+    BankAccountFormSet = formset_factory(
+        form=BankAccountForm,
+        extra=1,
+        can_delete=True
+    )
+    if data is None:
+        return BankAccountFormSet(form_kwargs={'accessible_fields': accessible_fields})
+    return BankAccountFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
 
 
 class CreateCustomerForm(forms.Form):
@@ -184,161 +377,6 @@ class CreateCustomerForm(forms.Form):
         })
     )
     
-    # فیلدهای اختیاری - آدرس تحویل
-    delivery_postal_code = forms.CharField(
-        max_length=10,
-        required=False,
-        label='کد پستی تحویل',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'dir': 'ltr'
-        })
-    )
-    
-    recipient_name = forms.CharField(
-        max_length=100,
-        required=False,
-        label='نام تحویل گیرنده شخص',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control'
-        })
-    )
-    
-    recipient_national_id = forms.CharField(
-        max_length=10,
-        required=False,
-        label='کد ملی تحویل گیرنده',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'dir': 'ltr'
-        })
-    )
-    
-    unique_delivery_id = forms.CharField(
-        max_length=50,
-        required=False,
-        label='شناسه یکتا تحویل',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'dir': 'ltr'
-        })
-    )
-    
-    delivery_province = forms.CharField(
-        max_length=50,
-        required=False,
-        label='استان تحویل',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control'
-        })
-    )
-    
-    delivery_city = forms.CharField(
-        max_length=50,
-        required=False,
-        label='شهر تحویل',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control'
-        })
-    )
-    
-    delivery_address = forms.CharField(
-        required=False,
-        label='آدرس پستی تحویل',
-        widget=forms.Textarea(attrs={
-            'class': 'form-control',
-            'rows': 2
-        })
-    )
-    
-    delivery_landline = forms.CharField(
-        max_length=11,
-        required=False,
-        label='شماره ثابت هماهنگی تحویل',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': '02112345678',
-            'dir': 'ltr'
-        })
-    )
-    
-    delivery_mobile = forms.CharField(
-        max_length=11,
-        required=False,
-        label='شماره همراه هماهنگی تحویل',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': '09123456789',
-            'dir': 'ltr'
-        })
-    )
-    
-    delivery_limit = forms.CharField(
-        max_length=200,
-        required=False,
-        label='محدودیت تحویل',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control'
-        })
-    )
-    
-    recipient_type = forms.ChoiceField(
-        choices=[('', 'انتخاب کنید')] + DeliveryAddress.RECIPIENT_TYPE_CHOICES,
-        required=False,
-        label='نوع تحویل گیرنده',
-        widget=forms.Select(attrs={
-            'class': 'form-control'
-        })
-    )
-    
-    # فیلدهای اختیاری - نماینده
-    representative_name = forms.CharField(
-        max_length=100,
-        required=False,
-        label='نام نماینده',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control'
-        })
-    )
-    
-    representative_position = forms.CharField(
-        max_length=100,
-        required=False,
-        label='سمت نماینده',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control'
-        })
-    )
-    
-    representative_mobile = forms.CharField(
-        max_length=11,
-        required=False,
-        label='شماره موبایل نماینده',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': '09123456789',
-            'dir': 'ltr'
-        })
-    )
-    
-    representative_landline = forms.CharField(
-        max_length=11,
-        required=False,
-        label='شماره ثابت نماینده',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': '02112345678',
-            'dir': 'ltr'
-        })
-    )
-    
-    representative_confirmation_letter = forms.FileField(
-        required=False,
-        label='نامه تایید نماینده',
-        widget=forms.FileInput(attrs={
-            'class': 'form-control'
-        })
-    )
     
     def clean_national_id(self):
         """اعتبارسنجی کد ملی"""
@@ -446,24 +484,9 @@ class CreateCustomerForm(forms.Form):
                 is_primary=False
             )
         
-        # ایجاد اطلاعات مالیاتی (در صورت وجود هر یک از فیلدها)
-        if any([
-            self.cleaned_data.get('economic_code'),
-            self.cleaned_data.get('tax_postal_code'),
-            self.cleaned_data.get('tax_province'),
-            self.cleaned_data.get('tax_city'),
-            self.cleaned_data.get('tax_address')
-        ]):
-            FinancialBanking.objects.create(
-                person=person,
-                economic_code=clean_empty_to_none(self.cleaned_data.get('economic_code')),
-                tax_postal_code=clean_empty_to_none(self.cleaned_data.get('tax_postal_code')),
-                tax_province=clean_empty_to_none(self.cleaned_data.get('tax_province')),
-                tax_city=clean_empty_to_none(self.cleaned_data.get('tax_city')),
-                tax_address=clean_empty_to_none(self.cleaned_data.get('tax_address'))
-            )
+        # اطلاعات مالیاتی و آدرس تحویل و نماینده در view ذخیره می‌شوند
         
-        # ایجاد آدرس تحویل (در صورت وجود کد پستی)
+        # ایجاد آدرس تحویل (در صورت وجود کد پستی) - این بخش دیگر استفاده نمی‌شود
         if self.cleaned_data.get('delivery_postal_code'):
             delivery_address = DeliveryAddress.objects.create(
                 person=person,
