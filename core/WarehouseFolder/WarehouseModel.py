@@ -10,8 +10,11 @@ class Warehouse(models.Model):
     """
     
     WAREHOUSE_TYPE_CHOICES = [
+        ('supplier', 'تامین کننده'),
         ('primary', 'اولیه'),
+        ('in-production', 'در حال ساخت'),
         ('secondary', 'ثانویه'),
+        ('customer', 'مشتری'),
     ]
     
     warehouse_id = models.CharField(
