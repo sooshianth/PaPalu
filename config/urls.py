@@ -5,9 +5,12 @@ from django.conf.urls.static import static
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 
-def redirect_to_login(request):
-    """هدایت به صفحه لاگین برای کاربران غیر لاگین شده"""
-    return redirect('unified_login')
+def root_view(request):
+    """هدایت به صفحه مناسب بر اساس وضعیت لاگین"""
+    if request.user.is_authenticated:
+        return redirect('home')
+    else:
+        return redirect('unified_login')
 
 @login_required
 def home_view(request):
@@ -21,7 +24,7 @@ urlpatterns = [
     path('permissions/', include('perm_manager.urls')),
     path('authentication/', include('authentication.urls')),
     path('home/', home_view, name='home'),
-    path('', redirect_to_login, name='root'),
+    path('', root_view, name='root'),
     path('accounting/', include('accounting.urls')),
     path('custody/', include('custody.urls')),
     path('distribution/', include('distribution.urls')),

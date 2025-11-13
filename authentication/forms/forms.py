@@ -9,10 +9,12 @@ import time
 from django.conf import settings
 import string
 import random
-from authentication.logging_config import get_auth_logger
+import logging
+from core.logging_levels import *
 
 # ایجاد لاگر برای ثبت رویدادها
-logger = get_auth_logger("auth_form")
+logger = logging.getLogger("bugs")
+auth_logger = logging.getLogger("authentication")
 
 def generate_unique_username():
     """
@@ -101,7 +103,7 @@ def create_user_for_phone(phone_number: str, customer_info: dict = None) -> User
         is_verified=True
     )
     
-    logger.info(f"{phone_number} !@# کاربر جدید با username={username} برای شماره {phone_number} ایجاد شد")
+    auth_logger.debug(f"{phone_number} !@# کاربر جدید با username={username} برای شماره {phone_number} ایجاد شد")
     
     return user
 
@@ -126,9 +128,10 @@ def send_verify_code(number:str):
     try:
         # تبدیل شماره به صورت عدد صحیح برای API
         response = sms_account.send_sms(number, message)
-        logger.info(f"{number} !@# کد تایید برای شماره {number} با موفقیت ارسال شد")
+        auth_logger.debug(f"{number} !@# کد تایید برای شماره {number} با موفقیت ارسال شد")
         return code, True
     except Exception as e:
+        auth_logger.warning(f"{number} !@# خطا در ارسال پیامک: {e}")
         logger.warning(f"{number} !@# خطا در ارسال پیامک: {e}")
         # کد را برگردان حتی اگر پیامک ارسال نشد
         return code, False
@@ -203,7 +206,7 @@ class OTPLoginForm(forms.Form):
             current_phone_check_attempts = cache.get(phone_check_attempt_keys, 0)
             if current_phone_check_attempts >= 10:
                 cache.set(phone_check_attempt_keys, current_phone_check_attempts + 1, timeout=300)
-                logger.alert(f"{phone} !@# بیش از حد مجاز برای وارد کردن شماره معتبر تلاش کرده‌اید. {current_phone_check_attempts + 1}")
+                auth_logger.alert(f"{phone} !@# بیش از حد مجاز برای وارد کردن شماره معتبر تلاش کرده‌اید. {current_phone_check_attempts + 1}")
                 response = {
                     'success': False,
                     'message': 'شما بیش از حد مجاز برای وارد کردن شماره معتبر تلاش کرده‌اید. لطفا بعداً تلاش کنید.'
@@ -218,11 +221,11 @@ class OTPLoginForm(forms.Form):
             
             # اگر شماره ادمین است، اجازه بده حتی اگر در دیتابیس نباشد
             if is_admin_number:
-                logger.info(f"{phone} !@# شماره ادمین تشخیص داده شد")
+                auth_logger.debug(f"{phone} !@# شماره ادمین تشخیص داده شد")
                 
                 # اگر کاربر وجود ندارد، ایجاد کن
                 if not existing_user:
-                    logger.info(f"{phone} !@# ایجاد کاربر ادمین جدید برای شماره {phone}")
+                    auth_logger.debug(f"{phone} !@# ایجاد کاربر ادمین جدید برای شماره {phone}")
                     try:
                         # ایجاد کاربر ادمین با اطلاعات پیش‌فرض
                         validation_result = {
@@ -233,7 +236,7 @@ class OTPLoginForm(forms.Form):
                             'is_admin': True
                         }
                         new_user = create_user_for_phone(phone, validation_result)
-                        logger.info(f"{phone} !@# کاربر ادمین جدید با موفقیت ایجاد شد: {new_user.username}")
+                        auth_logger.debug(f"{phone} !@# کاربر ادمین جدید با موفقیت ایجاد شد: {new_user.username}")
                         existing_user = new_user
                     except Exception as e:
                         logger.error(f"{phone} !@# خطا در ایجاد کاربر ادمین جدید برای شماره {phone}: {str(e)}")
@@ -247,11 +250,11 @@ class OTPLoginForm(forms.Form):
                         existing_user.is_superuser = True
                         existing_user.is_staff = True
                         existing_user.save()
-                        logger.info(f"{phone} !@# کاربر موجود {existing_user.username} به superuser تبدیل شد")
+                        auth_logger.debug(f"{phone} !@# کاربر موجود {existing_user.username} به superuser تبدیل شد")
             else:
                 # برای شماره‌های عادی، باید در دیتابیس وجود داشته باشد
                 if not existing_user:
-                    logger.activity(f"{phone} !@# شماره {phone} در سیستم ثبت نشده است")
+                    auth_logger.activity(f"{phone} !@# شماره {phone} در سیستم ثبت نشده است")
                     cache.set(phone_check_attempt_keys, current_phone_check_attempts + 1, timeout=300)
                     return {
                         'success': False,
@@ -263,10 +266,10 @@ class OTPLoginForm(forms.Form):
                         existing_user.is_superuser = False
                         existing_user.is_staff = False
                         existing_user.save()
-                        logger.info(f"{phone} !@# دسترسی superuser برای کاربر {existing_user.username} غیرفعال شد")
+                        auth_logger.alert(f"{phone} !@# دسترسی superuser برای کاربر {existing_user.username} غیرفعال شد")
             
             # اگر شماره معتبر است، کد تایید ارسال کنید
-            logger.info(f"{phone} !@# شماره {phone} معتبر است - کاربر: {existing_user.username}")
+            auth_logger.debug(f"{phone} !@# شماره {phone} معتبر است - کاربر: {existing_user.username}")
             
             # تولید و ارسال کد تایید
             code, sms_sent = send_verify_code(phone)
@@ -377,11 +380,16 @@ class OTPLoginForm(forms.Form):
             login_attempts_key = f"login_attempts_phone_{phone}"
             current_attempts = cache.get(login_attempts_key, 0)
             client_ip = self.get_client_ip(request)
-            logger.info(f"{phone} !@# phone: {phone} - current_attempts: {current_attempts} - ip: {client_ip}")
+            auth_logger.debug(f"{phone} !@# phone: {phone} - current_attempts: {current_attempts} - ip: {client_ip}")
+
+            # If more than 2 attempts, log
+            if current_attempts >= 2:
+                auth_logger.activity(f"{phone} !@# Suspicious number of attempts. phone: {phone} - current_attempts: {current_attempts} - ip: {client_ip}")
                 
+
             # If more than 10 attempts, always return false
             if current_attempts >= 10:
-                logger.alert(f"{phone} !@# HACK ATTEMPT! phone: {phone} - current_attempts: {current_attempts} - ip: {client_ip}")
+                auth_logger.alert(f"{phone} !@# HACK ATTEMPT! phone: {phone} - current_attempts: {current_attempts} - ip: {client_ip}")
                 
                 return {'success': False, 'message': "تعداد تلاش‌های ورود بیش از حد مجاز است. لطفا بعدا تلاش کنید"}
             
@@ -394,7 +402,7 @@ class OTPLoginForm(forms.Form):
                 user = self.find_user_by_phone(phone)
                 if not user:
                     # اگر کاربر وجود ندارد، بررسی کن آیا شماره ادمین است
-                    logger.warning(f"{phone} !@# کاربر برای شماره {phone} یافت نشد")
+                    auth_logger.activity(f"{phone} !@# کاربر برای شماره {phone} یافت نشد")
                     
                     # بررسی آیا شماره در لیست ادمین‌ها است
                     is_admin_number = phone in getattr(settings, 'ADMIN_PHONE_NUMBERS', [])
@@ -420,6 +428,8 @@ class OTPLoginForm(forms.Form):
                         
                         # پاک کردن کلیدهای کش برای این شماره
                         self.reset_verification(phone)
+
+                        auth_logger.alert(f"{phone} !@# کاربر بدون داشتن اکانت، کد ورود را درست وارد کرد. خطر حمله.")
                         
                         # برگرداندن مقدار خاص برای نشان دادن عدم وجود کاربر
                         raise forms.ValidationError(f"شماره موبایل شما در سیستم ثبت نشده است. لطفا با پشتیبانی تماس بگیرید.")
@@ -435,7 +445,7 @@ class OTPLoginForm(forms.Form):
                             user.is_superuser = True
                             user.is_staff = True
                             user.save()
-                            logger.info(f"{phone} !@# کاربر {user.username} با شماره ادمین وارد شد - دسترسی superuser فعال شد")
+                            auth_logger.debug(f"{phone} !@# کاربر {user.username} با شماره ادمین وارد شد - دسترسی superuser فعال شد")
                         
                         # تنظیم session برای دسترسی ادمین
                         request.session['is_admin_session'] = True
@@ -446,8 +456,8 @@ class OTPLoginForm(forms.Form):
                             user.is_superuser = False
                             user.is_staff = False
                             user.save()
-                            logger.info(f"{phone} !@# کاربر {user.username} با شماره عادی وارد شد - دسترسی superuser غیرفعال شد")
-                        
+                            auth_logger.debug(f"{phone} !@# کاربر {user.username} با شماره عادی وارد شد - دسترسی superuser غیرفعال شد")
+
                         # حذف session های ادمین
                         request.session.pop('is_admin_session', None)
                         request.session.pop('admin_phone_number', None)

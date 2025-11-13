@@ -4,10 +4,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 
 from authentication.models import UserPhoneNumber
-from authentication.logging_config import get_auth_logger
+import logging
+
 
 # ایجاد لاگر برای logout
-logger = get_auth_logger('auth_logout')
+logger = logging.getLogger("authentication")
 
 def get_client_ip(request):
     """
@@ -61,9 +62,9 @@ def logout_view(request):
     
     # لاگ خروج
     if was_admin_session:
-        logger.info(f"{phone_number} !@# کاربر ادمین {username} (شماره: {admin_phone}) از سیستم خارج شد - IP: {client_ip}")
+        logger.debug(f"{phone_number} !@# کاربر ادمین {username} (شماره: {admin_phone}) از سیستم خارج شد - IP: {client_ip}")
     else:
-        logger.info(f"{phone_number} !@# کاربر {username} از سیستم خارج شد - IP: {client_ip} - شماره تلفن: {phone_number}")
+        logger.debug(f"{phone_number} !@# کاربر {username} از سیستم خارج شد - IP: {client_ip} - شماره تلفن: {phone_number}")
 
     # پاک کردن session های ادمین قبل از logout
     if was_admin_session:

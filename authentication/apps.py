@@ -10,6 +10,4 @@ class AuthenticationConfig(AppConfig):
         """
         تنظیمات اولیه هنگام بارگذاری اپلیکیشن
         """
-        # تنظیم logging
-        from .logging_config import setup_authentication_logging
-        setup_authentication_logging()
+

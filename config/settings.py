@@ -19,6 +19,10 @@ DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS','127.0.0.1').split(',')
 
+# Session timeout configuration
+SESSION_COOKIE_AGE = 1200  # 20 minutes in seconds
+SESSION_SAVE_EVERY_REQUEST = False  # Changed to False to reduce database writes and memory usage
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 
 INSTALLED_APPS = [
@@ -53,6 +57,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    
+    # Custom middlewares
+    'config.middleware.SessionTimeoutMiddleware',
+    'config.middleware.RestrictAdminAccessMiddleware',
+    'config.middleware.LogContextMiddleware',
+    'config.middleware.SecurityLoggingMiddleware',
+    'config.middleware.LoginAttemptMiddleware',
+    'config.middleware.AdminSessionManagementMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -78,6 +90,21 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            'timeout': 10,  # Wait up to 10 seconds before 'database is locked'
+            'init_command': 'PRAGMA journal_mode=WAL; PRAGMA busy_timeout=10000;'
+        }
+    }
+}
+
+# Cache configuration - using LocMemCache for better performance and less memory usage
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'papalu-cache',
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,  # Limit cache size to prevent memory bloat
+        }
     }
 }
 
@@ -129,43 +156,136 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
+            'format': '{levelname} !@# {asctime} !@# {filename} !@# {funcName} !@# {process:d} !@# {thread:d} !@# {username} !@# {log_ip} !@# {download_size} !@# {upload_size} !@# {message} !@# {user_phone}',
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
+        },
+        'security': {
+            'format': '{levelname} !@# {asctime} !@# {user_id} !@# {username} !@# {action} !@# {method} !@# {endpoint} !@# {ip_address} !@# {user_agent} !@# {payload_summary} !@# {status_code} !@# {duration_ms} !@# {message} !@# {user_phone}',
+            'style': '{',
+        },
+        'auth': {
+            'format': '{levelname} !@# {asctime} !@# {user_id} !@# {username} !@# {action} !@# {ip_address} !@# {user_agent} !@# {message} !@# {user_phone}',
+            'style': '{',
+        },
+        'bugs': {
+            'format': '{levelname} !@# {asctime} !@# {filename} !@# {funcName} !@# {lineno} !@# {process:d} !@# {thread:d} !@# {username} !@# {log_ip} !@# {message}',
+            'style': '{',
+        },
+        'django_errors': {
+            'format': '{levelname} !@# {asctime} !@# {filename} !@# {funcName} !@# {pathname} !@# {lineno} !@# {message}',
+            'style': '{',
+        },
+        'audit': {
+            'format': '{levelname} !@# {asctime} !@# {user_id} !@# {username} !@# {action} !@# {method} !@# {endpoint} !@# {ip_address} !@# {user_agent} !@# {message} !@# {user_phone}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'exclude_runserver_and_http_protocol': {
+            '()': 'core.logging_filters.ExcludeRunserverAndHttpProtocol',
+        },
+        'userinfo': {
+            '()': 'core.logging_filters.LogUserInfoFilter',
         },
     },
     'handlers': {
         'console': {
-            'level': 'INFO',
+            'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple'
-        },
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'django.log',
-            'maxBytes': 1024 * 1024 * 10,  # 10 MB
-            'backupCount': 5,
             'formatter': 'verbose',
+            'filters': ['exclude_runserver_and_http_protocol', 'userinfo'],
+        },
+        'django_errors_file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+            'formatter': 'django_errors',
             'encoding': 'utf-8',
+        },
+        'security_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'security.log'),
+            'formatter': 'security',
+            'encoding': 'utf-8',
+            'filters': ['userinfo'],
+        },
+        'auth_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'auth.log'),
+            'formatter': 'auth',
+            'encoding': 'utf-8',
+            'filters': ['userinfo'],
+        },
+        'bugs_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'bugs.log'),
+            'formatter': 'bugs',
+            'encoding': 'utf-8',
+            'filters': ['userinfo'],
+        },
+        'audit_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'audit.log'),
+            'formatter': 'audit',
+            'encoding': 'utf-8',
+            'filters': ['userinfo'],
+        },
+        'circular_buffer': {
+            'level': 'DEBUG', 
+            'class': 'core.logging_filters.CircularBufferHandler',
+            'capacity': 10000,
+            'formatter': 'verbose',
+        },
+        'null': {
+            'class': 'logging.NullHandler',  # Ignores messages
         },
     },
     'loggers': {
-        'django': {
-            'handlers': ['console', 'file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'auth_form': {
-            'handlers': ['console'],
+        'http_protocol': {
+            'handlers': ['null'],
             'level': 'DEBUG',
             'propagate': False,
         },
-        'auth_logout': {
-            'handlers': ['console'],
+        'django': {
+            'handlers': ['console', 'django_errors_file', 'circular_buffer'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console', 'django_errors_file', 'circular_buffer'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': ['console', 'django_errors_file', 'circular_buffer'], 
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'security': {
+            'handlers': ['console', 'security_file', 'circular_buffer'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'authentication': {
+            'handlers': ['console', 'auth_file', 'circular_buffer'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'audit': {
+            'handlers': ['console', 'audit_file', 'circular_buffer'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'bugs': {
+            'handlers': ['console', 'bugs_file', 'circular_buffer'],
             'level': 'DEBUG',
             'propagate': False,
         },
@@ -176,3 +296,6 @@ LOGGING = {
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
 SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Rate limiting configuration
+MAX_REQUESTS_PER_MINUTE = 100
