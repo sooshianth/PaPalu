@@ -1,0 +1,556 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+        cursor: pointer;
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+    
+    .file-status {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .file-status.uploaded {
+        color: var(--primary-green);
+    }
+    
+    .file-status.not-uploaded {
+        color: var(--gray-600);
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-outline-info,
+    .btn-outline-success {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid;
+        transition: all 0.3s;
+    }
+    
+    .btn-outline-info {
+        color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .btn-outline-info:hover {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-outline-success {
+        color: var(--primary-green);
+        border-color: var(--primary-green);
+    }
+    
+    .btn-outline-success:hover {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    /* Modal Styles */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        overflow: auto;
+    }
+    
+    .modal.show {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: auto;
+        padding: 30px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        position: relative;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: var(--gray-800);
+        font-size: 1.5rem;
+    }
+    
+    .close {
+        color: var(--gray-600);
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.3s;
+    }
+    
+    .close:hover {
+        color: var(--gray-800);
+    }
+    
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .file-input-wrapper {
+        position: relative;
+    }
+    
+    .file-input-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: var(--gray-100);
+        border: 2px dashed var(--gray-300);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: var(--gray-600);
+    }
+    
+    .file-input-label:hover {
+        background: var(--light-green);
+        border-color: var(--primary-green);
+        color: var(--dark-green);
+    }
+    
+    .file-input-label svg {
+        margin-left: 10px;
+        width: 24px;
+        height: 24px;
+    }
+    
+    input[type="file"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .file-name {
+        margin-top: 15px;
+        padding: 12px 15px;
+        background: var(--light-green);
+        border-radius: 6px;
+        color: var(--dark-green);
+        font-size: 0.95rem;
+        display: none;
+    }
+    
+    .file-name.show {
+        display: block;
+    }
+    
+    .existing-file {
+        padding: 15px 20px;
+        background: #d1ecf1;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .existing-file-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .existing-file-info svg {
+        width: 24px;
+        height: 24px;
+        color: #17a2b8;
+    }
+    
+    .existing-file-name {
+        color: #0c5460;
+        font-weight: 500;
+    }
+    
+    .download-link {
+        color: #17a2b8;
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.3s;
+    }
+    
+    .download-link:hover {
+        color: #138496;
+        text-decoration: underline;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .empty-state svg {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+            gap: 5px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if orders_with_proformas %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>شماره سفارش</th>
+                        <th>شماره پیش فاکتور</th>
+                        <th>مشتری</th>
+                        <th>تاریخ ایجاد</th>
+                        <th>وضعیت فایل</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in orders_with_proformas %}
+                    <tr>
+                        <td>
+                            <span class="code-badge">{{ item.order.order_number }}</span>
+                        </td>
+                        <td>
+                            {{ item.proforma.proforma_number|default:"-" }}
+                        </td>
+                        <td>
+                            {{ item.proforma.customer.name|default:"-" }}
+                        </td>
+                        <td>
+                            {{ item.order.created_at|date:"Y/m/d"|default:"-" }}
+                        </td>
+                        <td>
+                            <div class="file-status {% if item.has_confirmation_file %}uploaded{% else %}not-uploaded{% endif %}">
+                                {% if item.has_confirmation_file %}
+                                    <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>آپلود شده</span>
+                                {% else %}
+                                    <svg style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                    <span>آپلود نشده</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="btn-group" onclick="event.stopPropagation();">
+                                <button type="button" 
+                                        class="btn-outline-success" 
+                                        onclick="openUploadModal('{{ item.order.order_number }}', '{{ item.proforma.proforma_number|default:"-" }}', '{{ item.proforma.customer.name|default:"-" }}', {% if item.has_confirmation_file %}true{% else %}false{% endif %}, {% if item.has_confirmation_file %}'{{ item.order_document.proforma_confirmation_attachment.url }}'{% else %}''{% endif %})">
+                                    آپلود فایل
+                                </button>
+                                {% if item.has_confirmation_file %}
+                                <a href="{{ item.order_document.proforma_confirmation_attachment.url }}" 
+                                   class="btn-outline-info" 
+                                   target="_blank">
+                                    دانلود
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H21V21H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 15H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>هیچ سفارشی در انتظار آپلود پیش فاکتور مشتری وجود ندارد.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Modal for Upload -->
+<div id="uploadModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>آپلود فایل تأیید پیش فاکتور</h3>
+            <span class="close" onclick="closeUploadModal()">&times;</span>
+        </div>
+        <div id="modalBody">
+            <!-- Content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<script>
+function openUploadModal(orderNumber, proformaNumber, customerName, hasFile, fileUrl) {
+    const modal = document.getElementById('uploadModal');
+    const modalBody = document.getElementById('modalBody');
+    
+    let existingFileHtml = '';
+    if (hasFile && fileUrl) {
+        existingFileHtml = `
+            <div class="existing-file">
+                <div class="existing-file-info">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="existing-file-name">فایل تأیید پیش فاکتور موجود است</span>
+                </div>
+                <a href="${fileUrl}" class="download-link" target="_blank">دانلود</a>
+            </div>
+        `;
+    }
+    
+    modalBody.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-200);">
+                <span style="color: var(--gray-600);">شماره سفارش:</span>
+                <span style="color: var(--gray-800); font-weight: 600;">${orderNumber}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray-200);">
+                <span style="color: var(--gray-600);">شماره پیش فاکتور:</span>
+                <span style="color: var(--gray-800); font-weight: 600;">${proformaNumber}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0;">
+                <span style="color: var(--gray-600);">مشتری:</span>
+                <span style="color: var(--gray-800); font-weight: 600;">${customerName}</span>
+            </div>
+        </div>
+        
+        ${existingFileHtml}
+        
+        <form class="upload-form" 
+              action="{% url 'sales:approve_proforma_upload' 'ORDER_NUMBER_PLACEHOLDER' %}" 
+              method="post" 
+              enctype="multipart/form-data"
+              id="uploadForm">
+            {% csrf_token %}
+            
+            <div class="file-input-wrapper">
+                <label for="confirmation_file" class="file-input-label">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    انتخاب فایل تأیید پیش فاکتور
+                </label>
+                <input type="file" 
+                       id="confirmation_file" 
+                       name="confirmation_file" 
+                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                       required>
+                <div class="file-name" id="file-name"></div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 20px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1;">
+                    آپلود فایل و تغییر وضعیت به "در انتظار تایید پرداخت"
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeUploadModal()" style="flex: 1;">
+                    انصراف
+                </button>
+            </div>
+        </form>
+    `;
+    
+    // جایگزینی ORDER_NUMBER_PLACEHOLDER با شماره سفارش واقعی
+    const form = document.getElementById('uploadForm');
+    form.action = form.action.replace('ORDER_NUMBER_PLACEHOLDER', orderNumber);
+    
+    modal.classList.add('show');
+    
+    // مدیریت نمایش نام فایل
+    const fileInput = document.getElementById('confirmation_file');
+    const fileNameDiv = document.getElementById('file-name');
+    
+    fileInput.addEventListener('change', function() {
+        const fileName = this.files[0]?.name || '';
+        if (fileName) {
+            fileNameDiv.textContent = 'فایل انتخاب شده: ' + fileName;
+            fileNameDiv.classList.add('show');
+        } else {
+            fileNameDiv.classList.remove('show');
+        }
+    });
+}
+
+function closeUploadModal() {
+    const modal = document.getElementById('uploadModal');
+    modal.classList.remove('show');
+}
+
+// بستن modal با کلیک خارج از آن
+window.onclick = function(event) {
+    const modal = document.getElementById('uploadModal');
+    if (event.target == modal) {
+        closeUploadModal();
+    }
+}
+</script>
+{% endblock %}
+

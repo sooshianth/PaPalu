@@ -188,6 +188,11 @@ def proforma_create_view(request):
                         proforma.company = get_or_create_company()
                     proforma.save()
 
+                    # تغییر وضعیت سفارش به "در انتظار آپلود پیش فاکتور مشتری"
+                    if proforma.order:
+                        proforma.order.status = 'pending_customer_proforma_upload'
+                        proforma.order.save()
+
                 messages.success(request, 'پیش فاکتور با موفقیت ایجاد شد.')
                 return redirect('sales:proforma_list')
             except Exception as e:
