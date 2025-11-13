@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پیش فاکتور {{ proforma.proforma_number|default:proforma.id }}</title>
+    <style>
+        @font-face {
+            font-family: 'Vazir';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Vazir';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Bold.ttf') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Vazir', Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+            color: #333;
+            padding: 20px;
+            background: #fff;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #28a745;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .header-left {
+            text-align: left;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        .proforma-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .proforma-number {
+            font-size: 18px;
+            color: #666;
+        }
+        .info-section {
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-right: 4px solid #28a745;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            min-width: 150px;
+        }
+        .info-value {
+            color: #212529;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            background: #fff;
+        }
+        .items-table thead {
+            background: #28a745;
+            color: #fff;
+        }
+        .items-table th {
+            padding: 12px;
+            text-align: right;
+            font-weight: bold;
+            border: 1px solid #1e7e34;
+        }
+        .items-table td {
+            padding: 10px;
+            text-align: right;
+            border: 1px solid #dee2e6;
+        }
+        .items-table tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .items-table tbody tr:hover {
+            background: #e9ecef;
+        }
+        .total-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #28a745;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .total-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .total-value {
+            font-weight: bold;
+            color: #28a745;
+            font-size: 18px;
+        }
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 12px;
+        }
+        .description-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            border-right: 4px solid #28a745;
+        }
+        .description-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-right">
+            <div class="company-name">{{ company_info.name|default:"تامین نهاده سیمرغ" }}</div>
+            {% if company_info.address %}
+            <div style="color: #666; font-size: 14px; margin-top: 5px;">{{ company_info.address }}</div>
+            {% endif %}
+            {% if company_info.phone_number and company_info.phone_number != '-' %}
+            <div style="color: #666; font-size: 14px; margin-top: 5px;">تلفن: {{ company_info.phone_number }}</div>
+            {% endif %}
+        </div>
+        <div class="header-left">
+            <div class="proforma-title">پیش فاکتور</div>
+            <div class="proforma-number">شماره: {{ proforma.proforma_number|default:proforma.id }}</div>
+            {% if proforma.validity_date %}
+            <div style="color: #666; font-size: 14px; margin-top: 10px;">تاریخ اعتبار: {{ proforma.validity_date }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-box">
+            <h3 style="margin-bottom: 15px; color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 10px;">اطلاعات مشتری</h3>
+            {% if customer_info %}
+            <div class="info-row">
+                <span class="info-label">نام:</span>
+                <span class="info-value">{{ customer_info.name }}</span>
+            </div>
+            {% if customer_info.national_id and customer_info.national_id != '-' %}
+            <div class="info-row">
+                <span class="info-label">شماره ملی:</span>
+                <span class="info-value">{{ customer_info.national_id }}</span>
+            </div>
+            {% endif %}
+            {% if customer_info.registration_number and customer_info.registration_number != '-' %}
+            <div class="info-row">
+                <span class="info-label">شماره ثبت شرکت:</span>
+                <span class="info-value">{{ customer_info.registration_number }}</span>
+            </div>
+            {% endif %}
+            {% if customer_info.economic_code and customer_info.economic_code != '-' %}
+            <div class="info-row">
+                <span class="info-label">شماره اقتصادی:</span>
+                <span class="info-value">{{ customer_info.economic_code }}</span>
+            </div>
+            {% endif %}
+            {% if customer_info.address and customer_info.address != '-' %}
+            <div class="info-row">
+                <span class="info-label">آدرس:</span>
+                <span class="info-value">{{ customer_info.address }}</span>
+            </div>
+            {% endif %}
+            {% if customer_info.postal_code and customer_info.postal_code != '-' %}
+            <div class="info-row">
+                <span class="info-label">کدپستی:</span>
+                <span class="info-value">{{ customer_info.postal_code }}</span>
+            </div>
+            {% endif %}
+            {% if customer_info.phone_number and customer_info.phone_number != '-' %}
+            <div class="info-row">
+                <span class="info-label">شماره تلفن:</span>
+                <span class="info-value">{{ customer_info.phone_number }}</span>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="info-row">
+                <span class="info-value">اطلاعات مشتری موجود نیست</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if order %}
+    <div class="info-section">
+        <div class="info-box">
+            <h3 style="margin-bottom: 15px; color: #28a745; border-bottom: 2px solid #28a745; padding-bottom: 10px;">اطلاعات سفارش</h3>
+            <div class="info-row">
+                <span class="info-label">شماره سفارش:</span>
+                <span class="info-value">{{ order.order_number|default:"-" }}</span>
+            </div>
+            {% if order.created_at %}
+            <div class="info-row">
+                <span class="info-label">تاریخ سفارش:</span>
+                <span class="info-value">{{ order.created_at|date:"Y/m/d" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if order_items %}
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>ردیف</th>
+                <th>نام محصول</th>
+                <th>مقدار</th>
+                <th>واحد</th>
+                <th>فی واحد</th>
+                <th>تخفیف</th>
+                <th>اضافات</th>
+                <th>مالیات</th>
+                <th>جمع</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order_items %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ item.product.name|default:"-" }}</td>
+                <td>{{ item.quantity|default:"-" }}</td>
+                <td>{{ item.requested_unit|default:"-" }}</td>
+                <td>{{ item.unit_price|default:"-"|floatformat:0 }}</td>
+                <td>{{ item.discount|default:0|floatformat:0 }}</td>
+                <td>{{ item.additional_charges|default:0|floatformat:0 }}</td>
+                <td>{{ item.vat|default:0|floatformat:0 }}</td>
+                <td>
+                    {% if item.quantity and item.unit_price %}
+                        {% widthratio item.quantity 1 item.unit_price as total %}
+                        {{ total|floatformat:0 }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if proforma.description %}
+    <div class="description-box">
+        <div class="description-title">توضیحات:</div>
+        <div>{{ proforma.description }}</div>
+    </div>
+    {% endif %}
+
+</body>
+</html>
+

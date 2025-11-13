@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import HttpResponseForbidden, HttpResponse
 from django.db import transaction
 from django.db.models import Q, Sum
+from django.template.loader import render_to_string
 from core.RBACModel import user_has_task, TaskChoices
 from sales.forms.create_proforma_form import (
     CreateProformaForm,
@@ -93,34 +94,73 @@ def get_person_complete_info(person):
     return info
 
 
+def get_accessible_proforma_fields_for_view(user):
+    """
+    بررسی دسترسی کاربر به فیلدهای نمایش پیش فاکتور در لیست
+    
+    Returns:
+        dict: دیکشنری از نام فیلد به دسترسی (True/False)
+    """
+    
+    # فیلدهایی که باید در لیست نمایش داده شوند
+    display_fields = {
+        'proforma_number': 'proforma_number',
+        'order': 'order',
+        'customer': 'customer',
+        'validity_date': 'validity_date',
+    }
+    
+    if user.is_superuser:
+        return {field: True for field in display_fields.keys()}
+    
+    # استفاده از ContentType برای بررسی دسترسی
+    content_type = ContentType.objects.get_for_model(Proforma)
+    accessible_fields = {}
+    
+    for display_name, model_field_name in display_fields.items():
+        # بررسی آیا قانونی برای این فیلد وجود دارد
+        rule = FieldAccessRule.objects.filter(
+            user=user,
+            content_type=content_type,
+            field_name=model_field_name,
+            access_type='view'
+        ).first()
+        
+        if rule is None:
+            # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
+            accessible_fields[display_name] = True
+        else:
+            # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
+            accessible_fields[display_name] = rule.allowed
+    
+    return accessible_fields
+
+
 @login_required
 def proforma_list_view(request):
     """
-    لیست پیش فاکتورهای در انتظار تأیید
-    - نمایش پیش فاکتورهایی که هنوز تأیید نشده‌اند
+    لیست پیش فاکتورها
     """
+    # بررسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA_PRICE.value):
         messages.error(request, 'شما دسترسی به مشاهده لیست پیش فاکتورها ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    # پیش فاکتورهای در انتظار تأیید
-    # در اینجا ما پیش فاکتورهایی را که مرتبط با سفارش‌های در وضعیت pending هستند نمایش می‌دهیم
-    # یا می‌توانیم یک فیلد status به Proforma اضافه کنیم
-    # برای اکنون، پیش فاکتورهایی که سفارش آن‌ها هنوز در وضعیت pending است را نمایش می‌دهیم
-    
+    # نمایش همه پیش فاکتورها
     if request.user.is_superuser:
-        proformas = Proforma.objects.filter(
-            order__status='pending'
-        ).select_related('order', 'customer', 'company').order_by('-created_at')
+        proformas = Proforma.objects.all().select_related('order', 'customer', 'company').order_by('-created_at')
     else:
         proformas = Proforma.objects.filter(
-            order__status='pending',
             order__registered_by=request.user
         ).select_related('order', 'customer', 'company').order_by('-created_at')
 
+    # دریافت فیلدهای قابل دسترسی برای نمایش
+    accessible_fields = get_accessible_proforma_fields_for_view(request.user)
+
     context = {
         'proformas': proformas,
-        'page_title': 'لیست پیش فاکتورهای در انتظار تأیید',
+        'accessible_fields': accessible_fields,
+        'page_title': 'لیست پیش فاکتورها',
     }
     return render(request, 'sales/proforma_list.html', context)
 
@@ -259,66 +299,88 @@ def proforma_detail_view(request, proforma_id):
 
 
 @login_required
-def proforma_approve_view(request, proforma_id):
+def proforma_download_pdf(request, proforma_id):
     """
-    تأیید پیش فاکتور و تغییر وضعیت سفارش به 'در انتظار تأیید پیش فاکتور توسط مشتری'
+    دانلود پیش فاکتور به صورت PDF
     """
+    # بررسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA_PRICE.value):
-        messages.error(request, 'شما دسترسی به تأیید پیش فاکتور ندارید.')
+        messages.error(request, 'شما دسترسی به دانلود PDF پیش فاکتور ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
-
+    
+    try:
+        from weasyprint import HTML, CSS
+        from weasyprint.text.fonts import FontConfiguration
+    except ImportError:
+        messages.error(request, "خطا: پکیج WeasyPrint به درستی نصب نشده است. لطفاً با مدیر سیستم تماس بگیرید.")
+        return redirect('sales:proforma_detail', proforma_id=proforma_id)
+    
     proforma = get_object_or_404(Proforma, pk=proforma_id)
-
-    # بررسی دسترسی
+    
+    # بررسی دسترسی - کاربر باید بتواند پیش فاکتورهای مرتبط با سفارش‌های خود را ببیند
     if not request.user.is_superuser:
         if proforma.order and proforma.order.registered_by != request.user:
             messages.error(request, 'شما دسترسی به این پیش فاکتور ندارید.')
             return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
-
-    # بررسی اینکه آیا همه اطلاعات پر شده است
-    if not (
-        proforma.order and
-        proforma.proforma_number and
-        proforma.proforma_number.strip() != '' and
-        proforma.validity_date and
-        proforma.customer and
-        proforma.company
-    ):
-        messages.error(request, 'تمام اطلاعات پیش فاکتور باید پر شده باشد.')
+    
+    try:
+        # دریافت اطلاعات سفارش و اقلام
+        order = proforma.order
+        order_items = []
+        if order:
+            order_items = OrderItem.objects.filter(order=order).select_related('product')
+        
+        # دریافت اطلاعات کامل مشتری و شرکت
+        customer_info = get_person_complete_info(proforma.customer) if proforma.customer else None
+        company_info = get_person_complete_info(proforma.company) if proforma.company else None
+        
+        # رندر HTML
+        from django.template.loader import render_to_string
+        html_string = render_to_string('sales/proforma_pdf_template.html', {
+            'proforma': proforma,
+            'order': order,
+            'order_items': order_items,
+            'customer_info': customer_info,
+            'company_info': company_info,
+        })
+        
+        # تبدیل به PDF
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        
+        # کانفیگ فونت برای فارسی
+        font_config = FontConfiguration()
+        
+        # CSS برای فونت وزیر
+        css = CSS(string='''
+            @font-face {
+                font-family: 'Vazir';
+                src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Regular.ttf') format('truetype');
+                font-weight: normal;
+                font-style: normal;
+            }
+            @font-face {
+                font-family: 'Vazir';
+                src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Bold.ttf') format('truetype');
+                font-weight: bold;
+                font-style: normal;
+            }
+            body {
+                font-family: 'Vazir', sans-serif;
+                direction: rtl;
+                text-align: right;
+            }
+        ''', font_config=font_config)
+        
+        # تولید PDF
+        pdf = html.write_pdf(stylesheets=[css], font_config=font_config)
+        
+        # ارسال به عنوان پاسخ
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"proforma_{proforma.proforma_number or proforma.id}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+    except Exception as e:
+        messages.error(request, f"خطا در تولید PDF: {str(e)}")
         return redirect('sales:proforma_detail', proforma_id=proforma_id)
-
-    # بررسی اینکه آیا همه اقلام سفارش دارای قیمت هستند
-    order_items = OrderItem.objects.filter(order=proforma.order).select_related('product')
-    for item in order_items:
-        if item.unit_price is None or item.unit_price == 0:
-            messages.error(request, 'تمام اقلام سفارش باید دارای قیمت باشند.')
-            return redirect('sales:proforma_detail', proforma_id=proforma_id)
-
-    if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                # تغییر وضعیت سفارش
-                if proforma.order:
-                    proforma.order.status = 'pending_customer_proforma_approval'
-                    proforma.order.save(update_fields=['status'])
-
-            messages.success(request, 'پیش فاکتور با موفقیت تأیید شد و سفارش به وضعیت "در انتظار تأیید پیش فاکتور توسط مشتری" تغییر یافت.')
-            return redirect('sales:proforma_list')
-        except Exception as e:
-            messages.error(request, f'خطا در تأیید پیش فاکتور: {str(e)}')
-            return redirect('sales:proforma_detail', proforma_id=proforma_id)
-
-    # دریافت اطلاعات کامل مشتری و شرکت
-    customer_info = get_person_complete_info(proforma.customer) if proforma.customer else None
-    company_info = get_person_complete_info(proforma.company) if proforma.company else None
-
-    context = {
-        'proforma': proforma,
-        'order': proforma.order,
-        'order_items': order_items,
-        'customer_info': customer_info,
-        'company_info': company_info,
-        'page_title': f'تأیید پیش فاکتور {proforma.proforma_number}',
-    }
-    return render(request, 'sales/proforma_approve.html', context)
 

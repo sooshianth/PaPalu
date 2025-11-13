@@ -486,9 +486,9 @@
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
             {% if is_complete %}
-            <a href="{% url 'sales:proforma_approve' proforma.id %}" class="btn btn-success">تأیید و صدور پیش فاکتور</a>
+            <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success">دانلود PDF پیش فاکتور</a>
             {% else %}
-            <a href="{% url 'sales:proforma_approve' proforma.id %}" class="btn btn-success" style="opacity: 0.5; cursor: not-allowed;" onclick="event.preventDefault(); alert('لطفاً ابتدا تمام اطلاعات پیش فاکتور را تکمیل کنید.');">تأیید و صدور پیش فاکتور</a>
+            <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success" style="opacity: 0.5; cursor: not-allowed;" onclick="event.preventDefault(); alert('لطفاً ابتدا تمام اطلاعات پیش فاکتور را تکمیل کنید.');">دانلود PDF پیش فاکتور</a>
             {% endif %}
             <a href="{% url 'sales:proforma_list' %}" class="btn btn-secondary">انصراف</a>
         </div>

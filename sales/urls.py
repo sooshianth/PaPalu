@@ -15,7 +15,7 @@ urlpatterns = [
     path('proforma/list/', proforma_view.proforma_list_view, name='proforma_list'),
     path('proforma/create/', proforma_view.proforma_create_view, name='proforma_create'),
     path('proforma/<int:proforma_id>/', proforma_view.proforma_detail_view, name='proforma_detail'),
-    path('proforma/<int:proforma_id>/approve/', proforma_view.proforma_approve_view, name='proforma_approve'),
+    path('proforma/<int:proforma_id>/download-pdf/', proforma_view.proforma_download_pdf, name='proforma_download_pdf'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     

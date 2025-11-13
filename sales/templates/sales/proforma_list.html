@@ -15,103 +15,146 @@
         flex-wrap: wrap;
         gap: 15px;
     }
+    
     .page-header h2 {
         color: var(--gray-800);
         font-size: 1.8rem;
         font-weight: 600;
         margin: 0;
     }
-    .proforma-cards {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 20px;
-        margin-top: 30px;
-    }
-    .proforma-card {
+    
+    .list-card {
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        padding: 25px;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        border: 2px solid transparent;
+        padding: 30px;
+        margin-bottom: 30px;
     }
-    .proforma-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-        border-color: var(--primary-green);
+    
+    .table-container {
+        overflow-x: auto;
     }
-    .proforma-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid var(--gray-200);
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
     }
-    .proforma-number {
-        font-size: 1.3rem;
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
         font-weight: 600;
-        color: var(--primary-green);
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
     }
-    .proforma-status {
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        background: var(--light-green);
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+        cursor: pointer;
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
         color: var(--dark-green);
     }
-    .proforma-info {
-        margin-bottom: 15px;
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
     }
-    .proforma-info-item {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        font-size: 0.95rem;
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
     }
-    .proforma-info-label {
-        color: var(--gray-600);
-        font-weight: 500;
-    }
-    .proforma-info-value {
-        color: var(--gray-800);
-        font-weight: 600;
-    }
-    .proforma-card-footer {
-        margin-top: 20px;
-        padding-top: 15px;
-        border-top: 1px solid var(--gray-200);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+    
     .empty-state {
         text-align: center;
         padding: 60px 20px;
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        color: var(--gray-600);
     }
+    
     .empty-state svg {
-        width: 100px;
-        height: 100px;
-        margin: 0 auto 20px;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
         opacity: 0.5;
     }
-    .empty-state p {
-        color: var(--gray-600);
-        font-size: 1.1rem;
-        margin: 10px 0;
+    
+    .btn-group {
+        display: flex;
+        gap: 5px;
     }
+    
+    .btn-outline-info,
+    .btn-outline-success {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid;
+        transition: all 0.3s;
+    }
+    
+    .btn-outline-info {
+        color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .btn-outline-info:hover {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-outline-success {
+        color: var(--primary-green);
+        border-color: var(--primary-green);
+    }
+    
+    .btn-outline-success:hover {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
     @media (max-width: 768px) {
-        .proforma-cards {
-            grid-template-columns: 1fr;
-        }
         .page-header {
             flex-direction: column;
             align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
         }
     }
 </style>
@@ -128,67 +171,82 @@
     </a>
 </div>
 
-{% if messages %}
-    {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}" role="alert">
-            {{ message }}
-        </div>
-    {% endfor %}
-{% endif %}
-
-{% if proformas %}
-    <div class="proforma-cards">
-        {% for proforma in proformas %}
-            <div class="proforma-card" onclick="window.location.href='{% url 'sales:proforma_detail' proforma.id %}'">
-                <div class="proforma-card-header">
-                    <div class="proforma-number">پیش فاکتور {{ proforma.proforma_number|default:proforma.id }}</div>
-                    <div class="proforma-status">در انتظار تأیید</div>
-                </div>
-                <div class="proforma-info">
-                    {% if proforma.order %}
-                    <div class="proforma-info-item">
-                        <span class="proforma-info-label">شماره سفارش:</span>
-                        <span class="proforma-info-value">{{ proforma.order.order_number }}</span>
-                    </div>
-                    {% endif %}
-                    {% if proforma.customer %}
-                    <div class="proforma-info-item">
-                        <span class="proforma-info-label">مشتری:</span>
-                        <span class="proforma-info-value">{{ proforma.customer.name|default:"-" }}</span>
-                    </div>
-                    {% endif %}
-                    {% if proforma.validity_date %}
-                    <div class="proforma-info-item">
-                        <span class="proforma-info-label">تاریخ اعتبار:</span>
-                        <span class="proforma-info-value">{{ proforma.validity_date }}</span>
-                    </div>
-                    {% endif %}
-                    <div class="proforma-info-item">
-                        <span class="proforma-info-label">تاریخ ایجاد:</span>
-                        <span class="proforma-info-value">{{ proforma.created_at|date:"Y/m/d"|default:"-" }}</span>
-                    </div>
-                </div>
-                <div class="proforma-card-footer">
-                    <a href="{% url 'sales:proforma_detail' proforma.id %}" class="btn btn-sm btn-primary" onclick="event.stopPropagation();">
-                        مشاهده جزئیات
-                    </a>
-                    <span style="color: var(--gray-600); font-size: 0.85rem;">
-                        کلیک برای مشاهده
-                    </span>
-                </div>
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
             </div>
         {% endfor %}
-    </div>
-{% else %}
-    <div class="empty-state">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 3H21V21H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M3 15H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <p>هیچ پیش فاکتوری در انتظار تأیید نیست.</p>
-        <p style="font-size: 0.9rem; margin-top: 10px;">برای ایجاد پیش فاکتور جدید روی دکمه بالا کلیک کنید.</p>
-    </div>
-{% endif %}
+    {% endif %}
+    
+    {% if proformas %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        {% if accessible_fields.proforma_number %}
+                        <th>شماره پیش فاکتور</th>
+                        {% endif %}
+                        {% if accessible_fields.order %}
+                        <th>شماره سفارش</th>
+                        {% endif %}
+                        {% if accessible_fields.customer %}
+                        <th>مشتری</th>
+                        {% endif %}
+                        {% if accessible_fields.validity_date %}
+                        <th>تاریخ اعتبار</th>
+                        {% endif %}
+                        <th>تاریخ ایجاد</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for proforma in proformas %}
+                    <tr onclick="window.location.href='{% url 'sales:proforma_detail' proforma.id %}'">
+                        {% if accessible_fields.proforma_number %}
+                        <td>{{ proforma.proforma_number|default:proforma.id }}</td>
+                        {% endif %}
+                        {% if accessible_fields.order %}
+                        <td>{{ proforma.order.order_number|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.customer %}
+                        <td>{{ proforma.customer.name|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.validity_date %}
+                        <td>{{ proforma.validity_date|default:"-" }}</td>
+                        {% endif %}
+                        <td>{{ proforma.created_at|date:"Y/m/d"|default:"-" }}</td>
+                        <td>
+                            <div class="btn-group" onclick="event.stopPropagation();">
+                                <a href="{% url 'sales:proforma_detail' proforma.id %}" 
+                                   class="btn-outline-info"
+                                   title="جزئیات">
+                                    جزئیات
+                                </a>
+                                <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" 
+                                   class="btn-outline-success"
+                                   title="دانلود PDF">
+                                    دانلود PDF
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H21V21H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 15H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>هیچ پیش فاکتوری یافت نشد.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">برای ایجاد پیش فاکتور جدید روی دکمه بالا کلیک کنید.</p>
+        </div>
+    {% endif %}
+</div>
 {% endblock %}
 
