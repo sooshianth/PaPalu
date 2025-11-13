@@ -1,6 +1,8 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
+from django.contrib import messages
+from django.urls import reverse
 
 import logging
 from core.logging_levels import *
@@ -9,6 +11,7 @@ from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
+from production.forms.program_form import ProductionProgramForm
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -108,7 +111,7 @@ def production_declaration_view(request):
         }
         
         bug_logger.info("صفحه اعلام تولید با موفقیت بارگذاری شد")
-        return render(request, 'production/production_declaration.html', context)
+        return render(request, 'production_declaration.html', context)
     
     except Exception as e:
         bug_logger.error(f"خطای کلی در بارگذاری صفحه اعلام تولید: {str(e)}")
@@ -121,4 +124,152 @@ def production_declaration_view(request):
             'completed_programs': ProductionProgram.objects.none(),
             'raw_materials_inventory': [],
         }
-        return render(request, 'production/production_declaration.html', context)
+        return render(request, 'production_declaration.html', context)
+
+
+def production_program_crud_view(request, program_id=None):
+    """
+    صفحه ساخت/ویرایش برنامه تولید
+    نمایش و ویرایش تمام جزئیات یک برنامه تولید به همراه موجودی مواد اولیه
+    اگر program_id نباشد، حالت ساخت جدید
+    """
+    is_create = program_id is None
+    
+    if is_create:
+        audit_logger.info("دسترسی به صفحه ایجاد برنامه تولید جدید")
+        bug_logger.debug("شروع بارگذاری صفحه ایجاد برنامه تولید")
+        program = None
+    else:
+        audit_logger.info(f"دسترسی به جزئیات برنامه تولید {program_id}")
+        bug_logger.debug(f"شروع بارگذاری جزئیات برنامه {program_id}")
+    
+    try:
+        # دریافت برنامه تولید (اگر ویرایش)
+        if not is_create:
+            try:
+                program = get_object_or_404(
+                    ProductionProgram.objects.select_related('product', 'production_info'),
+                    id=program_id
+                )
+                bug_logger.debug(f"برنامه تولید {program_id} با موفقیت بارگذاری شد")
+            except Exception as e:
+                bug_logger.error(f"خطا در بارگذاری برنامه تولید {program_id}: {str(e)}")
+                audit_logger.activity(f"تلاش برای دسترسی به برنامه تولید نامعتبر {program_id}")
+                raise
+        
+        # پردازش فرم
+        if request.method == 'POST':
+            action = request.POST.get('action', 'save')
+            
+            if is_create:
+                form = ProductionProgramForm(request.POST)
+                audit_logger.info("ارسال فرم ایجاد برنامه تولید جدید")
+            else:
+                form = ProductionProgramForm(request.POST, instance=program)
+                audit_logger.info(f"ارسال فرم ویرایش برنامه تولید {program_id}")
+            
+            if form.is_valid():
+                try:
+                    instance = form.save(commit=False)
+                    
+                    # تنظیم وضعیت بر اساس اکشن
+                    if action == 'save_draft':
+                        instance.status = ProductionProgram.Status.DRAFT
+                    elif action == 'confirm':
+                        instance.status = ProductionProgram.Status.CONFIRMED
+                    elif action == 'start':
+                        instance.status = ProductionProgram.Status.IN_PROGRESS
+                    elif action == 'complete':
+                        instance.status = ProductionProgram.Status.COMPLETED
+                    
+                    instance.save()
+                    
+                    if is_create:
+                        bug_logger.info(f"برنامه تولید جدید با شناسه {instance.id} ایجاد شد")
+                        messages.success(request, f'برنامه تولید با موفقیت ایجاد شد.')
+                    else:
+                        bug_logger.info(f"برنامه تولید {program_id} با موفقیت ویرایش شد")
+                        messages.success(request, f'برنامه تولید با موفقیت ذخیره شد.')
+                    
+                    return redirect(reverse('production:program_crud', args=[instance.id]))
+                    
+                except Exception as e:
+                    bug_logger.error(f"خطا در ذخیره برنامه تولید: {str(e)}")
+                    messages.error(request, f'خطا در ذخیره برنامه تولید: {str(e)}')
+            else:
+                bug_logger.warning(f"فرم برنامه تولید نامعتبر است: {form.errors}")
+                messages.error(request, 'لطفاً خطاهای فرم را بررسی کنید.')
+        else:
+            # GET request
+            if is_create:
+                form = ProductionProgramForm()
+            else:
+                form = ProductionProgramForm(instance=program)
+        
+        # دریافت موجودی مواد اولیه از انبارهای اولیه
+        raw_materials_inventory = []
+        try:
+            primary_warehouses = Warehouse.objects.filter(warehouse_type='primary')
+            bug_logger.debug(f"تعداد انبارهای اولیه: {primary_warehouses.count()}")
+            
+            if primary_warehouses.exists():
+                try:
+                    raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
+                    
+                    inventory_items = InventoryItem.objects.filter(
+                        warehouse__in=primary_warehouses,
+                        content_type=raw_material_ct
+                    ).select_related('warehouse', 'content_type')
+                    
+                    bug_logger.debug(f"تعداد آیتم‌های موجودی: {inventory_items.count()}")
+                    
+                    for item in inventory_items:
+                        try:
+                            raw_material = item.item
+                            if raw_material:
+                                raw_materials_inventory.append({
+                                    'raw_material_id': getattr(raw_material, 'raw_material_id', '-'),
+                                    'name': getattr(raw_material, 'name', '-'),
+                                    'warehouse': item.warehouse.warehouse_id if item.warehouse else '-',
+                                    'quantity': item.quantity if item.quantity else 0,
+                                    'unit': item.unit or 'تن',
+                                })
+                        except Exception as e:
+                            bug_logger.warning(f"خطا در بارگذاری ماده اولیه: {str(e)}")
+                            continue
+                    
+                except ContentType.DoesNotExist:
+                    bug_logger.warning("ContentType برای RawMaterial یافت نشد")
+                except Exception as e:
+                    bug_logger.warning(f"خطا در دریافت موجودی مواد اولیه: {str(e)}")
+            else:
+                bug_logger.info("هیچ انبار اولیه‌ای یافت نشد")
+        
+        except Exception as e:
+            bug_logger.error(f"خطای کلی در دریافت موجودی مواد اولیه: {str(e)}")
+        
+        context = {
+            'form': form,
+            'program': program,
+            'is_create': is_create,
+            'raw_materials_inventory': raw_materials_inventory,
+        }
+        
+        if is_create:
+            bug_logger.info("صفحه ایجاد برنامه تولید با موفقیت بارگذاری شد")
+        else:
+            bug_logger.info(f"صفحه جزئیات برنامه {program_id} با موفقیت بارگذاری شد")
+        
+        return render(request, 'production_declaration_crud.html', context)
+    
+    except Exception as e:
+        bug_logger.error(f"خطای کلی در بارگذاری صفحه: {str(e)}")
+        audit_logger.alert(f"خطای کلی در دسترسی به صفحه برنامه تولید")
+        
+        context = {
+            'form': ProductionProgramForm(),
+            'program': None,
+            'is_create': is_create,
+            'raw_materials_inventory': [],
+        }
+        return render(request, 'production_declaration_crud.html', context)
