@@ -1,20 +1,20 @@
 from django.db import models
 from django_jalali.db import models as jmodels
-from .InventoryModel import Inventory
+from .WarehouseModel import Warehouse
 from ..ProductFolder import Product
 
 
 class InventoryProduct(models.Model):
     """
-    مدل محصولات موجود در موجودیت انبار
-    هر موجودیت می‌تواند شامل چندین محصول با مقادیر مختلف باشد
+    مدل محصولات موجود در انبار
+    هر انبار می‌تواند شامل چندین محصول با مقادیر مختلف باشد
     """
     
-    inventory = models.ForeignKey(
-        Inventory,
+    warehouse = models.ForeignKey(
+        Warehouse,
         on_delete=models.CASCADE,
-        related_name='products',
-        verbose_name='موجودیت',
+        related_name='inventory_products',
+        verbose_name='انبار',
         blank=True,
         null=True
     )
@@ -58,13 +58,13 @@ class InventoryProduct(models.Model):
     )
     
     class Meta:
-        verbose_name = 'انبار | محصول موجودیت'
-        verbose_name_plural = 'انبار | محصولات موجودیت'
+        verbose_name = 'انبار | محصول موجودی'
+        verbose_name_plural = 'انبار | محصولات موجودی'
         ordering = ['product']
-        unique_together = ['inventory', 'product']
+        unique_together = ['warehouse', 'product']
     
     def __str__(self):
-        warehouse_id = self.inventory.warehouse.warehouse_id if self.inventory and self.inventory.warehouse else 'N/A'
+        warehouse_id = self.warehouse.warehouse_id if self.warehouse else 'N/A'
         product = str(self.product) if self.product else 'N/A'
         quantity = self.quantity or 'N/A'
         unit = self.unit or 'N/A'

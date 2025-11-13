@@ -1,5 +1,5 @@
 from django.contrib import admin
-from . import Warehouse, Inventory, InventoryProduct, DefaultItem
+from . import Warehouse, InventoryProduct, DefaultItem
 
 
 @admin.register(Warehouse)
@@ -9,18 +9,11 @@ class WarehouseAdmin(admin.ModelAdmin):
     search_fields = ['warehouse_id']
 
 
-@admin.register(Inventory)
-class InventoryAdmin(admin.ModelAdmin):
-    list_display = ['id', 'warehouse', 'date']
-    list_filter = ['warehouse', 'date']
-    search_fields = ['warehouse__warehouse_name']
-    date_hierarchy = 'date'
-
-
 @admin.register(InventoryProduct)
 class InventoryProductAdmin(admin.ModelAdmin):
-    list_display = ['id', 'inventory']
-    search_fields = ['inventory__warehouse__warehouse_name']
+    list_display = ['id', 'warehouse', 'product', 'quantity', 'unit']
+    list_filter = ['warehouse']
+    search_fields = ['warehouse__warehouse_id', 'product__name']
 
 
 @admin.register(DefaultItem)

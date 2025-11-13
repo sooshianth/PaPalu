@@ -10,8 +10,11 @@ class Warehouse(models.Model):
     """
     
     WAREHOUSE_TYPE_CHOICES = [
+        ('supplier', 'تامین کننده'),
         ('primary', 'اولیه'),
+        ('production', 'تولید'),
         ('secondary', 'ثانویه'),
+        ('consumer', 'مصرف کننده')
     ]
     
     warehouse_id = models.CharField(
@@ -55,10 +58,10 @@ class Warehouse(models.Model):
         blank=True
     )
     
-    available_capacity = models.DecimalField(
+    used_capacity = models.DecimalField(
         max_digits=15,
         decimal_places=3,
-        verbose_name='ظرفیت موجود',
+        verbose_name='ظرفیت مصرف شده',
         null=True,
         blank=True
     )
