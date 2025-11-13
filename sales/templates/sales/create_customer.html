@@ -159,7 +159,262 @@
             width: 100%;
         }
     }
+    
+    .delivery-form-row,
+    .rep-form-row,
+    .bank-form-row {
+        transition: opacity 0.3s;
+    }
+    
+    .delivery-form-row.deleted,
+    .rep-form-row.deleted,
+    .bank-form-row.deleted {
+        opacity: 0.5;
+        background-color: #f8f9fa;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // مدیریت formset آدرس تحویل
+    const deliveryContainer = document.getElementById('delivery-container');
+    const addDeliveryBtn = document.getElementById('add-delivery-btn');
+    
+    if (deliveryContainer && addDeliveryBtn) {
+        // پیدا کردن input TOTAL_FORMS مربوط به delivery formset
+        // management form قبل از container است
+        const deliveryManagementForm = deliveryContainer.previousElementSibling;
+        let deliveryTotalFormsInput = null;
+        if (deliveryManagementForm) {
+            deliveryTotalFormsInput = deliveryManagementForm.querySelector('input[name$="-TOTAL_FORMS"]');
+        }
+        // اگر پیدا نشد، از selector عمومی استفاده کن
+        if (!deliveryTotalFormsInput) {
+            const allInputs = document.querySelectorAll('input[name$="-TOTAL_FORMS"]');
+            if (allInputs.length > 0) {
+                deliveryTotalFormsInput = allInputs[0];
+            }
+        }
+        
+        if (deliveryTotalFormsInput) {
+            const deliveryPrefix = deliveryTotalFormsInput.name.replace('-TOTAL_FORMS', '');
+            let deliveryFormCount = parseInt(deliveryTotalFormsInput.value) || 0;
+            
+            addDeliveryBtn.addEventListener('click', function() {
+                const firstForm = deliveryContainer.querySelector('.delivery-form-row');
+                if (!firstForm) return;
+                
+                const newForm = firstForm.cloneNode(true);
+                newForm.classList.add('delivery-form-row');
+                
+                const formIndex = deliveryFormCount;
+                const regex = new RegExp(`${deliveryPrefix}-(\\d+)-`, 'g');
+                
+                newForm.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+                    if (element.name) {
+                        element.name = element.name.replace(regex, `${deliveryPrefix}-${formIndex}-`);
+                    }
+                    if (element.id) {
+                        element.id = element.id.replace(regex, `${deliveryPrefix}-${formIndex}-`);
+                    }
+                    if (element.getAttribute('for')) {
+                        element.setAttribute('for', element.getAttribute('for').replace(regex, `${deliveryPrefix}-${formIndex}-`));
+                    }
+                });
+                
+                newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    if (input.type === 'checkbox') {
+                        if (input.name.includes('-DELETE')) {
+                            input.checked = false;
+                        }
+                    } else if (input.type !== 'hidden') {
+                        input.value = '';
+                    }
+                });
+                
+                newForm.querySelectorAll('.text-danger').forEach(function(error) {
+                    error.remove();
+                });
+                
+                deliveryContainer.appendChild(newForm);
+                deliveryFormCount++;
+                deliveryTotalFormsInput.value = deliveryFormCount;
+            });
+            
+            deliveryContainer.addEventListener('change', function(e) {
+                if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
+                    const formRow = e.target.closest('.delivery-form-row');
+                    if (e.target.checked) {
+                        formRow.classList.add('deleted');
+                    } else {
+                        formRow.classList.remove('deleted');
+                    }
+                }
+            });
+        }
+    }
+    
+    // مدیریت formset نماینده
+    const repContainer = document.getElementById('rep-container');
+    const addRepBtn = document.getElementById('add-rep-btn');
+    
+    if (repContainer && addRepBtn) {
+        // پیدا کردن input TOTAL_FORMS مربوط به rep formset
+        // management form قبل از container است
+        const repManagementForm = repContainer.previousElementSibling;
+        let repTotalFormsInput = null;
+        if (repManagementForm) {
+            repTotalFormsInput = repManagementForm.querySelector('input[name$="-TOTAL_FORMS"]');
+        }
+        // اگر پیدا نشد، از selector عمومی استفاده کن
+        if (!repTotalFormsInput) {
+            const allInputs = document.querySelectorAll('input[name$="-TOTAL_FORMS"]');
+            if (allInputs.length > 1) {
+                repTotalFormsInput = allInputs[1];
+            } else if (allInputs.length > 0) {
+                repTotalFormsInput = allInputs[0];
+            }
+        }
+        
+        if (repTotalFormsInput) {
+            const repPrefix = repTotalFormsInput.name.replace('-TOTAL_FORMS', '');
+            let repFormCount = parseInt(repTotalFormsInput.value) || 0;
+            
+            addRepBtn.addEventListener('click', function() {
+                const firstForm = repContainer.querySelector('.rep-form-row');
+                if (!firstForm) return;
+                
+                const newForm = firstForm.cloneNode(true);
+                newForm.classList.add('rep-form-row');
+                
+                const formIndex = repFormCount;
+                const regex = new RegExp(`${repPrefix}-(\\d+)-`, 'g');
+                
+                newForm.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+                    if (element.name) {
+                        element.name = element.name.replace(regex, `${repPrefix}-${formIndex}-`);
+                    }
+                    if (element.id) {
+                        element.id = element.id.replace(regex, `${repPrefix}-${formIndex}-`);
+                    }
+                    if (element.getAttribute('for')) {
+                        element.setAttribute('for', element.getAttribute('for').replace(regex, `${repPrefix}-${formIndex}-`));
+                    }
+                });
+                
+                newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    if (input.type === 'checkbox') {
+                        if (input.name.includes('-DELETE')) {
+                            input.checked = false;
+                        }
+                    } else if (input.type !== 'hidden') {
+                        input.value = '';
+                    }
+                });
+                
+                newForm.querySelectorAll('.text-danger').forEach(function(error) {
+                    error.remove();
+                });
+                
+                repContainer.appendChild(newForm);
+                repFormCount++;
+                repTotalFormsInput.value = repFormCount;
+            });
+            
+            repContainer.addEventListener('change', function(e) {
+                if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
+                    const formRow = e.target.closest('.rep-form-row');
+                    if (e.target.checked) {
+                        formRow.classList.add('deleted');
+                    } else {
+                        formRow.classList.remove('deleted');
+                    }
+                }
+            });
+        }
+    }
+    
+    // مدیریت formset حساب بانکی
+    const bankContainer = document.getElementById('bank-container');
+    const addBankBtn = document.getElementById('add-bank-btn');
+    
+    if (bankContainer && addBankBtn) {
+        // پیدا کردن input TOTAL_FORMS مربوط به bank formset
+        const bankManagementForm = bankContainer.previousElementSibling;
+        let bankTotalFormsInput = null;
+        if (bankManagementForm) {
+            bankTotalFormsInput = bankManagementForm.querySelector('input[name$="-TOTAL_FORMS"]');
+        }
+        // اگر پیدا نشد، از selector عمومی استفاده کن
+        if (!bankTotalFormsInput) {
+            const allInputs = document.querySelectorAll('input[name$="-TOTAL_FORMS"]');
+            // حساب بانکی معمولاً آخرین formset است
+            if (allInputs.length > 0) {
+                bankTotalFormsInput = allInputs[allInputs.length - 1];
+            }
+        }
+        
+        if (bankTotalFormsInput) {
+            const bankPrefix = bankTotalFormsInput.name.replace('-TOTAL_FORMS', '');
+            let bankFormCount = parseInt(bankTotalFormsInput.value) || 0;
+            
+            addBankBtn.addEventListener('click', function() {
+                const firstForm = bankContainer.querySelector('.bank-form-row');
+                if (!firstForm) return;
+                
+                const newForm = firstForm.cloneNode(true);
+                newForm.classList.add('bank-form-row');
+                
+                const formIndex = bankFormCount;
+                const regex = new RegExp(`${bankPrefix}-(\\d+)-`, 'g');
+                
+                newForm.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+                    if (element.name) {
+                        element.name = element.name.replace(regex, `${bankPrefix}-${formIndex}-`);
+                    }
+                    if (element.id) {
+                        element.id = element.id.replace(regex, `${bankPrefix}-${formIndex}-`);
+                    }
+                    if (element.getAttribute('for')) {
+                        element.setAttribute('for', element.getAttribute('for').replace(regex, `${bankPrefix}-${formIndex}-`));
+                    }
+                });
+                
+                newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    if (input.type === 'checkbox') {
+                        if (input.name.includes('-DELETE')) {
+                            input.checked = false;
+                        }
+                    } else if (input.type !== 'hidden') {
+                        input.value = '';
+                    }
+                });
+                
+                newForm.querySelectorAll('.text-danger').forEach(function(error) {
+                    error.remove();
+                });
+                
+                bankContainer.appendChild(newForm);
+                bankFormCount++;
+                bankTotalFormsInput.value = bankFormCount;
+            });
+            
+            bankContainer.addEventListener('change', function(e) {
+                if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
+                    const formRow = e.target.closest('.bank-form-row');
+                    if (e.target.checked) {
+                        formRow.classList.add('deleted');
+                    } else {
+                        formRow.classList.remove('deleted');
+                    }
+                }
+            });
+        }
+    }
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -345,178 +600,304 @@
                                     </div>
                                     {% endif %}
                                 </div>
+                                
+                                <!-- حساب‌های بانکی -->
+                                <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid var(--light-green);">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                        <h6 style="margin: 0; color: var(--primary-green); font-size: 1.1rem;">حساب‌های بانکی (اختیاری)</h6>
+                                        <button type="button" id="add-bank-btn" class="btn btn-success" style="padding: 8px 16px;">
+                                            <span>+ افزودن حساب بانکی</span>
+                                        </button>
+                                    </div>
+
+                                    {{ bank_formset.management_form }}
+                                    <div id="bank-container">
+                                        {% for f in bank_formset.forms %}
+                                            <div class="bank-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
+                                                {% if f.DELETE %}
+                                                    <div style="position: absolute; left: 10px; top: 10px;">
+                                                        <label style="display: flex; align-items: center; cursor: pointer;">
+                                                            {{ f.DELETE }}
+                                                            <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
+                                                        </label>
+                                                    </div>
+                                                {% endif %}
+                                                <div class="row">
+                                                    {% if accessible_bank_fields.account_number %}
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">{{ f.account_number.label }}</label>
+                                                        {{ f.account_number }}
+                                                        {% if f.account_number.errors %}
+                                                            <div class="text-danger">{{ f.account_number.errors.0 }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if accessible_bank_fields.shaba_number %}
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">{{ f.shaba_number.label }}</label>
+                                                        {{ f.shaba_number }}
+                                                        {% if f.shaba_number.errors %}
+                                                            <div class="text-danger">{{ f.shaba_number.errors.0 }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% endif %}
+
+                                                    {% if accessible_bank_fields.bank_name %}
+                                                    <div class="col-md-4 mb-3">
+                                                        <label class="form-label">{{ f.bank_name.label }}</label>
+                                                        {{ f.bank_name }}
+                                                        {% if f.bank_name.errors %}
+                                                            <div class="text-danger">{{ f.bank_name.errors.0 }}</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% endif %}
+                                                </div>
+                                                {% for hidden in f.hidden_fields %}
+                                                    {{ hidden }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+
+                                    {% if bank_formset.non_form_errors %}
+                                        {% for err in bank_formset.non_form_errors %}
+                                            <div class="text-danger">{{ err }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                </div>
                             </div>
                             
                             <!-- بخش آدرس تحویل -->
                             <div class="form-section">
-                                <h5>آدرس تحویل (اختیاری)</h5>
-                                <div class="row">
-                                    {% if accessible_fields.delivery_postal_code %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.delivery_postal_code.label }}</label>
-                                        {{ form.delivery_postal_code }}
-                                        {% if form.delivery_postal_code.errors %}
-                                            <div class="text-danger">{{ form.delivery_postal_code.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.recipient_name %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.recipient_name.label }}</label>
-                                        {{ form.recipient_name }}
-                                        {% if form.recipient_name.errors %}
-                                            <div class="text-danger">{{ form.recipient_name.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.recipient_national_id %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.recipient_national_id.label }}</label>
-                                        {{ form.recipient_national_id }}
-                                        {% if form.recipient_national_id.errors %}
-                                            <div class="text-danger">{{ form.recipient_national_id.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.unique_delivery_id %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.unique_delivery_id.label }}</label>
-                                        {{ form.unique_delivery_id }}
-                                        {% if form.unique_delivery_id.errors %}
-                                            <div class="text-danger">{{ form.unique_delivery_id.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.delivery_province %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.delivery_province.label }}</label>
-                                        {{ form.delivery_province }}
-                                        {% if form.delivery_province.errors %}
-                                            <div class="text-danger">{{ form.delivery_province.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.delivery_city %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.delivery_city.label }}</label>
-                                        {{ form.delivery_city }}
-                                        {% if form.delivery_city.errors %}
-                                            <div class="text-danger">{{ form.delivery_city.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.delivery_address %}
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label">{{ form.delivery_address.label }}</label>
-                                        {{ form.delivery_address }}
-                                        {% if form.delivery_address.errors %}
-                                            <div class="text-danger">{{ form.delivery_address.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.delivery_mobile %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.delivery_mobile.label }}</label>
-                                        {{ form.delivery_mobile }}
-                                        {% if form.delivery_mobile.errors %}
-                                            <div class="text-danger">{{ form.delivery_mobile.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.delivery_landline %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.delivery_landline.label }}</label>
-                                        {{ form.delivery_landline }}
-                                        {% if form.delivery_landline.errors %}
-                                            <div class="text-danger">{{ form.delivery_landline.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.delivery_limit %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.delivery_limit.label }}</label>
-                                        {{ form.delivery_limit }}
-                                        {% if form.delivery_limit.errors %}
-                                            <div class="text-danger">{{ form.delivery_limit.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.recipient_type %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.recipient_type.label }}</label>
-                                        {{ form.recipient_type }}
-                                        {% if form.recipient_type.errors %}
-                                            <div class="text-danger">{{ form.recipient_type.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h5 style="margin: 0;">آدرس تحویل (اختیاری)</h5>
+                                    <button type="button" id="add-delivery-btn" class="btn btn-success" style="padding: 8px 16px;">
+                                        <span>+ افزودن آدرس تحویل</span>
+                                    </button>
                                 </div>
+
+                                {{ delivery_formset.management_form }}
+                                <div id="delivery-container">
+                                    {% for f in delivery_formset.forms %}
+                                        <div class="delivery-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
+                                            {% if f.DELETE %}
+                                                <div style="position: absolute; left: 10px; top: 10px;">
+                                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                                        {{ f.DELETE }}
+                                                        <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
+                                                    </label>
+                                                </div>
+                                            {% endif %}
+                                            <div class="row">
+                                                {% if accessible_delivery_fields.postal_code %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.postal_code.label }}</label>
+                                                    {{ f.postal_code }}
+                                                    {% if f.postal_code.errors %}
+                                                        <div class="text-danger">{{ f.postal_code.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.recipient_name %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.recipient_name.label }}</label>
+                                                    {{ f.recipient_name }}
+                                                    {% if f.recipient_name.errors %}
+                                                        <div class="text-danger">{{ f.recipient_name.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.recipient_national_id %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.recipient_national_id.label }}</label>
+                                                    {{ f.recipient_national_id }}
+                                                    {% if f.recipient_national_id.errors %}
+                                                        <div class="text-danger">{{ f.recipient_national_id.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.unique_delivery_id %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.unique_delivery_id.label }}</label>
+                                                    {{ f.unique_delivery_id }}
+                                                    {% if f.unique_delivery_id.errors %}
+                                                        <div class="text-danger">{{ f.unique_delivery_id.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.province %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.province.label }}</label>
+                                                    {{ f.province }}
+                                                    {% if f.province.errors %}
+                                                        <div class="text-danger">{{ f.province.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.city %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.city.label }}</label>
+                                                    {{ f.city }}
+                                                    {% if f.city.errors %}
+                                                        <div class="text-danger">{{ f.city.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.address %}
+                                                <div class="col-12 mb-3">
+                                                    <label class="form-label">{{ f.address.label }}</label>
+                                                    {{ f.address }}
+                                                    {% if f.address.errors %}
+                                                        <div class="text-danger">{{ f.address.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.delivery_mobile %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.delivery_mobile.label }}</label>
+                                                    {{ f.delivery_mobile }}
+                                                    {% if f.delivery_mobile.errors %}
+                                                        <div class="text-danger">{{ f.delivery_mobile.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.delivery_landline %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.delivery_landline.label }}</label>
+                                                    {{ f.delivery_landline }}
+                                                    {% if f.delivery_landline.errors %}
+                                                        <div class="text-danger">{{ f.delivery_landline.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.delivery_limit %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.delivery_limit.label }}</label>
+                                                    {{ f.delivery_limit }}
+                                                    {% if f.delivery_limit.errors %}
+                                                        <div class="text-danger">{{ f.delivery_limit.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_delivery_fields.recipient_type %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.recipient_type.label }}</label>
+                                                    {{ f.recipient_type }}
+                                                    {% if f.recipient_type.errors %}
+                                                        <div class="text-danger">{{ f.recipient_type.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            {% for hidden in f.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+
+                                {% if delivery_formset.non_form_errors %}
+                                    {% for err in delivery_formset.non_form_errors %}
+                                        <div class="text-danger">{{ err }}</div>
+                                    {% endfor %}
+                                {% endif %}
                             </div>
                             
                             <!-- بخش نماینده -->
                             <div class="form-section">
-                                <h5>اطلاعات نماینده (اختیاری)</h5>
-                                <div class="row">
-                                    {% if accessible_fields.representative_name %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.representative_name.label }}</label>
-                                        {{ form.representative_name }}
-                                        {% if form.representative_name.errors %}
-                                            <div class="text-danger">{{ form.representative_name.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.representative_position %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.representative_position.label }}</label>
-                                        {{ form.representative_position }}
-                                        {% if form.representative_position.errors %}
-                                            <div class="text-danger">{{ form.representative_position.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.representative_mobile %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.representative_mobile.label }}</label>
-                                        {{ form.representative_mobile }}
-                                        {% if form.representative_mobile.errors %}
-                                            <div class="text-danger">{{ form.representative_mobile.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.representative_landline %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.representative_landline.label }}</label>
-                                        {{ form.representative_landline }}
-                                        {% if form.representative_landline.errors %}
-                                            <div class="text-danger">{{ form.representative_landline.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
-                                    
-                                    {% if accessible_fields.representative_confirmation_letter %}
-                                    <div class="col-12 mb-3">
-                                        <label class="form-label">{{ form.representative_confirmation_letter.label }}</label>
-                                        {{ form.representative_confirmation_letter }}
-                                        {% if form.representative_confirmation_letter.errors %}
-                                            <div class="text-danger">{{ form.representative_confirmation_letter.errors.0 }}</div>
-                                        {% endif %}
-                                    </div>
-                                    {% endif %}
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h5 style="margin: 0;">اطلاعات نماینده (اختیاری)</h5>
+                                    <button type="button" id="add-rep-btn" class="btn btn-success" style="padding: 8px 16px;">
+                                        <span>+ افزودن نماینده</span>
+                                    </button>
                                 </div>
+
+                                {{ rep_formset.management_form }}
+                                <div id="rep-container">
+                                    {% for f in rep_formset.forms %}
+                                        <div class="rep-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
+                                            {% if f.DELETE %}
+                                                <div style="position: absolute; left: 10px; top: 10px;">
+                                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                                        {{ f.DELETE }}
+                                                        <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
+                                                    </label>
+                                                </div>
+                                            {% endif %}
+                                            <div class="row">
+                                                {% if accessible_rep_fields.name %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.name.label }}</label>
+                                                    {{ f.name }}
+                                                    {% if f.name.errors %}
+                                                        <div class="text-danger">{{ f.name.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_rep_fields.position %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.position.label }}</label>
+                                                    {{ f.position }}
+                                                    {% if f.position.errors %}
+                                                        <div class="text-danger">{{ f.position.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_rep_fields.mobile %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.mobile.label }}</label>
+                                                    {{ f.mobile }}
+                                                    {% if f.mobile.errors %}
+                                                        <div class="text-danger">{{ f.mobile.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_rep_fields.landline %}
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">{{ f.landline.label }}</label>
+                                                    {{ f.landline }}
+                                                    {% if f.landline.errors %}
+                                                        <div class="text-danger">{{ f.landline.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if accessible_rep_fields.confirmation_letter %}
+                                                <div class="col-12 mb-3">
+                                                    <label class="form-label">{{ f.confirmation_letter.label }}</label>
+                                                    {{ f.confirmation_letter }}
+                                                    {% if f.confirmation_letter.errors %}
+                                                        <div class="text-danger">{{ f.confirmation_letter.errors.0 }}</div>
+                                                    {% endif %}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            {% for hidden in f.hidden_fields %}
+                                                {{ hidden }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+
+                                {% if rep_formset.non_form_errors %}
+                                    {% for err in rep_formset.non_form_errors %}
+                                        <div class="text-danger">{{ err }}</div>
+                                    {% endfor %}
+                                {% endif %}
                             </div>
                             
                             <!-- دکمه‌های ارسال و لغو -->
