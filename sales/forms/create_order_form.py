@@ -174,6 +174,9 @@ class RequiredOrderItemFormSet(BaseFormSet):
         super().clean()
         has_at_least_one = False
         for form in self.forms:
+            # اگر فرم برای حذف علامت خورده باشد، آن را نادیده بگیر
+            if form.cleaned_data.get('DELETE', False):
+                continue
             if getattr(form, 'cleaned_data', None) and any(
                 form.cleaned_data.get(k) for k in ['product', 'requested_unit', 'quantity', 'unit_price']
             ):
@@ -191,7 +194,7 @@ def build_order_item_formset(data=None, accessible_fields: Optional[Dict[str, bo
         form=OrderItemForm,
         formset=RequiredOrderItemFormSet,
         extra=1,
-        can_delete=False
+        can_delete=True
     )
     if data is None:
         return ItemFormSet(form_kwargs={'accessible_fields': accessible_fields})
