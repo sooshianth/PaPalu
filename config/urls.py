@@ -34,7 +34,7 @@ urlpatterns = [
     path('program/list/', program_views.program_list_view, name='program_list_direct'),
     path('program/<int:program_id>/edit/', program_views.edit_program_view, name='program_edit_direct'),
     # Backward-compatible alias: some users attempt /product/create -> map to program create
-    path('product/create/', program_views.create_program_view, name='product_create_alias'),
+    # path('product/create/', program_views.create_program_view, name='product_create_alias'),
     path('sales/', include('sales.urls')),
     path('warehousing/', include('warehousing.urls')),
     path('access/', include('access.urls')),
