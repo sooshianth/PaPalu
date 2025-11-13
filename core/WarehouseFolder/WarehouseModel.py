@@ -11,6 +11,7 @@ class Warehouse(models.Model):
     
     WAREHOUSE_TYPE_CHOICES = [
         ('supplier', 'تامین کننده'),
+        ('supplier', 'تامین کننده'),
         ('primary', 'اولیه'),
         ('production', 'تولید'),
         ('secondary', 'ثانویه'),

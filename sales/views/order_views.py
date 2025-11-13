@@ -56,6 +56,9 @@ def create_order_view(request):
                     for form in item_formset:
                         if not getattr(form, 'cleaned_data', None):
                             continue
+                        # اگر فرم برای حذف علامت خورده باشد، آن را نادیده بگیر
+                        if form.cleaned_data.get('DELETE', False):
+                            continue
                         product = form.cleaned_data.get('product')
                         requested_unit = form.cleaned_data.get('requested_unit')
                         quantity = form.cleaned_data.get('quantity')
@@ -71,10 +74,8 @@ def create_order_view(request):
                         order.save(update_fields=['total_order_weight'])
 
                 messages.success(request, 'سفارش با موفقیت ایجاد شد. تسک بعد: صدور پیش فاکتور.')
-                # If user has permission to issue proforma, consider redirecting
-                if user_has_task(request.user, TaskChoices.SALES_ISSUE_PROFORMA.value):
-                    return redirect('sales:proforma_issue_start')  # Assumes URL name exists
-                return redirect('sales:order_list')  # Fallback list URL
+                # Redirect to order list (proforma functionality will be added later)
+                return redirect('sales:order_list')
             except Exception as e:
                 messages.error(request, f'خطا در ایجاد سفارش: {str(e)}')
         else:

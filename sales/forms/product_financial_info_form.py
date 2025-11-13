@@ -2,7 +2,8 @@ from django import forms
 from django.contrib.contenttypes.models import ContentType
 from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
 from core.ProductFolder.ProductModel import Product
-from django_jalali.forms.widgets import jDateTimeInput, jDateInput
+from django_jalali.forms.widgets import jDateTimeInput
+import jdatetime
 
 
 class ProductFinancialInfoForm(forms.ModelForm):
@@ -23,8 +24,9 @@ class ProductFinancialInfoForm(forms.ModelForm):
                 'step': '0.01',
                 'placeholder': 'قیمت محصول'
             }),
-            'deadline': jDateInput(attrs={
+            'deadline': forms.DateInput(attrs={
                 'class': 'form-control',
+                'type': 'date',
                 'placeholder': 'مهلت اعتبار قیمت'
             }),
             'condition': forms.Textarea(attrs={
@@ -76,6 +78,17 @@ class ProductFinancialInfoForm(forms.ModelForm):
                 empty_label='-- انتخاب محصول --'
             )
         
+        # تنظیم فیلد deadline به صورت DateField با تقویم HTML5
+        if 'deadline' in self.fields:
+            self.fields['deadline'] = forms.DateField(
+                required=True,
+                label='مهلت اعتبار قیمت',
+                widget=forms.DateInput(attrs={
+                    'class': 'form-control',
+                    'type': 'date'
+                })
+            )
+        
         # تنظیم فیلدهای اجباری
         required_fields = ['product', 'price', 'deadline', 'condition', 'condition_description']
         for field_name in required_fields:
@@ -99,6 +112,42 @@ class ProductFinancialInfoForm(forms.ModelForm):
             raise forms.ValidationError('قیمت باید بزرگتر از صفر باشد.')
         
         return price
+    
+    def clean_deadline(self):
+        """تبدیل تاریخ میلادی به شمسی برای deadline"""
+        deadline = self.cleaned_data.get('deadline')
+        
+        if deadline:
+            # تبدیل تاریخ میلادی به شمسی
+            try:
+                # deadline یک datetime.date است (میلادی)
+                # تبدیل به jdatetime.date (شمسی)
+                jdate = jdatetime.date.fromgregorian(date=deadline)
+                return jdate
+            except Exception as e:
+                raise forms.ValidationError(f'خطا در تبدیل تاریخ: {str(e)}')
+        
+        return deadline
+    
+    def save(self, commit=True):
+        """ذخیره فرم با تبدیل صحیح تاریخ"""
+        instance = super().save(commit=False)
+        
+        # تبدیل deadline از میلادی به شمسی (اگر در cleaned_data باشد)
+        if 'deadline' in self.cleaned_data and self.cleaned_data['deadline']:
+            deadline = self.cleaned_data['deadline']
+            # اگر deadline یک datetime.date است، تبدیل به jdatetime.date
+            if isinstance(deadline, jdatetime.date):
+                instance.deadline = deadline
+            else:
+                # تبدیل از datetime.date به jdatetime.date
+                jdate = jdatetime.date.fromgregorian(date=deadline)
+                instance.deadline = jdate
+        
+        if commit:
+            instance.save()
+        
+        return instance
     
     def clean(self):
         """اعتبارسنجی کلی فرم"""
