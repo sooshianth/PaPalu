@@ -49,7 +49,11 @@ class LogUserInfoFilter(logging.Filter):
             last_name = getattr(user, 'last_name', '')
             fn = first_name if first_name else '()'
             ln = last_name if last_name else '()'
-            record.username = f"{fn} {ln} - {user.username}"
+            username = getattr(user, 'username', None)
+            if username:
+                record.username = f"{fn} {ln} - {username}"
+            else:
+                record.username = 'Anonymous'
             record.user_id = getattr(user, 'id', 'Unknown')
             record.user_phone = user_phone or '-'
         else:

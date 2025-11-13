@@ -43,7 +43,7 @@ class ProductAdmin(admin.ModelAdmin):
             'fields': ('physical_shape', 'pellet_granule_diameter', 'image')
         }),
         ('توضیحات', {
-            'fields': ('invoice_description', 'full_description', 'lab_analysis', 'original_selection')
+            'fields': ('invoice_description', 'full_description', 'lab_analysis', 'grade', 'main_application')
         }),
         ('واحدها', {
             'fields': ('main_unit', 'secondary_unit', 'conversion_coefficient')

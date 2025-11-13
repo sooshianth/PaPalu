@@ -36,7 +36,7 @@ class Command(BaseCommand):
         )
         
         from core.WarehouseFolder import (
-            InventoryProduct, Warehouse, DefaultItem
+            InventoryItem, Warehouse, DefaultItem
         )
         
         from core.RawMaterialFolder import (
@@ -71,7 +71,7 @@ class Command(BaseCommand):
             # Transport
             Transport, ProductInfo, TruckInfo, Fare, LoadingScheduleInfo,
             # Warehouse
-            InventoryProduct, Warehouse, DefaultItem,
+            InventoryItem, Warehouse, DefaultItem,
             # Raw Material
             Supplier, QualityParameter, RawMaterialPurchaseInfo,
             RawMaterialQualityControl, RawMaterial,
