@@ -44,7 +44,7 @@ class CoreConfig(AppConfig):
         
         # Warehouse models
         from .WarehouseFolder import (
-            Inventory, InventoryProduct, Warehouse, DefaultItem
+            InventoryProduct, Warehouse, DefaultItem
         )
         
         # Raw Material models

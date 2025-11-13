@@ -133,7 +133,102 @@
         .form-actions { flex-direction: column; }
         .btn { width: 100%; }
     }
+    
+    .item-form-row {
+        transition: opacity 0.3s;
+    }
+    
+    .item-form-row.deleted {
+        opacity: 0.5;
+        background-color: #f8f9fa;
+    }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const formsetContainer = document.getElementById('items-container');
+    const addButton = document.getElementById('add-item-btn');
+    
+    // پیدا کردن فیلد TOTAL_FORMS در management form
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    if (!totalFormsInput) {
+        console.error('فیلد TOTAL_FORMS پیدا نشد');
+        return;
+    }
+    
+    // استخراج prefix از نام فیلد (مثلاً "form" از "form-TOTAL_FORMS")
+    const prefix = totalFormsInput.name.replace('-TOTAL_FORMS', '');
+    let formCount = parseInt(totalFormsInput.value) || 0;
+    
+    // تابع برای افزودن قلم جدید
+    addButton.addEventListener('click', function() {
+        const firstForm = formsetContainer.querySelector('.item-form-row');
+        if (!firstForm) {
+            console.error('فرم اولیه پیدا نشد');
+            return;
+        }
+        
+        // کلون کردن فرم اول
+        const newForm = firstForm.cloneNode(true);
+        newForm.classList.add('item-form-row');
+        
+        // به‌روزرسانی تمام فیلدها با شماره جدید
+        const formIndex = formCount;
+        const regex = new RegExp(`${prefix}-(\\d+)-`, 'g');
+        
+        // به‌روزرسانی name و id فیلدها
+        newForm.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+            if (element.name) {
+                element.name = element.name.replace(regex, `${prefix}-${formIndex}-`);
+            }
+            if (element.id) {
+                element.id = element.id.replace(regex, `${prefix}-${formIndex}-`);
+            }
+            if (element.getAttribute('for')) {
+                element.setAttribute('for', element.getAttribute('for').replace(regex, `${prefix}-${formIndex}-`));
+            }
+        });
+        
+        // پاک کردن مقادیر فیلدها
+        newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+            if (input.type === 'checkbox') {
+                // برای checkbox حذف، مقدار را false کن
+                if (input.name.includes('-DELETE')) {
+                    input.checked = false;
+                }
+            } else if (input.type !== 'hidden') {
+                input.value = '';
+            }
+        });
+        
+        // پاک کردن پیام‌های خطا
+        newForm.querySelectorAll('.text-danger').forEach(function(error) {
+            error.remove();
+        });
+        
+        // اضافه کردن به container
+        formsetContainer.appendChild(newForm);
+        
+        // به‌روزرسانی تعداد فرم‌ها
+        formCount++;
+        totalFormsInput.value = formCount;
+    });
+    
+    // مدیریت checkbox حذف
+    formsetContainer.addEventListener('change', function(e) {
+        if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
+            const formRow = e.target.closest('.item-form-row');
+            if (e.target.checked) {
+                formRow.classList.add('deleted');
+            } else {
+                formRow.classList.remove('deleted');
+            }
+        }
+    });
+});
+</script>
 {% endblock %}
 
 {% block content %}
@@ -233,85 +328,104 @@
 
         <!-- بخش اقلام سفارش -->
         <div class="form-section">
-            <h5>اقلام سفارش</h5>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h5 style="margin: 0;">اقلام سفارش</h5>
+                <button type="button" id="add-item-btn" class="btn btn-success" style="padding: 8px 16px;">
+                    <span>+ افزودن قلم جدید</span>
+                </button>
+            </div>
 
             {{ item_formset.management_form }}
-
-            {% for f in item_formset.forms %}
-                <div class="row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px;">
-                    <!-- اجباری های قلم -->
-                    {% if accessible_fields_item.product %}
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label required-field">{{ f.product.label }}</label>
-                        {{ f.product }}
-                        {% if f.product.errors %}
-                            <div class="text-danger">{{ f.product.errors.0 }}</div>
+            <div id="items-container">
+                {% for f in item_formset.forms %}
+                    <div class="item-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
+                        {% if f.DELETE %}
+                            <div style="position: absolute; left: 10px; top: 10px;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    {{ f.DELETE }}
+                                    <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
+                                </label>
+                            </div>
                         {% endif %}
-                    </div>
-                    {% endif %}
+                        <div class="row">
+                            <!-- اجباری های قلم -->
+                            {% if accessible_fields_item.product %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.product.label }}</label>
+                                {{ f.product }}
+                                {% if f.product.errors %}
+                                    <div class="text-danger">{{ f.product.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
 
-                    {% if accessible_fields_item.requested_unit %}
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label required-field">{{ f.requested_unit.label }}</label>
-                        {{ f.requested_unit }}
-                        {% if f.requested_unit.errors %}
-                            <div class="text-danger">{{ f.requested_unit.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                            {% if accessible_fields_item.requested_unit %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.requested_unit.label }}</label>
+                                {{ f.requested_unit }}
+                                {% if f.requested_unit.errors %}
+                                    <div class="text-danger">{{ f.requested_unit.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
 
-                    {% if accessible_fields_item.quantity %}
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label required-field">{{ f.quantity.label }}</label>
-                        {{ f.quantity }}
-                        {% if f.quantity.errors %}
-                            <div class="text-danger">{{ f.quantity.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                            {% if accessible_fields_item.quantity %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.quantity.label }}</label>
+                                {{ f.quantity }}
+                                {% if f.quantity.errors %}
+                                    <div class="text-danger">{{ f.quantity.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
 
-                    {% if accessible_fields_item.unit_price %}
-                    <div class="col-md-3 mb-3">
-                        <label class="form-label required-field">{{ f.unit_price.label }}</label>
-                        {{ f.unit_price }}
-                        {% if f.unit_price.errors %}
-                            <div class="text-danger">{{ f.unit_price.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                            {% if accessible_fields_item.unit_price %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.unit_price.label }}</label>
+                                {{ f.unit_price }}
+                                {% if f.unit_price.errors %}
+                                    <div class="text-danger">{{ f.unit_price.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
 
-                    <!-- اختیاری های قلم -->
-                    {% if accessible_fields_item.discount %}
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">{{ f.discount.label }}</label>
-                        {{ f.discount }}
-                        {% if f.discount.errors %}
-                            <div class="text-danger">{{ f.discount.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                            <!-- اختیاری های قلم -->
+                            {% if accessible_fields_item.discount %}
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ f.discount.label }}</label>
+                                {{ f.discount }}
+                                {% if f.discount.errors %}
+                                    <div class="text-danger">{{ f.discount.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
 
-                    {% if accessible_fields_item.additional_charges %}
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">{{ f.additional_charges.label }}</label>
-                        {{ f.additional_charges }}
-                        {% if f.additional_charges.errors %}
-                            <div class="text-danger">{{ f.additional_charges.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+                            {% if accessible_fields_item.additional_charges %}
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ f.additional_charges.label }}</label>
+                                {{ f.additional_charges }}
+                                {% if f.additional_charges.errors %}
+                                    <div class="text-danger">{{ f.additional_charges.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
 
-                    {% if accessible_fields_item.vat %}
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">{{ f.vat.label }}</label>
-                        {{ f.vat }}
-                        {% if f.vat.errors %}
-                            <div class="text-danger">{{ f.vat.errors.0 }}</div>
-                        {% endif %}
+                            {% if accessible_fields_item.vat %}
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ f.vat.label }}</label>
+                                {{ f.vat }}
+                                {% if f.vat.errors %}
+                                    <div class="text-danger">{{ f.vat.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% for hidden in f.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
                     </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
 
             {% if item_formset.non_form_errors %}
                 {% for err in item_formset.non_form_errors %}
