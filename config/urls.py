@@ -12,25 +12,28 @@ def root_view(request):
     else:
         return redirect('unified_login')
 
-@login_required
 def home_view(request):
     """صفحه اصلی بعد از لاگین"""
-    return render(request, 'home.html', {
-        'user': request.user
-    })
-
+    if request.user.is_authenticated:
+        return render(request, 'home.html', {
+            'user': request.user
+        })
+    else:
+        return redirect_to_login(request)
+        
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('permissions/', include('perm_manager.urls')),
     path('authentication/', include('authentication.urls')),
     path('home/', home_view, name='home'),
-    path('', root_view, name='root'),
+    path('', home_view, name='root'),
     path('accounting/', include('accounting.urls')),
     path('custody/', include('custody.urls')),
     path('distribution/', include('distribution.urls')),
     path('production/', include('production.urls')),
     path('sales/', include('sales.urls')),
     path('warehousing/', include('warehousing.urls')),
+    path('access/', include('access.urls')),
 ]
 
 # Serve media files in development

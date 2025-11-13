@@ -1,0 +1,568 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .search-filter-section {
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .search-filter-section h5 {
+        color: var(--primary-green);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .badge-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .badge-success {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .badge-secondary {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .badge-info {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .badge-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .empty-state svg {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+    
+    .product-image-thumb {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-outline-info,
+    .btn-outline-warning,
+    .btn-outline-danger {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid;
+        transition: all 0.3s;
+    }
+    
+    .btn-outline-info {
+        color: #17a2b8;
+        border-color: #17a2b8;
+    }
+    
+    .btn-outline-info:hover {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .btn-outline-warning {
+        color: #ffc107;
+        border-color: #ffc107;
+    }
+    
+    .btn-outline-warning:hover {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-outline-danger {
+        color: #dc3545;
+        border-color: #dc3545;
+    }
+    
+    .btn-outline-danger:hover {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    
+    .col-md-4 {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .col-md-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .col-md-2 {
+        flex: 0 0 16.666667%;
+        max-width: 16.666667%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        justify-content: center;
+        gap: 5px;
+        margin-top: 20px;
+    }
+    
+    .page-item {
+        margin: 0;
+    }
+    
+    .page-link {
+        padding: 8px 15px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        text-decoration: none;
+        color: var(--gray-800);
+        transition: all 0.3s;
+    }
+    
+    .page-link:hover {
+        background-color: var(--light-green);
+        border-color: var(--primary-green);
+    }
+    
+    .page-item.active .page-link {
+        background-color: var(--primary-green);
+        color: white;
+        border-color: var(--primary-green);
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+        
+        .col-md-4,
+        .col-md-3,
+        .col-md-2 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+    <a href="{% url 'sales:create_product' %}" class="btn btn-primary">
+        <svg style="width: 20px; height: 20px; margin-left: 8px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        ایجاد محصول جدید
+    </a>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- بخش جستجو و فیلتر -->
+    <div class="search-filter-section">
+        <form method="get" action="{% url 'sales:product_list' %}">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="search" class="form-label">جستجو</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="search" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="نام، کد، یا دسته محصول...">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="category" class="form-label">گروه محصول</label>
+                    <select class="form-select" id="category" name="category">
+                        <option value="">همه گروه‌ها</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat }}" {% if category_filter == cat %}selected{% endif %}>
+                            {{ cat }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <label for="application" class="form-label">کاربرد</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="application" 
+                           name="application" 
+                           value="{{ application_filter }}"
+                           placeholder="کاربرد محصول...">
+                </div>
+
+                <div class="col-md-2 mb-3">
+                    <label for="is_custom" class="form-label">نوع محصول</label>
+                    <select class="form-select" id="is_custom" name="is_custom">
+                        <option value="">همه</option>
+                        <option value="true" {% if custom_filter == 'true' %}selected{% endif %}>سفارشی</option>
+                        <option value="false" {% if custom_filter == 'false' %}selected{% endif %}>استاندارد</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button type="submit" class="btn btn-primary">جستجو</button>
+                <a href="{% url 'sales:product_list' %}" class="btn btn-secondary">پاک کردن فیلترها</a>
+            </div>
+        </form>
+    </div>
+    
+    {% if products %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        {% if accessible_fields.image %}<th>تصویر</th>{% endif %}
+                        {% if accessible_fields.code %}<th>کد محصول</th>{% endif %}
+                        {% if accessible_fields.name %}<th>نام محصول</th>{% endif %}
+                        {% if accessible_fields.category %}<th>گروه</th>{% endif %}
+                        {% if accessible_fields.grade %}<th>گرید</th>{% endif %}
+                        {% if accessible_fields.physical_shape %}<th>شکل فیزیکی</th>{% endif %}
+                        {% if accessible_fields.main_application %}<th>کاربرد</th>{% endif %}
+                        {% if accessible_fields.main_unit %}<th>واحد اصلی</th>{% endif %}
+                        {% if accessible_fields.is_custom %}<th>نوع</th>{% endif %}
+                        <th>تاریخ ایجاد</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        {% if accessible_fields.image %}
+                        <td>
+                            {% if product.image %}
+                            <img src="{{ product.image.url }}" 
+                                 alt="{{ product.name }}" 
+                                 class="product-image-thumb">
+                            {% else %}
+                            <div class="product-image-thumb" style="background-color: var(--gray-200); display: flex; align-items: center; justify-content: center; color: var(--gray-600);">
+                                -
+                            </div>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        {% if accessible_fields.code %}
+                        <td><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ product.code }}</code></td>
+                        {% endif %}
+                        {% if accessible_fields.name %}
+                        <td>
+                            <a href="{% url 'sales:product_detail' product.id %}" 
+                               style="color: var(--primary-green); text-decoration: none; font-weight: 500;">
+                                {{ product.name }}
+                            </a>
+                        </td>
+                        {% endif %}
+                        {% if accessible_fields.category %}
+                        <td>
+                            {{ product.category }}
+                            {% if accessible_fields.subcategory and product.subcategory %}
+                            <br><small style="color: var(--gray-600);">{{ product.subcategory }}</small>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        {% if accessible_fields.grade %}
+                        <td>{{ product.grade|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.physical_shape %}
+                        <td>{{ product.physical_shape|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.main_application %}
+                        <td>
+                            {% if product.main_application %}
+                            <span class="badge badge-info">{{ product.get_main_application_display }}</span>
+                            {% else %}
+                            <span class="badge badge-secondary">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        {% if accessible_fields.main_unit %}
+                        <td>{{ product.main_unit|default:"-" }}</td>
+                        {% endif %}
+                        {% if accessible_fields.is_custom %}
+                        <td>
+                            {% if product.is_custom %}
+                            <span class="badge badge-warning">سفارشی</span>
+                            {% else %}
+                            <span class="badge badge-secondary">استاندارد</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>{{ product.created_at|date:"Y/m/d" }}</td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'sales:product_detail' product.id %}" 
+                                   class="btn-outline-info"
+                                   title="جزئیات">
+                                    جزئیات
+                                </a>
+                                <a href="{% url 'sales:edit_product' product.id %}" 
+                                   class="btn-outline-warning"
+                                   title="ویرایش">
+                                    ویرایش
+                                </a>
+                                <a href="{% url 'sales:delete_product' product.id %}" 
+                                   class="btn-outline-danger"
+                                   title="حذف"
+                                   onclick="return confirm('آیا از حذف این محصول اطمینان دارید؟')">
+                                    حذف
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- صفحه‌بندی -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="صفحه‌بندی محصولات">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}">
+                        ابتدا
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}">
+                        قبلی
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}">
+                        بعدی
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if category_filter %}&category={{ category_filter }}{% endif %}">
+                        انتها
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>هیچ محصولی یافت نشد.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">
+                {% if search_query or category_filter %}
+                نتیجه‌ای برای جستجوی شما پیدا نشد. لطفاً فیلترها را تغییر دهید.
+                {% else %}
+                هیچ محصولی ثبت نشده است.
+                {% endif %}
+            </p>
+            <a href="{% url 'sales:create_product' %}" class="btn btn-primary" style="margin-top: 15px;">
+                ایجاد اولین محصول
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form on filter change
+    document.querySelectorAll('#category, #application, #is_custom').forEach(function(element) {
+        element.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+</script>
+{% endblock %}

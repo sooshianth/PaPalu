@@ -13,6 +13,7 @@ class TaskChoices(models.TextChoices):
     # Sales (فروش)
     SALES_CREATE_CUSTOMER = 'sales.create_customer', 'ایجاد شخص مشتری'
     SALES_CREATE_ORDER = 'sales.create_order', 'ایجاد سفارش فروش'
+    SALES_VIEW_ORDER_LIST = 'sales.view_order_list', 'مشاهده لیست سفارش‌های فروش'
     SALES_ISSUE_PROFORMA = 'sales.issue_proforma', 'صدور پیش فاکتور فروش'
     SALES_APPROVE_PROFORMA = 'sales.approve_proforma', 'تایید پیش فاکتور فروش'
     SALES_TRANSACTION_RECEIPT = 'sales.transaction_receipt', 'رسید تراکنش فروش'
@@ -23,9 +24,15 @@ class TaskChoices(models.TextChoices):
     SALES_APPROVE_SETTLEMENT = 'sales.approve_settlement', 'تایید تسویه کامل فروش'
     SALES_ISSUE_INVOICE = 'sales.issue_invoice', 'صدور فاکتور فروش'
     SALES_DEFINE_PRODUCT = 'sales.define_product', 'تعریف محصول'
+    SALES_CREATE_PRODUCT = 'sales.create_product', 'ایجاد محصول'
+    SALES_VIEW_PRODUCT_LIST = 'sales.view_product_list', 'مشاهده لیست محصولات'
+    SALES_VIEW_PRODUCT_DETAIL = 'sales.view_product_detail', 'مشاهده جزئیات محصول'
+    SALES_EDIT_PRODUCT = 'sales.edit_product', 'ویرایش محصول'
+    SALES_DELETE_PRODUCT = 'sales.delete_product', 'حذف محصول'
     SALES_APPROVE_ALLOCATION = 'sales.approve_allocation', 'تایید تخصیص فروش'
     SALES_APPROVE_PROFORMA_PRICE = 'sales.approve_proforma_price', 'تایید پیش فاکتور فروش(قیمت و مشخصات)'
     SALES_PRODUCT_PRICE_LIST = 'sales.product_price_list', 'لیست قیمت محصولات'
+    SALES_SET_PRODUCT_PRICE = 'sales.set_product_price', 'قیمت‌گذاری محصول'
     
     
     # Supply (تامین)
@@ -76,6 +83,9 @@ class TaskChoices(models.TextChoices):
     DISTRIBUTION_CREATE_DRIVER = 'distribution.create_driver', 'ایجاد شخص راننده'
     DISTRIBUTION_SEND_WEIGHT_INFO = 'distribution.send_weight_info', 'ارسال اطلاعات وزنی به باربری'
 
+    # Access (دسترسی‌ها)
+    ACCESS_FIELD_ACCESS_BULK_UPLOAD = 'access.field_access_bulk_upload', 'آپلود دسته‌ای دسترسی فیلدها'
+
 
 # Add category order as a class attribute after class definition
 # Format: (category_id, display_name)
@@ -85,6 +95,7 @@ TaskChoices.CATEGORY_ORDER = [
     ('supply', 'تامین'),
     ('production', 'تولید'),
     ('distribution', 'توزیع'),
+    ('access', 'دسترسی‌ها'),
 ]
 
 

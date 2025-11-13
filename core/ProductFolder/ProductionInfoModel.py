@@ -7,10 +7,10 @@ class ProductionInfo(models.Model):
     اطلاعات تولید محصول
     """
     
-    product = models.OneToOneField(
+    product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
-        related_name='production_info',
+        related_name='production_infos',
         verbose_name='محصول',
         null=True,
         blank=True,
@@ -96,5 +96,7 @@ class ProductionInfo(models.Model):
         verbose_name_plural = 'محصول | اطلاعات تولید'
     
     def __str__(self):
-        return f"اطلاعات تولید - {self.product.name}"
+        if self.product:
+            return f"اطلاعات تولید - {self.product.name} ({self.formula_id or ''})"
+        return f"اطلاعات تولید - {self.formula_id or 'بدون محصول'}"
 

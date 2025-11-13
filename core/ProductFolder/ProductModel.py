@@ -6,6 +6,7 @@ class PhysicalShape(models.Model):
     """
     کلاس شکل فیزیکی محصول تا توسط ادمین مدیریت شود
     """
+
     name = models.CharField(
         max_length=100,
         unique=True,
@@ -31,6 +32,10 @@ class Product(models.Model):
     مدل اصلی محصول - اطلاعات پایه
     """
     
+    PRODUCT_APPLICATION_CHOICES = [
+        ('3 year khar', 'خر 3 ساله'),
+    ]
+    
     # اطلاعات پایه
     name = models.CharField(
         max_length=255,
@@ -55,54 +60,46 @@ class Product(models.Model):
         verbose_name='زیر گروه محصول'
     )
     
-    physical_shape = models.ForeignKey(
-        PhysicalShape,
-        on_delete=models.SET_NULL,
-        blank=True,
+    grade = models.CharField(
+        max_length=255,
+        verbose_name='گرید',
         null=True,
+        blank=True
+    )
+    
+    physical_shape = models.CharField(
+        max_length=100,
         verbose_name='شکل فیزیکی',
-        related_name='products'
-    )
-    
-    pellet_granule_diameter = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        blank=True,
         null=True,
-        verbose_name='قطر پلت یا گرانول'
+        blank=True
     )
     
-    invoice_description = models.TextField(
-        verbose_name='شرح محصول برای پیش فاکتور'
-    )
-    
-    image = models.ImageField(
-        upload_to='products/',
-        blank=True,
+    main_application = models.CharField(
+        max_length=255,
+        verbose_name='کاربرد اصلی',
+        choices=PRODUCT_APPLICATION_CHOICES,
         null=True,
-        verbose_name='تصویر محصول'
-    )
-    
-    full_description = models.TextField(
-        verbose_name='شرح کامل محصول'
-    )
-    
-    lab_analysis = models.TextField(
-        verbose_name='آنالیز آزمایشگاهی محصول'
-    )
-    
-    original_selection = models.TextField(
-        verbose_name='گزیده اصلی(مثلا: موردی روز 1 تا 10 مقدار ماده اولیه)'
+        blank=True  
     )
     
     is_custom = models.BooleanField(
         default=False,
-        verbose_name='محصول سفارشی است؟'
+        verbose_name='محصول سفارشی است؟',
+        null=True,
+        blank=True
+    )
+    
+    full_description = models.TextField(
+        verbose_name='شرح کامل محصول',
+        null=True,
+        blank=True
     )
     
     main_unit = models.CharField(
         max_length=50,
-        verbose_name='واحد شمارش اصلی'
+        verbose_name='واحد شمارش اصلی',
+        null=True,
+        blank=True
     )
     
     secondary_unit = models.CharField(
@@ -126,6 +123,34 @@ class Product(models.Model):
         verbose_name='تاریخ انقضا'
     )
     
+    # فیلدهای اختیاری
+    pellet_granule_diameter = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name='قطر پلت یا گرانول'
+    )
+    
+    image = models.ImageField(
+        upload_to='products/',
+        blank=True,
+        null=True,
+        verbose_name='تصویر محصول'
+    )
+    
+    lab_analysis = models.TextField(
+        verbose_name='آنالیز آزمایشگاهی محصول',
+        null=True,
+        blank=True
+    )
+    
+    invoice_description = models.TextField(
+        verbose_name='شرح محصول برای پیش فاکتور',
+        null=True,
+        blank=True
+    )
+    
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
         verbose_name='تاریخ ایجاد'
@@ -143,4 +168,3 @@ class Product(models.Model):
     
     def __str__(self):
         return f"{self.code} - {self.name}"
-

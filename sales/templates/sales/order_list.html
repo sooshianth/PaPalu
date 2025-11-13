@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    .table-container { overflow-x: auto; }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    .data-table thead { background: var(--gray-100); }
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    .data-table tbody tr:hover { background-color: var(--light-green); }
+    .data-table tbody td { padding: 15px; color: var(--gray-600); }
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    .alert-success { background-color: var(--light-green); color: var(--dark-green); }
+    .alert-info { background-color: #d1ecf1; color: #0c5460; }
+    .alert-danger { background-color: #f8d7da; color: #721c24; }
+    @media (max-width: 768px) {
+        .page-header { flex-direction: column; align-items: flex-start; }
+        .list-card { padding: 20px; }
+        .data-table { font-size: 0.9rem; }
+        .data-table thead th, .data-table tbody td { padding: 10px; }
+    }
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+    <a href="{% url 'sales:order_create' %}" class="btn btn-primary">
+        <svg style="width: 20px; height: 20px; margin-left: 8px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        ایجاد سفارش جدید
+    </a>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if orders %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>شماره سفارش</th>
+                        {% if accessible_fields.status %}
+                        <th>وضعیت</th>
+                        {% endif %}
+                        {% if accessible_fields.total_purchase_cost %}
+                        <th>بهای تمام شده خرید</th>
+                        {% endif %}
+                        {% if accessible_fields.total_order_weight %}
+                        <th>وزن کل سفارش</th>
+                        {% endif %}
+                        <th>ثبت‌کننده</th>
+                        <th>تاریخ ایجاد</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                        <tr>
+                            <td><span class="code-badge">{{ order.order_number }}</span></td>
+                            {% if accessible_fields.status %}
+                            <td>
+                                {% if order.status == 'pending' %}در انتظار
+                                {% elif order.status == 'confirmed' %}تایید شده
+                                {% elif order.status == 'processing' %}در حال پردازش
+                                {% elif order.status == 'completed' %}تکمیل شده
+                                {% elif order.status == 'cancelled' %}لغو شده
+                                {% elif order.status == 'archived' %}بایگانی شده
+                                {% else %}-{% endif %}
+                            </td>
+                            {% endif %}
+                            {% if accessible_fields.total_purchase_cost %}
+                            <td>{{ order.total_purchase_cost|default:"0" }}</td>
+                            {% endif %}
+                            {% if accessible_fields.total_order_weight %}
+                            <td>{{ order.total_order_weight|default:"-" }}</td>
+                            {% endif %}
+                            <td>{{ order.registered_by.username|default:"-" }}</td>
+                            <td>{{ order.created_at|default:"-" }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H21V21H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>هیچ سفارشی ثبت نشده است.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">برای ایجاد سفارش روی دکمه بالا کلیک کنید.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+

@@ -1,0 +1,266 @@
+from django import forms
+from django.forms import BaseFormSet, formset_factory
+from django.contrib.contenttypes.models import ContentType
+from core.OrderFolder.OrderModel import Order
+from core.OrderFolder.OrderItemModel import OrderItem
+from core.ProductFolder.ProductModel import Product
+from access.models.FieldAccessUserModel import FieldAccessRule
+from decimal import Decimal
+from typing import Dict, Any, Optional
+
+
+class CreateOrderForm(forms.ModelForm):
+    """
+    فرم ایجاد سفارش
+    - شامل اعمال محدودیت‌های دسترسی فیلدی
+    - برخی فیلدها فقط نمایشی هستند
+    """
+    class Meta:
+        model = Order
+        fields = [
+            'order_number',
+            'order_type',
+            'registration_source',
+            'status',
+            'freight_payment_type',
+            'total_order_weight',
+        ]
+        widgets = {
+            'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
+            'order_type': forms.Select(attrs={'class': 'form-control'}),
+            'registration_source': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
+            'freight_payment_type': forms.Select(attrs={'class': 'form-control'}),
+            'total_order_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.request_user = kwargs.pop('user', None)
+        accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
+        super().__init__(*args, **kwargs)
+
+        # Set defaults for creation context
+        self.fields['order_type'].required = False
+        self.fields['registration_source'].required = False
+        self.fields['status'].required = False
+        self.fields['total_order_weight'].required = False
+
+        # Read-only/display-only fields
+        if 'status' in self.fields:
+            self.fields['status'].disabled = True
+        if 'total_order_weight' in self.fields:
+            self.fields['total_order_weight'].disabled = True
+
+        # Required fields
+        self.fields['order_number'].required = True
+        self.fields['freight_payment_type'].required = True
+
+        # Remove non-accessible fields if mapping provided
+        if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
+            for field_name, allowed in list(accessible_fields.items()):
+                if not allowed and field_name in self.fields:
+                    del self.fields[field_name]
+
+    def save(self, commit=True) -> Order:
+        order: Order = super().save(commit=False)
+        # Defaults on create
+        if not order.order_type:
+            order.order_type = 'sale'
+        if not order.registration_source:
+            order.registration_source = 'expert'
+        if not order.status:
+            order.status = 'pending'
+        if commit:
+            order.save()
+        return order
+
+
+class OrderItemForm(forms.Form):
+    """
+    فرم قلم سفارش
+    فیلدهای اجباری: product, requested_unit, quantity, unit_price
+    اختیاری: discount, additional_charges, vat
+    نمایشی: total_purchase_cost (محاسبه بعد از ذخیره)
+    """
+    def __init__(self, *args, **kwargs):
+        accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
+        super().__init__(*args, **kwargs)
+
+        if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
+            for field_name, allowed in list(accessible_fields.items()):
+                if not allowed and field_name in self.fields:
+                    del self.fields[field_name]
+
+    product = forms.ModelChoiceField(
+        queryset=Product.objects.all(),
+        required=True,
+        label='محصول',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    requested_unit = forms.CharField(
+        max_length=50,
+        required=True,
+        label='واحد',
+        widget=forms.TextInput(attrs={'class': 'form-control'})
+    )
+    quantity = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=True,
+        label='مقدار',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    unit_price = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=True,
+        label='فی',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    discount = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        initial=Decimal('0'),
+        label='تخفیف',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    additional_charges = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        initial=Decimal('0'),
+        label='اضافات',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+    vat = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        required=False,
+        initial=Decimal('0'),
+        label='مالیات بر ارزش افزوده',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+    )
+
+    def clean(self):
+        cleaned = super().clean()
+        # Ensure non-negative numbers where applicable
+        for key in ['quantity', 'unit_price', 'discount', 'additional_charges', 'vat']:
+            value = cleaned.get(key)
+            if value is not None and value < 0:
+                self.add_error(key, 'مقدار نمی‌تواند منفی باشد.')
+        return cleaned
+
+    def to_instance(self, order: Order) -> OrderItem:
+        data: Dict[str, Any] = self.cleaned_data
+        item = OrderItem(
+            order=order,
+            product=data.get('product'),
+            requested_unit=data.get('requested_unit'),
+            quantity=data.get('quantity'),
+            unit_price=data.get('unit_price'),
+            discount=data.get('discount') or Decimal('0'),
+            additional_charges=data.get('additional_charges') or Decimal('0'),
+            vat=data.get('vat') or Decimal('0'),
+        )
+        return item
+
+
+class RequiredOrderItemFormSet(BaseFormSet):
+    """
+    از حداقل یک قلم اطمینان حاصل می‌کند
+    """
+    def clean(self):
+        super().clean()
+        has_at_least_one = False
+        for form in self.forms:
+            if getattr(form, 'cleaned_data', None) and any(
+                form.cleaned_data.get(k) for k in ['product', 'requested_unit', 'quantity', 'unit_price']
+            ):
+                has_at_least_one = True
+                break
+        if not has_at_least_one:
+            raise forms.ValidationError('حداقل یک قلم سفارش باید وارد شود.')
+
+
+def build_order_item_formset(data=None, accessible_fields: Optional[Dict[str, bool]] = None):
+    """
+    سازنده فرم‌ست اقلام سفارش با اعمال دسترسی‌ها
+    """
+    ItemFormSet = formset_factory(
+        form=OrderItemForm,
+        formset=RequiredOrderItemFormSet,
+        extra=1,
+        can_delete=False
+    )
+    if data is None:
+        return ItemFormSet(form_kwargs={'accessible_fields': accessible_fields})
+    return ItemFormSet(data, form_kwargs={'accessible_fields': accessible_fields})
+
+
+def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_form: OrderItemForm):
+    """
+    محاسبه دسترسی فیلدهای فرم اصلی سفارش و فرم قلم‌ها
+    به سبک ویو ایجاد مشتری
+    """
+    if user.is_superuser:
+        access_main = {name: True for name in order_form.fields.keys()}
+        access_item = {name: True for name in sample_item_form.fields.keys()}
+        return access_main, access_item
+
+    # Mapping for order form
+    order_field_mapping = {
+        'order_number': ('Order', 'order_number'),
+        'order_type': ('Order', 'order_type'),
+        'registration_source': ('Order', 'registration_source'),
+        'status': ('Order', 'status'),
+        'freight_payment_type': ('Order', 'freight_payment_type'),
+        'total_order_weight': ('Order', 'total_order_weight'),
+    }
+    # Mapping for item form
+    item_field_mapping = {
+        'product': ('OrderItem', 'product'),
+        'requested_unit': ('OrderItem', 'requested_unit'),
+        'quantity': ('OrderItem', 'quantity'),
+        'unit_price': ('OrderItem', 'unit_price'),
+        'discount': ('OrderItem', 'discount'),
+        'additional_charges': ('OrderItem', 'additional_charges'),
+        'vat': ('OrderItem', 'vat'),
+    }
+
+    def can_edit_field(model_class, model_field_name):
+        content_type = ContentType.objects.get_for_model(model_class)
+        # Prefer edit over view
+        rule_edit = FieldAccessRule.objects.filter(
+            user=user,
+            content_type=content_type,
+            field_name=model_field_name,
+            access_type='edit'
+        ).first()
+        if rule_edit is not None:
+            return rule_edit.allowed
+        rule_view = FieldAccessRule.objects.filter(
+            user=user,
+            content_type=content_type,
+            field_name=model_field_name,
+            access_type='view'
+        ).first()
+        if rule_view is not None:
+            return rule_view.allowed
+        return True
+
+    # Resolve model classes
+    from core.OrderFolder.OrderModel import Order as OrderModel
+    from core.OrderFolder.OrderItemModel import OrderItem as OrderItemModel
+
+    access_main = {}
+    for form_field, (model_name, model_field) in order_field_mapping.items():
+        access_main[form_field] = can_edit_field(OrderModel, model_field)
+
+    access_item = {}
+    for form_field, (model_name, model_field) in item_field_mapping.items():
+        access_item[form_field] = can_edit_field(OrderItemModel, model_field)
+
+    return access_main, access_item
+
+
