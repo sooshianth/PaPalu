@@ -114,10 +114,19 @@ class ProductionForm(forms.ModelForm):
             'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
         ]
 
+        if status == ProductionProgram.Status.DRAFT:
+            # In draft: make snapshot fields readonly
+            for name in ['inventory_snapshot', 'net_unplanned_requirement']:
+                if name in self.fields:
+                    self.fields[name].widget.attrs['readonly'] = True
+            # Hide time fields in draft
+            self.fields['started_at'].widget = forms.HiddenInput()
+            self.fields['completed_at'].widget = forms.HiddenInput()
+
         # Lock/hide main fields when status is confirmed or higher
-        if status == ProductionProgram.Status.CONFIRMED:
+        elif status == ProductionProgram.Status.CONFIRMED:
             # Can't edit anything, only view
-            for name in main_field_names + ['produced_weight_ton']:
+            for name in main_field_names:
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
                     self.fields[name].widget.attrs['disabled'] = True
@@ -133,8 +142,7 @@ class ProductionForm(forms.ModelForm):
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
                     self.fields[name].widget.attrs['disabled'] = True
-            # Can edit produced_weight_ton and started_at
-            self.fields['produced_weight_ton'].widget.attrs.pop('disabled', None)
+            # Can edit started_at
             self.fields['started_at'].widget.attrs.pop('disabled', None)
             self.fields['started_at'].widget.attrs.pop('readonly', None)
             # Lock completed_at (readonly but not disabled)
@@ -149,6 +157,7 @@ class ProductionForm(forms.ModelForm):
                     self.fields[name].widget.attrs['disabled'] = True
             # Can edit produced_weight_ton and completed_at
             self.fields['produced_weight_ton'].widget.attrs.pop('disabled', None)
+            self.fields['produced_weight_ton'].widget.attrs.pop('readonly', None)
             self.fields['completed_at'].widget.attrs.pop('disabled', None)
             self.fields['completed_at'].widget.attrs.pop('readonly', None)
             # Lock started_at but show it (readonly but not disabled)
@@ -180,10 +189,11 @@ class ProductionForm(forms.ModelForm):
             if 'predicted_end_time' not in self.fields or not self.fields['predicted_end_time'].widget.attrs.get('readonly'):
                 self.add_error('predicted_end_time', 'باید بعد از زمان شروع باشد.')
         
-        # Produced weight sanity
-        pw = cleaned.get('produced_weight_ton')
-        if pw is not None and pw < 0:
-            self.add_error('produced_weight_ton', 'وزن تولید شده نمی تواند منفی باشد.')
+        # For readonly decimal fields that might be empty, set them to None
+        for field_name in ['planned_weight_ton', 'inventory_snapshot', 'net_unplanned_requirement']:
+            if field_name in self.fields and self.fields[field_name].widget.attrs.get('readonly'):
+                if cleaned.get(field_name) == '':
+                    cleaned[field_name] = None
         
         return cleaned
 
@@ -204,7 +214,10 @@ class ProductionForm(forms.ModelForm):
             if instance.status != ProductionProgram.Status.DRAFT:
                 for attr in main_field_names:
                     # Restore the original value from DB regardless of form field state
-                    setattr(instance, attr, getattr(orig, attr))
+                    current_val = getattr(instance, attr, None)
+                    # If field is empty/None, restore from original
+                    if not current_val:
+                        setattr(instance, attr, getattr(orig, attr))
             
             # Also preserve started_at when not in IN_PROGRESS or COMPLETED
             if instance.status not in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:

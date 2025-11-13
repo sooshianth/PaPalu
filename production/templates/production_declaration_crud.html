@@ -287,11 +287,13 @@
                 <span class="detail-label">{{ form.planned_weight_ton.label }}:</span>
                 <span class="detail-value">{{ form.planned_weight_ton }}</span>
             </div>
+            {% if not is_create and program and program.status == 'completed' %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.produced_weight_ton.label }}:</span>
                 <span class="detail-value">{{ form.produced_weight_ton }}</span>
             </div>
-            {% if not is_create and program %}
+            {% endif %}
+            {% if not is_create and program and program.status == 'completed' %}
             <div class="detail-row">
                 <span class="detail-label">درصد تحقق:</span>
                 <span class="detail-value">{{ program.fulfillment_percentage|default:"-" }}%</span>
@@ -335,16 +337,16 @@
                 <span class="detail-value">{{ program.priority_index|default:"-" }}</span>
             </div>
             {% endif %}
-            <!-- زمان شروع واقعی (visible when not draft) -->
-            {% if not is_create and program and program.status != 'draft' %}
+            <!-- زمان شروع واقعی (visible when in_progress or completed) -->
+            {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.started_at.label }}:</span>
                 <span class="detail-value">{{ form.started_at }}</span>
             </div>
             {% endif %}
             
-            <!-- زمان تکمیل (visible when in_progress or completed) -->
-            {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
+            <!-- زمان تکمیل (visible only when completed) -->
+            {% if not is_create and program and program.status == 'completed' %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.completed_at.label }}:</span>
                 <span class="detail-value">{{ form.completed_at }}</span>
@@ -367,8 +369,6 @@
     {{ form.status }}
     <div class="form-actions" style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 32px;">
         {% if program.status == 'draft' or is_create %}
-            <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
-            <button class="btn btn-secondary" type="submit" name="action" value="save_draft">ذخیره پیش‌نویس</button>
             <button class="btn btn-primary" type="submit" name="action" value="confirm">تایید برنامه</button>
         {% elif program.status == 'confirmed' %}
             <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
