@@ -1,5 +1,5 @@
 from django.urls import path
-from sales.views import customer_views, order_views, product_view, product_price_view
+from sales.views import customer_views, order_views, product_view, product_price_view, proforma_view
 
 app_name = 'sales'
 
@@ -10,6 +10,12 @@ urlpatterns = [
     # مسیرهای سفارش
     path('order/create/', order_views.create_order_view, name='order_create'),
     path('order/list/', order_views.order_list_view, name='order_list'),
+    
+    # مسیرهای پیش فاکتور
+    path('proforma/list/', proforma_view.proforma_list_view, name='proforma_list'),
+    path('proforma/create/', proforma_view.proforma_create_view, name='proforma_create'),
+    path('proforma/<int:proforma_id>/', proforma_view.proforma_detail_view, name='proforma_detail'),
+    path('proforma/<int:proforma_id>/approve/', proforma_view.proforma_approve_view, name='proforma_approve'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     

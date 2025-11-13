@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"ایجاد پیش فاکتور" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--light-green);
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .form-control[readonly],
+    .form-control[disabled] {
+        background-color: var(--gray-200);
+        cursor: not-allowed;
+    }
+    
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .mb-3 { margin-bottom: 1rem; }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        .form-card { padding: 20px; }
+        .form-section { padding: 15px; }
+        .form-actions { flex-direction: column; }
+        .btn { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title|default:"ایجاد پیش فاکتور جدید" }}</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- بخش اطلاعات اجباری -->
+        <div class="form-section">
+            <h5>اطلاعات اجباری</h5>
+            <div class="row">
+                {% if accessible_fields.order %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.order.label }}</label>
+                    {{ form.order }}
+                    {% if form.order.errors %}
+                        <div class="text-danger">{{ form.order.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.proforma_number %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.proforma_number.label }}</label>
+                    {{ form.proforma_number }}
+                    {% if form.proforma_number.errors %}
+                        <div class="text-danger">{{ form.proforma_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.validity_date %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.validity_date.label }}</label>
+                    {{ form.validity_date }}
+                    {% if form.validity_date.errors %}
+                        <div class="text-danger">{{ form.validity_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.customer %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.customer.label }}</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                        <div class="text-danger">{{ form.customer.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.company %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.company.label }}</label>
+                    {{ form.company }}
+                    <input type="text" class="form-control" value="{{ form.company_display.name|default:'تامین نهاده سیمرغ' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    {% if form.company.errors %}
+                        <div class="text-danger">{{ form.company.errors.0 }}</div>
+                    {% endif %}
+                    <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">
+                        شرکت به صورت خودکار انتخاب شده است
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- بخش اطلاعات اختیاری -->
+        <div class="form-section">
+            <h5>اطلاعات اختیاری</h5>
+            <div class="row">
+                {% if accessible_fields.description %}
+                <div class="col-12 mb-3">
+                    <label class="form-label">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="text-danger">{{ form.description.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- دکمه‌ها -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ثبت پیش فاکتور</button>
+            <a href="{% url 'sales:proforma_list' %}" class="btn btn-secondary">انصراف</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // تبدیل فیلد تاریخ اعتبار به تقویم شمسی
+    var validityDateInput = $('#id_validity_date');
+    
+    if (validityDateInput.length) {
+        // تبدیل type='date' به text برای استفاده از تقویم شمسی
+        validityDateInput.attr('type', 'text');
+        validityDateInput.attr('readonly', 'readonly');
+        validityDateInput.css('cursor', 'pointer');
+        
+        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+        var initialValue = validityDateInput.val();
+        var persianDateValue = '';
+        
+        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+        if (initialValue) {
+            var parts = initialValue.split('-');
+            if (parts.length === 3) {
+                var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                var pDate = persianDate.fromGregorian(gregorianDate);
+                persianDateValue = pDate.format('YYYY/MM/DD');
+                validityDateInput.val(persianDateValue);
+            }
+        }
+        
+        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+        var hiddenInput = $('<input>', {
+            type: 'hidden',
+            id: 'id_validity_date_hidden',
+            name: 'validity_date'
+        });
+        if (initialValue) {
+            hiddenInput.val(initialValue);
+        }
+        validityDateInput.after(hiddenInput);
+        
+        // راه‌اندازی تقویم شمسی
+        validityDateInput.pDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            altField: '#id_validity_date_hidden',
+            altFormat: 'YYYY-MM-DD',
+            calendarType: 'persian',
+            initialValue: persianDateValue || false,
+            timePicker: {
+                enabled: false
+            },
+            onSelect: function() {
+                // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                var selectedDate = validityDateInput.val();
+                if (selectedDate) {
+                    try {
+                        var persianDateParts = selectedDate.split('/');
+                        if (persianDateParts.length === 3) {
+                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var formattedDate = gregorianDate.year + '-' + 
+                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                               String(gregorianDate.day).padStart(2, '0');
+                            
+                            hiddenInput.val(formattedDate);
+                        }
+                    } catch (e) {
+                        console.error('خطا در تبدیل تاریخ:', e);
+                    }
+                }
+            }
+        });
+        
+        // اضافه کردن آیکون تقویم
+        if (!validityDateInput.parent().find('.p-datepicker-trigger').length) {
+            var iconSpan = $('<span>', {
+                class: 'p-datepicker-trigger',
+                html: '📅',
+                css: {
+                    'position': 'absolute',
+                    'right': '10px',
+                    'top': '50%',
+                    'transform': 'translateY(-50%)',
+                    'cursor': 'pointer',
+                    'font-size': '1.2rem',
+                    'z-index': '10',
+                    'pointer-events': 'none'
+                }
+            });
+            validityDateInput.parent().css('position', 'relative');
+            validityDateInput.parent().append(iconSpan);
+        }
+    }
+});
+</script>
+
+<style>
+#id_validity_date {
+    position: relative;
+    padding-left: 40px;
+}
+
+.p-datepicker-trigger {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    z-index: 10;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+

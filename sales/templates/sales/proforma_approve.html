@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--light-green);
+    }
+    
+    .info-box {
+        background: white;
+        border: 2px solid var(--primary-green);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .info-label {
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+    
+    .info-value {
+        color: var(--gray-800);
+        font-weight: 600;
+    }
+    
+    .order-items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    .order-items-table thead {
+        background: var(--gray-100);
+    }
+    
+    .order-items-table th {
+        padding: 12px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .order-items-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--gray-600);
+    }
+    
+    .order-items-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .alert-warning {
+        background-color: #fff6db;
+        border-color: #ffe1a3;
+        color: #b95c00;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-info {
+        background-color: #d0e5f7;
+        border-color: #7ac3ef;
+        color: #0c5460;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    @media (max-width: 768px) {
+        .form-card { padding: 20px; }
+        .form-section { padding: 15px; }
+        .form-actions { flex-direction: column; }
+        .btn { width: 100%; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="alert alert-info" role="alert">
+        <strong>اطلاعیه:</strong> با تأیید این پیش فاکتور، وضعیت سفارش به "در انتظار تأیید پیش فاکتور توسط مشتری" تغییر می‌یابد.
+    </div>
+
+    <!-- اطلاعات پیش فاکتور -->
+    <div class="form-section">
+        <h5>اطلاعات پیش فاکتور</h5>
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">شماره سریال:</span>
+                <span class="info-value">{{ proforma.proforma_number|default:"-" }}</span>
+            </div>
+            {% if proforma.validity_date %}
+            <div class="info-item">
+                <span class="info-label">تاریخ اعتبار:</span>
+                <span class="info-value">{{ proforma.validity_date }}</span>
+            </div>
+            {% endif %}
+            {% if proforma.created_at %}
+            <div class="info-item">
+                <span class="info-label">تاریخ ایجاد:</span>
+                <span class="info-value">{{ proforma.created_at|date:"Y/m/d H:i" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- اطلاعات سفارش -->
+    {% if order %}
+    <div class="form-section">
+        <h5>اطلاعات سفارش</h5>
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">شماره سفارش:</span>
+                <span class="info-value">{{ order.order_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">وضعیت فعلی:</span>
+                <span class="info-value">
+                    {% if order.status == 'pending' %}در انتظار
+                    {% elif order.status == 'confirmed' %}تایید شده
+                    {% elif order.status == 'processing' %}در حال پردازش
+                    {% elif order.status == 'pending_customer_proforma_approval' %}در انتظار تأیید پیش فاکتور توسط مشتری
+                    {% elif order.status == 'completed' %}تکمیل شده
+                    {% elif order.status == 'cancelled' %}لغو شده
+                    {% elif order.status == 'archived' %}بایگانی شده
+                    {% else %}-{% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">وضعیت جدید:</span>
+                <span class="info-value" style="color: var(--primary-green);">در انتظار تأیید پیش فاکتور توسط مشتری</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- اطلاعات مشتری -->
+    {% if customer_info %}
+    <div class="form-section">
+        <h5>اطلاعات مشتری</h5>
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">نام:</span>
+                <span class="info-value">{{ customer_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ملی:</span>
+                <span class="info-value">{{ customer_info.national_id }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ثبت شرکت:</span>
+                <span class="info-value">{{ customer_info.registration_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره اقتصادی:</span>
+                <span class="info-value">{{ customer_info.economic_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">آدرس:</span>
+                <span class="info-value">{{ customer_info.address }}</span>
+            </div>
+            {% if customer_info.tax_province != '-' %}
+            <div class="info-item">
+                <span class="info-label">استان:</span>
+                <span class="info-value">{{ customer_info.tax_province }}</span>
+            </div>
+            {% endif %}
+            {% if customer_info.tax_city != '-' %}
+            <div class="info-item">
+                <span class="info-label">شهر:</span>
+                <span class="info-value">{{ customer_info.tax_city }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <span class="info-label">کدپستی:</span>
+                <span class="info-value">{{ customer_info.postal_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره تلفن:</span>
+                <span class="info-value">{{ customer_info.phone_number }} {% if customer_info.phone_type != '-' %}({{ customer_info.phone_type }}){% endif %}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- اطلاعات شرکت -->
+    {% if company_info %}
+    <div class="form-section">
+        <h5>اطلاعات شرکت</h5>
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">نام شرکت:</span>
+                <span class="info-value">{{ company_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ملی:</span>
+                <span class="info-value">{{ company_info.national_id }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ثبت شرکت:</span>
+                <span class="info-value">{{ company_info.registration_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره اقتصادی:</span>
+                <span class="info-value">{{ company_info.economic_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">آدرس:</span>
+                <span class="info-value">{{ company_info.address }}</span>
+            </div>
+            {% if company_info.tax_province != '-' %}
+            <div class="info-item">
+                <span class="info-label">استان:</span>
+                <span class="info-value">{{ company_info.tax_province }}</span>
+            </div>
+            {% endif %}
+            {% if company_info.tax_city != '-' %}
+            <div class="info-item">
+                <span class="info-label">شهر:</span>
+                <span class="info-value">{{ company_info.tax_city }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <span class="info-label">کدپستی:</span>
+                <span class="info-value">{{ company_info.postal_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره تلفن:</span>
+                <span class="info-value">{{ company_info.phone_number }} {% if company_info.phone_type != '-' %}({{ company_info.phone_type }}){% endif %}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- اقلام سفارش -->
+    {% if order_items %}
+    <div class="form-section">
+        <h5>اقلام سفارش</h5>
+        <table class="order-items-table">
+            <thead>
+                <tr>
+                    <th>محصول</th>
+                    <th>مقدار</th>
+                    <th>واحد</th>
+                    <th>فی</th>
+                    <th>تخفیف</th>
+                    <th>اضافات</th>
+                    <th>مالیات</th>
+                    <th>جمع</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order_items %}
+                <tr>
+                    <td>{{ item.product.name|default:"-" }}</td>
+                    <td>{{ item.quantity|default:"-" }}</td>
+                    <td>{{ item.requested_unit|default:"-" }}</td>
+                    <td>{{ item.unit_price|default:"-" }}</td>
+                    <td>{{ item.discount|default:"0" }}</td>
+                    <td>{{ item.additional_charges|default:"0" }}</td>
+                    <td>{{ item.vat|default:"0" }}</td>
+                    <td>
+                        {% if item.quantity and item.unit_price %}
+                            {% widthratio item.quantity 1 item.unit_price as total %}
+                            {{ total }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- فرم تأیید -->
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-success btn-lg">تأیید و صدور پیش فاکتور</button>
+            <a href="{% url 'sales:proforma_detail' proforma.id %}" class="btn btn-secondary">بازگشت</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

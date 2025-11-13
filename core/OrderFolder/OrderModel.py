@@ -20,6 +20,7 @@ class Order(models.Model):
         ('pending', 'در انتظار'),
         ('confirmed', 'تایید شده'),
         ('processing', 'در حال پردازش'),
+        ('pending_customer_proforma_approval', 'در انتظار تأیید پیش فاکتور توسط مشتری'),
         ('completed', 'تکمیل شده'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),
@@ -58,7 +59,7 @@ class Order(models.Model):
     
     # وضعیت
     status = models.CharField(
-        max_length=20,
+        max_length=100,
         choices=STATUS_CHOICES,
         default='pending',
         null=True,
