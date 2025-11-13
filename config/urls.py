@@ -5,12 +5,9 @@ from django.conf.urls.static import static
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 
-def root_view(request):
-    """هدایت به صفحه مناسب بر اساس وضعیت لاگین"""
-    if request.user.is_authenticated:
-        return redirect('home')
-    else:
-        return redirect('unified_login')
+def redirect_to_login(request):
+    """هدایت به صفحه لاگین برای کاربران غیر لاگین شده"""
+    return redirect('unified_login')
 
 def home_view(request):
     """صفحه اصلی بعد از لاگین"""
