@@ -46,9 +46,8 @@ def create_order_view(request):
                 with transaction.atomic():
                     order: Order = order_form.save(commit=False)
                     order.registered_by = request.user
-                    # Defaults are set in form.save(); ensure again before save
-                    if not order.status:
-                        order.status = 'pending'
+                    # تنظیم وضعیت به "در انتظار صدور پیش فاکتور"
+                    order.status = 'pending_proforma_issue'
                     order.save()
 
                     total_weight = None
@@ -87,7 +86,7 @@ def create_order_view(request):
         order_form = CreateOrderForm(user=request.user, accessible_fields=access_main, initial={
             'order_type': 'sale',
             'registration_source': 'expert',
-            'status': 'pending',
+            'status': 'pending_proforma_issue',
         })
         item_formset = build_order_item_formset(accessible_fields=access_item)
 

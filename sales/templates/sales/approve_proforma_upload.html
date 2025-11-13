@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .upload-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .order-info-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+    
+    .info-value {
+        color: var(--gray-800);
+        font-weight: 600;
+    }
+    
+    .upload-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .file-input-wrapper {
+        position: relative;
+    }
+    
+    .file-input-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: var(--gray-100);
+        border: 2px dashed var(--gray-300);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s;
+        color: var(--gray-600);
+    }
+    
+    .file-input-label:hover {
+        background: var(--light-green);
+        border-color: var(--primary-green);
+        color: var(--dark-green);
+    }
+    
+    .file-input-label svg {
+        margin-left: 10px;
+        width: 24px;
+        height: 24px;
+    }
+    
+    input[type="file"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+    
+    .file-name {
+        margin-top: 15px;
+        padding: 12px 15px;
+        background: var(--light-green);
+        border-radius: 6px;
+        color: var(--dark-green);
+        font-size: 0.95rem;
+        display: none;
+    }
+    
+    .file-name.show {
+        display: block;
+    }
+    
+    .existing-file {
+        padding: 15px 20px;
+        background: #d1ecf1;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .existing-file-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .existing-file-info svg {
+        width: 24px;
+        height: 24px;
+        color: #17a2b8;
+    }
+    
+    .existing-file-name {
+        color: #0c5460;
+        font-weight: 500;
+    }
+    
+    .download-link {
+        color: #17a2b8;
+        text-decoration: none;
+        font-size: 0.95rem;
+        transition: color 0.3s;
+    }
+    
+    .download-link:hover {
+        color: #138496;
+        text-decoration: underline;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 15px;
+        margin-top: 20px;
+    }
+    
+    .btn {
+        flex: 1;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="upload-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="order-info-section">
+        <h3 style="margin-bottom: 15px; color: var(--gray-800);">اطلاعات سفارش</h3>
+        <div class="info-item">
+            <span class="info-label">شماره سفارش:</span>
+            <span class="info-value">{{ order.order_number }}</span>
+        </div>
+        {% if proforma %}
+        <div class="info-item">
+            <span class="info-label">شماره پیش فاکتور:</span>
+            <span class="info-value">{{ proforma.proforma_number|default:"-" }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">مشتری:</span>
+            <span class="info-value">{{ proforma.customer.name|default:"-" }}</span>
+        </div>
+        {% endif %}
+        <div class="info-item">
+            <span class="info-label">وضعیت:</span>
+            <span class="info-value">در انتظار آپلود پیش فاکتور مشتری</span>
+        </div>
+    </div>
+    
+    {% if order_document and order_document.proforma_confirmation_attachment %}
+    <div class="existing-file">
+        <div class="existing-file-info">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span class="existing-file-name">فایل تأیید پیش فاکتور موجود است</span>
+        </div>
+        <a href="{{ order_document.proforma_confirmation_attachment.url }}" 
+           class="download-link" 
+           target="_blank">
+            دانلود
+        </a>
+    </div>
+    {% endif %}
+    
+    <form class="upload-form" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="file-input-wrapper">
+            <label for="confirmation_file" class="file-input-label">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                انتخاب فایل تأیید پیش فاکتور
+            </label>
+            <input type="file" 
+                   id="confirmation_file" 
+                   name="confirmation_file" 
+                   accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                   required>
+            <div class="file-name" id="file-name"></div>
+        </div>
+        
+        <div class="btn-group">
+            <button type="submit" class="btn btn-primary">
+                آپلود فایل و تغییر وضعیت به "در انتظار تایید پرداخت"
+            </button>
+            <a href="{% url 'sales:approve_proforma_list' %}" class="btn btn-secondary">
+                بازگشت به لیست
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('confirmation_file');
+    const fileNameDiv = document.getElementById('file-name');
+    
+    fileInput.addEventListener('change', function() {
+        const fileName = this.files[0]?.name || '';
+        
+        if (fileName) {
+            fileNameDiv.textContent = 'فایل انتخاب شده: ' + fileName;
+            fileNameDiv.classList.add('show');
+        } else {
+            fileNameDiv.classList.remove('show');
+        }
+    });
+});
+</script>
+{% endblock %}
+
