@@ -1,0 +1,10 @@
+{% for program in completed_page.object_list %}
+<tr>
+    <td>{{ program.id }}</td>
+    <td>{{ program.product.name|default:"-" }}</td>
+    <td>{{ program.planned_weight_ton|default:"-" }}</td>
+    <td>{{ program.execution_date|default:"-" }}</td>
+    <td><span class="status-badge status-completed">{{ program.get_status_display }}</span></td>
+    <td><a href="{% url 'production:program_crud' program.id %}" class="btn-detail">جزئیات</a></td>
+</tr>
+{% endfor %}

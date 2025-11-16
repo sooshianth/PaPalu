@@ -24,10 +24,10 @@ class ProductionForm(forms.ModelForm):
         label='محصول',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-    formula_id = forms.CharField(
+    program_id = forms.CharField(
         max_length=100,
         required=False,
-        label='شناسه فرمول',
+        label='شناسه برنامه',
         widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
     )
     planned_weight_ton = forms.DecimalField(
@@ -95,7 +95,7 @@ class ProductionForm(forms.ModelForm):
     class Meta:
         model = ProductionProgram
         fields = [
-            'production_info', 'product', 'formula_id', 'planned_weight_ton',
+            'production_info', 'product', 'program_id', 'planned_weight_ton',
             'predicted_start_time', 'predicted_end_time', 'execution_date', 'packaging_type', 'extra_description',
             'inventory_snapshot', 'net_unplanned_requirement', 'produced_weight_ton',
             'started_at', 'completed_at', 'status'
@@ -109,7 +109,7 @@ class ProductionForm(forms.ModelForm):
 
         # All main fields (cannot edit when confirmed)
         main_field_names = [
-            'production_info', 'product', 'formula_id', 'planned_weight_ton',
+            'production_info', 'product', 'program_id', 'planned_weight_ton',
             'predicted_start_time', 'predicted_end_time', 'execution_date', 'packaging_type',
             'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
         ]
@@ -206,7 +206,7 @@ class ProductionForm(forms.ModelForm):
             
             # List of all main fields that should be locked when not in draft
             main_field_names = [
-                'production_info', 'product', 'formula_id', 'planned_weight_ton', 'predicted_start_time',
+                'production_info', 'product', 'program_id', 'planned_weight_ton', 'predicted_start_time',
                 'predicted_end_time', 'execution_date', 'packaging_type', 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
             ]
             

@@ -46,7 +46,7 @@ def _get_dashboard_context():
 
         product_flow_status.append({
             'product': prod_info.product.name if prod_info.product else '-',
-            'formula_id': prod_info.formula_id or '-',
+            'program_id': prod_info.formula_id or '-',
             'inventory': inventory,
             'planned_inventory': planned_inventory,
             'net_unplanned_requirement': net_unplanned,

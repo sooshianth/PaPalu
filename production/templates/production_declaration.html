@@ -179,6 +179,109 @@
         margin-bottom: 16px;
     }
     
+    /* Search form styles */
+    .search-form {
+        padding: 16px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .search-inputs {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+    
+    .search-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .search-field label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .search-field input {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s ease;
+    }
+    
+    .search-field input:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .btn-search {
+        padding: 8px 20px;
+        background: var(--primary-green);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    
+    .btn-search:hover {
+        background: var(--dark-green);
+        transform: translateY(-1px);
+    }
+    
+    .btn-clear {
+        padding: 8px 20px;
+        background: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+        display: inline-block;
+    }
+    
+    .btn-clear:hover {
+        background: #5a6268;
+        transform: translateY(-1px);
+    }
+    
+    /* Sortable table headers */
+    .sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        transition: background 0.2s ease;
+    }
+    
+    .sortable:hover {
+        background: #e9ecef !important;
+    }
+    
+    .sort-icon {
+        margin-right: 6px;
+        font-size: 0.9rem;
+        opacity: 0.5;
+    }
+    
+    .sortable.sorted-asc .sort-icon,
+    .sortable.sorted-desc .sort-icon {
+        opacity: 1;
+        color: var(--primary-green);
+        font-weight: bold;
+    }
+    
     .grid-2 {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
@@ -226,27 +329,59 @@
     </a>
 </div>
 
-<!-- برنامه‌های تایید شده -->
-<div class="section">
-    <div class="section-title">
-        <span>برنامه‌های تایید شده</span>
-        <span class="section-badge">{{ confirmed_programs.count }}</span>
-    </div>
-    
-    <div class="card">
-        <div class="card-body">
-            {% if confirmed_programs %}
+<!-- برنامه‌های تایید شده با موجودی مواد اولیه -->
+<div style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px;">
+    <!-- برنامه‌های تایید شده (چپ، 70%) -->
+    <div class="section" style="flex: 1;" id="confirmed-section">
+        <div class="section-title">
+            <span>برنامه‌های تایید شده</span>
+            <span class="section-badge">{{ confirmed_programs.count }}</span>
+        </div>
+        
+        <div class="card">
+            <!-- Search Form -->
+            <div class="search-form">
+                <div class="search-inputs">
+                    <div class="search-field">
+                        <label for="search_id_confirmed">شناسه:</label>
+                        <input type="text" id="search_id_confirmed" name="search_id_confirmed" value="{{ search_id_confirmed }}" placeholder="جستجوی زنده...">
+                    </div>
+                    <div class="search-field">
+                        <label for="search_product_confirmed">محصول:</label>
+                        <input type="text" id="search_product_confirmed" name="search_product_confirmed" value="{{ search_product_confirmed }}" placeholder="جستجوی زنده...">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body" id="confirmed-tbody-container">
+                {% if confirmed_programs %}
             <div class="table-wrap">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>شناسه</th>
+                            <th class="sortable {% if sort_by_confirmed == 'id' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
+                                onclick="sortTable('id', 'confirmed')">
+                                شناسه
+                                <span class="sort-icon">{% if sort_by_confirmed == 'id' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
                             <th>محصول</th>
-                            <th>شناسه فرمول</th>
-                            <th>تناژ برنامه‌ریزی شده (تن)</th>
-                            <th>تاریخ اجرا</th>
+                            <th>شناسه برنامه</th>
+                            <th class="sortable {% if sort_by_confirmed == 'planned_weight_ton' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
+                                onclick="sortTable('planned_weight_ton', 'confirmed')">
+                                تناژ برنامه‌ریزی شده (تن)
+                                <span class="sort-icon">{% if sort_by_confirmed == 'planned_weight_ton' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
+                            <th class="sortable {% if sort_by_confirmed == 'execution_date' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
+                                onclick="sortTable('execution_date', 'confirmed')">
+                                تاریخ اجرا
+                                <span class="sort-icon">{% if sort_by_confirmed == 'execution_date' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
                             <th>نوع بسته‌بندی</th>
-                            <th>وضعیت</th>
+                            <th class="sortable {% if sort_by_confirmed == 'status' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
+                                onclick="sortTable('status', 'confirmed')">
+                                وضعیت
+                                <span class="sort-icon">{% if sort_by_confirmed == 'status' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
                             <th>عملیات</th>
                         </tr>
                     </thead>
@@ -255,7 +390,7 @@
                         <tr>
                             <td>{{ program.id }}</td>
                             <td>{{ program.product.name|default:"-" }}</td>
-                            <td>{{ program.formula_id|default:"-" }}</td>
+                            <td>{{ program.program_id|default:"-" }}</td>
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
                             <td>{{ program.execution_date|default:"-" }}</td>
                             <td>{{ program.get_packaging_type_display|default:"-" }}</td>
@@ -277,30 +412,115 @@
             {% endif %}
         </div>
     </div>
+    </div>
+    
+    <!-- موجودی مواد اولیه (راست، 30%) - sticky -->
+    <div class="section" style="flex: 0 0 30%; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto;" id="raw-materials-sidebar">
+        <div class="section-title">
+            <span>موجودی مواد اولیه</span>
+            <span class="section-badge">{{ raw_materials_inventory|length }}</span>
+        </div>
+        
+        <div class="card">
+            <div class="card-body">
+                {% if raw_materials_inventory %}
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>کد</th>
+                                <th>نام ماده</th>
+                                <th>موجودی</th>
+                                <th>واحد</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in raw_materials_inventory %}
+                            <tr>
+                                <td>{{ item.raw_material_id }}</td>
+                                <td>{{ item.name }}</td>
+                                <td>{{ item.quantity|floatformat:2 }}</td>
+                                <td>{{ item.unit }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <path d="M3 9H21" stroke="currentColor" stroke-width="2"/>
+                        <path d="M9 21V9" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    <p>هیچ موجودی ماده اولیه‌ای یافت نشد</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- برنامه‌های در حال اجرا -->
-<div class="section">
+<div class="section" id="progress-section">
     <div class="section-title">
         <span>برنامه‌های در حال اجرا</span>
         <span class="section-badge">{{ in_progress_programs.count }}</span>
     </div>
     
     <div class="card">
+        <!-- Search Form -->
+        <div class="search-form">
+            <div class="search-inputs">
+                <div class="search-field">
+                    <label for="search_id_progress">شناسه:</label>
+                    <input type="text" id="search_id_progress" name="search_id_progress" value="{{ search_id_progress }}" placeholder="جستجوی زنده...">
+                </div>
+                <div class="search-field">
+                    <label for="search_product_progress">محصول:</label>
+                    <input type="text" id="search_product_progress" name="search_product_progress" value="{{ search_product_progress }}" placeholder="جستجوی زنده...">
+                </div>
+            </div>
+        </div>
+        
         <div class="card-body">
             {% if in_progress_programs %}
             <div class="table-wrap">
                 <table class="data-table">
                     <thead>
                         <tr>
-                            <th>شناسه</th>
+                            <th class="sortable {% if sort_by_progress == 'id' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('id', 'progress')">
+                                شناسه
+                                <span class="sort-icon">{% if sort_by_progress == 'id' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
                             <th>محصول</th>
-                            <th>شناسه فرمول</th>
-                            <th>تناژ برنامه‌ریزی شده (تن)</th>
-                            <th>تاریخ اجرا</th>
-                            <th>ساعت شروع پیش‌بینی</th>
-                            <th>ساعت پایان پیش‌بینی</th>
-                            <th>وضعیت</th>
+                            <th>شناسه برنامه</th>
+                            <th class="sortable {% if sort_by_progress == 'planned_weight_ton' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('planned_weight_ton', 'progress')">
+                                تناژ برنامه‌ریزی شده (تن)
+                                <span class="sort-icon">{% if sort_by_progress == 'planned_weight_ton' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
+                            <th class="sortable {% if sort_by_progress == 'execution_date' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('execution_date', 'progress')">
+                                تاریخ اجرا
+                                <span class="sort-icon">{% if sort_by_progress == 'execution_date' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
+                            <th class="sortable {% if sort_by_progress == 'predicted_start_time' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('predicted_start_time', 'progress')">
+                                ساعت شروع پیش‌بینی
+                                <span class="sort-icon">{% if sort_by_progress == 'predicted_start_time' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
+                            <th class="sortable {% if sort_by_progress == 'predicted_end_time' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('predicted_end_time', 'progress')">
+                                ساعت پایان پیش‌بینی
+                                <span class="sort-icon">{% if sort_by_progress == 'predicted_end_time' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
+                            <th class="sortable {% if sort_by_progress == 'status' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('status', 'progress')">
+                                وضعیت
+                                <span class="sort-icon">{% if sort_by_progress == 'status' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                            </th>
                             <th>عملیات</th>
                         </tr>
                     </thead>
@@ -309,7 +529,7 @@
                         <tr>
                             <td>{{ program.id }}</td>
                             <td>{{ program.product.name|default:"-" }}</td>
-                            <td>{{ program.formula_id|default:"-" }}</td>
+                            <td>{{ program.program_id|default:"-" }}</td>
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
                             <td>{{ program.execution_date|default:"-" }}</td>
                             <td>{{ program.predicted_start_time|date:"H:i"|default:"-" }}</td>
@@ -335,32 +555,66 @@
     </div>
 </div>
 
-<!-- برنامه‌های تکمیل شده و موجودی مواد اولیه -->
-<div class="grid-2">
-    <!-- برنامه‌های تکمیل شده -->
-    <div class="section">
-        <div class="section-title">
-            <span>برنامه‌های تکمیل شده (اخیر)</span>
-            <span class="section-badge">{{ completed_programs.count }}</span>
+<!-- برنامه‌های تکمیل شده -->
+<div class="section">
+    <div class="section-title">
+        <span>برنامه‌های تکمیل شده (اخیر)</span>
+        <span class="section-badge" id="completed-count">{{ completed_page.paginator.count }}</span>
+    </div>
+    
+    <div class="card">
+        <!-- Search Form -->
+        <div class="search-form">
+            <div class="search-inputs">
+                <div class="search-field">
+                    <label for="search_id_completed">شناسه:</label>
+                    <input type="text" id="search_id_completed" name="search_id_completed" value="{{ search_id_completed }}" placeholder="جستجوی زنده...">
+                </div>
+                <div class="search-field">
+                    <label for="search_product_completed">محصول:</label>
+                    <input type="text" id="search_product_completed" name="search_product_completed" value="{{ search_product_completed }}" placeholder="جستجوی زنده...">
+                </div>
+            </div>
         </div>
         
-        <div class="card">
-            <div class="card-body">
-                {% if completed_programs %}
+        <!-- Pagination at top -->
+        <div id="completed-pagination-top">
+            {% include 'production/_completed_pagination.html' %}
+        </div>
+        
+        <div class="card-body">
+            <div id="completed-programs-container">
+                {% if completed_page.object_list %}
                 <div class="table-wrap">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>شناسه</th>
+                                <th class="sortable {% if sort_by_completed == 'id' %}sorted-{{ sort_dir_completed }}{% endif %}" 
+                                    onclick="sortTable('id', 'completed')">
+                                    شناسه
+                                    <span class="sort-icon">{% if sort_by_completed == 'id' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                                </th>
                                 <th>محصول</th>
-                                <th>تناژ (تن)</th>
-                                <th>تاریخ</th>
-                                <th>وضعیت</th>
+                                <th class="sortable {% if sort_by_completed == 'planned_weight_ton' %}sorted-{{ sort_dir_completed }}{% endif %}" 
+                                    onclick="sortTable('planned_weight_ton', 'completed')">
+                                    تناژ (تن)
+                                    <span class="sort-icon">{% if sort_by_completed == 'planned_weight_ton' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                                </th>
+                                <th class="sortable {% if sort_by_completed == 'execution_date' %}sorted-{{ sort_dir_completed }}{% endif %}" 
+                                    onclick="sortTable('execution_date', 'completed')">
+                                    تاریخ
+                                    <span class="sort-icon">{% if sort_by_completed == 'execution_date' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                                </th>
+                                <th class="sortable {% if sort_by_completed == 'status' %}sorted-{{ sort_dir_completed }}{% endif %}" 
+                                    onclick="sortTable('status', 'completed')">
+                                    وضعیت
+                                    <span class="sort-icon">{% if sort_by_completed == 'status' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                                </th>
                                 <th>عملیات</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {% for program in completed_programs %}
+                        <tbody id="completed-tbody">
+                            {% for program in completed_page.object_list %}
                             <tr>
                                 <td>{{ program.id }}</td>
                                 <td>{{ program.product.name|default:"-" }}</td>
@@ -385,54 +639,340 @@
             </div>
         </div>
     </div>
-
-    <!-- موجودی مواد اولیه -->
-    <div class="section">
-        <div class="section-title">
-            <span>موجودی مواد اولیه</span>
-            <span class="section-badge">{{ raw_materials_inventory|length }}</span>
-        </div>
-        
-        <div class="card">
-            <div class="card-body">
-                {% if raw_materials_inventory %}
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>کد</th>
-                                <th>نام ماده</th>
-                                <th>انبار</th>
-                                <th>موجودی</th>
-                                <th>واحد</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item in raw_materials_inventory %}
-                            <tr>
-                                <td>{{ item.raw_material_id }}</td>
-                                <td>{{ item.name }}</td>
-                                <td>{{ item.warehouse }}</td>
-                                <td>{{ item.quantity|floatformat:2 }}</td>
-                                <td>{{ item.unit }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="empty-state">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-                        <path d="M3 9H21" stroke="currentColor" stroke-width="2"/>
-                        <path d="M9 21V9" stroke="currentColor" stroke-width="2"/>
-                    </svg>
-                    <p>هیچ موجودی ماده اولیه‌ای در انبارهای اولیه یافت نشد</p>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-    </div>
 </div>
 
 {% endblock %}
+
+{% block extra_js %}
+<script>
+// Get CSRF token for secure AJAX requests
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Live search timers for debouncing
+let searchTimers = {
+    confirmed: null,
+    progress: null,
+    completed: null
+};
+
+// Track current sort state for each table
+let sortState = {
+    confirmed: {
+        column: '{{ sort_by_confirmed|default:"execution_date" }}',
+        direction: '{{ sort_dir_confirmed|default:"asc" }}'
+    },
+    progress: {
+        column: '{{ sort_by_progress|default:"execution_date" }}',
+        direction: '{{ sort_dir_progress|default:"asc" }}'
+    },
+    completed: {
+        column: '{{ sort_by_completed|default:"execution_date" }}',
+        direction: '{{ sort_dir_completed|default:"desc" }}'
+    }
+};
+
+// Live search functionality
+function setupLiveSearch() {
+    // Confirmed table search
+    const searchIdConfirmed = document.getElementById('search_id_confirmed');
+    const searchProductConfirmed = document.getElementById('search_product_confirmed');
+    
+    if (searchIdConfirmed) {
+        searchIdConfirmed.addEventListener('input', () => {
+            clearTimeout(searchTimers.confirmed);
+            searchTimers.confirmed = setTimeout(() => {
+                loadTable('confirmed');
+            }, 300);
+        });
+    }
+    
+    if (searchProductConfirmed) {
+        searchProductConfirmed.addEventListener('input', () => {
+            clearTimeout(searchTimers.confirmed);
+            searchTimers.confirmed = setTimeout(() => {
+                loadTable('confirmed');
+            }, 300);
+        });
+    }
+    
+    // Progress table search
+    const searchIdProgress = document.getElementById('search_id_progress');
+    const searchProductProgress = document.getElementById('search_product_progress');
+    
+    if (searchIdProgress) {
+        searchIdProgress.addEventListener('input', () => {
+            clearTimeout(searchTimers.progress);
+            searchTimers.progress = setTimeout(() => {
+                loadTable('progress');
+            }, 300);
+        });
+    }
+    
+    if (searchProductProgress) {
+        searchProductProgress.addEventListener('input', () => {
+            clearTimeout(searchTimers.progress);
+            searchTimers.progress = setTimeout(() => {
+                loadTable('progress');
+            }, 300);
+        });
+    }
+    
+    // Completed table search
+    const searchIdCompleted = document.getElementById('search_id_completed');
+    const searchProductCompleted = document.getElementById('search_product_completed');
+    
+    if (searchIdCompleted) {
+        searchIdCompleted.addEventListener('input', () => {
+            clearTimeout(searchTimers.completed);
+            searchTimers.completed = setTimeout(() => {
+                loadTable('completed', 1);
+            }, 300);
+        });
+    }
+    
+    if (searchProductCompleted) {
+        searchProductCompleted.addEventListener('input', () => {
+            clearTimeout(searchTimers.completed);
+            searchTimers.completed = setTimeout(() => {
+                loadTable('completed', 1);
+            }, 300);
+        });
+    }
+}
+
+// Sort table
+function sortTable(column, tableType) {
+    // Get current sort state for this table
+    const currentSort = sortState[tableType].column;
+    const currentDir = sortState[tableType].direction;
+    
+    // Toggle direction if same column, else default to ascending
+    let newDir;
+    if (currentSort === column) {
+        newDir = currentDir === 'asc' ? 'desc' : 'asc';
+    } else {
+        newDir = 'asc';
+    }
+    
+    // Update sort state
+    sortState[tableType].column = column;
+    sortState[tableType].direction = newDir;
+    
+    // Build params for AJAX call
+    const params = new URLSearchParams();
+    
+    // Get search values from inputs
+    const searchId = document.getElementById(`search_id_${tableType}`)?.value || '';
+    const searchProduct = document.getElementById(`search_product_${tableType}`)?.value || '';
+    
+    if (searchId) params.set(`search_id_${tableType}`, searchId);
+    if (searchProduct) params.set(`search_product_${tableType}`, searchProduct);
+    
+    // Set sort parameters
+    params.set(`sort_${tableType}`, column);
+    params.set(`dir_${tableType}`, newDir);
+    
+    // For completed table, preserve current page
+    let pageNum = null;
+    if (tableType === 'completed') {
+        const urlParams = new URLSearchParams(window.location.search);
+        pageNum = urlParams.get('page') || 1;
+    }
+    
+    // Load table with new sort parameters
+    loadTable(tableType, pageNum, params.toString());
+}
+
+// Update sort icons in table headers
+function updateSortIcons(tableType) {
+    const currentSort = sortState[tableType].column;
+    const currentDir = sortState[tableType].direction;
+    
+    // Find the table container based on type
+    let tableContainer;
+    if (tableType === 'confirmed') {
+        tableContainer = document.getElementById('confirmed-section');
+    } else if (tableType === 'progress') {
+        tableContainer = document.getElementById('progress-section');
+    } else { // completed
+        // Find the completed section - it's the last .section div
+        const sections = document.querySelectorAll('.section');
+        tableContainer = sections[sections.length - 1]; // Last section is completed
+    }
+    
+    if (!tableContainer) return;
+    
+    // Reset all sort headers in this table
+    const sortableHeaders = tableContainer.querySelectorAll('th.sortable');
+    sortableHeaders.forEach(header => {
+        header.classList.remove('sorted-asc', 'sorted-desc');
+        const sortIcon = header.querySelector('.sort-icon');
+        if (sortIcon) {
+            sortIcon.textContent = '⇅';
+        }
+    });
+    
+    // Update the current sorted column
+    sortableHeaders.forEach(header => {
+        const onclick = header.getAttribute('onclick');
+        if (onclick && onclick.includes(`'${currentSort}'`)) {
+            header.classList.add(`sorted-${currentDir}`);
+            const sortIcon = header.querySelector('.sort-icon');
+            if (sortIcon) {
+                sortIcon.textContent = currentDir === 'asc' ? '↑' : '↓';
+            }
+        }
+    });
+}
+
+// Generic table loader via AJAX
+async function loadTable(tableType, pageNum = null, extraParams = '') {
+    try {
+        let container, tbody, countBadge;
+        
+        if (tableType === 'confirmed') {
+            container = document.getElementById('confirmed-section');
+            tbody = container.querySelector('tbody');
+            countBadge = container.querySelector('.section-badge');
+        } else if (tableType === 'progress') {
+            container = document.getElementById('progress-section');
+            tbody = container.querySelector('tbody');
+            countBadge = container.querySelector('.section-badge');
+        } else {  // completed
+            container = document.getElementById('completed-programs-container');
+            tbody = document.getElementById('completed-tbody');
+            countBadge = document.getElementById('completed-count');
+        }
+        
+        if (!container || !tbody) return;
+        
+        container.style.opacity = '0.5';
+        container.style.pointerEvents = 'none';
+        
+        // Build URL with all current parameters
+        const params = new URLSearchParams(extraParams);
+        
+        // Get search values from inputs
+        const searchId = document.getElementById(`search_id_${tableType}`)?.value || '';
+        const searchProduct = document.getElementById(`search_product_${tableType}`)?.value || '';
+        
+        if (searchId) params.set(`search_id_${tableType}`, searchId);
+        if (searchProduct) params.set(`search_product_${tableType}`, searchProduct);
+        
+        // Get current sort params if not overridden
+        if (!params.has(`sort_${tableType}`)) {
+            const currentParams = new URLSearchParams(window.location.search);
+            const sortVal = currentParams.get(`sort_${tableType}`);
+            const dirVal = currentParams.get(`dir_${tableType}`);
+            if (sortVal) {
+                params.set(`sort_${tableType}`, sortVal);
+                sortState[tableType].column = sortVal;
+            }
+            if (dirVal) {
+                params.set(`dir_${tableType}`, dirVal);
+                sortState[tableType].direction = dirVal;
+            }
+        }
+        
+        // Add page number for completed
+        if (tableType === 'completed' && pageNum) {
+            params.set('page', pageNum);
+        }
+        
+        params.set('table', tableType);
+        
+        const response = await fetch(`/production/declaration/?${params.toString()}`, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        
+        const data = await response.json();
+        
+        // Update table tbody
+        tbody.innerHTML = data.programs_html;
+        
+        // Update pagination for completed
+        if (tableType === 'completed' && data.pagination_html) {
+            const paginationTop = document.getElementById('completed-pagination-top');
+            if (paginationTop) {
+                paginationTop.innerHTML = data.pagination_html;
+            }
+        }
+        
+        // Update count badge
+        if (countBadge && data.total_count !== undefined) {
+            countBadge.textContent = data.total_count;
+        }
+        
+        // Update sort icons to reflect current state
+        updateSortIcons(tableType);
+        
+        container.style.opacity = '1';
+        container.style.pointerEvents = 'auto';
+        
+    } catch (error) {
+        console.error('Error loading table:', error);
+        alert('خطا در بارگذاری داده‌ها. لطفاً دوباره تلاش کنید.');
+        if (container) {
+            container.style.opacity = '1';
+            container.style.pointerEvents = 'auto';
+        }
+    }
+}
+
+// Wrapper for completed page loading
+function loadCompletedPage(pageNum) {
+    const extraParams = new URLSearchParams();
+    
+    // Preserve sorting from current sort state
+    if (sortState.completed.column) {
+        extraParams.set('sort_completed', sortState.completed.column);
+        extraParams.set('dir_completed', sortState.completed.direction);
+    }
+    
+    // Preserve searching
+    const searchId = document.getElementById('search_id_completed')?.value;
+    const searchProduct = document.getElementById('search_product_completed')?.value;
+    if (searchId) {
+        extraParams.set('search_id_completed', searchId);
+    }
+    if (searchProduct) {
+        extraParams.set('search_product_completed', searchProduct);
+    }
+
+    loadTable('completed', pageNum, extraParams.toString());
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    setupLiveSearch();
+    
+    // Initialize sort icons for all tables
+    updateSortIcons('confirmed');
+    updateSortIcons('progress');
+    updateSortIcons('completed');
+});
+</script>
+{% endblock %}
+
