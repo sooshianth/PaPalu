@@ -274,9 +274,10 @@
     <table id="rolesTable">
         <thead>
             <tr>
-                <th style="width: 25%;">نام نقش</th>
-                <th style="width: 30%;">مجوز وظیفه</th>
-                <th style="width: 45%;">توضیحات (در زمان ایجاد تنظیم می‌شود)</th>
+                <th style="width: 20%;">نام نقش</th>
+                <th style="width: 25%;">مجوز وظیفه</th>
+                <th style="width: 25%;">مجوز فیلد</th>
+                <th style="width: 30%;">توضیحات (در زمان ایجاد تنظیم می‌شود)</th>
             </tr>
         </thead>
         <tbody>
@@ -297,6 +298,14 @@
                     </select>
                 </td>
                 <td>
+                    <select id="newRoleFieldPerm">
+                        <option value="">-- بدون مجوز --</option>
+                        {% for fp in field_permissions %}
+                        <option value="{{ fp.id }}">{{ fp.name|escape }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td>
                     <input type="text" id="newRoleDescription" placeholder="توضیحات اختیاری..." />
                 </td>
             </tr>
@@ -312,7 +321,7 @@
                 </td>
                 <td>
                     <select class="task-perm-select" data-role-id="{{ role.id }}">
-                        <option value="">-- No Permission --</option>
+                        <option value="">-- بدون مجوز --</option>
                         {% for tp in task_permissions %}
                         <option value="{{ tp.id }}" {% if role.task_permission and role.task_permission.id == tp.id %}selected{% endif %}>
                             {{ tp.name|escape }}
@@ -320,15 +329,25 @@
                         {% endfor %}
                     </select>
                 </td>
+                <td>
+                    <select class="field-perm-select" data-role-id="{{ role.id }}">
+                        <option value="">-- بدون مجوز --</option>
+                        {% for fp in field_permissions %}
+                        <option value="{{ fp.id }}" {% if role.field_permission and role.field_permission.id == fp.id %}selected{% endif %}>
+                            {{ fp.name|escape }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </td>
                 <td class="description-cell">
                     <div class="description-display">
-                        <span class="description-text">{{ role.description|default:"No description"|escape }}</span>
-                        <button class="edit-description-btn" data-role-id="{{ role.id }}">Edit</button>
+                        <span class="description-text">{{ role.description|default:"بدون توضیحات"|escape }}</span>
+                        <button class="edit-description-btn" data-role-id="{{ role.id }}">ویرایش</button>
                     </div>
                     <div class="description-edit" style="display: none;">
-                        <input type="text" class="description-input" data-role-id="{{ role.id }}" data-original="{{ role.description|default:""|escape }}" value="{{ role.description|default:""|escape }}" placeholder="Enter description..." />
-                        <button class="save-description-btn" data-role-id="{{ role.id }}">OK</button>
-                        <button class="cancel-description-btn" data-role-id="{{ role.id }}">Cancel</button>
+                        <input type="text" class="description-input" data-role-id="{{ role.id }}" data-original="{{ role.description|default:""|escape }}" value="{{ role.description|default:""|escape }}" placeholder="توضیحات را وارد کنید..." />
+                        <button class="save-description-btn" data-role-id="{{ role.id }}">تایید</button>
+                        <button class="cancel-description-btn" data-role-id="{{ role.id }}">لغو</button>
                     </div>
                 </td>
             </tr>
@@ -345,11 +364,12 @@
     const saveBtn = document.getElementById('saveBtn');
     const newRoleName = document.getElementById('newRoleName');
     const newRoleTaskPerm = document.getElementById('newRoleTaskPerm');
+    const newRoleFieldPerm = document.getElementById('newRoleFieldPerm');
     const newRoleDescription = document.getElementById('newRoleDescription');
     const messageDiv = document.getElementById('message');
     
     // Track changes
-    const changes = new Map(); // roleId -> {task_permission_id, description}
+    const changes = new Map(); // roleId -> {task_permission_id, field_permission_id, description}
     
     function showMessage(text, type = 'success') {
         messageDiv.textContent = text;
@@ -378,6 +398,7 @@
     addBtn.addEventListener('click', async () => {
         const name = newRoleName.value.trim();
         const taskPermId = newRoleTaskPerm.value;
+        const fieldPermId = newRoleFieldPerm.value;
         const description = newRoleDescription.value.trim();
         
         if (!name) {
@@ -408,6 +429,7 @@
                 body: JSON.stringify({
                     name: name,
                     task_permission_id: taskPermId || null,
+                    field_permission_id: fieldPermId || null,
                     description: description
                 })
             });
@@ -450,6 +472,23 @@
             }
             
             changes.get(roleId).task_permission_id = newValue;
+            markRowChanged(roleId);
+        });
+    });
+    
+    // Handle field permission dropdown changes - track but don't save
+    document.querySelectorAll('.field-perm-select').forEach(select => {
+        const roleId = select.dataset.roleId;
+        const originalValue = select.value;
+        
+        select.addEventListener('change', function() {
+            const newValue = this.value;
+            
+            if (!changes.has(roleId)) {
+                changes.set(roleId, {});
+            }
+            
+            changes.get(roleId).field_permission_id = newValue;
             markRowChanged(roleId);
         });
     });
@@ -517,6 +556,7 @@
                     body: JSON.stringify({
                         id: parseInt(roleId),
                         task_permission_id: changeData.task_permission_id,
+                        field_permission_id: changeData.field_permission_id,
                         description: changeData.description
                     })
                 });
@@ -564,7 +604,7 @@
             const textSpan = cell.querySelector('.description-text');
             
             // Update display
-            textSpan.textContent = description || 'No description';
+            textSpan.textContent = description || 'بدون توضیحات';
             
             // Track change
             if (!changes.has(roleId)) {

@@ -17,7 +17,7 @@ from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
-from access.models.FieldAccessUserModel import FieldAccessRule
+from core.RBACModel import user_has_field_access, get_accessible_fields
 from django.contrib.contenttypes.models import ContentType
 import json
 import jdatetime

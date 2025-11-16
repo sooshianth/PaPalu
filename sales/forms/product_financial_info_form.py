@@ -188,7 +188,7 @@ def get_accessible_financial_info_fields(user, financial_info_form: ProductFinan
     if user.is_superuser:
         return {field: True for field in display_fields.keys()}
     
-    from access.models.FieldAccessUserModel import FieldAccessRule
+    from core.RBACModel import user_has_field_access, get_accessible_fields
     from django.contrib.contenttypes.models import ContentType
     
     content_type = ContentType.objects.get_for_model(ProductFinancialInfo)

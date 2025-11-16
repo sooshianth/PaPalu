@@ -5,7 +5,7 @@
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
-from access.models.FieldAccessUserModel import FieldAccessRule
+from core.RBACModel import user_has_field_access, get_accessible_fields
 from core.PersonFolder import Person
 
 

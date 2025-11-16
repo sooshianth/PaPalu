@@ -3,8 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
-from core.RBACModel import user_has_task, TaskChoices
-from access.models.FieldAccessUserModel import FieldAccessRule
+from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
+from access.helpers import check_field_access_prefer_edit
 from sales.forms.create_customer_form import (
     CreateCustomerForm,
     build_delivery_address_formset,
@@ -319,29 +319,7 @@ def get_accessible_form_fields(user, form):
                     continue
                 
                 # بررسی دسترسی به فیلد: اولویت با قانون edit است، اگر نبود، قانون view بررسی شود
-                content_type = ContentType.objects.get_for_model(model_class)
-                
-                rule_edit = FieldAccessRule.objects.filter(
-                    user=user,
-                    content_type=content_type,
-                    field_name=model_field_name,
-                    access_type='edit'
-                ).first()
-                
-                if rule_edit is not None:
-                    accessible_fields[form_field_name] = rule_edit.allowed
-                else:
-                    rule_view = FieldAccessRule.objects.filter(
-                        user=user,
-                        content_type=content_type,
-                        field_name=model_field_name,
-                        access_type='view'
-                    ).first()
-                    if rule_view is not None:
-                        accessible_fields[form_field_name] = rule_view.allowed
-                    else:
-                        # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
-                        accessible_fields[form_field_name] = True
+                accessible_fields[form_field_name] = check_field_access_prefer_edit(user, model_class, model_field_name)
                 
             except Exception as e:
                 # در صورت بروز خطا، به طور پیش‌فرض دسترسی داده نمی‌شود

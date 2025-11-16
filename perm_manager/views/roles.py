@@ -9,14 +9,16 @@ import json
 @superuser_required
 def roles_view(request):
     """View for managing Roles"""
-    from core.RBACModel import Role
+    from core.RBACModel import Role, FieldPermission
     
-    roles = Role.objects.all().select_related('task_permission').order_by('name')
+    roles = Role.objects.all().select_related('task_permission', 'field_permission').order_by('name')
     task_permissions = TaskPermission.objects.all().order_by('name')
+    field_permissions = FieldPermission.objects.all().order_by('name')
     
     context = {
         'roles': roles,
         'task_permissions': task_permissions,
+        'field_permissions': field_permissions,
         'active_page': 'roles'
     }
     return render(request, 'perm_manager/roles.html', context)
@@ -26,13 +28,14 @@ def roles_view(request):
 @require_http_methods(["POST"])
 def add_role(request):
     """API endpoint to add a new role"""
-    from core.RBACModel import Role
+    from core.RBACModel import Role, FieldPermission
     
     try:
         data = json.loads(request.body)
         name = data.get('name', '').strip()
         description = data.get('description', '').strip()
         task_permission_id = data.get('task_permission_id')
+        field_permission_id = data.get('field_permission_id')
         
         # Validate name
         if not name:
@@ -56,9 +59,18 @@ def add_role(request):
             except (TaskPermission.DoesNotExist, ValueError):
                 return JsonResponse({'status': 'error', 'message': 'Invalid task permission'}, status=400)
         
+        # Validate field permission
+        field_permission = None
+        if field_permission_id:
+            try:
+                field_permission = FieldPermission.objects.get(id=int(field_permission_id))
+            except (FieldPermission.DoesNotExist, ValueError):
+                return JsonResponse({'status': 'error', 'message': 'Invalid field permission'}, status=400)
+        
         role = Role.objects.create(
             name=name,
             task_permission=task_permission,
+            field_permission=field_permission,
             description=description if description else None
         )
         
@@ -77,13 +89,14 @@ def add_role(request):
 @superuser_required
 @require_http_methods(["POST"])
 def update_role(request):
-    """API endpoint to update role task permission or description"""
-    from core.RBACModel import Role
+    """API endpoint to update role permissions or description"""
+    from core.RBACModel import Role, FieldPermission
     
     try:
         data = json.loads(request.body)
         role_id = data.get('id')
         task_permission_id = data.get('task_permission_id')
+        field_permission_id = data.get('field_permission_id')
         description = data.get('description', '').strip()
         
         # Validate ID
@@ -105,6 +118,17 @@ def update_role(request):
                     role.task_permission = task_permission
                 except (TaskPermission.DoesNotExist, ValueError):
                     return JsonResponse({'status': 'error', 'message': 'Invalid task permission'}, status=400)
+        
+        # Update field permission if provided
+        if field_permission_id is not None:
+            if field_permission_id == '':
+                role.field_permission = None
+            else:
+                try:
+                    field_permission = FieldPermission.objects.get(id=int(field_permission_id))
+                    role.field_permission = field_permission
+                except (FieldPermission.DoesNotExist, ValueError):
+                    return JsonResponse({'status': 'error', 'message': 'Invalid field permission'}, status=400)
         
         # Update description if provided
         if 'description' in data:

@@ -10,7 +10,7 @@ from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from core.RBACModel import user_has_task, TaskChoices
-from access.models.FieldAccessUserModel import FieldAccessRule
+from core.RBACModel import user_has_field_access, get_accessible_fields
 from django.contrib.contenttypes.models import ContentType
 from sales.forms.create_product_form import (
     CreateProductForm, 

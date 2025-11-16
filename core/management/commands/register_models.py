@@ -53,7 +53,7 @@ class Command(BaseCommand):
         )
         
         from core.RBACModel import (
-            TaskPermission, Role, UserTaskPermission
+            TaskPermission, FieldPermission, FieldChoice, Role, UserTaskPermission, UserFieldPermission
         )
         
         # List of all model classes
@@ -80,7 +80,7 @@ class Command(BaseCommand):
             # Settlement
             Settlement, TransactionDocument,
             # RBAC
-            TaskPermission, Role, UserTaskPermission,
+            TaskPermission, FieldPermission, FieldChoice, Role, UserTaskPermission, UserFieldPermission,
         ]
         
         registered_count = 0

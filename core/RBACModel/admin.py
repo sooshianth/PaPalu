@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from . import TaskPermission, Role, UserTaskPermission, TaskChoices
+from . import TaskPermission, Role, UserTaskPermission, TaskChoices, FieldPermission, FieldChoice, UserFieldPermission
 
 
 class TaskPermissionForm(forms.ModelForm):
@@ -41,10 +41,11 @@ class TaskPermissionAdmin(admin.ModelAdmin):
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'task_permission', 'description']
+    list_display = ['name', 'task_permission', 'field_permission', 'description']
     list_filter = ['name']
     filter_horizontal = ['users']
     search_fields = ['name', 'description']
+    autocomplete_fields = ['task_permission', 'field_permission']
 
 
 @admin.register(UserTaskPermission)
@@ -52,3 +53,91 @@ class UserTaskPermissionAdmin(admin.ModelAdmin):
     list_display = ['user', 'task_permission']
     search_fields = ['user__username', 'task_permission__name']
     list_filter = ['task_permission']
+
+
+class FieldChoiceInline(admin.TabularInline):
+    model = FieldChoice
+    extra = 1
+    fields = ['content_type', 'field_name', 'access_type', 'allowed']
+
+
+@admin.register(FieldPermission)
+class FieldPermissionAdmin(admin.ModelAdmin):
+    list_display = ['name', 'description', 'created_at', 'updated_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    inlines = [FieldChoiceInline]
+    
+    fieldsets = (
+        ('اطلاعات اصلی', {
+            'fields': ('name', 'description')
+        }),
+        ('اطلاعات زمانی', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(FieldChoice)
+class FieldChoiceAdmin(admin.ModelAdmin):
+    list_display = [
+        'field_permission',
+        'content_type', 
+        'field_name', 
+        'access_type', 
+        'allowed',
+        'created_at'
+    ]
+    
+    list_filter = [
+        'access_type', 
+        'allowed', 
+        'content_type',
+        'field_permission'
+    ]
+    
+    search_fields = [
+        'field_permission__name',
+        'field_name'
+    ]
+    
+    autocomplete_fields = ['field_permission']
+    
+    fieldsets = (
+        ('اطلاعات مجوز', {
+            'fields': ('field_permission',)
+        }),
+        ('اطلاعات مدل و فیلد', {
+            'fields': ('content_type', 'field_name')
+        }),
+        ('تنظیمات دسترسی', {
+            'fields': ('access_type', 'allowed')
+        }),
+        ('اطلاعات زمانی', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = ['created_at']
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('field_permission', 'content_type')
+
+
+@admin.register(UserFieldPermission)
+class UserFieldPermissionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'field_permission']
+    search_fields = ['user__username', 'user__email', 'field_permission__name']
+    autocomplete_fields = ['user', 'field_permission']
+    
+    fieldsets = (
+        ('اطلاعات کاربر', {
+            'fields': ('user',)
+        }),
+        ('مجوز دسترسی فیلد', {
+            'fields': ('field_permission',)
+        }),
+    )

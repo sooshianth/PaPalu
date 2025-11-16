@@ -545,7 +545,7 @@ def get_accessible_product_fields(user, product_form: CreateProductForm = None):
         # superuser به همه فیلدها دسترسی دارد
         return {field: True for field in display_fields.keys()}
     
-    from access.models.FieldAccessUserModel import FieldAccessRule
+    from core.RBACModel import user_has_field_access, get_accessible_fields
     from django.contrib.contenttypes.models import ContentType
     from core.ProductFolder.ProductModel import Product
     

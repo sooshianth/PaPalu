@@ -173,6 +173,23 @@
             {% endif %}
         </a>
         
+        <a href="{% url 'permission_manager:field_permissions' %}" class="dashboard-card">
+            <div class="card-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <h3 class="card-title">مجوزهای دسترسی فیلد</h3>
+            <p class="card-description">
+                کنترل دسترسی به فیلدهای خاص مدل‌ها. مشخص کنید هر مجوز شامل دسترسی به چه فیلدهایی است.
+            </p>
+            {% if field_permissions %}
+                <span class="card-count">{{ field_permissions|length }} مجوز</span>
+            {% endif %}
+        </a>
+        
         <a href="{% url 'permission_manager:roles' %}" class="dashboard-card">
             <div class="card-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -211,10 +228,11 @@
     <div class="info-section">
         <h3>راهنمای استفاده</h3>
         <ul>
-            <li>ابتدا مجوزهای وظیفه را تعریف کنید و مشخص کنید هر مجوز شامل چه وظایفی است</li>
-            <li>سپس نقش‌های مختلف را ایجاد کرده و مجوزهای مورد نیاز را به آنها اختصاص دهید</li>
+            <li>ابتدا مجوزهای وظیفه و مجوزهای فیلد را تعریف کنید و مشخص کنید هر مجوز شامل چه وظایف یا فیلدهایی است</li>
+            <li>سپس نقش‌های مختلف را ایجاد کرده و مجوزهای مورد نیاز (وظیفه و فیلد) را به آنها اختصاص دهید</li>
             <li>در نهایت کاربران را ایجاد کرده و نقش‌های مناسب را به آنها تخصیص دهید</li>
             <li>هر کاربر می‌تواند چندین نقش داشته باشد و دسترسی‌های او از ترکیب نقش‌هایش حاصل می‌شود</li>
+            <li>همچنین می‌توانید مجوزهای ویژه وظیفه یا فیلد را مستقیماً به کاربران نیز اختصاص دهید</li>
         </ul>
     </div>
 </div>

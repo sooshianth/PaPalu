@@ -9,8 +9,8 @@ class AccessConfig(AppConfig):
     def ready(self):
         """
         این متد بعد از آماده شدن اپلیکیشن اجرا می‌شود
-        و مطمئن می‌شود که مدل‌های access در ContentType ثبت شوند
+        مدل‌های Field Access حالا در core.RBACModel هستند
         """
         # Import models to ensure they are registered
-        from .models.FieldAccessUserModel import FieldAccessRule
+        from core.RBACModel import FieldPermission, FieldChoice, UserFieldPermission
 
