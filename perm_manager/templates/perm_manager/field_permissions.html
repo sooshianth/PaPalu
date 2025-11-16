@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'perm_manager/base.html' %}
 
 {% block title %}مجوزهای فیلد - مدیریت دسترسی‌ها{% endblock %}
 
@@ -117,11 +117,34 @@
         transform: scale(1.1);
     }
     
+    /* چک‌باکس را به شکل یک مربع کوچک با ضربدر قرمز نمایش می‌دهیم که معنی «ممنوع» دارد */
     .checkbox-cell input[type="checkbox"] {
-        width: 18px;
-        height: 18px;
+        appearance: none;
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
         cursor: pointer;
-        accent-color: #2d7a4f;
+        border: 2px solid #dc3545;
+        border-radius: 4px;
+        position: relative;
+        background-color: #ffffff;
+        transition: all 0.2s ease;
+    }
+
+    .checkbox-cell input[type="checkbox"]:checked {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+    }
+
+    .checkbox-cell input[type="checkbox"]:checked::before {
+        content: "✕";
+        color: #dc3545;
+        font-size: 14px;
+        font-weight: 700;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -57%);
     }
     
     .add-btn {
@@ -216,6 +239,46 @@
     .field-group {
         border-right: 1px solid #dee2e6;
     }
+
+    .managed-fields-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding: 0.75rem 1rem;
+        border-radius: 12px;
+        background: #f8f9fa;
+        border: 1px solid #e2e6ea;
+    }
+
+    .managed-fields-actions select,
+    .managed-fields-actions input[type="text"] {
+        min-width: 180px;
+        padding: 0.35rem 0.6rem;
+        border-radius: 8px;
+        border: 1px solid #ced4da;
+        font-size: 0.85rem;
+    }
+
+    .managed-fields-actions button {
+        font-size: 0.85rem;
+    }
+
+    .btn-success {
+        background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        color: white;
+    }
+
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-sm {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
 </style>
 {% endblock %}
 
@@ -224,9 +287,27 @@
 
 <div id="message"></div>
 
+<div class="managed-fields-actions">
+    <span style="font-weight:600; color:#2c3e50;">افزودن فیلد برای مدیریت:</span>
+    <select id="modelSelect">
+        <option value="">انتخاب مدل...</option>
+        {% for model in all_model_fields %}
+            <option value="{{ model.content_type_id }}">
+                {{ model.display_name }}{% if model.verbose_name %} - {{ model.verbose_name }}{% endif %}
+            </option>
+        {% endfor %}
+    </select>
+    <input type="text" id="fieldNameInput" placeholder="نام فیلد (مثال: name, price)" />
+    <input type="text" id="fieldLabelInput" placeholder="برچسب فیلد (اختیاری)" />
+    <button class="btn btn-success btn-sm" id="addFieldBtn">افزودن فیلد</button>
+</div>
+
 <div class="actions">
     <div>
-        <span style="color: #5a6c7d; font-size: 1rem; font-weight: 500;">مدیریت دسترسی فیلدها با انتخاب یا لغو انتخاب دسترسی مشاهده/ویرایش برای هر فیلد</span>
+        <span style="color: #5a6c7d; font-size: 1rem; font-weight: 500;">
+            مدیریت «ممنوعیت» فیلدها: در حالت عادی همه فیلدها قابل مشاهده/ویرایش هستند؛
+            با زدن ضربدر (✕) برای هر فیلد، دسترسی آن فیلد برای آن مجوز قطع می‌شود.
+        </span>
     </div>
     <button class="btn btn-primary" id="saveBtn">ذخیره تغییرات</button>
 </div>
@@ -327,9 +408,61 @@
     const addBtn = document.getElementById('addBtn');
     const newPermName = document.getElementById('newPermName');
     const messageDiv = document.getElementById('message');
+    const modelSelect = document.getElementById('modelSelect');
+    const fieldNameInput = document.getElementById('fieldNameInput');
+    const fieldLabelInput = document.getElementById('fieldLabelInput');
+    const addFieldBtn = document.getElementById('addFieldBtn');
     
     // perm_field_map from Django
     const permFieldMap = {{ perm_field_map|safe }};
+    
+    // افزودن فیلد جدید به ManagedField و ریلود صفحه
+    addFieldBtn.addEventListener('click', async () => {
+        const ctId = modelSelect.value;
+        const fieldName = fieldNameInput.value.trim();
+        const fieldLabel = fieldLabelInput.value.trim();
+        
+        if (!ctId) {
+            showMessage('لطفاً یک مدل انتخاب کنید', 'error');
+            return;
+        }
+        if (!fieldName) {
+            showMessage('لطفاً نام فیلد را وارد کنید', 'error');
+            return;
+        }
+        
+        addFieldBtn.disabled = true;
+        
+        try {
+            const response = await fetch('/permissions/api/add-managed-field/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    content_type_id: parseInt(ctId),
+                    field_name: fieldName,
+                    field_label: fieldLabel
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.status === 'success' || result.status === 'info') {
+                showMessage((result.message || 'فیلد با موفقیت اضافه شد') + '! در حال بارگذاری مجدد...', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                showMessage('خطا: ' + result.message, 'error');
+                addFieldBtn.disabled = false;
+            }
+        } catch (error) {
+            showMessage('خطا در افزودن فیلد: ' + error.message, 'error');
+            addFieldBtn.disabled = false;
+        }
+    });
     
     // Track original state
     const originalStates = new Map();

@@ -10,7 +10,9 @@ from .field_permissions import (
     field_permissions_view, 
     add_field_permission, 
     delete_field_permission, 
-    save_field_permissions
+    save_field_permissions,
+    add_managed_field,
+    delete_managed_field
 )
 from .roles import (
     roles_view,
@@ -33,6 +35,8 @@ __all__ = [
     'add_field_permission',
     'delete_field_permission',
     'save_field_permissions',
+    'add_managed_field',
+    'delete_managed_field',
     'roles_view',
     'add_role',
     'update_role',

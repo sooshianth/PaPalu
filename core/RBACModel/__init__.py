@@ -1,5 +1,5 @@
 from .TaskPermission import TaskPermission, TaskChoices
-from .FieldPermission import FieldPermission, FieldChoice
+from .FieldPermission import FieldPermission, FieldChoice, ManagedField
 from .Roles import Role, UserTaskPermission, UserFieldPermission, user_has_task, user_has_field_access, get_accessible_fields, user_can_access_field
 
 __all__ = [
@@ -7,6 +7,7 @@ __all__ = [
     'TaskChoices',
     'FieldPermission',
     'FieldChoice',
+    'ManagedField',
     'Role',
     'UserTaskPermission',
     'UserFieldPermission',

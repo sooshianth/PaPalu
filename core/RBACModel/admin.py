@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from . import TaskPermission, Role, UserTaskPermission, TaskChoices, FieldPermission, FieldChoice, UserFieldPermission
+from . import TaskPermission, Role, UserTaskPermission, TaskChoices, FieldPermission, FieldChoice, UserFieldPermission, ManagedField
 
 
 class TaskPermissionForm(forms.ModelForm):
@@ -139,5 +139,23 @@ class UserFieldPermissionAdmin(admin.ModelAdmin):
         }),
         ('مجوز دسترسی فیلد', {
             'fields': ('field_permission',)
+        }),
+    )
+
+
+@admin.register(ManagedField)
+class ManagedFieldAdmin(admin.ModelAdmin):
+    list_display = ['content_type', 'field_name', 'field_label', 'created_at']
+    list_filter = ['content_type']
+    search_fields = ['field_name', 'field_label']
+    readonly_fields = ['created_at']
+    
+    fieldsets = (
+        ('اطلاعات فیلد', {
+            'fields': ('content_type', 'field_name', 'field_label')
+        }),
+        ('اطلاعات زمانی', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
         }),
     )

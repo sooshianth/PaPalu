@@ -3,6 +3,40 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 
 
+class ManagedField(models.Model):
+    """
+    فیلدهایی که در صفحه «مجوز دسترسی فیلد» می‌خواهیم روی آن‌ها قانون تعریف کنیم.
+    این مدل تعیین می‌کند کدام فیلدها در جدول اصلی نمایش داده شوند.
+    """
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        verbose_name='نوع مدل'
+    )
+    field_name = models.CharField(
+        max_length=100,
+        verbose_name='نام فیلد'
+    )
+    field_label = models.CharField(
+        max_length=150,
+        verbose_name='برچسب فیلد',
+        help_text='نام نمایشی فیلد در UI'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='تاریخ ایجاد'
+    )
+
+    class Meta:
+        verbose_name = 'فیلد قابل مدیریت'
+        verbose_name_plural = 'فیلدهای قابل مدیریت'
+        unique_together = ['content_type', 'field_name']
+        ordering = ['content_type', 'field_name']
+
+    def __str__(self):
+        return f"{self.content_type.app_label}.{self.content_type.model}.{self.field_name}"
+
+
 class FieldPermission(models.Model):
     """
     مدل مجوز دسترسی فیلد

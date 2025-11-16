@@ -2,6 +2,7 @@ from django import forms
 from core.OrderFolder.ProformaModel import Proforma
 from core.OrderFolder.OrderModel import Order
 from core.PersonFolder.PersonModel import Person
+from access.helpers import check_field_access_prefer_edit
 import jdatetime
 
 
@@ -284,27 +285,18 @@ def get_accessible_proforma_fields(user, proforma_form: CreateProformaForm = Non
         'description': 'description',
     }
     
+    # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
         return {field: True for field in display_fields.keys()}
-    
-    from core.RBACModel import user_has_field_access, get_accessible_fields
-    from django.contrib.contenttypes.models import ContentType
-    
-    content_type = ContentType.objects.get_for_model(Proforma)
+
+    # استفاده از سیستم جدید FieldPermission
     accessible_fields = {}
-    
     for display_name, model_field_name in display_fields.items():
-        rule = FieldAccessRule.objects.filter(
-            user=user,
-            content_type=content_type,
-            field_name=model_field_name,
-            access_type='edit'
-        ).first()
-        
-        if rule is None:
-            accessible_fields[display_name] = True
-        else:
-            accessible_fields[display_name] = rule.allowed
-    
+        accessible_fields[display_name] = check_field_access_prefer_edit(
+            user,
+            Proforma,
+            model_field_name,
+        )
+
     return accessible_fields
 

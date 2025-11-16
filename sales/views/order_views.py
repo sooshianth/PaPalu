@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
 from django.db.models import Sum
+
 from core.RBACModel import user_has_task, TaskChoices
 from sales.forms.create_order_form import (
     CreateOrderForm,
@@ -12,8 +13,7 @@ from sales.forms.create_order_form import (
 )
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
-from core.RBACModel import user_has_field_access, get_accessible_fields
-from django.contrib.contenttypes.models import ContentType
+from access.helpers import check_field_access_prefer_edit
 
 
 @login_required
@@ -114,6 +114,7 @@ def get_accessible_order_list_fields(user):
     """
     بررسی دسترسی کاربر به فیلدهای نمایش سفارش
     """
+    # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
         return {
             'status': True,
@@ -133,14 +134,12 @@ def get_accessible_order_list_fields(user):
 
     accessible = {}
     for display_name, (model_class, model_field_name) in mapping.items():
-        content_type = ContentType.objects.get_for_model(model_class)
-        rule = FieldAccessRule.objects.filter(
-            user=user,
-            content_type=content_type,
-            field_name=model_field_name,
-            access_type='view'
-        ).first()
-        accessible[display_name] = True if rule is None else rule.allowed
+        accessible[display_name] = check_field_access_prefer_edit(
+            user,
+            model_class,
+            model_field_name,
+        )
+
     return accessible
 
 
