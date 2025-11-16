@@ -342,13 +342,9 @@
             <!-- Search Form -->
             <div class="search-form">
                 <div class="search-inputs">
-                    <div class="search-field">
-                        <label for="search_id_confirmed">شناسه:</label>
-                        <input type="text" id="search_id_confirmed" name="search_id_confirmed" value="{{ search_id_confirmed }}" placeholder="جستجوی زنده...">
-                    </div>
-                    <div class="search-field">
-                        <label for="search_product_confirmed">محصول:</label>
-                        <input type="text" id="search_product_confirmed" name="search_product_confirmed" value="{{ search_product_confirmed }}" placeholder="جستجوی زنده...">
+                    <div class="search-field" style="flex: 1;">
+                        <label for="search_confirmed">جستجو در شناسه و محصول:</label>
+                        <input type="text" id="search_confirmed" name="search_confirmed" value="{{ search_confirmed }}" placeholder="جستجوی زنده در شناسه و نام محصول...">
                     </div>
                 </div>
             </div>
@@ -472,13 +468,9 @@
         <!-- Search Form -->
         <div class="search-form">
             <div class="search-inputs">
-                <div class="search-field">
-                    <label for="search_id_progress">شناسه:</label>
-                    <input type="text" id="search_id_progress" name="search_id_progress" value="{{ search_id_progress }}" placeholder="جستجوی زنده...">
-                </div>
-                <div class="search-field">
-                    <label for="search_product_progress">محصول:</label>
-                    <input type="text" id="search_product_progress" name="search_product_progress" value="{{ search_product_progress }}" placeholder="جستجوی زنده...">
+                <div class="search-field" style="flex: 1;">
+                    <label for="search_progress">جستجو در شناسه و محصول:</label>
+                    <input type="text" id="search_progress" name="search_progress" value="{{ search_progress }}" placeholder="جستجوی زنده در شناسه و نام محصول...">
                 </div>
             </div>
         </div>
@@ -566,13 +558,9 @@
         <!-- Search Form -->
         <div class="search-form">
             <div class="search-inputs">
-                <div class="search-field">
-                    <label for="search_id_completed">شناسه:</label>
-                    <input type="text" id="search_id_completed" name="search_id_completed" value="{{ search_id_completed }}" placeholder="جستجوی زنده...">
-                </div>
-                <div class="search-field">
-                    <label for="search_product_completed">محصول:</label>
-                    <input type="text" id="search_product_completed" name="search_product_completed" value="{{ search_product_completed }}" placeholder="جستجوی زنده...">
+                <div class="search-field" style="flex: 1;">
+                    <label for="search_completed">جستجو در شناسه و محصول:</label>
+                    <input type="text" id="search_completed" name="search_completed" value="{{ search_completed }}" placeholder="جستجوی زنده در شناسه و نام محصول...">
                 </div>
             </div>
         </div>
@@ -594,16 +582,28 @@
                                     شناسه
                                     <span class="sort-icon">{% if sort_by_completed == 'id' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
+                                <th class="sortable {% if sort_by_completed == 'program_id' %}sorted-{{ sort_dir_completed }}{% endif %}" 
+                                    onclick="sortTable('program_id', 'completed')">
+                                    شناسه برنامه
+                                    <span class="sort-icon">{% if sort_by_completed == 'program_id' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                                </th>
                                 <th>محصول</th>
+                                <th>نوع بسته بندی</th>
                                 <th class="sortable {% if sort_by_completed == 'planned_weight_ton' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('planned_weight_ton', 'completed')">
                                     تناژ (تن)
                                     <span class="sort-icon">{% if sort_by_completed == 'planned_weight_ton' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
-                                <th class="sortable {% if sort_by_completed == 'execution_date' %}sorted-{{ sort_dir_completed }}{% endif %}" 
-                                    onclick="sortTable('execution_date', 'completed')">
-                                    تاریخ
-                                    <span class="sort-icon">{% if sort_by_completed == 'execution_date' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                                <th>درصد تحقق</th>
+                                <th class="sortable {% if sort_by_completed == 'started_at' %}sorted-{{ sort_dir_completed }}{% endif %}" 
+                                    onclick="sortTable('started_at', 'completed')">
+                                    زمان شروع واقعی
+                                    <span class="sort-icon">{% if sort_by_completed == 'started_at' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
+                                </th>
+                                <th class="sortable {% if sort_by_completed == 'completed_at' %}sorted-{{ sort_dir_completed }}{% endif %}" 
+                                    onclick="sortTable('completed_at', 'completed')">
+                                    زمان پایان واقعی
+                                    <span class="sort-icon">{% if sort_by_completed == 'completed_at' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
                                 <th class="sortable {% if sort_by_completed == 'status' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('status', 'completed')">
@@ -617,9 +617,19 @@
                             {% for program in completed_page.object_list %}
                             <tr>
                                 <td>{{ program.id }}</td>
+                                <td>{{ program.program_id|default:"-" }}</td>
                                 <td>{{ program.product.name|default:"-" }}</td>
+                                <td>{{ program.product.packaging_type|default:"-" }}</td>
                                 <td>{{ program.planned_weight_ton|default:"-" }}</td>
-                                <td>{{ program.execution_date|default:"-" }}</td>
+                                <td>
+                                    {% if program.planned_weight_ton and program.produced_weight_ton %}
+                                        {% widthratio program.produced_weight_ton program.planned_weight_ton 100 %}%
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ program.started_at|date:"Y/m/d H:i"|default:"-" }}</td>
+                                <td>{{ program.completed_at|date:"Y/m/d H:i"|default:"-" }}</td>
                                 <td><span class="status-badge status-completed">{{ program.get_status_display }}</span></td>
                                 <td><a href="{% url 'production:program_crud' program.id %}" class="btn-detail">جزئیات</a></td>
                             </tr>
@@ -687,20 +697,9 @@ let sortState = {
 // Live search functionality
 function setupLiveSearch() {
     // Confirmed table search
-    const searchIdConfirmed = document.getElementById('search_id_confirmed');
-    const searchProductConfirmed = document.getElementById('search_product_confirmed');
-    
-    if (searchIdConfirmed) {
-        searchIdConfirmed.addEventListener('input', () => {
-            clearTimeout(searchTimers.confirmed);
-            searchTimers.confirmed = setTimeout(() => {
-                loadTable('confirmed');
-            }, 300);
-        });
-    }
-    
-    if (searchProductConfirmed) {
-        searchProductConfirmed.addEventListener('input', () => {
+    const searchConfirmed = document.getElementById('search_confirmed');
+    if (searchConfirmed) {
+        searchConfirmed.addEventListener('input', () => {
             clearTimeout(searchTimers.confirmed);
             searchTimers.confirmed = setTimeout(() => {
                 loadTable('confirmed');
@@ -709,20 +708,9 @@ function setupLiveSearch() {
     }
     
     // Progress table search
-    const searchIdProgress = document.getElementById('search_id_progress');
-    const searchProductProgress = document.getElementById('search_product_progress');
-    
-    if (searchIdProgress) {
-        searchIdProgress.addEventListener('input', () => {
-            clearTimeout(searchTimers.progress);
-            searchTimers.progress = setTimeout(() => {
-                loadTable('progress');
-            }, 300);
-        });
-    }
-    
-    if (searchProductProgress) {
-        searchProductProgress.addEventListener('input', () => {
+    const searchProgress = document.getElementById('search_progress');
+    if (searchProgress) {
+        searchProgress.addEventListener('input', () => {
             clearTimeout(searchTimers.progress);
             searchTimers.progress = setTimeout(() => {
                 loadTable('progress');
@@ -731,20 +719,9 @@ function setupLiveSearch() {
     }
     
     // Completed table search
-    const searchIdCompleted = document.getElementById('search_id_completed');
-    const searchProductCompleted = document.getElementById('search_product_completed');
-    
-    if (searchIdCompleted) {
-        searchIdCompleted.addEventListener('input', () => {
-            clearTimeout(searchTimers.completed);
-            searchTimers.completed = setTimeout(() => {
-                loadTable('completed', 1);
-            }, 300);
-        });
-    }
-    
-    if (searchProductCompleted) {
-        searchProductCompleted.addEventListener('input', () => {
+    const searchCompleted = document.getElementById('search_completed');
+    if (searchCompleted) {
+        searchCompleted.addEventListener('input', () => {
             clearTimeout(searchTimers.completed);
             searchTimers.completed = setTimeout(() => {
                 loadTable('completed', 1);
@@ -865,12 +842,10 @@ async function loadTable(tableType, pageNum = null, extraParams = '') {
         // Build URL with all current parameters
         const params = new URLSearchParams(extraParams);
         
-        // Get search values from inputs
-        const searchId = document.getElementById(`search_id_${tableType}`)?.value || '';
-        const searchProduct = document.getElementById(`search_product_${tableType}`)?.value || '';
+        // Get search values from consolidated search input
+        const searchValue = document.getElementById(`search_${tableType}`)?.value || '';
         
-        if (searchId) params.set(`search_id_${tableType}`, searchId);
-        if (searchProduct) params.set(`search_product_${tableType}`, searchProduct);
+        if (searchValue) params.set(`search_${tableType}`, searchValue);
         
         // Get current sort params if not overridden
         if (!params.has(`sort_${tableType}`)) {

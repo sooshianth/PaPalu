@@ -35,15 +35,10 @@ def production_declaration_view(request):
     bug_logger.debug("شروع بارگذاری صفحه اعلام تولید")
     
     try:
-        # Get search parameters for each table separately
-        search_id_confirmed = request.GET.get('search_id_confirmed', '').strip()
-        search_product_confirmed = request.GET.get('search_product_confirmed', '').strip()
-        
-        search_id_progress = request.GET.get('search_id_progress', '').strip()
-        search_product_progress = request.GET.get('search_product_progress', '').strip()
-        
-        search_id_completed = request.GET.get('search_id_completed', '').strip()
-        search_product_completed = request.GET.get('search_product_completed', '').strip()
+        # Get consolidated search parameters for each table
+        search_confirmed = request.GET.get('search_confirmed', '').strip()
+        search_progress = request.GET.get('search_progress', '').strip()
+        search_completed = request.GET.get('search_completed', '').strip()
         
         # Get sort parameters for each table
         sort_by_confirmed = request.GET.get('sort_confirmed', 'execution_date')
@@ -56,7 +51,7 @@ def production_declaration_view(request):
         sort_dir_completed = request.GET.get('dir_completed', 'desc')
         
         # Validate sort columns
-        allowed_sorts = ['id', 'execution_date', 'predicted_start_time', 'predicted_end_time', 'planned_weight_ton', 'status']
+        allowed_sorts = ['id', 'program_id', 'execution_date', 'predicted_start_time', 'predicted_end_time', 'planned_weight_ton', 'status', 'started_at', 'completed_at']
         
         if sort_by_confirmed not in allowed_sorts:
             sort_by_confirmed = 'execution_date'
@@ -76,11 +71,12 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.CONFIRMED
             ).select_related('product', 'production_info')
             
-            # Apply search filters for confirmed table
-            if search_id_confirmed:
-                confirmed_programs = confirmed_programs.filter(id__icontains=search_id_confirmed)
-            if search_product_confirmed:
-                confirmed_programs = confirmed_programs.filter(product__name__icontains=search_product_confirmed)
+            # Apply consolidated search filter for confirmed table
+            if search_confirmed:
+                confirmed_programs = confirmed_programs.filter(
+                    Q(id__icontains=search_confirmed) | 
+                    Q(product__name__icontains=search_confirmed)
+                )
             
             # Apply sorting for confirmed table
             confirmed_programs = confirmed_programs.order_by(order_by_confirmed, 'id')
@@ -94,11 +90,12 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.IN_PROGRESS
             ).select_related('product', 'production_info')
             
-            # Apply search filters for in-progress table
-            if search_id_progress:
-                in_progress_programs = in_progress_programs.filter(id__icontains=search_id_progress)
-            if search_product_progress:
-                in_progress_programs = in_progress_programs.filter(product__name__icontains=search_product_progress)
+            # Apply consolidated search filter for in-progress table
+            if search_progress:
+                in_progress_programs = in_progress_programs.filter(
+                    Q(id__icontains=search_progress) | 
+                    Q(product__name__icontains=search_progress)
+                )
             
             # Apply sorting for in-progress table
             in_progress_programs = in_progress_programs.order_by(order_by_progress, 'id')
@@ -113,11 +110,12 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.COMPLETED
             ).select_related('product', 'production_info')
             
-            # Apply search filters for completed table
-            if search_id_completed:
-                completed_programs_qs = completed_programs_qs.filter(id__icontains=search_id_completed)
-            if search_product_completed:
-                completed_programs_qs = completed_programs_qs.filter(product__name__icontains=search_product_completed)
+            # Apply consolidated search filter for completed table
+            if search_completed:
+                completed_programs_qs = completed_programs_qs.filter(
+                    Q(id__icontains=search_completed) | 
+                    Q(product__name__icontains=search_completed)
+                )
             
             # Apply sorting for completed table
             completed_programs_qs = completed_programs_qs.order_by(order_by_completed, 'id')
@@ -163,6 +161,18 @@ def production_declaration_view(request):
                     for item in inventory_items:
                         try:
                             raw_material = item.item  # Generic relation
+                            if raw_material is None:
+                                # If generic relation fails, try to find by raw_material_id
+                                try:
+                                    raw_material = RawMaterial.objects.get(raw_material_id=item.object_id)
+                                except RawMaterial.DoesNotExist:
+                                    # Try by primary key as fallback
+                                    try:
+                                        raw_material = RawMaterial.objects.get(pk=item.object_id)
+                                    except (RawMaterial.DoesNotExist, ValueError):
+                                        bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
+                                        continue
+                            
                             if raw_material:
                                 raw_materials_inventory.append({
                                     'raw_material_id': getattr(raw_material, 'raw_material_id', '-'),
@@ -193,13 +203,10 @@ def production_declaration_view(request):
             'in_progress_programs': in_progress_programs,
             'completed_page': completed_page,
             'raw_materials_inventory': raw_materials_inventory,
-            # Search parameters for each table
-            'search_id_confirmed': search_id_confirmed,
-            'search_product_confirmed': search_product_confirmed,
-            'search_id_progress': search_id_progress,
-            'search_product_progress': search_product_progress,
-            'search_id_completed': search_id_completed,
-            'search_product_completed': search_product_completed,
+            # Consolidated search parameters for each table
+            'search_confirmed': search_confirmed,
+            'search_progress': search_progress,
+            'search_completed': search_completed,
             # Sort parameters for each table
             'sort_by_confirmed': sort_by_confirmed,
             'sort_dir_confirmed': sort_dir_confirmed,
@@ -402,6 +409,18 @@ def production_program_crud_view(request, program_id=None):
                     for item in inventory_items:
                         try:
                             raw_material = item.item
+                            if raw_material is None:
+                                # If generic relation fails, try to find by raw_material_id
+                                try:
+                                    raw_material = RawMaterial.objects.get(raw_material_id=item.object_id)
+                                except RawMaterial.DoesNotExist:
+                                    # Try by primary key as fallback
+                                    try:
+                                        raw_material = RawMaterial.objects.get(pk=item.object_id)
+                                    except (RawMaterial.DoesNotExist, ValueError):
+                                        bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
+                                        continue
+                            
                             if raw_material:
                                 raw_materials_inventory.append({
                                     'raw_material_id': getattr(raw_material, 'raw_material_id', '-'),
