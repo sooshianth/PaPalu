@@ -50,29 +50,47 @@ def create_order_view(request):
                     order.status = 'pending_proforma_issue'
                     order.save()
 
-                    total_weight = None
                     # Save items
-                    for form in item_formset:
+                    items_saved = 0
+                    skipped_items = []
+                    for idx, form in enumerate(item_formset):
                         if not getattr(form, 'cleaned_data', None):
+                            skipped_items.append(f"فرم {idx+1}: بدون cleaned_data")
                             continue
                         # اگر فرم برای حذف علامت خورده باشد، آن را نادیده بگیر
                         if form.cleaned_data.get('DELETE', False):
+                            skipped_items.append(f"فرم {idx+1}: علامت حذف")
                             continue
                         product = form.cleaned_data.get('product')
-                        requested_unit = form.cleaned_data.get('requested_unit')
+                        weight_unit = form.cleaned_data.get('weight_unit')
                         quantity = form.cleaned_data.get('quantity')
                         unit_price = form.cleaned_data.get('unit_price')
-                        if not (product and requested_unit and quantity is not None and unit_price is not None):
+                        
+                        # حداقل محصول، واحد، مقدار و قیمت باید وجود داشته باشد
+                        if not (product and weight_unit and quantity is not None and unit_price is not None):
+                            missing = []
+                            if not product: missing.append('محصول')
+                            if not weight_unit: missing.append('واحد')
+                            if quantity is None: missing.append('مقدار')
+                            if unit_price is None: missing.append('قیمت')
+                            skipped_items.append(f"فرم {idx+1}: فیلدهای ناقص ({', '.join(missing)})")
                             continue
+                        
                         item = form.to_instance(order)
                         item.save()
+                        items_saved += 1
 
-                    # Optionally compute total order weight if applicable (kept None if not provided)
-                    if total_weight is not None:
-                        order.total_order_weight = total_weight
-                        order.save(update_fields=['total_order_weight'])
-
-                messages.success(request, 'سفارش با موفقیت ایجاد شد. تسک بعد: صدور پیش فاکتور.')
+                if items_saved == 0:
+                    warning_msg = 'سفارش ایجاد شد اما هیچ قلمی ذخیره نشد! لطفاً اطمینان حاصل کنید که اطلاعات اقلام (محصول، واحد، مقدار، قیمت) را کامل وارد کرده‌اید.'
+                    if skipped_items:
+                        warning_msg += f' اقلام رد شده: {"; ".join(skipped_items)}'
+                    messages.warning(request, warning_msg)
+                else:
+                    success_msg = f'سفارش با موفقیت ایجاد شد و {items_saved} قلم ثبت شد. تسک بعد: صدور پیش فاکتور.'
+                    if skipped_items:
+                        success_msg += f' ({len(skipped_items)} قلم رد شد)'
+                    messages.success(request, success_msg)
+                
                 # Redirect to order list (proforma functionality will be added later)
                 return redirect('sales:order_list')
             except Exception as e:
@@ -117,9 +135,9 @@ def get_accessible_order_list_fields(user):
     # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
         return {
+            'customer': True,
             'status': True,
             'total_purchase_cost': True,
-            'total_order_weight': True,
         }
 
     # مدل‌ها
@@ -127,8 +145,8 @@ def get_accessible_order_list_fields(user):
     from core.OrderFolder.OrderItemModel import OrderItem as OrderItemModel
 
     mapping = {
+        'customer': (OrderModel, 'customer'),
         'status': (OrderModel, 'status'),
-        'total_order_weight': (OrderModel, 'total_order_weight'),
         'total_purchase_cost': (OrderItemModel, 'total_purchase_cost'),
     }
 
@@ -153,9 +171,9 @@ def order_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     if request.user.is_superuser:
-        orders_qs = Order.objects.all().order_by('-created_at')
+        orders_qs = Order.objects.all().select_related('customer').order_by('-created_at')
     else:
-        orders_qs = Order.objects.filter(registered_by=request.user).order_by('-created_at')
+        orders_qs = Order.objects.filter(registered_by=request.user).select_related('customer').order_by('-created_at')
 
     # محاسبه مجموع بهای تمام شده خرید برای هر سفارش با annotate
     orders_qs = orders_qs.annotate(total_purchase_cost=Sum('order_items__total_purchase_cost'))

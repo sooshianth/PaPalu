@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django_jalali.db import models as jmodels
+from core.PersonFolder import Person
 
 
 class Order(models.Model):
@@ -22,6 +23,10 @@ class Order(models.Model):
         ('processing', 'در حال پردازش'),
         ('pending_proforma_issue', 'در انتظار صدور پیش فاکتور'),
         ('pending_customer_proforma_upload', 'در انتظار آپلود پیش فاکتور مشتری'),
+        # بعد از آپلود تأیید پیش فاکتور، سفارش به این وضعیت می‌رود
+        ('pending_transaction_receipt_upload', 'در انتظار بارگذاری رسید تراکنش'),
+        # بعد از تکمیل بارگذاری رسیدها، سفارش به این وضعیت می‌رود
+        ('pending_sales_transaction_approval', 'در انتظار تایید تراکنش فروش'),
         ('pending_payment_approval', 'در انتظار تایید پرداخت'),
         ('completed', 'تکمیل شده'),
         ('cancelled', 'لغو شده'),
@@ -34,11 +39,23 @@ class Order(models.Model):
         ('shared', 'مشترک'),
     ]
     
+    
     # شماره سفارش
     order_number = models.CharField(
         max_length=100,
         primary_key=True,
         verbose_name='شماره سفارش'
+    )
+    
+    # مشتری/تامین‌کننده (بسته به نوع سفارش)
+    customer = models.ForeignKey(
+        Person,
+        on_delete=models.PROTECT,
+        related_name='orders',
+        verbose_name='مشتری/تامین‌کننده',
+        null=True,
+        blank=True,
+        help_text='برای سفارش فروش: مشتری، برای سفارش خرید: تامین‌کننده'
     )
     
     # نوع سفارش(خرید/فروش)
@@ -95,31 +112,24 @@ class Order(models.Model):
         verbose_name='نوع پرداخت کرایه'
     )
     
-    # وزن کل سفارش
-    total_order_weight = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name='وزن کل سفارش'
-    )
-    
-    # وزن کل ارسال
+    # وزن کل ارسال (محاسبه شده از اقلام)
     total_shipment_weight = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name='وزن کل ارسال'
+        verbose_name='وزن کل ارسال',
+        help_text='مجموع وزن اقلام ارسال شده'
     )
     
-    # وزن کل تحویل
+    # وزن کل تحویل (محاسبه شده از اقلام)
     total_delivery_weight = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name='وزن کل تحویل'
+        verbose_name='وزن کل تحویل',
+        help_text='مجموع وزن اقلام تحویل شده'
     )
     
     # شماره سند حسابداری ثبت شده
@@ -151,4 +161,13 @@ class Order(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.order_number} - {self.get_order_type_display()}"
+        customer_name = self.customer.name if self.customer else 'بدون مشتری'
+        return f"{self.order_number} - {customer_name} - {self.get_order_type_display()}"
+    
+    def get_total_amount(self):
+        """
+        محاسبه مبلغ کل سفارش از مجموع اقلام
+        """
+        from django.db.models import Sum
+        total = self.order_items.aggregate(total=Sum('total_purchase_cost'))['total']
+        return total or 0

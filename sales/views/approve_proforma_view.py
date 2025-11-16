@@ -92,11 +92,14 @@ def approve_proforma_upload_view(request, order_number):
                 order_document.proforma_confirmation_attachment = confirmation_file
                 order_document.save()
 
-                # تغییر وضعیت سفارش به "در انتظار تایید پرداخت"
-                order.status = 'pending_payment_approval'
+                # تغییر وضعیت سفارش به "در انتظار بارگذاری رسید تراکنش"
+                order.status = 'pending_transaction_receipt_upload'
                 order.save()
 
-            messages.success(request, 'فایل تأیید پیش فاکتور با موفقیت آپلود شد و وضعیت سفارش به "در انتظار تایید پرداخت" تغییر یافت.')
+            messages.success(
+                request,
+                'فایل تأیید پیش فاکتور با موفقیت آپلود شد و وضعیت سفارش به "در انتظار بارگذاری رسید تراکنش" تغییر یافت.'
+            )
             return redirect('sales:approve_proforma_list')
 
         except Exception as e:

@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+
+{% block title %}ثبت رسید تراکنش - سفارش {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .info-card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid var(--gray-300);
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 1.1rem;
+    }
+    
+    .info-card-body {
+        padding: 1.5rem;
+    }
+    
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .info-item strong {
+        display: block;
+        color: var(--gray-600);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-item span {
+        color: var(--text-dark);
+        font-size: 1rem;
+    }
+    
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+    
+    .modern-table thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .modern-table th {
+        padding: 0.75rem;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--gray-300);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table td {
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--text-dark);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .modern-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        padding: 1rem 1.5rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .form-section-body {
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        font-family: inherit;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .form-divider {
+        border: 0;
+        border-top: 2px solid var(--gray-200);
+        margin: 1.5rem 0;
+    }
+    
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 1rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .total-amount {
+        background: var(--light-green);
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-green);
+    }
+    
+    .empty-message {
+        text-align: center;
+        color: var(--gray-600);
+        padding: 2rem;
+        font-size: 1rem;
+    }
+    
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .errorlist li {
+        color: #dc3545;
+        font-size: 0.85rem;
+        padding: 0.25rem 0;
+    }
+    
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .info-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <h2>ثبت رسید تراکنش - سفارش {{ order.order_number }}</h2>
+</div>
+
+{# داده دیدنی (اطلاعات تسویه و سفارش) #}
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات تسویه و سفارش
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>نوع تسویه (فروش/سرک/کسری):</strong>
+                <span>{{ settlement.get_settlement_type_display|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شماره سفارش:</strong>
+                <span>{{ order.order_number }}</span>
+            </div>
+            <div class="info-item">
+                <strong>وضعیت تسویه:</strong>
+                <span>{{ settlement.get_settlement_status_display|default:"-" }}</span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <strong>مشتری (شخص بدهکار):</strong>
+                <span>{{ settlement.debtor_person.name|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شخص بستانکار:</strong>
+                <span>{{ settlement.creditor_person.name|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>مبلغ کل سند مبدا:</strong>
+                <span style="font-weight: 600; color: var(--primary-green);">
+                    {% if settlement.original_document_amount %}
+                        {{ settlement.original_document_amount|floatformat:0 }} ریال
+                    {% else %}
+                        -
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <strong>مبلغ کل تسویه شده:</strong>
+                <span style="font-weight: 600; color: var(--dark-green);">{{ settlement.settled_amount|floatformat:0|default:"0" }} ریال</span>
+            </div>
+            <div class="info-item">
+                <strong>مبلغ باقیمانده:</strong>
+                <span style="font-weight: 600; {% if remaining_amount > 0 %}color: #dc3545;{% else %}color: var(--primary-green);{% endif %}">
+                    {% if settlement.original_document_amount %}
+                        {{ remaining_amount|floatformat:0 }} ریال
+                    {% else %}
+                        -
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        {% if remaining_amount <= 0 and settlement.original_document_amount %}
+        <div class="info-row" style="margin-top: 1rem;">
+            <div style="background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
+                ✓ تسویه کامل شده است! پس از ثبت آخرین سند، وضعیت سفارش به «در انتظار تایید تراکنش فروش» تغییر می‌کند.
+            </div>
+        </div>
+        {% elif remaining_amount > 0 %}
+        <div class="info-row" style="margin-top: 1rem;">
+            <div style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; border-right: 4px solid #ffc107; font-weight: 500;">
+                <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} ریال باقیمانده است. لطفاً رسیدهای تراکنش را تا رسیدن به مبلغ کل اضافه کنید.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# لیست اسناد تراکنش موجود #}
+<div class="info-card">
+    <div class="info-card-header">
+        اسناد تراکنش ثبت‌شده
+    </div>
+    <div class="info-card-body">
+        {% if documents %}
+            <div style="overflow-x: auto;">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>شماره سند حسابداری</th>
+                            <th>نوع تسویه</th>
+                            <th>مبلغ سند</th>
+                            <th>تاریخ سررسید</th>
+                            <th>حساب مبدا</th>
+                            <th>حساب مقصد</th>
+                            <th>وضعیت وصول</th>
+                            <th>تاریخ وصول</th>
+                            <th>پیوست</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for doc in documents %}
+                        <tr>
+                            <td>{{ doc.accounting_document_number }}</td>
+                            <td>{{ doc.get_payment_type_display }}</td>
+                            <td><strong>{{ doc.document_amount|floatformat:0 }}</strong></td>
+                            <td>{{ doc.due_date }}</td>
+                            <td>{{ doc.source_account }}</td>
+                            <td>{{ doc.destination_account|default:"-" }}</td>
+                            <td>{{ doc.get_payment_status_display|default:"-" }}</td>
+                            <td>{{ doc.check_receipt_date|default:"-" }}</td>
+                            <td>
+                                {% if doc.document_attachment %}
+                                    <a href="{{ doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="total-amount">
+                جمع مبالغ اسناد: {{ total_document_amount|floatformat:0 }} ریال
+            </div>
+        {% else %}
+            <p class="empty-message">هنوز سند تراکنشی برای این تسویه ثبت نشده است.</p>
+        {% endif %}
+    </div>
+</div>
+
+{# فرم ثبت سند جدید (داده پرکردنی) #}
+<div class="form-section">
+    <div class="form-section-header">
+        ثبت سند تراکنش جدید
+    </div>
+    <div class="form-section-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.payment_type.id_for_label }}">نوع تسویه (نقدی بازارگاه / بانکی / چک) <span style="color: #dc3545;">*</span></label>
+                    {{ form.payment_type }}
+                    {{ form.payment_type.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.document_amount.id_for_label }}">مبلغ سند <span style="color: #dc3545;">*</span></label>
+                    {{ form.document_amount }}
+                    {{ form.document_amount.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.due_date.id_for_label }}">تاریخ سررسید <span style="color: #dc3545;">*</span></label>
+                    {{ form.due_date }}
+                    {{ form.due_date.errors }}
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.source_account.id_for_label }}">حساب مبدا <span style="color: #dc3545;">*</span></label>
+                    {{ form.source_account }}
+                    {{ form.source_account.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.document_attachment.id_for_label }}">پیوست سند <span style="color: #dc3545;">*</span></label>
+                    {{ form.document_attachment }}
+                    {{ form.document_attachment.errors }}
+                </div>
+            </div>
+
+            <hr class="form-divider">
+            <h5 class="section-title">اطلاعات اختیاری</h5>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.payment_status.id_for_label }}">وضعیت وصول</label>
+                    {{ form.payment_status }}
+                    {{ form.payment_status.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.check_receipt_date.id_for_label }}">تاریخ وصول</label>
+                    {{ form.check_receipt_date }}
+                    {{ form.check_receipt_date.errors }}
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">ثبت سند</button>
+                <a href="{% url 'sales:transaction_receipt_order_list' %}" class="btn btn-secondary">بازگشت به لیست سفارش‌ها</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+

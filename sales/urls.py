@@ -1,5 +1,13 @@
 from django.urls import path
-from sales.views import customer_views, order_views, product_view, product_price_view, proforma_view, approve_proforma_view
+from sales.views import (
+    customer_views,
+    order_views,
+    product_view,
+    product_price_view,
+    proforma_view,
+    approve_proforma_view,
+    transaction_receipt_view,
+)
 
 app_name = 'sales'
 
@@ -17,9 +25,16 @@ urlpatterns = [
     path('proforma/<int:proforma_id>/', proforma_view.proforma_detail_view, name='proforma_detail'),
     path('proforma/<int:proforma_id>/download-pdf/', proforma_view.proforma_download_pdf, name='proforma_download_pdf'),
     
+    # API برای دریافت اطلاعات سفارش
+    path('api/order/<str:order_number>/customer/', proforma_view.get_order_customer_api, name='get_order_customer_api'),
+    
     # مسیرهای تأیید پیش فاکتور
     path('approve-proforma/list/', approve_proforma_view.approve_proforma_list_view, name='approve_proforma_list'),
     path('approve-proforma/<str:order_number>/upload/', approve_proforma_view.approve_proforma_upload_view, name='approve_proforma_upload'),
+
+    # مسیرهای ثبت رسید تراکنش فروش
+    path('transaction-receipts/orders/', transaction_receipt_view.transaction_receipt_order_list_view, name='transaction_receipt_order_list'),
+    path('transaction-receipts/<str:order_number>/upload/', transaction_receipt_view.transaction_receipt_upload_view, name='transaction_receipt_upload'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     

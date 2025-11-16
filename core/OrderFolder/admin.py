@@ -4,16 +4,49 @@ from . import Order, OrderItem, OrderDocument, DocumentRelation, ApprovalInfo
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['order_number', 'order_type', 'status']
-    list_filter = ['order_type', 'status']
-    search_fields = ['order_number']
+    list_display = ['order_number', 'customer', 'order_type', 'status', 'freight_payment_type']
+    list_filter = ['order_type', 'status', 'registered_by']
+    search_fields = ['order_number', 'customer__name', 'customer__national_id']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('اطلاعات اصلی', {
+            'fields': ('order_number', 'customer', 'order_type', 'registration_source', 'registered_by')
+        }),
+        ('وزن‌های ارسال و تحویل', {
+            'fields': ('total_shipment_weight', 'total_delivery_weight'),
+            'description': 'این مقادیر از اقلام سفارش محاسبه می‌شوند'
+        }),
+        ('وضعیت و تاریخ', {
+            'fields': ('status', 'creation_date', 'created_at', 'updated_at')
+        }),
+        ('اطلاعات دیگر', {
+            'fields': ('freight_payment_type', 'accounting_document_number'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(OrderItem)
 class OrderItemAdmin(admin.ModelAdmin):
-    list_display = ['id', 'order', 'product']
-    list_filter = ['order']
-    search_fields = ['order__order_number']
+    list_display = ['id', 'order', 'product', 'weight_unit', 'quantity', 'unit_price', 'total_purchase_cost']
+    list_filter = ['order', 'weight_unit']
+    search_fields = ['order__order_number', 'product__name']
+    readonly_fields = ['total_purchase_cost']
+    fieldsets = (
+        ('اطلاعات اصلی', {
+            'fields': ('order', 'product')
+        }),
+        ('واحد و مقدار', {
+            'fields': ('weight_unit', 'bag_weight', 'quantity')
+        }),
+        ('قیمت و هزینه‌ها', {
+            'fields': ('unit_price', 'discount', 'additional_charges', 'vat')
+        }),
+        ('هزینه‌های محاسبه شده', {
+            'fields': ('cost_without_freight', 'freight_cost', 'total_purchase_cost'),
+            'classes': ('collapse',)
+        }),
+    )
 
 
 @admin.register(OrderDocument)

@@ -19,19 +19,19 @@ class CreateOrderForm(forms.ModelForm):
         model = Order
         fields = [
             'order_number',
+            'customer',
             'order_type',
             'registration_source',
             'status',
             'freight_payment_type',
-            'total_order_weight',
         ]
         widgets = {
             'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
+            'customer': forms.Select(attrs={'class': 'form-control'}),
             'order_type': forms.Select(attrs={'class': 'form-control'}),
             'registration_source': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
             'freight_payment_type': forms.Select(attrs={'class': 'form-control'}),
-            'total_order_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -39,20 +39,24 @@ class CreateOrderForm(forms.ModelForm):
         accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
         super().__init__(*args, **kwargs)
 
+        # فیلتر کردن مشتریان - فقط نمایش مشتریان واقعی
+        from core.PersonFolder.PersonModel import Person
+        if 'customer' in self.fields:
+            self.fields['customer'].queryset = Person.objects.filter(type='customer').order_by('name')
+            self.fields['customer'].empty_label = '-- انتخاب مشتری --'
+
         # Set defaults for creation context
         self.fields['order_type'].required = False
         self.fields['registration_source'].required = False
         self.fields['status'].required = False
-        self.fields['total_order_weight'].required = False
 
         # Read-only/display-only fields
         if 'status' in self.fields:
             self.fields['status'].disabled = True
-        if 'total_order_weight' in self.fields:
-            self.fields['total_order_weight'].disabled = True
 
         # Required fields
         self.fields['order_number'].required = True
+        self.fields['customer'].required = True
         self.fields['freight_payment_type'].required = True
 
         # Remove non-accessible fields if mapping provided
@@ -78,10 +82,17 @@ class CreateOrderForm(forms.ModelForm):
 class OrderItemForm(forms.Form):
     """
     فرم قلم سفارش
-    فیلدهای اجباری: product, requested_unit, quantity, unit_price
-    اختیاری: discount, additional_charges, vat
+    فیلدهای اجباری: product, weight_unit, quantity, unit_price
+    اختیاری: bag_weight, discount, additional_charges, vat
     نمایشی: total_purchase_cost (محاسبه بعد از ذخیره)
     """
+    WEIGHT_UNIT_CHOICES = [
+        ('kg', 'کیلوگرم'),
+        ('ton', 'تن'),
+        ('bag', 'کیسه'),
+        ('piece', 'عدد'),
+    ]
+    
     def __init__(self, *args, **kwargs):
         accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
         super().__init__(*args, **kwargs)
@@ -97,24 +108,39 @@ class OrderItemForm(forms.Form):
         label='محصول',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    weight_unit = forms.ChoiceField(
+        choices=WEIGHT_UNIT_CHOICES,
+        required=True,
+        initial='kg',
+        label='واحد وزن',
+        widget=forms.Select(attrs={'class': 'form-control weight-unit-select'})
+    )
+    bag_weight = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        label='وزن هر کیسه (کیلوگرم)',
+        widget=forms.NumberInput(attrs={'class': 'form-control bag-weight-input', 'step': '0.01'}),
+        help_text='فقط برای واحد کیسه'
+    )
     requested_unit = forms.CharField(
         max_length=50,
-        required=True,
-        label='واحد',
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        required=False,
+        label='واحد (قدیمی)',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'style': 'display:none;'})
     )
     quantity = forms.DecimalField(
         max_digits=10,
         decimal_places=2,
         required=True,
-        label='مقدار',
+        label='مقدار/وزن',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
     unit_price = forms.DecimalField(
         max_digits=12,
         decimal_places=2,
         required=True,
-        label='فی',
+        label='فی (قیمت واحد)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
     discount = forms.DecimalField(
@@ -145,10 +171,17 @@ class OrderItemForm(forms.Form):
     def clean(self):
         cleaned = super().clean()
         # Ensure non-negative numbers where applicable
-        for key in ['quantity', 'unit_price', 'discount', 'additional_charges', 'vat']:
+        for key in ['quantity', 'unit_price', 'bag_weight', 'discount', 'additional_charges', 'vat']:
             value = cleaned.get(key)
             if value is not None and value < 0:
                 self.add_error(key, 'مقدار نمی‌تواند منفی باشد.')
+        
+        # بررسی اینکه اگر واحد کیسه است، وزن کیسه باید وارد شود
+        weight_unit = cleaned.get('weight_unit')
+        bag_weight = cleaned.get('bag_weight')
+        if weight_unit == 'bag' and not bag_weight:
+            self.add_error('bag_weight', 'برای واحد کیسه، وزن هر کیسه الزامی است.')
+        
         return cleaned
 
     def to_instance(self, order: Order) -> OrderItem:
@@ -156,7 +189,9 @@ class OrderItemForm(forms.Form):
         item = OrderItem(
             order=order,
             product=data.get('product'),
-            requested_unit=data.get('requested_unit'),
+            weight_unit=data.get('weight_unit'),
+            bag_weight=data.get('bag_weight'),
+            requested_unit=data.get('requested_unit') or data.get('weight_unit'),  # fallback
             quantity=data.get('quantity'),
             unit_price=data.get('unit_price'),
             discount=data.get('discount') or Decimal('0'),
@@ -214,15 +249,17 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
     # Mapping for order form
     order_field_mapping = {
         'order_number': ('Order', 'order_number'),
+        'customer': ('Order', 'customer'),
         'order_type': ('Order', 'order_type'),
         'registration_source': ('Order', 'registration_source'),
         'status': ('Order', 'status'),
         'freight_payment_type': ('Order', 'freight_payment_type'),
-        'total_order_weight': ('Order', 'total_order_weight'),
     }
     # Mapping for item form
     item_field_mapping = {
         'product': ('OrderItem', 'product'),
+        'weight_unit': ('OrderItem', 'weight_unit'),
+        'bag_weight': ('OrderItem', 'bag_weight'),
         'requested_unit': ('OrderItem', 'requested_unit'),
         'quantity': ('OrderItem', 'quantity'),
         'unit_price': ('OrderItem', 'unit_price'),

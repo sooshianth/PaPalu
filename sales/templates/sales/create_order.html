@@ -148,6 +148,41 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // تابع برای مدیریت نمایش فیلد "وزن هر کیسه" برای هر قلم
+    function setupBagWeightToggle(formRow) {
+        const weightUnitSelect = formRow.querySelector('.weight-unit-select');
+        const bagWeightField = formRow.querySelector('.bag-weight-input');
+        
+        if (weightUnitSelect && bagWeightField) {
+            const bagWeightContainer = bagWeightField.closest('.bag-weight-field');
+            
+            function toggleBagWeight() {
+                if (weightUnitSelect.value === 'bag') {
+                    if (bagWeightContainer) {
+                        bagWeightContainer.style.display = 'block';
+                    }
+                    bagWeightField.required = true;
+                } else {
+                    if (bagWeightContainer) {
+                        bagWeightContainer.style.display = 'none';
+                    }
+                    bagWeightField.required = false;
+                    bagWeightField.value = '';
+                }
+            }
+            
+            // اجرای اولیه
+            toggleBagWeight();
+            
+            // Listen for changes
+            weightUnitSelect.addEventListener('change', toggleBagWeight);
+        }
+    }
+    
+    // اعمال به تمام فرم‌های موجود
+    document.querySelectorAll('.item-form-row').forEach(setupBagWeightToggle);
+    
+    // مدیریت formset اقلام
     const formsetContainer = document.getElementById('items-container');
     const addButton = document.getElementById('add-item-btn');
     
@@ -211,6 +246,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // اضافه کردن به container
         formsetContainer.appendChild(newForm);
         
+        // اعمال toggle bag weight به فرم جدید
+        setupBagWeightToggle(newForm);
+        
         // به‌روزرسانی تعداد فرم‌ها
         formCount++;
         totalFormsInput.value = formCount;
@@ -258,6 +296,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     {{ form.order_number }}
                     {% if form.order_number.errors %}
                         <div class="text-danger">{{ form.order_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields_main.customer %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.customer.label }}</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                        <div class="text-danger">{{ form.customer.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -311,16 +359,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% if form.status.errors %}
                         <div class="text-danger">{{ form.status.errors.0 }}</div>
                     {% endif %}
-                </div>
-                {% endif %}
-
-                {% if accessible_fields_main.total_order_weight %}
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">{{ form.total_order_weight.label }}</label>
-                    {{ form.total_order_weight }}
-                    {% if form.total_order_weight.errors %}
-                        <div class="text-danger">{{ form.total_order_weight.errors.0 }}</div>
-                    {% endif %}
+                    <small style="color: var(--gray-600); font-size: 0.85rem; display: block; margin-top: 3px;">
+                        وضعیت پس از ثبت: "در انتظار صدور پیش فاکتور"
+                    </small>
                 </div>
                 {% endif %}
             </div>
@@ -359,13 +400,26 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             {% endif %}
 
-                            {% if accessible_fields_item.requested_unit %}
+                            {% if accessible_fields_item.weight_unit %}
                             <div class="col-md-3 mb-3">
-                                <label class="form-label required-field">{{ f.requested_unit.label }}</label>
-                                {{ f.requested_unit }}
-                                {% if f.requested_unit.errors %}
-                                    <div class="text-danger">{{ f.requested_unit.errors.0 }}</div>
+                                <label class="form-label required-field">{{ f.weight_unit.label }}</label>
+                                {{ f.weight_unit }}
+                                {% if f.weight_unit.errors %}
+                                    <div class="text-danger">{{ f.weight_unit.errors.0 }}</div>
                                 {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if accessible_fields_item.bag_weight %}
+                            <div class="col-md-3 mb-3 bag-weight-field">
+                                <label class="form-label">{{ f.bag_weight.label }}</label>
+                                {{ f.bag_weight }}
+                                {% if f.bag_weight.errors %}
+                                    <div class="text-danger">{{ f.bag_weight.errors.0 }}</div>
+                                {% endif %}
+                                <small style="color: var(--gray-600); font-size: 0.85rem; display: block; margin-top: 3px;">
+                                    فقط برای واحد "کیسه"
+                                </small>
                             </div>
                             {% endif %}
 

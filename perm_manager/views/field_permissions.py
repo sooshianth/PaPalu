@@ -42,7 +42,7 @@ def field_permissions_view(request):
                     'content_type_id': ct.id,
                     'fields': sorted(fields, key=lambda x: x['label'])
                 })
-
+    
     # فقط فیلدهایی که به‌طور صریح در ManagedField ثبت شده‌اند در جدول اصلی نمایش داده می‌شوند
     managed_fields_qs = ManagedField.objects.select_related('content_type').all().order_by(
         'content_type__app_label', 'content_type__model', 'field_name'
