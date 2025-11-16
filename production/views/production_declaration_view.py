@@ -266,7 +266,7 @@ def production_program_crud_view(request, program_id=None):
         bom_data = {}
         
         try:
-            all_production_infos = ProductionInfo.objects.all().select_related('product').prefetch_related('bom_items__raw_material')
+            all_production_infos = ProductionInfo.objects.all().select_related('product').prefetch_related('bom_items')
             for prod_info in all_production_infos:
                 product_id = prod_info.product.id if prod_info.product else None
                 if product_id:

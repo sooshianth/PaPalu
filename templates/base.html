@@ -912,15 +912,44 @@
                         <span class="nav-text">تامین</span>
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="#" class="nav-link" title="تولید">
+                <li class="nav-item has-submenu" id="productionSubmenu">
+                    <a href="#" class="nav-link" title="تولید" id="productionMainLink">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <span class="nav-text">تولید</span>
+                        <svg class="submenu-toggle" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; margin-right: auto;">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{% url 'production:production_declaration' %}" class="nav-link submenu-link" title="اعلام تولید">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">اعلام تولید</span>
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{% url 'production:program_list' %}" class="nav-link submenu-link" title="لیست برنامه‌ها">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">لیست برنامه‌ها</span>
+                            </a>
+                        </li>
+                        <li class="submenu-item">
+                            <a href="{% url 'production:program_create' %}" class="nav-link submenu-link" title="ایجاد برنامه">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">ایجاد برنامه</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
                 <li class="nav-item">
                     <a href="#" class="nav-link" title="توزیع">
@@ -1078,7 +1107,7 @@
                 </a>
             </li>
             <li class="mobile-nav-item">
-                <a href="#" class="mobile-nav-link" title="تولید">
+                <a href="{% url 'production:production_declaration' %}" class="mobile-nav-link" title="تولید">
                     <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1210,35 +1239,67 @@ document.addEventListener('DOMContentLoaded', function() {
      * Initialize submenu functionality
      */
     function initSubmenu() {
+        // Sales submenu
         const salesSubmenu = document.getElementById('salesSubmenu');
         const salesMainLink = document.getElementById('salesMainLink');
         
-        if (!salesSubmenu || !salesMainLink) return;
+        // Production submenu
+        const productionSubmenu = document.getElementById('productionSubmenu');
+        const productionMainLink = document.getElementById('productionMainLink');
         
-        // Check if current page is in sales section
+        // Check if current page is in sales or production section
         const currentPath = window.location.pathname;
-        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/'];
+        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/'];
+        const productionPaths = ['/production/'];
         const isSalesPage = salesPaths.some(path => currentPath.includes(path));
+        const isProductionPage = productionPaths.some(path => currentPath.includes(path));
         
-        // Auto-expand if on sales page
-        if (isSalesPage) {
-            salesSubmenu.classList.add('expanded');
+        // Setup sales submenu
+        if (salesSubmenu && salesMainLink) {
+            // Auto-expand if on sales page
+            if (isSalesPage) {
+                salesSubmenu.classList.add('expanded');
+            }
+            
+            // Toggle submenu on main link click
+            salesMainLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                salesSubmenu.classList.toggle('expanded');
+                
+                // Save state to localStorage
+                const isExpanded = salesSubmenu.classList.contains('expanded');
+                localStorage.setItem('salesSubmenuExpanded', isExpanded);
+            });
+            
+            // Load saved state from localStorage
+            const savedState = localStorage.getItem('salesSubmenuExpanded');
+            if (savedState === 'true' && !isSalesPage) {
+                salesSubmenu.classList.add('expanded');
+            }
         }
         
-        // Toggle submenu on main link click
-        salesMainLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            salesSubmenu.classList.toggle('expanded');
+        // Setup production submenu
+        if (productionSubmenu && productionMainLink) {
+            // Auto-expand if on production page
+            if (isProductionPage) {
+                productionSubmenu.classList.add('expanded');
+            }
             
-            // Save state to localStorage
-            const isExpanded = salesSubmenu.classList.contains('expanded');
-            localStorage.setItem('salesSubmenuExpanded', isExpanded);
-        });
-        
-        // Load saved state from localStorage
-        const savedState = localStorage.getItem('salesSubmenuExpanded');
-        if (savedState === 'true' && !isSalesPage) {
-            salesSubmenu.classList.add('expanded');
+            // Toggle submenu on main link click
+            productionMainLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                productionSubmenu.classList.toggle('expanded');
+                
+                // Save state to localStorage
+                const isExpanded = productionSubmenu.classList.contains('expanded');
+                localStorage.setItem('productionSubmenuExpanded', isExpanded);
+            });
+            
+            // Load saved state from localStorage
+            const savedState = localStorage.getItem('productionSubmenuExpanded');
+            if (savedState === 'true' && !isProductionPage) {
+                productionSubmenu.classList.add('expanded');
+            }
         }
     }
     

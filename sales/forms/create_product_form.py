@@ -404,20 +404,15 @@ class BOMForm(forms.ModelForm):
 
     class Meta:
         model = BOM
-        fields = ['raw_material_id', 'raw_material', 'unit_used', 'quantity']
+        fields = ['raw_material', 'unit_used', 'quantity']
         widgets = {
-            'raw_material_id': forms.TextInput(attrs={
+            'raw_material': forms.Select(attrs={
                 'class': 'form-control',
-                'dir': 'ltr',
-                'placeholder': 'شناسه ماده اولیه'
-            }),
-            'raw_material': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'ماده اولیه (ها)'
+                'placeholder': 'ماده اولیه'
             }),
             'unit_used': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'واحد به کار رفته (ها)'
+                'placeholder': 'واحد به کار رفته'
             }),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -429,7 +424,6 @@ class BOMForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # تنظیم فیلدهای اجباری - در formset، فیلدها اختیاری هستند
-        self.fields['raw_material_id'].required = False
         self.fields['raw_material'].required = False
         self.fields['unit_used'].required = False
         self.fields['quantity'].required = False
@@ -449,7 +443,6 @@ class BOMForm(forms.ModelForm):
         
         # بررسی اینکه آیا حداقل یک فیلد پر شده است
         has_data = any([
-            cleaned_data.get('raw_material_id'),
             cleaned_data.get('raw_material'),
             cleaned_data.get('unit_used'),
             cleaned_data.get('quantity'),
@@ -457,8 +450,6 @@ class BOMForm(forms.ModelForm):
         
         # اگر حداقل یک فیلد پر شده باشد، همه فیلدها باید پر شوند
         if has_data:
-            if not cleaned_data.get('raw_material_id'):
-                self.add_error('raw_material_id', 'شناسه ماده اولیه الزامی است.')
             if not cleaned_data.get('raw_material'):
                 self.add_error('raw_material', 'ماده اولیه الزامی است.')
             if not cleaned_data.get('unit_used'):
