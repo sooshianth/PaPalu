@@ -54,8 +54,8 @@ class OrderItem(models.Model):
     
     # واحد درخواستی (deprecated - استفاده از weight_unit)
     requested_unit = models.CharField(
-        max_length=3,
-        choices=UNIT_CHOICES,
+        max_length=10,
+        choices=WEIGHT_UNIT_CHOICES,
         null=True,
         blank=True,
         verbose_name='واحد درخواستی (قدیمی)'
@@ -73,8 +73,8 @@ class OrderItem(models.Model):
     
     # واحد فرعی (اختیاری)
     secondary_unit = models.CharField(
-        max_length=3,
-        choices=UNIT_CHOICES,
+        max_length=10,
+        choices=WEIGHT_UNIT_CHOICES,
         null=True,
         blank=True,
         verbose_name='واحد فرعی'
