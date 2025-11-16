@@ -65,12 +65,13 @@ class CreateProformaForm(forms.ModelForm):
         # تنظیم فیلد order به صورت SelectField - فقط سفارش‌های نوع فروش
         if 'order' in self.fields:
             self.fields['order'] = forms.ModelChoiceField(
-                queryset=Order.objects.filter(order_type='sale').order_by('-created_at'),
+                queryset=Order.objects.filter(order_type='sale').select_related('customer').order_by('-created_at'),
                 required=True,
                 label='سفارش',
                 widget=forms.Select(attrs={
                     'class': 'form-control',
-                    'placeholder': 'انتخاب سفارش'
+                    'placeholder': 'انتخاب سفارش',
+                    'onchange': 'updateCustomerFromOrder(this.value)'  # JavaScript برای انتخاب خودکار مشتری
                 }),
                 empty_label='-- انتخاب سفارش --'
             )

@@ -241,6 +241,32 @@
 <script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 <script>
+// تابع برای انتخاب خودکار مشتری بر اساس سفارش
+function updateCustomerFromOrder(orderNumber) {
+    if (!orderNumber) {
+        return;
+    }
+    
+    // دریافت اطلاعات مشتری از API
+    fetch(`/sales/api/order/${orderNumber}/customer/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.customer_id) {
+                // انتخاب مشتری در dropdown
+                const customerSelect = document.getElementById('id_customer');
+                if (customerSelect) {
+                    customerSelect.value = data.customer_id;
+                    
+                    // نمایش پیام موفقیت
+                    console.log(`مشتری "${data.customer_name}" به صورت خودکار انتخاب شد`);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('خطا در دریافت اطلاعات مشتری:', error);
+        });
+}
+
 $(document).ready(function() {
     // تبدیل فیلد تاریخ اعتبار به تقویم شمسی
     var validityDateInput = $('#id_validity_date');

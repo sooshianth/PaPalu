@@ -1,6 +1,7 @@
 from django.db import models
 from core.PersonFolder import Person
 from core.TransportFolder import Transport
+from core.OrderFolder import Order
 
 
 class Settlement(models.Model):
@@ -29,17 +30,21 @@ class Settlement(models.Model):
     )
 
     # شماره سفارش
-    order_number = models.CharField(
-        max_length=50,
-        verbose_name='شماره سفارش',
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='settlements',
+        verbose_name='سفارش',
         null=True,
         blank=True
     )
 
     # شماره بارنامه
-    waybill_number = models.CharField(
-        max_length=50,
-        verbose_name='شماره بارنامه',
+    waybill = models.ForeignKey(
+        Transport,
+        on_delete=models.CASCADE,
+        related_name='settlements',
+        verbose_name='بارنامه',
         null=True,
         blank=True
     )
@@ -47,7 +52,7 @@ class Settlement(models.Model):
     # شخص بدهکار
     debtor_person = models.ForeignKey(
         Person,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='debtor_settlements',
         verbose_name='شخص بدهکار',
         null=True,
@@ -94,7 +99,16 @@ class Settlement(models.Model):
     class Meta:
         verbose_name = 'تسویه | تسویه ها'
         verbose_name_plural = 'تسویه | تسویه ها'
-        ordering = ['-id', 'order_number']
+        # 'order_number' فیلدی روی خود Settlement نیست، اگر لازم شد بعداً می‌توانی آن را به
+        # 'order__order_number' (در صورت وجود این فیلد روی مدل Order) تغییر دهی.
+        # فعلاً برای رفع خطای مایگریشن، فقط بر اساس id مرتب می‌کنیم.
+        ordering = ['-id']
 
     def __str__(self):
-        return f"تسویه {self.settlement_type or ''} - سفارش: {self.order_number or 'بدون شماره'}"
+        order_number = None
+        try:
+            # اگر مدل Order فیلدی به نام order_number داشته باشد
+            order_number = getattr(self.order, 'order_number', None)
+        except Exception:
+            order_number = None
+        return f"تسویه {self.settlement_type or ''} - سفارش: {order_number or 'بدون شماره'}"

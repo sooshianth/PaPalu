@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.template.loader import render_to_string
@@ -291,6 +291,33 @@ def proforma_detail_view(request, proforma_id):
         'page_title': f'جزئیات پیش فاکتور {proforma.proforma_number or proforma.id}',
     }
     return render(request, 'sales/proforma_detail.html', context)
+
+
+@login_required
+def get_order_customer_api(request, order_number):
+    """
+    API endpoint برای دریافت اطلاعات مشتری یک سفارش
+    استفاده می‌شود برای انتخاب خودکار مشتری در فرم پیش‌فاکتور
+    """
+    try:
+        order = Order.objects.select_related('customer').get(order_number=order_number)
+        
+        # بررسی دسترسی
+        if not request.user.is_superuser:
+            if order.registered_by != request.user:
+                return JsonResponse({'error': 'شما دسترسی به این سفارش ندارید'}, status=403)
+        
+        # بازگشت اطلاعات مشتری
+        data = {
+            'customer_id': order.customer.national_id if order.customer else None,
+            'customer_name': order.customer.name if order.customer else None,
+        }
+        
+        return JsonResponse(data)
+    except Order.DoesNotExist:
+        return JsonResponse({'error': 'سفارش یافت نشد'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required

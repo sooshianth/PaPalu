@@ -14,6 +14,12 @@ class TransactionDocument(models.Model):
         ('cancelled', 'لغو شده'),
     ]
 
+    PAYMENT_TYPE_CHOICES = [
+        ('market_cash', 'نقدی بازارگاه'),
+        ('bank', 'بانکی'),
+        ('cheque', 'چک'),
+    ]
+
     # شماره سند حسابداری به عنوان Primary Key
     accounting_document_number = models.CharField(
         max_length=50,
@@ -29,6 +35,15 @@ class TransactionDocument(models.Model):
         verbose_name='تسویه',
         null=True,
         blank=True
+    )
+
+    # نوع تسویه (نحوه پرداخت)
+    payment_type = models.CharField(
+        max_length=20,
+        choices=PAYMENT_TYPE_CHOICES,
+        verbose_name='نوع تسویه',
+        null=True,
+        blank=True,
     )
 
     # شماره سند
