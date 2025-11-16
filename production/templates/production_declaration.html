@@ -943,13 +943,12 @@ async function loadTable(tableType, pageNum = null, extraParams = '') {
 
 // Wrapper for completed page loading
 function loadCompletedPage(pageNum) {
-    const urlParams = new URLSearchParams(window.location.search);
     const extraParams = new URLSearchParams();
     
-    // Preserve sorting
-    if (urlParams.has('sort_completed')) {
-        extraParams.set('sort_completed', urlParams.get('sort_completed'));
-        extraParams.set('dir_completed', urlParams.get('dir_completed'));
+    // Preserve sorting from current sort state
+    if (sortState.completed.column) {
+        extraParams.set('sort_completed', sortState.completed.column);
+        extraParams.set('dir_completed', sortState.completed.direction);
     }
     
     // Preserve searching
