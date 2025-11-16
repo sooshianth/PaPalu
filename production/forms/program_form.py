@@ -6,7 +6,7 @@ class ProductionProgramForm(forms.ModelForm):
     """فرم برنامه تولید با استایل مشابه فرم های فروش و اعتبارسنجی گردش وضعیت.
 
     قوانین اعتبارسنجی (خلاصه):
-      - در وضعیت های غیر Draft فیلدهای الزامی باید پر باشند: formula_id, product, planned_weight_ton,
+      - در وضعیت های غیر Draft فیلدهای الزامی باید پر باشند: program_id, product, planned_weight_ton,
         predicted_start_time, predicted_end_time (end > start), execution_date, packaging_type.
       - planned_weight_ton > 0 ، produced_weight_ton در صورت ورود >0.
       - پس از تایید (confirmed) فیلدهای اصلی غیر قابل ویرایش می شوند (به جز produced_weight_ton برای بروزرسانی تحقق).
@@ -25,10 +25,10 @@ class ProductionProgramForm(forms.ModelForm):
         label='محصول',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
-    formula_id = forms.CharField(
+    program_id = forms.CharField(
         max_length=100,
         required=False,
-        label='شناسه فرمول',
+        label='شناسه برنامه',
         widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
     )
     planned_weight_ton = forms.DecimalField(
@@ -86,7 +86,7 @@ class ProductionProgramForm(forms.ModelForm):
     class Meta:
         model = ProductionProgram
         fields = [
-            'production_info', 'product', 'formula_id', 'planned_weight_ton',
+            'production_info', 'product', 'program_id', 'planned_weight_ton',
             'predicted_start_time', 'predicted_end_time', 'execution_date', 'packaging_type', 'extra_description',
             'inventory_snapshot', 'net_unplanned_requirement', 'produced_weight_ton', 'status'
         ]
@@ -97,7 +97,7 @@ class ProductionProgramForm(forms.ModelForm):
         instance: ProductionProgram | None = getattr(self, 'instance', None)
         if instance and instance.pk and instance.status != ProductionProgram.Status.DRAFT:
             lock_names = [
-                'production_info', 'product', 'formula_id', 'planned_weight_ton',
+                'production_info', 'product', 'program_id', 'planned_weight_ton',
                 'predicted_start_time', 'predicted_end_time', 'execution_date', 'packaging_type',
                 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
             ]
@@ -118,7 +118,7 @@ class ProductionProgramForm(forms.ModelForm):
         cleaned = super().clean()
         status = cleaned.get('status') or (self.instance.status if self.instance.pk else ProductionProgram.Status.DRAFT)
         required_if_active = [
-            'formula_id', 'product', 'planned_weight_ton', 'predicted_start_time',
+            'program_id', 'product', 'planned_weight_ton', 'predicted_start_time',
             'predicted_end_time', 'execution_date', 'packaging_type'
         ]
         if status != ProductionProgram.Status.DRAFT:
@@ -143,7 +143,7 @@ class ProductionProgramForm(forms.ModelForm):
             # Re-fetch from DB for locked fields to avoid accidental overwrite to None
             orig = ProductionProgram.objects.get(pk=instance.pk)
             for attr in [
-                'production_info', 'product', 'formula_id', 'planned_weight_ton', 'predicted_start_time',
+                'production_info', 'product', 'program_id', 'planned_weight_ton', 'predicted_start_time',
                 'predicted_end_time', 'execution_date', 'packaging_type', 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
             ]:
                 setattr(instance, attr, getattr(orig, attr))

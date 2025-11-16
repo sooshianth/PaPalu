@@ -1,0 +1,148 @@
+{% load static %}
+
+{% if page_obj.has_other_pages %}
+<div class="pagination-container">
+    <div class="pagination-controls">
+        <!-- Previous button -->
+        {% if page_obj.has_previous %}
+        <button class="pagination-btn pagination-arrow" onclick="loadCompletedPage({{ page_obj.previous_page_number }})">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        {% else %}
+        <button class="pagination-btn pagination-arrow" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        {% endif %}
+        
+        <!-- Page numbers -->
+        {% with page_obj.paginator as paginator %}
+            {% with page_obj.number as current_page %}
+                {% with paginator.num_pages as total_pages %}
+                
+                    <!-- Always show first page -->
+                    {% if current_page > 3 %}
+                    <button class="pagination-btn {% if current_page == 1 %}active{% endif %}" onclick="loadCompletedPage(1)">1</button>
+                    {% endif %}
+                    
+                    <!-- Show dots if there's a gap -->
+                    {% if current_page > 4 %}
+                    <span class="pagination-dots">...</span>
+                    {% endif %}
+                    
+                    <!-- Show pages around current page -->
+                    {% for num in paginator.page_range %}
+                        {% if num >= current_page|add:'-2' and num <= current_page|add:'2' %}
+                        <button class="pagination-btn {% if num == current_page %}active{% endif %}" onclick="loadCompletedPage({{ num }})">
+                            {{ num }}
+                        </button>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <!-- Show dots if there's a gap -->
+                    {% if current_page < total_pages|add:'-3' %}
+                    <span class="pagination-dots">...</span>
+                    {% endif %}
+                    
+                    <!-- Always show last page -->
+                    {% if current_page < total_pages|add:'-2' %}
+                    <button class="pagination-btn {% if current_page == total_pages %}active{% endif %}" onclick="loadCompletedPage({{ total_pages }})">
+                        {{ total_pages }}
+                    </button>
+                    {% endif %}
+                
+                {% endwith %}
+            {% endwith %}
+        {% endwith %}
+        
+        <!-- Next button -->
+        {% if page_obj.has_next %}
+        <button class="pagination-btn pagination-arrow" onclick="loadCompletedPage({{ page_obj.next_page_number }})">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        {% else %}
+        <button class="pagination-btn pagination-arrow" disabled>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 18L15 12L9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        </button>
+        {% endif %}
+    </div>
+    
+    <div class="pagination-info">
+        صفحه {{ page_obj.number }} از {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} مورد)
+    </div>
+</div>
+
+<style>
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.pagination-btn {
+    min-width: 36px;
+    height: 36px;
+    border: 1px solid #dee2e6;
+    background: white;
+    color: #495057;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+}
+
+.pagination-btn:hover:not(:disabled):not(.active) {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pagination-btn.active {
+    background: var(--primary-green);
+    color: white;
+    border-color: var(--primary-green);
+    font-weight: 600;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pagination-arrow {
+    padding: 0;
+    min-width: 36px;
+}
+
+.pagination-dots {
+    padding: 0 8px;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+</style>
+{% endif %}

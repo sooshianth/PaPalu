@@ -14,7 +14,7 @@ class ProductionProgram(models.Model):
       Draft -> Confirmed -> In Progress -> Completed
 
     فیلدهای کلیدی (مطابق تسک):
-      formula_id (شناسه فرمول), product, planned_weight_ton (تناژ برنامه ریزی شده),
+      program_id (شناسه برنامه), product, planned_weight_ton (تناژ برنامه ریزی شده),
       predicted_start_time (ساعت شروع پیشبینی شده), predicted_end_time (ساعت پایان پیشبینی شده),
       execution_date (تاریخ اجرای برنامه), packaging_type (نوع بسته بندی), extra_description (توضیحات اضافه).
     """
@@ -45,9 +45,9 @@ class ProductionProgram(models.Model):
         verbose_name='محصول',
         null=True, blank=True
     )
-    formula_id = models.CharField(
+    program_id = models.CharField(
         max_length=100,
-        verbose_name='شناسه فرمول',
+        verbose_name='شناسه برنامه',
         null=True, blank=True
     )
     planned_weight_ton = models.DecimalField(
@@ -140,7 +140,7 @@ class ProductionProgram(models.Model):
 
     def __str__(self):
         p = self.product or (self.production_info.product if self.production_info else None)
-        return f"برنامه تولید {p.name if p else ''} ({self.formula_id or ''}) - {self.get_status_display()}"
+        return f"برنامه تولید {p.name if p else ''} ({self.program_id or ''}) - {self.get_status_display()}"
 
     @property
     def is_editable(self):
@@ -181,8 +181,8 @@ class ProductionProgram(models.Model):
     def save(self, *args, **kwargs):
         # Auto populate formula/product from production_info if missing
         if self.production_info:
-            if not self.formula_id:
-                self.formula_id = self.production_info.formula_id
+            if not self.program_id:
+                self.program_id = self.production_info.formula_id
             if not self.product:
                 self.product = self.production_info.product
         # Compute consumption & priority when confirming or in progress

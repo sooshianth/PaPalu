@@ -319,8 +319,8 @@
                 <span class="detail-value">{{ form.production_info }}</span>
             </div>
             <div class="detail-row">
-                <span class="detail-label">{{ form.formula_id.label }}:</span>
-                <span class="detail-value">{{ form.formula_id }}</span>
+                <span class="detail-label">{{ form.program_id.label }}:</span>
+                <span class="detail-value">{{ form.program_id }}</span>
             </div>
         </div>
         
@@ -483,7 +483,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Add filtered options from context data
                 productionInfosData[selectedProductId].forEach(item => {
                     const option = new Option(
-                        `${item.formula_id} - ${item.specific_production_instruction || ''}`,
+                        `${item.program_id} - ${item.specific_production_instruction || ''}`,
                         item.id
                     );
                     productionInfoSelect.add(option);
@@ -525,7 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let html = `
             <div style="margin-bottom: 16px;">
-                <strong>شناسه فرمول:</strong> ${data.formula_id || '-'}<br>
+                <strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>
                 <strong>حداقل تناژ تولید:</strong> ${data.min_batch_production || '-'} تن<br>
                 <strong>دستورالعمل تولید:</strong> ${data.specific_production_instruction || '-'}
             </div>
