@@ -416,8 +416,8 @@
                     <tbody>
                         {% for bom in production_info.bom_items.all %}
                         <tr>
-                            <td><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ bom.raw_material_id|default:"-" }}</code></td>
-                            <td>{{ bom.raw_material|default:"-" }}</td>
+                            <td><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ bom.raw_material.raw_material_id|default:"-" }}</code></td>
+                            <td>{{ bom.raw_material.name|default:"-" }}</td>
                             <td>{{ bom.unit_used|default:"-" }}</td>
                             <td>{{ bom.quantity|default:"-" }}</td>
                         </tr>

@@ -1,5 +1,6 @@
 from django.db import models
 from .ProductionInfoModel import ProductionInfo
+from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 
 
 class BOM(models.Model):
@@ -16,24 +17,18 @@ class BOM(models.Model):
         blank=True,
     )
     
-    raw_material_id = models.CharField(
-        max_length=100,
-        verbose_name='شناسه ماده اولیه',
-        null=True,
-        blank=True,
-    )
-    
-    # بعدا باید فارین کی بشه به کلاس مواد اولیه
-    raw_material = models.CharField(
-        max_length=255,
-        verbose_name='ماده اولیه (ها)',
+    raw_material = models.ForeignKey(
+        RawMaterial,
+        on_delete=models.CASCADE,
+        related_name='bom_usages',
+        verbose_name='ماده اولیه',
         null=True,
         blank=True,
     )
     
     unit_used = models.CharField(
         max_length=50,
-        verbose_name='واحد به کار رفته (ها)',
+        verbose_name='واحد به کار رفته',
         null=True,
         blank=True,
     )
@@ -57,7 +52,7 @@ class BOM(models.Model):
         verbose_name_plural = 'محصول | ماده اولیه (BOM)'
     
     def __str__(self):
-        raw_material_name = self.raw_material or self.raw_material_id or 'بدون نام'
+        raw_material_name = self.raw_material.name if self.raw_material else 'بدون نام'
         if self.production_info and self.production_info.product:
             return f"{raw_material_name} - {self.production_info.product.name}"
         return f"{raw_material_name}"

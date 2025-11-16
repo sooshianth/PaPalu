@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 from django_jalali.db import models as jmodels
+from decimal import Decimal
 
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.ProductModel import Product
@@ -155,11 +156,11 @@ class ProductionProgram(models.Model):
         if not self.production_info or not self.planned_weight_ton:
             return {}
         summary = {}
-        min_batch = self.production_info.min_batch_production or 1
+        min_batch = self.production_info.min_batch_production or Decimal('1')
         for bom in self.production_info.bom_items.all():
-            if bom.quantity:
-                required = (bom.quantity * float(self.planned_weight_ton)) / float(min_batch)
-                summary[bom.raw_material_id or str(bom.id)] = round(required, 4)
+            if bom.quantity and bom.raw_material:
+                required = (bom.quantity * self.planned_weight_ton) / min_batch
+                summary[bom.raw_material.raw_material_id or str(bom.id)] = float(round(required, 4))
         return summary
 
     def compute_priority(self):
@@ -169,13 +170,13 @@ class ProductionProgram(models.Model):
             return None
         base_need = None
         if self.net_unplanned_requirement is not None:
-            base_need = float(self.net_unplanned_requirement)
+            base_need = self.net_unplanned_requirement
         elif self.inventory_snapshot is not None:
-            base_need = max(float(self.planned_weight_ton) - float(self.inventory_snapshot), 0)
+            base_need = max(self.planned_weight_ton - self.inventory_snapshot, Decimal('0'))
         if base_need is None:
             return None
-        pr = base_need / float(self.planned_weight_ton)
-        return round(min(max(pr, 0), 1.5), 3)
+        pr = base_need / self.planned_weight_ton
+        return float(round(min(max(pr, Decimal('0')), Decimal('1.5')), 3))
 
     def save(self, *args, **kwargs):
         # Auto populate formula/product from production_info if missing
@@ -195,5 +196,5 @@ class ProductionProgram(models.Model):
             self.completed_at = timezone.now()
         # Fulfillment percentage
         if self.produced_weight_ton and self.planned_weight_ton:
-            self.fulfillment_percentage = round((float(self.produced_weight_ton) / float(self.planned_weight_ton)) * 100, 2)
+            self.fulfillment_percentage = round((self.produced_weight_ton / self.planned_weight_ton) * Decimal('100'), 2)
         super().save(*args, **kwargs)

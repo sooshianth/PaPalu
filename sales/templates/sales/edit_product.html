@@ -488,15 +488,7 @@
                 <div class="formset-row" data-form-index="{{ forloop.counter0 }}">
                     {{ form.id }}
                     <div class="row">
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label required-field">{{ form.raw_material_id.label }}</label>
-                            {{ form.raw_material_id }}
-                            {% if form.raw_material_id.errors %}
-                                <div class="text-danger">{{ form.raw_material_id.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label required-field">{{ form.raw_material.label }}</label>
                             {{ form.raw_material }}
                             {% if form.raw_material.errors %}
@@ -512,7 +504,7 @@
                             {% endif %}
                         </div>
 
-                        <div class="col-md-2 mb-3">
+                        <div class="col-md-3 mb-3">
                             <label class="form-label required-field">{{ form.quantity.label }}</label>
                             {{ form.quantity }}
                             {% if form.quantity.errors %}
