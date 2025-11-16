@@ -1,10 +1,10 @@
 from django import forms
 from django.forms import BaseFormSet, formset_factory, modelformset_factory
-from django.contrib.contenttypes.models import ContentType
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from django_jalali.db import models as jmodels
+from access.helpers import check_field_access_prefer_edit
 
 
 class CreateProductForm(forms.ModelForm):
@@ -532,32 +532,17 @@ def get_accessible_product_fields(user, product_form: CreateProductForm = None):
         'invoice_description': 'invoice_description',
     }
     
+    # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
-        # superuser به همه فیلدها دسترسی دارد
         return {field: True for field in display_fields.keys()}
-    
-    from access.models.FieldAccessUserModel import FieldAccessRule
-    from django.contrib.contenttypes.models import ContentType
-    from core.ProductFolder.ProductModel import Product
-    
-    # استفاده از ContentType برای بررسی دسترسی
-    content_type = ContentType.objects.get_for_model(Product)
+
+    # استفاده از سیستم جدید FieldPermission
     accessible_fields = {}
-    
     for display_name, model_field_name in display_fields.items():
-        # بررسی آیا قانونی برای این فیلد وجود دارد
-        rule = FieldAccessRule.objects.filter(
-            user=user,
-            content_type=content_type,
-            field_name=model_field_name,
-            access_type='edit'
-        ).first()
-        
-        if rule is None:
-            # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
-            accessible_fields[display_name] = True
-        else:
-            # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
-            accessible_fields[display_name] = rule.allowed
-    
+        accessible_fields[display_name] = check_field_access_prefer_edit(
+            user,
+            Product,
+            model_field_name,
+        )
+
     return accessible_fields

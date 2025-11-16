@@ -5,6 +5,7 @@ from django.http import HttpResponseForbidden, HttpResponse
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.template.loader import render_to_string
+
 from core.RBACModel import user_has_task, TaskChoices
 from sales.forms.create_proforma_form import (
     CreateProformaForm,
@@ -17,8 +18,8 @@ from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
-from access.models.FieldAccessUserModel import FieldAccessRule
 from django.contrib.contenttypes.models import ContentType
+from access.helpers import check_field_access_prefer_edit
 import json
 import jdatetime
 
@@ -110,29 +111,18 @@ def get_accessible_proforma_fields_for_view(user):
         'validity_date': 'validity_date',
     }
     
+    # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
         return {field: True for field in display_fields.keys()}
-    
-    # استفاده از ContentType برای بررسی دسترسی
-    content_type = ContentType.objects.get_for_model(Proforma)
+
     accessible_fields = {}
-    
     for display_name, model_field_name in display_fields.items():
-        # بررسی آیا قانونی برای این فیلد وجود دارد
-        rule = FieldAccessRule.objects.filter(
-            user=user,
-            content_type=content_type,
-            field_name=model_field_name,
-            access_type='view'
-        ).first()
-        
-        if rule is None:
-            # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
-            accessible_fields[display_name] = True
-        else:
-            # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
-            accessible_fields[display_name] = rule.allowed
-    
+        accessible_fields[display_name] = check_field_access_prefer_edit(
+            user,
+            Proforma,
+            model_field_name,
+        )
+
     return accessible_fields
 
 

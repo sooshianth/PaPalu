@@ -3,8 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
+
 from core.RBACModel import user_has_task, TaskChoices
-from access.models.FieldAccessUserModel import FieldAccessRule
+from access.helpers import check_field_access_prefer_edit
 from sales.forms.create_customer_form import (
     CreateCustomerForm,
     build_delivery_address_formset,
@@ -12,7 +13,7 @@ from sales.forms.create_customer_form import (
     build_bank_account_formset,
     DeliveryAddressForm,
     RepresentativeForm,
-    BankAccountForm
+    BankAccountForm,
 )
 from core.PersonFolder import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
@@ -319,29 +320,7 @@ def get_accessible_form_fields(user, form):
                     continue
                 
                 # بررسی دسترسی به فیلد: اولویت با قانون edit است، اگر نبود، قانون view بررسی شود
-                content_type = ContentType.objects.get_for_model(model_class)
-                
-                rule_edit = FieldAccessRule.objects.filter(
-                    user=user,
-                    content_type=content_type,
-                    field_name=model_field_name,
-                    access_type='edit'
-                ).first()
-                
-                if rule_edit is not None:
-                    accessible_fields[form_field_name] = rule_edit.allowed
-                else:
-                    rule_view = FieldAccessRule.objects.filter(
-                        user=user,
-                        content_type=content_type,
-                        field_name=model_field_name,
-                        access_type='view'
-                    ).first()
-                    if rule_view is not None:
-                        accessible_fields[form_field_name] = rule_view.allowed
-                    else:
-                        # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
-                        accessible_fields[form_field_name] = True
+                accessible_fields[form_field_name] = check_field_access_prefer_edit(user, model_class, model_field_name)
                 
             except Exception as e:
                 # در صورت بروز خطا، به طور پیش‌فرض دسترسی داده نمی‌شود
@@ -354,10 +333,10 @@ def get_accessible_form_fields(user, form):
 
 
 def get_accessible_delivery_fields(user, form):
-    """بررسی دسترسی کاربر به فیلدهای فرم آدرس تحویل"""
+    """بررسی دسترسی کاربر به فیلدهای فرم آدرس تحویل با سیستم جدید FieldPermission"""
     if user.is_superuser:
         return {field_name: True for field_name in form.fields.keys()}
-    
+
     field_mapping = {
         'postal_code': ('DeliveryAddress', 'postal_code'),
         'recipient_name': ('DeliveryAddress', 'recipient_name'),
@@ -371,54 +350,40 @@ def get_accessible_delivery_fields(user, form):
         'delivery_mobile': ('PhoneNumber', 'number'),
         'delivery_landline': ('PhoneNumber', 'number'),
     }
-    
+
+    from core.PersonFolder.DeliveryAddressModel import DeliveryAddress as DeliveryAddressModel
+    from core.PersonFolder.PhoneNumberModel import PhoneNumber as PhoneNumberModel
+
+    model_map = {
+        'DeliveryAddress': DeliveryAddressModel,
+        'PhoneNumber': PhoneNumberModel,
+    }
+
     accessible_fields = {}
     for form_field_name in form.fields.keys():
         if form_field_name in field_mapping:
             model_name, model_field_name = field_mapping[form_field_name]
-            try:
-                if model_name == 'DeliveryAddress':
-                    from core.PersonFolder.DeliveryAddressModel import DeliveryAddress as ModelClass
-                elif model_name == 'PhoneNumber':
-                    from core.PersonFolder.PhoneNumberModel import PhoneNumber as ModelClass
-                else:
-                    accessible_fields[form_field_name] = False
-                    continue
-                
-                content_type = ContentType.objects.get_for_model(ModelClass)
-                rule_edit = FieldAccessRule.objects.filter(
-                    user=user,
-                    content_type=content_type,
-                    field_name=model_field_name,
-                    access_type='edit'
-                ).first()
-                
-                if rule_edit is not None:
-                    accessible_fields[form_field_name] = rule_edit.allowed
-                else:
-                    rule_view = FieldAccessRule.objects.filter(
-                        user=user,
-                        content_type=content_type,
-                        field_name=model_field_name,
-                        access_type='view'
-                    ).first()
-                    if rule_view is not None:
-                        accessible_fields[form_field_name] = rule_view.allowed
-                    else:
-                        accessible_fields[form_field_name] = True
-            except Exception:
+            model_class = model_map.get(model_name)
+            if model_class is None:
                 accessible_fields[form_field_name] = False
+                continue
+
+            accessible_fields[form_field_name] = check_field_access_prefer_edit(
+                user,
+                model_class,
+                model_field_name,
+            )
         else:
             accessible_fields[form_field_name] = True
-    
+
     return accessible_fields
 
 
 def get_accessible_representative_fields(user, form):
-    """بررسی دسترسی کاربر به فیلدهای فرم نماینده"""
+    """بررسی دسترسی کاربر به فیلدهای فرم نماینده با سیستم جدید FieldPermission"""
     if user.is_superuser:
         return {field_name: True for field_name in form.fields.keys()}
-    
+
     field_mapping = {
         'name': ('Representative', 'name'),
         'position': ('Representative', 'position'),
@@ -426,97 +391,60 @@ def get_accessible_representative_fields(user, form):
         'mobile': ('PhoneNumber', 'number'),
         'landline': ('PhoneNumber', 'number'),
     }
-    
+
+    from core.PersonFolder.RepresentativeModel import Representative as RepresentativeModel
+    from core.PersonFolder.PhoneNumberModel import PhoneNumber as PhoneNumberModel
+
+    model_map = {
+        'Representative': RepresentativeModel,
+        'PhoneNumber': PhoneNumberModel,
+    }
+
     accessible_fields = {}
     for form_field_name in form.fields.keys():
         if form_field_name in field_mapping:
             model_name, model_field_name = field_mapping[form_field_name]
-            try:
-                if model_name == 'Representative':
-                    from core.PersonFolder.RepresentativeModel import Representative as ModelClass
-                elif model_name == 'PhoneNumber':
-                    from core.PersonFolder.PhoneNumberModel import PhoneNumber as ModelClass
-                else:
-                    accessible_fields[form_field_name] = False
-                    continue
-                
-                content_type = ContentType.objects.get_for_model(ModelClass)
-                rule_edit = FieldAccessRule.objects.filter(
-                    user=user,
-                    content_type=content_type,
-                    field_name=model_field_name,
-                    access_type='edit'
-                ).first()
-                
-                if rule_edit is not None:
-                    accessible_fields[form_field_name] = rule_edit.allowed
-                else:
-                    rule_view = FieldAccessRule.objects.filter(
-                        user=user,
-                        content_type=content_type,
-                        field_name=model_field_name,
-                        access_type='view'
-                    ).first()
-                    if rule_view is not None:
-                        accessible_fields[form_field_name] = rule_view.allowed
-                    else:
-                        accessible_fields[form_field_name] = True
-            except Exception:
+            model_class = model_map.get(model_name)
+            if model_class is None:
                 accessible_fields[form_field_name] = False
+                continue
+
+            accessible_fields[form_field_name] = check_field_access_prefer_edit(
+                user,
+                model_class,
+                model_field_name,
+            )
         else:
             accessible_fields[form_field_name] = True
-    
+
     return accessible_fields
 
 
 def get_accessible_bank_account_fields(user, form):
-    """بررسی دسترسی کاربر به فیلدهای فرم حساب بانکی"""
+    """بررسی دسترسی کاربر به فیلدهای فرم حساب بانکی با سیستم جدید FieldPermission"""
     if user.is_superuser:
         return {field_name: True for field_name in form.fields.keys()}
-    
+
     field_mapping = {
         'account_number': ('BankAccount', 'account_number'),
         'shaba_number': ('BankAccount', 'shaba_number'),
         'bank_name': ('BankAccount', 'bank_name'),
     }
-    
+
+    from core.PersonFolder.BankAccountModel import BankAccount as BankAccountModel
+
     accessible_fields = {}
     for form_field_name in form.fields.keys():
         if form_field_name in field_mapping:
-            model_name, model_field_name = field_mapping[form_field_name]
-            try:
-                if model_name == 'BankAccount':
-                    from core.PersonFolder.BankAccountModel import BankAccount as ModelClass
-                else:
-                    accessible_fields[form_field_name] = False
-                    continue
-                
-                content_type = ContentType.objects.get_for_model(ModelClass)
-                rule_edit = FieldAccessRule.objects.filter(
-                    user=user,
-                    content_type=content_type,
-                    field_name=model_field_name,
-                    access_type='edit'
-                ).first()
-                
-                if rule_edit is not None:
-                    accessible_fields[form_field_name] = rule_edit.allowed
-                else:
-                    rule_view = FieldAccessRule.objects.filter(
-                        user=user,
-                        content_type=content_type,
-                        field_name=model_field_name,
-                        access_type='view'
-                    ).first()
-                    if rule_view is not None:
-                        accessible_fields[form_field_name] = rule_view.allowed
-                    else:
-                        accessible_fields[form_field_name] = True
-            except Exception:
-                accessible_fields[form_field_name] = False
+            _, model_field_name = field_mapping[form_field_name]
+            accessible_fields[form_field_name] = check_field_access_prefer_edit(
+                user,
+                BankAccountModel,
+                model_field_name,
+            )
         else:
             accessible_fields[form_field_name] = True
-    
+
     return accessible_fields
 
 
@@ -528,8 +456,8 @@ def get_accessible_customer_fields(user):
         dict: دیکشنری از نام فیلد به دسترسی (True/False)
     """
     
+    # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
-        # superuser به همه فیلدها دسترسی دارد
         return {
             'national_id': True,
             'name': True,
@@ -538,10 +466,9 @@ def get_accessible_customer_fields(user):
             'sales_expert': True,
             'description': True,
         }
-    
-    # import مدل Person
+
     from core.PersonFolder import Person as PersonModel
-    
+
     # فیلدهایی که در لیست نمایش داده می‌شوند
     display_fields = {
         'national_id': 'national_id',
@@ -551,26 +478,15 @@ def get_accessible_customer_fields(user):
         'sales_expert': 'sales_expert',
         'description': 'description',
     }
-    
+
     accessible_fields = {}
-    content_type = ContentType.objects.get_for_model(PersonModel)
-    
     for display_name, model_field_name in display_fields.items():
-        # بررسی آیا قانونی برای این فیلد وجود دارد
-        rule = FieldAccessRule.objects.filter(
-            user=user,
-            content_type=content_type,
-            field_name=model_field_name,
-            access_type='view'
-        ).first()
-        
-        if rule is None:
-            # اگر هیچ قانونی تعریف نشده، دسترسی داده می‌شود
-            accessible_fields[display_name] = True
-        else:
-            # اگر قانون وجود دارد، مقدار allowed را بررسی می‌کنیم
-            accessible_fields[display_name] = rule.allowed
-    
+        accessible_fields[display_name] = check_field_access_prefer_edit(
+            user,
+            PersonModel,
+            model_field_name,
+        )
+
     return accessible_fields
 
 

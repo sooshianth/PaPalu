@@ -6,6 +6,14 @@ from .task_permissions import (
     add_task_permission,
     delete_task_permission
 )
+from .field_permissions import (
+    field_permissions_view, 
+    add_field_permission, 
+    delete_field_permission, 
+    save_field_permissions,
+    add_managed_field,
+    delete_managed_field
+)
 from .roles import (
     roles_view,
     add_role,
@@ -23,6 +31,12 @@ __all__ = [
     'save_task_permissions',
     'add_task_permission',
     'delete_task_permission',
+    'field_permissions_view',
+    'add_field_permission',
+    'delete_field_permission',
+    'save_field_permissions',
+    'add_managed_field',
+    'delete_managed_field',
     'roles_view',
     'add_role',
     'update_role',

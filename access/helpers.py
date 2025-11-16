@@ -2,7 +2,7 @@
 توابع کمکی برای کار با سیستم دسترسی فیلدها
 """
 
-from .models import FieldAccessRule
+from core.RBACModel import user_has_field_access, get_accessible_fields, user_can_access_field
 
 
 def filter_fields_by_access(user, model_instance, fields_list, access_type='view'):
@@ -13,7 +13,7 @@ def filter_fields_by_access(user, model_instance, fields_list, access_type='view
         user: شیء کاربر
         model_instance: نمونه‌ای از مدل
         fields_list: لیست نام فیلدها
-        access_type: نوع دسترسی (view, edit, delete)
+        access_type: نوع دسترسی (view, edit)
     
     Returns:
         لیست فیلدهایی که کاربر به آن‌ها دسترسی دارد
@@ -23,7 +23,7 @@ def filter_fields_by_access(user, model_instance, fields_list, access_type='view
     
     accessible_fields = []
     for field in fields_list:
-        if FieldAccessRule.has_field_access(user, model_instance, field, access_type):
+        if user_has_field_access(user, model_instance, field, access_type):
             accessible_fields.append(field)
     
     return accessible_fields
@@ -42,7 +42,7 @@ def get_field_value_safe(user, model_instance, field_name, default=None):
     Returns:
         مقدار فیلد یا مقدار پیش‌فرض
     """
-    if FieldAccessRule.has_field_access(user, model_instance, field_name, 'view'):
+    if user_has_field_access(user, model_instance, field_name, 'view'):
         return getattr(model_instance, field_name, default)
     return default
 
@@ -59,7 +59,7 @@ def can_edit_field(user, model_instance, field_name):
     Returns:
         True یا False
     """
-    return FieldAccessRule.has_field_access(user, model_instance, field_name, 'edit')
+    return user_has_field_access(user, model_instance, field_name, 'edit')
 
 
 def set_field_value_safe(user, model_instance, field_name, value):
@@ -88,12 +88,12 @@ def get_model_dict_with_access(user, model_instance, access_type='view'):
     Args:
         user: شیء کاربر
         model_instance: نمونه‌ای از مدل
-        access_type: نوع دسترسی (view, edit, delete)
+        access_type: نوع دسترسی (view, edit)
     
     Returns:
         دیکشنری از فیلدها و مقادیرشان
     """
-    accessible_fields = FieldAccessRule.get_accessible_fields(
+    accessible_fields = get_accessible_fields(
         user, 
         model_instance.__class__, 
         access_type
@@ -112,4 +112,29 @@ def get_model_dict_with_access(user, model_instance, access_type='view'):
             continue
     
     return result
+
+
+def check_field_access_prefer_edit(user, model_class, field_name):
+    """
+    بررسی دسترسی به فیلد با اولویت edit
+    اگر کاربر دسترسی edit داشت، True برمی‌گرداند
+    در غیر این صورت دسترسی view بررسی می‌شود
+    
+    Args:
+        user: شیء کاربر
+        model_class: کلاس مدل
+        field_name: نام فیلد
+    
+    Returns:
+        True اگر کاربر دسترسی دارد، در غیر این صورت False
+    """
+    if user.is_superuser:
+        return True
+    
+    # اولویت با edit است
+    if user_can_access_field(user, model_class, field_name, 'edit'):
+        return True
+    
+    # در غیر این صورت view بررسی می‌شود
+    return user_can_access_field(user, model_class, field_name, 'view')
 

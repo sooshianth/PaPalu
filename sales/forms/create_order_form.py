@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 from core.ProductFolder.ProductModel import Product
-from access.models.FieldAccessUserModel import FieldAccessRule
+from core.RBACModel import user_has_field_access, get_accessible_fields, user_can_access_field
 from decimal import Decimal
 from typing import Dict, Any, Optional
 
@@ -232,25 +232,12 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
     }
 
     def can_edit_field(model_class, model_field_name):
-        content_type = ContentType.objects.get_for_model(model_class)
         # Prefer edit over view
-        rule_edit = FieldAccessRule.objects.filter(
-            user=user,
-            content_type=content_type,
-            field_name=model_field_name,
-            access_type='edit'
-        ).first()
-        if rule_edit is not None:
-            return rule_edit.allowed
-        rule_view = FieldAccessRule.objects.filter(
-            user=user,
-            content_type=content_type,
-            field_name=model_field_name,
-            access_type='view'
-        ).first()
-        if rule_view is not None:
-            return rule_view.allowed
-        return True
+        if user_can_access_field(user, model_class, model_field_name, 'edit'):
+            return True
+        if user_can_access_field(user, model_class, model_field_name, 'view'):
+            return True
+        return False
 
     # Resolve model classes
     from core.OrderFolder.OrderModel import Order as OrderModel

@@ -168,6 +168,7 @@
     <nav class="nav">
         <ul>
             <li><a href="{% url 'permission_manager:task_permissions' %}" class="{% if active_page == 'taskpermissions' %}active{% endif %}">مجوزهای وظیفه</a></li>
+            <li><a href="{% url 'permission_manager:field_permissions' %}" class="{% if active_page == 'fieldpermissions' %}active{% endif %}">مجوزهای فیلد</a></li>
             <li><a href="{% url 'permission_manager:roles' %}" class="{% if active_page == 'roles' %}active{% endif %}">نقش‌ها</a></li>
             <li><a href="{% url 'permission_manager:users' %}" class="{% if active_page == 'users' %}active{% endif %}">کاربران</a></li>
         </ul>
