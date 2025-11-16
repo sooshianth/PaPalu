@@ -1,5 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 from .StockEntryModel import StockEntry
 
 
@@ -17,23 +19,22 @@ class SourceStock(models.Model):
         verbose_name='لاگ انبار'
     )
     
-    from_product = models.ForeignKey(
-        'core.Product',
-        on_delete=models.SET_NULL,
+    # Generic relation to either Product or RawMaterial
+    from_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.CASCADE,
+        limit_choices_to={'model__in': ('product', 'rawmaterial')},
+        verbose_name='نوع آیتم منبع',
+        null=True,
+        blank=True
+    )
+    from_object_id = models.PositiveIntegerField(
+        verbose_name='شناسه آیتم منبع',
         null=True,
         blank=True,
-        related_name='source_stocks',
-        verbose_name='از محصول'
+        db_index=True
     )
-    
-    from_raw_material = models.ForeignKey(
-        'core.RawMaterial',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='source_stocks',
-        verbose_name='از مواد اولیه'
-    )
+    from_item = GenericForeignKey('from_content_type', 'from_object_id')
     
     from_warehouse = models.ForeignKey(
         'core.Warehouse',
@@ -52,28 +53,53 @@ class SourceStock(models.Model):
         verbose_name='مقدار'
     )
     
+    UNIT_CHOICES = [
+        ('gr', 'گرم'),
+        ('kg', 'کیلوگرم'),
+        ('ton', 'تن'),
+        ('m3', 'متر مکعب'),
+        ('ltr', 'لیتر'),
+        ('cc', 'میلی لیتر'),
+    ]
+
+    unit = models.CharField(
+        max_length=3,
+        choices=UNIT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name='واحد'
+    )
+    
     class Meta:
         verbose_name = 'انبار | صب بخیر (منبع)'
         verbose_name_plural = 'انبار | صب بخیرها (منبع)'
+        indexes = [
+            models.Index(fields=['from_content_type', 'from_object_id']),
+        ]
     
     def __str__(self):
-        source = self.from_product or self.from_raw_material
+        source = self.from_item or 'آیتم نامشخص'
         return f"{source} از {self.from_warehouse}"
     
     def clean(self):
-        """Validate that either product or raw material is specified."""
-        if not self.from_product and not self.from_raw_material:
+        """Validate that an item is specified."""
+        if not self.from_content_type or not self.from_object_id:
             raise ValidationError(
-                'باید حداقل یک محصول یا مواد اولیه به عنوان منبع انتخاب شود.'
+                'باید یک محصول یا مواد اولیه به عنوان منبع انتخاب شود.'
             )
         
-        if self.from_product and self.from_raw_material:
-            raise ValidationError(
-                'نمی‌توان هم محصول و هم مواد اولیه را به طور همزمان انتخاب کرد.'
-            )
-        
-        if self.quantity <= 0:
+        if self.quantity and self.quantity <= 0:
             raise ValidationError('مقدار باید بزرگتر از صفر باشد.')
+    
+    @property
+    def is_product(self):
+        """Check if the source item is a Product"""
+        return self.from_content_type and self.from_content_type.model == 'product'
+    
+    @property
+    def is_raw_material(self):
+        """Check if the source item is a RawMaterial"""
+        return self.from_content_type and self.from_content_type.model == 'rawmaterial'
     
     def save(self, *args, **kwargs):
         self.clean()

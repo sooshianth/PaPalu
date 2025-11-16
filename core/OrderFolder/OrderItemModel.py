@@ -25,9 +25,19 @@ class OrderItem(models.Model):
         verbose_name='محصول'
     )
     
+    UNIT_CHOICES = [
+        ('gr', 'گرم'),
+        ('kg', 'کیلوگرم'),
+        ('ton', 'تن'),
+        ('m3', 'متر مکعب'),
+        ('ltr', 'لیتر'),
+        ('cc', 'میلی لیتر'),
+    ]
+
     # واحد درخواستی
     requested_unit = models.CharField(
-        max_length=50,
+        max_length=3,
+        choices=UNIT_CHOICES,
         null=True,
         blank=True,
         verbose_name='واحد درخواستی'
@@ -44,7 +54,8 @@ class OrderItem(models.Model):
     
     # واحد فرعی (اختیاری)
     secondary_unit = models.CharField(
-        max_length=50,
+        max_length=3,
+        choices=UNIT_CHOICES,
         null=True,
         blank=True,
         verbose_name='واحد فرعی'

@@ -21,6 +21,15 @@ class RawMaterial(models.Model):
         ('inactive', 'غیرفعال'),
     ]
     
+    UNIT_CHOICES = [
+        ('gr', 'گرم'),
+        ('kg', 'کیلوگرم'),
+        ('ton', 'تن'),
+        ('m3', 'متر مکعب'),
+        ('ltr', 'لیتر'),
+        ('cc', 'میلی لیتر'),
+    ]
+    
     # اطلاعات پایه - Basic Information (placed directly in main model)
     raw_material_id = models.CharField(
         max_length=100,
@@ -50,18 +59,18 @@ class RawMaterial(models.Model):
         blank=True
     )
     primary_unit = models.CharField(
-        max_length=50,
-        verbose_name="واحد شمارش اصلی (مبنای خرید)",
-        help_text="مثال: کیلوگرم، لیتر، تن",
+        max_length=3,
+        choices=UNIT_CHOICES,
+        verbose_name='واحد اصلی',
         null=True,
         blank=True
     )
     secondary_unit = models.CharField(
-        max_length=50,
-        verbose_name="واحد شمارش فرعی (مبنای سنجش انبار)",
+        max_length=3,
+        choices=UNIT_CHOICES,
+        verbose_name='واحد فرعی',
         null=True,
-        blank=True,
-        help_text="مثال: گرم، میلی‌لیتر"
+        blank=True
     )
     conversion_factor = models.DecimalField(
         max_digits=15,

@@ -26,11 +26,21 @@ class BOM(models.Model):
         blank=True,
     )
     
+    UNIT_CHOICES = [
+        ('gr', 'گرم'),
+        ('kg', 'کیلوگرم'),
+        ('ton', 'تن'),
+        ('m3', 'متر مکعب'),
+        ('ltr', 'لیتر'),
+        ('cc', 'میلی لیتر'),
+    ]
+
     unit_used = models.CharField(
-        max_length=50,
+        max_length=3,
+        choices=UNIT_CHOICES,
         verbose_name='واحد به کار رفته',
         null=True,
-        blank=True,
+        blank=True
     )
     
     quantity = models.DecimalField(

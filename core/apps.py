@@ -16,7 +16,8 @@ class CoreConfig(AppConfig):
         
         # Product models
         from .ProductFolder import (
-            Product, ProductionInfo, BOM, QualityControl, ProductSales
+            Product, ProductionInfo, BOM, QualityControl, ProductSales,
+            ProductFinancialInfo
         )
         from .ProductFolder.ProductModel import PhysicalShape
         
@@ -29,7 +30,8 @@ class CoreConfig(AppConfig):
         
         # Order models
         from .OrderFolder import (
-            Order, OrderItem, ApprovalInfo, DocumentRelation, OrderDocument
+            Order, OrderItem, ApprovalInfo, DocumentRelation, OrderDocument,
+            Proforma
         )
         
         # Allocation models
@@ -63,7 +65,14 @@ class CoreConfig(AppConfig):
             Settlement, TransactionDocument
         )
         
+        # Production models
+        from .ProductionFolder import (
+            ProductionProgram
+        )
+        
         # RBAC models
         from .RBACModel import (
-            TaskPermission, TaskChoices, Role, UserTaskPermission, user_has_task
+            TaskPermission, TaskChoices, Role, UserTaskPermission, 
+            UserFieldPermission, FieldPermission, FieldChoice, ManagedField,
+            user_has_task
         )

@@ -6,6 +6,15 @@ from ..ProductFolder.ProductModel import Product
 class AllocationProductInfo(models.Model):
     """مدل اطلاعات محصولات تخصیص"""
     
+    UNIT_CHOICES = [
+        ('gr', 'گرم'),
+        ('kg', 'کیلوگرم'),
+        ('ton', 'تن'),
+        ('m3', 'متر مکعب'),
+        ('ltr', 'لیتر'),
+        ('cc', 'میلی لیتر'),
+    ]
+
     allocation = models.ForeignKey(
         Allocation,
         on_delete=models.CASCADE,
@@ -23,7 +32,8 @@ class AllocationProductInfo(models.Model):
         null=True
     )
     unit = models.CharField(
-        max_length=100,
+        max_length=3,
+        choices=UNIT_CHOICES,
         verbose_name="واحد",
         blank=True,
         null=True

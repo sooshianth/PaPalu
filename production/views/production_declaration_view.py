@@ -162,16 +162,8 @@ def production_declaration_view(request):
                         try:
                             raw_material = item.item  # Generic relation
                             if raw_material is None:
-                                # If generic relation fails, try to find by raw_material_id
-                                try:
-                                    raw_material = RawMaterial.objects.get(raw_material_id=item.object_id)
-                                except RawMaterial.DoesNotExist:
-                                    # Try by primary key as fallback
-                                    try:
-                                        raw_material = RawMaterial.objects.get(pk=item.object_id)
-                                    except (RawMaterial.DoesNotExist, ValueError):
-                                        bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
-                                        continue
+                                bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
+                                continue
                             
                             if raw_material:
                                 raw_materials_inventory.append({
@@ -410,16 +402,8 @@ def production_program_crud_view(request, program_id=None):
                         try:
                             raw_material = item.item
                             if raw_material is None:
-                                # If generic relation fails, try to find by raw_material_id
-                                try:
-                                    raw_material = RawMaterial.objects.get(raw_material_id=item.object_id)
-                                except RawMaterial.DoesNotExist:
-                                    # Try by primary key as fallback
-                                    try:
-                                        raw_material = RawMaterial.objects.get(pk=item.object_id)
-                                    except (RawMaterial.DoesNotExist, ValueError):
-                                        bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
-                                        continue
+                                bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
+                                continue
                             
                             if raw_material:
                                 raw_materials_inventory.append({
