@@ -320,13 +320,42 @@ def production_program_crud_view(request, program_id=None):
                         instance.status = ProductionProgram.Status.CONFIRMED
                     elif action == 'start':
                         instance.status = ProductionProgram.Status.IN_PROGRESS
-                        # Auto-fill started_at to now if not already set
-                        if not instance.started_at:
+                        # Handle popup data for start action
+                        started_at_str = request.POST.get('started_at')
+                        if started_at_str:
+                            try:
+                                # Convert from ISO datetime string to datetime object
+                                from datetime import datetime
+                                instance.started_at = datetime.fromisoformat(started_at_str.replace('T', ' '))
+                                bug_logger.info(f"زمان شروع واقعی از popup دریافت شد: {instance.started_at}")
+                            except ValueError as e:
+                                bug_logger.warning(f"خطا در تبدیل زمان شروع: {str(e)}")
+                                instance.started_at = timezone.now()
+                        else:
                             instance.started_at = timezone.now()
                     elif action == 'complete':
                         instance.status = ProductionProgram.Status.COMPLETED
-                        # Auto-fill completed_at to now if not already set
-                        if not instance.completed_at:
+                        # Handle popup data for complete action
+                        produced_weight_str = request.POST.get('produced_weight_ton')
+                        completed_at_str = request.POST.get('completed_at')
+                        
+                        if produced_weight_str:
+                            try:
+                                from decimal import Decimal
+                                instance.produced_weight_ton = Decimal(produced_weight_str)
+                                bug_logger.info(f"وزن تولید شده از popup دریافت شد: {instance.produced_weight_ton}")
+                            except (ValueError, TypeError) as e:
+                                bug_logger.warning(f"خطا در تبدیل وزن تولید شده: {str(e)}")
+                        
+                        if completed_at_str:
+                            try:
+                                from datetime import datetime
+                                instance.completed_at = datetime.fromisoformat(completed_at_str.replace('T', ' '))
+                                bug_logger.info(f"زمان تکمیل از popup دریافت شد: {instance.completed_at}")
+                            except ValueError as e:
+                                bug_logger.warning(f"خطا در تبدیل زمان تکمیل: {str(e)}")
+                                instance.completed_at = timezone.now()
+                        else:
                             instance.completed_at = timezone.now()
                     
                     instance.save()
