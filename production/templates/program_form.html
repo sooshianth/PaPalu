@@ -16,7 +16,19 @@
 	table.datatable th,table.datatable td{border:1px solid #e9ecef;padding:8px 10px;text-align:center}
 	table.datatable th{background:#f8f9fa}
 	@media (max-width:768px){.form-grid{grid-template-columns:1fr}}
+	/* Sticky actions bar */
+	.sticky-actions{position:sticky;top:0;background:#fff;z-index:15;border-bottom:1px solid #e9ecef;padding:6px 0}
+	/* Tabs + one-pane-at-a-time */
+	#formTabs{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto}
+	#formTabs .nav-link{border:1px solid #e9ecef;border-radius:999px;padding:6px 10px;flex:0 0 auto}
+	#formTabs .nav-link.active{background:#e7f1ff;border-color:#cfe2ff;color:#084298}
+	#tabContents{display:block}
+	.tab-pane{display:none;border:1px solid #e9ecef;border-radius:10px;padding:12px;background:#fff}
+	.tab-pane.active{display:block}
+	.error-text{color:#b02a37;font-size:.85rem;margin-top:4px}
 </style>
+<!-- Persian Datepicker CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
 {% endblock %}
 
 {% block content %}
@@ -28,47 +40,55 @@
 		{% endif %}
 	</div>
 	<div class="card-body">
-		<form method="post" novalidate>
-			{% csrf_token %}
-
-			{% if form.non_field_errors %}
-				<div class="alert alert-danger">{{ form.non_field_errors }}</div>
-			{% endif %}
-
-			{% if db_integrity_issue %}
-			<div class="alert alert-warning" style="font-size:.85rem">⚠️ مشکل پایگاه داده: جدول برنامه تولید وجود ندارد در حالی که مهاجرت ثبت شده است. برای رفع: یا فایل db.sqlite3 را حذف و دوباره migrate اجرا کنید، یا جدول را به صورت دستی ایجاد نمایید. (موقتاً داشبورد با دادهٔ خالی نمایش داده می‌شود.)</div>
-			{% endif %}
-
-			<div class="form-grid">
-			<div class="form-row">{{ form.production_info.label_tag }}{{ form.production_info }}</div>
-			<div class="form-row">{{ form.product.label_tag }}{{ form.product }}</div>
-			<div class="form-row">{{ form.formula_id.label_tag }}{{ form.formula_id }}</div>
-			<div class="form-row">{{ form.planned_weight_ton.label_tag }}{{ form.planned_weight_ton }}</div>
-			<div class="form-row">{{ form.predicted_start_time.label_tag }}{{ form.predicted_start_time }}</div>
-			<div class="form-row">{{ form.predicted_end_time.label_tag }}{{ form.predicted_end_time }}</div>
-			<div class="form-row">{{ form.execution_date.label_tag }}{{ form.execution_date }}</div>
-			<div class="form-row">{{ form.packaging_type.label_tag }}{{ form.packaging_type }}</div>
-			<div class="form-row">{{ form.extra_description.label_tag }}{{ form.extra_description }}</div>
-			<div class="form-row">{{ form.inventory_snapshot.label_tag }}{{ form.inventory_snapshot }}</div>
-			<div class="form-row">{{ form.net_unplanned_requirement.label_tag }}{{ form.net_unplanned_requirement }}</div>
-			<div class="form-row" style="display:none">{{ form.status }}</div>
-			<div class="form-row">{{ form.produced_weight_ton.label_tag }}{{ form.produced_weight_ton }}</div>
+			<!-- Tabs navbar and bulk actions -->
+			<div class="sticky-actions" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap">
+				<div id="formTabs" class="nav nav-pills" style="gap:6px;overflow:auto;white-space:nowrap"></div>
+				<div class="form-actions" style="display:flex;gap:6px">
+					<button class="btn btn-secondary btn-sm" type="button" onclick="bulkDraftAll()">پیش‌نویس همه</button>
+					<button class="btn btn-primary btn-sm" type="button" onclick="bulkAcceptAll()">تأیید همه</button>
+					<button class="btn btn-danger btn-sm" type="button" onclick="bulkClearAll()">پاک کردن همه</button>
+					<button class="btn btn-outline-secondary btn-sm" type="button" onclick="addNewFormTab()">+ افزودن فرم</button>
+					<a class="btn btn-outline-dark btn-sm" href="{% url 'production:program_list' %}">بازگشت به لیست</a>
+				</div>
 			</div>
 
-			<div class="form-actions" style="margin-top:16px">
-				<button class="btn btn-secondary btn-sm" type="submit" name="action" value="draft">ذخیره پیش نویس</button>
-				{% if not program or program.status == 'draft' %}
-					<button class="btn btn-primary btn-sm" type="submit" name="action" value="confirm">تایید برنامه</button>
-				{% endif %}
-				{% if program and program.status == 'confirmed' %}
-					<button class="btn btn-success btn-sm" type="submit" name="action" value="start">شروع تولید</button>
-				{% endif %}
-				{% if program and program.status == 'in_progress' %}
-					<button class="btn btn-primary btn-sm" type="submit" name="action" value="complete">تکمیل برنامه</button>
-				{% endif %}
-				<a class="btn btn-secondary btn-sm" href="{% url 'production:program_list' %}">بازگشت به لیست</a>
-			</div>
-		</form>
+			<!-- Tab contents: each tab holds one program form -->
+			<div id="tabContents"></div>
+
+			<!-- Hidden template: initial server-rendered form cloned for each tab -->
+			<template id="programFormTemplate">
+				<form method="post" class="program-form" novalidate>
+					{% csrf_token %}
+					{% if form.non_field_errors %}
+						<div class="alert alert-danger">{{ form.non_field_errors }}</div>
+					{% endif %}
+					{% if db_integrity_issue %}
+					<div class="alert alert-warning" style="font-size:.85rem">⚠️ مشکل پایگاه داده: جدول برنامه تولید وجود ندارد در حالی که مهاجرت ثبت شده است. برای رفع: یا فایل db.sqlite3 را حذف و دوباره migrate اجرا کنید، یا جدول را به صورت دستی ایجاد نمایید. (موقتاً داشبورد با دادهٔ خالی نمایش داده می‌شود.)</div>
+					{% endif %}
+					<div class="form-grid">
+						<div class="form-row">{{ form.production_info.label_tag }}{{ form.production_info }}</div>
+						<div class="form-row">{{ form.product.label_tag }}{{ form.product }}</div>
+						{% if form.formula_id %}
+						<div class="form-row">{{ form.formula_id.label_tag }}{{ form.formula_id }}</div>
+						{% endif %}
+						<div class="form-row">{{ form.planned_weight_ton.label_tag }}{{ form.planned_weight_ton }}</div>
+						<div class="form-row">{{ form.predicted_start_time.label_tag }}{{ form.predicted_start_time }}</div>
+						<div class="form-row">{{ form.predicted_end_time.label_tag }}{{ form.predicted_end_time }}</div>
+						<div class="form-row">{{ form.execution_date.label_tag }}{{ form.execution_date }}</div>
+						<div class="form-row">{{ form.packaging_type.label_tag }}{{ form.packaging_type }}</div>
+						<div class="form-row">{{ form.extra_description.label_tag }}{{ form.extra_description }}</div>
+						<div class="form-row">{{ form.inventory_snapshot.label_tag }}{{ form.inventory_snapshot }}</div>
+						<div class="form-row">{{ form.net_unplanned_requirement.label_tag }}{{ form.net_unplanned_requirement }}</div>
+						<div class="form-row" style="display:none">{{ form.status }}</div>
+						<div class="form-row">{{ form.produced_weight_ton.label_tag }}{{ form.produced_weight_ton }}</div>
+					</div>
+					<div class="form-actions" style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
+						<button class="btn btn-secondary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'draft')">پیش‌نویس</button>
+						<button class="btn btn-primary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'confirm')">تأیید</button>
+						<button class="btn btn-outline-danger btn-sm" type="button" onclick="clearForm(this.closest('.tab-pane'))">پاک کردن</button>
+					</div>
+				</form>
+			</template>
 
 		<!-- Dashboard Tables Section -->
 		<hr style="margin:24px 0">
@@ -163,26 +183,7 @@
 			</table>
 		</div>
 
-		<h4 style="margin-top:32px">ایجاد گروهی برنامه‌ها (Batch Creation)</h4>
-		<div class="table-wrap">
-			<table id="batchTable" class="datatable">
-				<thead>
-					<tr>
-						<th>محصول</th>
-						<th>فرمول</th>
-						<th>وزن برنامه</th>
-						<th>ساعت برنامه</th>
-						<th>وضعیت</th>
-						<th>عملیات</th>
-					</tr>
-				</thead>
-				<tbody id="batchTableBody">
-					<!-- Placeholder for batch entry rows -->
-				</tbody>
-			</table>
-			<button class="btn btn-secondary btn-sm" type="button" onclick="addBatchRow()">افزودن ردیف</button>
-			<button class="btn btn-primary btn-sm" type="button" onclick="saveBatchPrograms()">ذخیره گروهی</button>
-		</div>
+		<!-- Batch creation section removed; replaced by tabbed multi-form UI above -->
 
 		{% if program %}
 			<hr style="margin:20px 0">
@@ -225,30 +226,255 @@
 		});
 	}
 
-	// Batch creation functionality
-	function addBatchRow() {
-		var tbody = document.getElementById('batchTableBody');
-		var row = tbody.insertRow();
-		row.innerHTML = `
-			<td><input type="text" class="form-control form-control-sm" name="batch_product[]"></td>
-			<td><input type="text" class="form-control form-control-sm" name="batch_formula[]"></td>
-			<td><input type="number" class="form-control form-control-sm" name="batch_weight[]" step="0.001"></td>
-			<td><input type="number" class="form-control form-control-sm" name="batch_hours[]" step="0.01"></td>
-			<td><select class="form-control form-control-sm" name="batch_status[]">
-				<option value="draft">پیش‌نویس</option>
-				<option value="confirmed">تأیید شده</option>
-			</select></td>
-			<td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">حذف</button></td>
-		`;
+	// ---- Tabbed multi-form management ----
+	let tabCounter = 0;
+
+	function initJalaliPickers(rootEl){
+		if (!(window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker)) return;
+		jQuery(rootEl).find('.jalali-date').each(function(){
+			const $el = jQuery(this);
+			$el.attr('dir','ltr');
+			$el.persianDatepicker({
+				format: 'YYYY/MM/DD',
+				initialValueType: 'gregorian',
+				autoClose: true
+			});
+		});
+		jQuery(rootEl).find('.jalali-datetime').each(function(){
+			const $el = jQuery(this);
+			$el.attr('dir','ltr');
+			$el.persianDatepicker({
+				format: 'YYYY/MM/DD HH:mm',
+				initialValueType: 'gregorian',
+				timePicker: { enabled: true, second: {enabled: false} },
+				autoClose: true
+			});
+		});
 	}
 
-	function saveBatchPrograms() {
-		// Collect all batch rows data and submit
-		alert('قابلیت ذخیره گروهی در حال توسعه است.');
-		// TODO: Implement AJAX submission for batch creation
+	function activateTab(tabId){
+		document.querySelectorAll('#formTabs .nav-link').forEach(el=>el.classList.remove('active'));
+		const tabBtn = document.querySelector(`#tabBtn-${tabId}`);
+		const pane = document.querySelector(`#tabPane-${tabId}`);
+		if(tabBtn) tabBtn.classList.add('active');
+		document.querySelectorAll('#tabContents .tab-pane').forEach(el=>el.classList.remove('active'));
+		if(pane) pane.classList.add('active');
 	}
 
-	// Initialize DataTables
+	function removeTab(tabId){
+		const btn = document.querySelector(`#tabBtn-${tabId}`);
+		const pane = document.querySelector(`#tabPane-${tabId}`);
+		if (btn) btn.remove();
+		if (pane) pane.remove();
+		// Activate another tab if available
+		const any = document.querySelector('#formTabs .nav-link');
+		if (any) {
+			const id = any.getAttribute('data-tab');
+			activateTab(id);
+		}
+	}
+
+	function addNewFormTab(){
+		tabCounter += 1;
+		const tabId = String(tabCounter);
+		// Add tab button
+		const btn = document.createElement('button');
+		btn.type = 'button';
+		btn.className = 'nav-link';
+		btn.id = `tabBtn-${tabId}`;
+		btn.setAttribute('data-tab', tabId);
+		btn.innerHTML = `فرم ${tabId} <span style="margin-right:6px"></span>`;
+		btn.onclick = ()=>activateTab(tabId);
+		document.getElementById('formTabs').appendChild(btn);
+		// Add pane
+		const pane = document.createElement('div');
+		pane.className = 'tab-pane';
+		pane.id = `tabPane-${tabId}`;
+		// Clone template form
+		const tpl = document.getElementById('programFormTemplate');
+		pane.appendChild(tpl.content.cloneNode(true));
+		document.getElementById('tabContents').appendChild(pane);
+		// Init Jalali for this pane
+		initJalaliPickers(pane);
+		// Activate this tab exclusively
+		activateTab(tabId);
+	}
+
+	function clearForm(pane){
+		const form = pane.querySelector('form');
+		if (!form) return;
+		form.reset();
+	}
+
+	function collectGregorianConversions(root){
+		function pad(n){ return (n<10? '0':'') + n; }
+		// Convert Persian/Arabic-Indic numerals to ASCII
+		function normalizeDigits(str){
+			const persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
+			const arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
+			let result = str;
+			for(let i=0; i<10; i++){
+				result = result.replace(new RegExp(persianDigits[i], 'g'), i.toString());
+				result = result.replace(new RegExp(arabicDigits[i], 'g'), i.toString());
+			}
+			return result;
+		}
+		
+		root.querySelectorAll('.jalali-date').forEach(function(inp){
+			let val = inp.value && inp.value.trim();
+			if (!val) { inp.value = ''; return; }
+			val = normalizeDigits(val);
+			const m = val.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+			if (!m) { console.warn('Invalid jalali date format:', val); return; }
+			const jy = parseInt(m[1]);
+			const jm = parseInt(m[2]);
+			const jd = parseInt(m[3]);
+			try { 
+				const g = jalaali.toGregorian(jy, jm, jd); 
+				inp.value = `${g.gy}-${pad(g.gm)}-${pad(g.gd)}`; 
+			} catch(e) { 
+				console.error('Jalali conversion error:', e); 
+				inp.value = ''; 
+			}
+		});
+		root.querySelectorAll('.jalali-datetime').forEach(function(inp){
+			let val = inp.value && inp.value.trim();
+			if (!val) { inp.value = ''; return; }
+			val = normalizeDigits(val);
+			const m = val.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})$/);
+			if (!m) { console.warn('Invalid jalali datetime format:', val); return; }
+			const jy = parseInt(m[1]);
+			const jm = parseInt(m[2]);
+			const jd = parseInt(m[3]);
+			const hh = pad(parseInt(m[4]));
+			const mm = pad(parseInt(m[5]));
+			try { 
+				const g = jalaali.toGregorian(jy, jm, jd); 
+				inp.value = `${g.gy}-${pad(g.gm)}-${pad(g.gd)} ${hh}:${mm}`; 
+			} catch(e) { 
+				console.error('Jalali conversion error:', e); 
+				inp.value = ''; 
+			}
+		});
+	}
+
+	async function sendForm(pane, action){
+		const form = pane.querySelector('form');
+		if (!form) return;
+		// Clear previous errors
+		clearErrors(pane);
+		// Log date values BEFORE conversion
+		const startBefore = form.querySelector('[name="predicted_start_time"]')?.value;
+		const endBefore = form.querySelector('[name="predicted_end_time"]')?.value;
+		const execBefore = form.querySelector('[name="execution_date"]')?.value;
+		console.log('Dates BEFORE conversion:', {start: startBefore, end: endBefore, exec: execBefore});
+		// Convert jalali values to gregorian before creating FormData
+		collectGregorianConversions(form);
+		// Log date values AFTER conversion
+		const startAfter = form.querySelector('[name="predicted_start_time"]')?.value;
+		const endAfter = form.querySelector('[name="predicted_end_time"]')?.value;
+		const execAfter = form.querySelector('[name="execution_date"]')?.value;
+		console.log('Dates AFTER conversion:', {start: startAfter, end: endAfter, exec: execAfter});
+		const data = new FormData(form);
+		data.set('action', action);
+		const csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+		try{
+			const resp = await fetch('/production/program/create/', {
+				method: 'POST',
+				headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+				body: data,
+				redirect: 'follow',
+				credentials: 'same-origin'
+			});
+			const ct = resp.headers.get('content-type') || '';
+			if (resp.ok && ct.includes('application/json')) {
+				const payload = await resp.json();
+				if (payload.status === 'confirmed') { markPaneConfirmed(pane, payload); }
+				else if (payload.status === 'draft') { markPaneDraft(pane, payload); }
+				alert('ذخیره شد.');
+			} else if (resp.ok) {
+				// Fallback: mark by requested action
+				if (action === 'confirm') { markPaneConfirmed(pane, {}); }
+				else if (action === 'draft') { markPaneDraft(pane, {}); }
+				alert('ذخیره شد.');
+			} else if (ct.includes('application/json')) {
+				const payload = await resp.json();
+				showErrors(pane, payload.errors || {});
+				alert('خطا در ذخیره فرم');
+			} else {
+				alert('خطا در ذخیره فرم');
+			}
+		} catch(err){
+			alert('خطای شبکه');
+		}
+	}
+
+	function clearErrors(pane){
+		pane.querySelectorAll('.error-text').forEach(el=>el.remove());
+		pane.querySelectorAll('[aria-invalid="true"]').forEach(el=>el.setAttribute('aria-invalid','false'));
+	}
+	function showErrors(pane, errors){
+		clearErrors(pane);
+		Object.keys(errors).forEach(function(name){
+			const msgs = errors[name];
+			const field = pane.querySelector(`[name="${name}"]`);
+			if (field){
+				field.setAttribute('aria-invalid','true');
+				const holder = document.createElement('div');
+				holder.className = 'error-text';
+				holder.textContent = Array.isArray(msgs) ? msgs.join('، ') : String(msgs);
+				const parent = field.closest('.form-row') || field.parentElement;
+				parent.appendChild(holder);
+			}
+		});
+	}
+
+	function markPaneConfirmed(pane, payload){
+		// add a visible chip and disable fields
+		let chip = pane.querySelector('.status-chip');
+		if (!chip){
+			chip = document.createElement('div');
+			chip.className = 'status-chip';
+			chip.style.background = '#e6ffed';
+			chip.style.borderColor = '#ccebd8';
+			chip.style.color = '#0f5132';
+			chip.textContent = 'تأیید شد';
+			pane.insertBefore(chip, pane.firstChild);
+		}
+		pane.querySelectorAll('input, select, textarea, button').forEach(el=>{
+			el.disabled = true;
+		});
+	}
+
+	function markPaneDraft(pane, payload){
+		let chip = pane.querySelector('.status-chip');
+		if (!chip){
+			chip = document.createElement('div');
+			chip.className = 'status-chip';
+			chip.textContent = 'پیش‌نویس';
+			pane.insertBefore(chip, pane.firstChild);
+		} else {
+			chip.textContent = 'پیش‌نویس';
+			chip.style.background = '#f8f9fa';
+			chip.style.borderColor = '#e9ecef';
+			chip.style.color = '#343a40';
+		}
+		// drafts remain editable
+	}
+
+	async function bulkDraftAll(){
+		const panes = Array.from(document.querySelectorAll('#tabContents .tab-pane'));
+		for (const p of panes){ await sendForm(p, 'draft'); }
+	}
+	async function bulkAcceptAll(){
+		const panes = Array.from(document.querySelectorAll('#tabContents .tab-pane'));
+		for (const p of panes){ await sendForm(p, 'confirm'); }
+	}
+	function bulkClearAll(){
+		document.querySelectorAll('#tabContents .tab-pane').forEach(p=>clearForm(p));
+	}
+
+	// Initialize DataTables and bootstrap first form tab
 	document.addEventListener('DOMContentLoaded', function(){
 		if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
 			jQuery('#consumptionTable').DataTable({
@@ -281,6 +507,19 @@
 				language: { url: '/static/i18n/datatables/fa.json' }
 			});
 		}
+
+		// Start with one form tab
+		addNewFormTab();
 	});
+</script>
+<!-- jQuery (needed for persian-datepicker) -->
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<!-- Persian Date libraries -->
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<!-- Jalaali conversion helper -->
+<script src="https://cdn.jsdelivr.net/npm/jalaali-js@1.1.0/dist/jalaali.min.js"></script>
+<script>
+	// Jalali helpers are initialized per-tab by initJalaliPickers()
 </script>
 {% endblock %}

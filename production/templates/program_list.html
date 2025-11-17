@@ -1,35 +1,78 @@
 {% extends 'base.html' %}
+{% block title %}لیست برنامه‌های تولید{% endblock %}
+
+{% block extra_css %}
+<style>
+    .card {background:#fff;border:1px solid #e9ecef;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+    .card-header {padding:14px 18px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between}
+    .card-body {padding:18px}
+    .table-wrap{overflow:auto}
+    table.datatable{width:100%;border-collapse:collapse}
+    table.datatable th,table.datatable td{border:1px solid #e9ecef;padding:8px 10px;text-align:center}
+    table.datatable th{background:#f8f9fa}
+    .status-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#e6ffed;border:1px solid #ccebd8;color:#0f5132;font-size:.9rem}
+    .btn-link{color:var(--primary-color,#0d6efd);text-decoration:none}
+    .btn-link:hover{text-decoration:underline}
+</style>
+{% endblock %}
+
 {% block content %}
-<h2>لیست برنامه های تولید</h2>
-<table border="1" cellpadding="4" cellspacing="0">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>محصول</th>
-            <th>فرمول</th>
-            <th>وزن برنامه</th>
-            <th>وضعیت</th>
-            <th>اولویت</th>
-            <th>درصد تحقق</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-    {% for p in programs %}
-        <tr>
-            <td>{{ p.id }}</td>
-            <td>{{ p.product }}</td>
-            <td>{{ p.formula_id }}</td>
-            <td>{{ p.planned_weight_ton }}</td>
-            <td>{{ p.get_status_display }}</td>
-            <td>{{ p.priority_index }}</td>
-            <td>{{ p.fulfillment_percentage }}%</td>
-            <td><a href="{% url 'production:program_edit' p.id %}">ویرایش</a></td>
-        </tr>
-    {% empty %}
-        <tr><td colspan="8">هیچ برنامه ای ثبت نشده است.</td></tr>
-    {% endfor %}
-    </tbody>
-</table>
-<p><a href="{% url 'production:program_create' %}">ایجاد برنامه جدید</a></p>
+<div class="card">
+    <div class="card-header">
+        <h3 style="font-size:1.1rem">لیست برنامه‌های تولید</h3>
+        <a class="btn btn-primary btn-sm" href="{% url 'production:program_create' %}">+ ایجاد برنامه جدید</a>
+    </div>
+    <div class="card-body">
+        <div class="table-wrap">
+            <table id="programsTable" class="datatable">
+                <thead>
+                    <tr>
+                        <th>شناسه</th>
+                        <th>محصول</th>
+                        <th>فرمول</th>
+                        <th>تناژ برنامه</th>
+                        <th>تاریخ اجرا</th>
+                        <th>وضعیت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in programs %}
+                    <tr>
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.product }}</td>
+                        <td>{{ p.production_info }}</td>
+                        <td>{{ p.planned_weight_ton }}</td>
+                        <td>{{ p.execution_date }}</td>
+                        <td>
+                            {% if p.status == p.Status.CONFIRMED %}<span class="status-chip">تأیید شده</span>{% else %}{{ p.get_status_display }}{% endif %}
+                        </td>
+                        <td>
+                            <a class="btn btn-secondary btn-sm" href="{% url 'production:program_edit' p.id %}">ویرایش</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7">برنامه‌ای موجود نیست.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function(){
+        if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+            jQuery('#programsTable').DataTable({
+                paging: true,
+                searching: true,
+                info: true,
+                order: [[0,'desc']],
+                language: { url: '/static/i18n/datatables/fa.json' }
+            });
+        }
+    });
+</script>
 {% endblock %}

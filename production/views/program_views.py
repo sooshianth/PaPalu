@@ -3,136 +3,164 @@ from django.urls import reverse
 from django.contrib import messages
 from django.db.models import Sum, Q
 from django.db import OperationalError
+from django.http import JsonResponse
+import logging
+from core.logging_levels import *
 from production.forms.program_form import ProductionProgramForm
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.ProductFolder.BOMModel import BOM
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 
+bug_logger = logging.getLogger("bugs")
+audit_logger = logging.getLogger("audit")
+
 
 def _get_dashboard_context():
-    """Helper function to gather dashboard data for all three tables"""
-    
-    # Table 1: Raw Material Inventory (placeholder - needs warehouse integration)
-    raw_material_inventory = BOM.objects.values(
-        'raw_material_id', 'raw_material', 'unit_used'
-    ).distinct()
-    # Add placeholder inventory (TODO: integrate with warehouse system)
-    for item in raw_material_inventory:
-        item['current_inventory'] = 0  # Placeholder
-    
-    # Table 2: Product Flow Status
-    product_flow_status = []
-    production_infos = ProductionInfo.objects.select_related('product').all()
-    
-    db_issue = False
-    for prod_info in production_infos:
-        try:
-            # Calculate planned inventory (sum of confirmed but not started programs)
-            planned_inventory = ProductionProgram.objects.filter(
-                production_info=prod_info,
-                status=ProductionProgram.Status.CONFIRMED
-            ).aggregate(total=Sum('planned_weight_ton'))['total'] or 0
-        except OperationalError:
-            # Missing table or schema drift – mark issue and fallback to zero
-            planned_inventory = 0
-            db_issue = True
+    """Helper: gathers dashboard data for inventory, flow status, and allocations."""
+    audit_logger.debug("جمع‌آوری داده‌های داشبورد برنامه تولید")
+    try:
+        raw_material_inventory = BOM.objects.values(
+            'raw_material_id', 'raw_material', 'unit_used'
+        ).distinct()
+        for item in raw_material_inventory:
+            item['current_inventory'] = 0
 
-        # Placeholder for inventory and logistic confirmed orders
-        inventory = 0  # TODO: integrate with warehouse
-        logistic_confirmed = 0  # TODO: integrate with orders/allocation
+        product_flow_status = []
+        production_infos = ProductionInfo.objects.select_related('product').all()
+        db_issue = False
+        for prod_info in production_infos:
+            try:
+                planned_inventory = ProductionProgram.objects.filter(
+                    production_info=prod_info,
+                    status=ProductionProgram.Status.CONFIRMED
+                ).aggregate(total=Sum('planned_weight_ton'))['total'] or 0
+            except OperationalError:
+                planned_inventory = 0
+                db_issue = True
+                bug_logger.warning("خطای عملیاتی هنگام محاسبه موجودی برنامه‌ریزی شده")
 
-        # Calculate net unplanned requirement
-        net_unplanned = logistic_confirmed - (inventory + planned_inventory)
+            inventory = 0
+            logistic_confirmed = 0
+            net_unplanned = logistic_confirmed - (inventory + planned_inventory)
 
-        product_flow_status.append({
-            'product': prod_info.product.name if prod_info.product else '-',
-            'program_id': prod_info.formula_id or '-',
-            'inventory': inventory,
-            'planned_inventory': planned_inventory,
-            'net_unplanned_requirement': net_unplanned,
-            'status': 'نیازمند برنامه‌ریزی' if net_unplanned > 0 else 'کافی'
-        })
-    
-    # Sort by net_unplanned_requirement descending (highest need first)
-    product_flow_status.sort(key=lambda x: x['net_unplanned_requirement'], reverse=True)
-    
-    # Table 3: Allocations (placeholder - needs allocation model)
-    allocations = []
-    # TODO: Query allocation model when available
-    # allocations = Allocation.objects.filter(
-    #     status='logistic_confirmed'
-    # ).prefetch_related('products')
-    
-    return {
-        'raw_material_inventory': raw_material_inventory,
-        'product_flow_status': product_flow_status,
-        'allocations': allocations,
-        'db_integrity_issue': db_issue,
-    }
+            product_flow_status.append({
+                'product': prod_info.product.name if prod_info.product else '-',
+                'program_id': prod_info.formula_id or '-',
+                'inventory': inventory,
+                'planned_inventory': planned_inventory,
+                'net_unplanned_requirement': net_unplanned,
+                'status': 'نیازمند برنامه‌ریزی' if net_unplanned > 0 else 'کافی'
+            })
+
+        product_flow_status.sort(key=lambda x: x['net_unplanned_requirement'], reverse=True)
+        allocations = []
+        return {
+            'raw_material_inventory': raw_material_inventory,
+            'product_flow_status': product_flow_status,
+            'allocations': allocations,
+            'db_integrity_issue': db_issue,
+        }
+    except Exception as e:
+        bug_logger.error(f"Dashboard context error: {e}")
+        return {'raw_material_inventory': [], 'product_flow_status': [], 'allocations': [], 'db_integrity_issue': False}
 
 
 def create_program_view(request):
     """ایجاد / پیش نویس / تایید برنامه تولید"""
-    if request.method == 'POST':
-        action = request.POST.get('action')  # draft / confirm / start / complete
-        form = ProductionProgramForm(request.POST)
-        if form.is_valid():
-            instance = form.save(commit=False)
-            # Set status based on action
+    audit_logger.info("دسترسی به ایجاد برنامه تولید")
+    try:
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            bug_logger.debug(f"POST action={action}")
+            bug_logger.debug(f"Date fields received - execution_date: {request.POST.get('execution_date')}, start: {request.POST.get('predicted_start_time')}, end: {request.POST.get('predicted_end_time')}")
+            # Create mutable copy and set status based on action BEFORE validation
+            post_data = request.POST.copy()
             if action == 'confirm':
-                instance.status = ProductionProgram.Status.CONFIRMED
+                post_data['status'] = ProductionProgram.Status.CONFIRMED
             elif action == 'start':
-                instance.status = ProductionProgram.Status.IN_PROGRESS
+                post_data['status'] = ProductionProgram.Status.IN_PROGRESS
             elif action == 'complete':
-                instance.status = ProductionProgram.Status.COMPLETED
+                post_data['status'] = ProductionProgram.Status.COMPLETED
             else:
-                instance.status = ProductionProgram.Status.DRAFT
-            instance.save()
-            messages.success(request, 'برنامه ذخیره شد.')
-            return redirect(reverse('production:program_edit', args=[instance.id]))
-    else:
-        form = ProductionProgramForm()
-    
-    context = {
-        'form': form,
-        'mode': 'create',
-    }
-    context.update(_get_dashboard_context())
-    # Template path corrected: file resides at production/templates/program_form.html
-    return render(request, 'program_form.html', context)
+                post_data['status'] = ProductionProgram.Status.DRAFT
+            
+            form = ProductionProgramForm(post_data)
+            if form.is_valid():
+                instance = form.save(commit=False)
+                # Status already set from form data
+                instance.save()
+                bug_logger.info(f"برنامه با موفقیت ذخیره شد. ID={instance.id}, Status={instance.status}")
+                messages.success(request, 'برنامه ذخیره شد.')
+                # AJAX-friendly JSON
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                    return JsonResponse({
+                        'ok': True,
+                        'id': instance.id,
+                        'status': instance.status,
+                        'detail_url': reverse('production:program_edit', args=[instance.id])
+                    })
+                return redirect(reverse('production:program_edit', args=[instance.id]))
+            else:
+                bug_logger.warning(f"فرم نامعتبر است. Errors: {form.errors.as_json()}")
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                    return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+        else:
+            form = ProductionProgramForm()
+
+        context = {'form': form, 'mode': 'create'}
+        context.update(_get_dashboard_context())
+        return render(request, 'program_form.html', context)
+    except Exception as e:
+        bug_logger.error(f"Create program error: {e}")
+        messages.error(request, 'خطا در ثبت برنامه.')
+        context = {'form': ProductionProgramForm(), 'mode': 'create'}
+        context.update(_get_dashboard_context())
+        return render(request, 'program_form.html', context)
 
 
 def edit_program_view(request, program_id):
+    audit_logger.info("دسترسی به ویرایش برنامه تولید")
     program = get_object_or_404(ProductionProgram, id=program_id)
-    if request.method == 'POST':
-        action = request.POST.get('action')
-        form = ProductionProgramForm(request.POST, instance=program)
-        if form.is_valid():
-            instance = form.save(commit=False)
-            # Status transitions (only allowed forward)
-            if action == 'confirm' and instance.status == ProductionProgram.Status.DRAFT:
-                instance.status = ProductionProgram.Status.CONFIRMED
-            elif action == 'start' and instance.status == ProductionProgram.Status.CONFIRMED:
-                instance.status = ProductionProgram.Status.IN_PROGRESS
-            elif action == 'complete' and instance.status == ProductionProgram.Status.IN_PROGRESS:
-                instance.status = ProductionProgram.Status.COMPLETED
-            instance.save()
-            messages.success(request, 'برنامه بهروز شد.')
-            return redirect(reverse('production:program_edit', args=[instance.id]))
-    else:
-        form = ProductionProgramForm(instance=program)
-    
-    context = {
-        'form': form,
-        'program': program,
-        'mode': 'edit',
-    }
-    context.update(_get_dashboard_context())
-    # Template path corrected: file resides at production/templates/program_form.html
-    return render(request, 'program_form.html', context)
+    try:
+        if request.method == 'POST':
+            action = request.POST.get('action')
+            form = ProductionProgramForm(request.POST, instance=program)
+            if form.is_valid():
+                instance = form.save(commit=False)
+                if action == 'confirm' and instance.status == ProductionProgram.Status.DRAFT:
+                    instance.status = ProductionProgram.Status.CONFIRMED
+                elif action == 'start' and instance.status == ProductionProgram.Status.CONFIRMED:
+                    instance.status = ProductionProgram.Status.IN_PROGRESS
+                elif action == 'complete' and instance.status == ProductionProgram.Status.IN_PROGRESS:
+                    instance.status = ProductionProgram.Status.COMPLETED
+                instance.save()
+                messages.success(request, 'برنامه به‌روز شد.')
+                return redirect(reverse('production:program_edit', args=[instance.id]))
+        else:
+            form = ProductionProgramForm(instance=program)
+
+        context = {'form': form, 'program': program, 'mode': 'edit'}
+        context.update(_get_dashboard_context())
+        return render(request, 'program_form.html', context)
+    except Exception as e:
+        bug_logger.error(f"Edit program error: {e}")
+        messages.error(request, 'خطا در بروزرسانی برنامه.')
+        context = {'form': ProductionProgramForm(instance=program), 'program': program, 'mode': 'edit'}
+        context.update(_get_dashboard_context())
+        return render(request, 'program_form.html', context)
 
 
 def program_list_view(request):
-    programs = ProductionProgram.objects.all().select_related('product', 'production_info')
-    # Adjusted template path if list template follows same structure; fallback to simple list page
-    return render(request, 'program_list.html', {'programs': programs})
+    audit_logger.info("نمایش لیست برنامه‌های تولید")
+    try:
+        programs = ProductionProgram.objects.all().select_related('product', 'production_info')
+        return render(request, 'program_list.html', {'programs': programs})
+    except Exception as e:
+        bug_logger.error(f"List programs error: {e}")
+        return render(request, 'program_list.html', {'programs': []})
+
+
+def program_drafts_view(request):
+    """Redirect to main program list - drafts are shown there with status"""
+    audit_logger.info("ریدایرکت از صفحه پیش‌نویس به لیست اصلی")
+    return redirect(reverse('production:program_list'))

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}پیش‌نویس برنامه‌های تولید{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {background:#fff;border:1px solid #e9ecef;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+  .card-header {padding:14px 18px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between}
+  .card-body {padding:18px}
+  .status-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;background:#f8f9fa;border:1px solid #e9ecef;font-size:.9rem}
+  .table-wrap{overflow:auto}
+  table.datatable{width:100%;border-collapse:collapse}
+  table.datatable th,table.datatable td{border:1px solid #e9ecef;padding:8px 10px;text-align:center}
+  table.datatable th{background:#f8f9fa}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size:1.1rem">پیش‌نویس برنامه‌های تولید</h3>
+    <a class="btn btn-primary btn-sm" href="{% url 'production:program_create' %}">+ ایجاد برنامه جدید</a>
+  </div>
+  <div class="card-body">
+    <div class="table-wrap">
+      <table id="draftsTable" class="datatable">
+        <thead>
+          <tr>
+            <th>شناسه</th>
+            <th>محصول</th>
+            <th>فرمول</th>
+            <th>تناژ برنامه</th>
+            <th>تاریخ اجرا</th>
+            <th>وضعیت</th>
+            <th>عملیات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in programs %}
+          <tr>
+            <td>{{ p.id }}</td>
+            <td>{{ p.product }}</td>
+            <td>{{ p.production_info }}</td>
+            <td>{{ p.planned_weight_ton }}</td>
+            <td>{{ p.execution_date }}</td>
+            <td><span class="status-chip">پیش‌نویس</span></td>
+            <td>
+              <a class="btn btn-secondary btn-sm" href="{% url 'production:program_edit' p.id %}">ویرایش</a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7">پیش‌نویسی موجود نیست.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+      jQuery('#draftsTable').DataTable({
+        paging: true,
+        searching: true,
+        info: true,
+        language: { url: '/static/i18n/datatables/fa.json' }
+      });
+    }
+  });
+</script>
+{% endblock %}

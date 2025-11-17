@@ -40,17 +40,17 @@ class ProductionProgramForm(forms.ModelForm):
     predicted_start_time = forms.DateTimeField(
         required=False,
         label='شروع پیشبینی شده',
-        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'})
+        widget=forms.TextInput(attrs={'class': 'form-control jalali-datetime', 'dir': 'ltr'})
     )
     predicted_end_time = forms.DateTimeField(
         required=False,
         label='پایان پیشبینی شده',
-        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'})
+        widget=forms.TextInput(attrs={'class': 'form-control jalali-datetime', 'dir': 'ltr'})
     )
     execution_date = forms.DateField(
         required=False,
         label='تاریخ اجرای برنامه',
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        widget=forms.TextInput(attrs={'class': 'form-control jalali-date', 'dir': 'ltr'})
     )
     packaging_type = forms.ChoiceField(
         required=False,
