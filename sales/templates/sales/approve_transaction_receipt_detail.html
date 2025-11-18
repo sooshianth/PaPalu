@@ -237,11 +237,13 @@
                             <th>وضعیت وصول</th>
                             <th>تاریخ وصول</th>
                             <th>پیوست</th>
+                            <th>وضعیت تأیید</th>
+                            <th>عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                     {% for doc in documents %}
-                        <tr>
+                        <tr {% if doc.inquiry_amount %}style="background-color: #d4edda;"{% endif %}>
                             <td>{{ doc.accounting_document_number|default:"-" }}</td>
                             <td>{{ doc.get_payment_type_display }}</td>
                             <td><strong>{{ doc.document_amount|floatformat:0 }}</strong></td>
@@ -254,6 +256,20 @@
                                     <a href="{{ doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
                                 {% else %}
                                     -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if doc.inquiry_amount %}
+                                    <span style="color: var(--primary-green); font-weight: 600;">✓ تأیید شده</span>
+                                {% else %}
+                                    <span style="color: #ffc107; font-weight: 600;">⏳ در انتظار تأیید</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not doc.inquiry_amount %}
+                                    <a href="?document_id={{ doc.id }}" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">تأیید</a>
+                                {% else %}
+                                    <a href="?document_id={{ doc.id }}" class="btn btn-sm btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">ویرایش تأیید</a>
                                 {% endif %}
                             </td>
                         </tr>
@@ -273,7 +289,7 @@
         تأییدهای تراکنش ثبت‌شده
     </div>
     <div class="info-card-body">
-        {% if approvals %}
+        {% if approved_documents %}
             <div style="overflow-x: auto;">
                 <table class="modern-table">
                     <thead>
@@ -286,21 +302,19 @@
                             <th>شماره شبا</th>
                             <th>نام استعلام شده</th>
                             <th>ساعت واریز</th>
-                            <th>تاریخ ثبت</th>
                         </tr>
                     </thead>
                     <tbody>
-                    {% for approval in approvals %}
+                    {% for doc in approved_documents %}
                         <tr>
-                            <td>{{ approval.accounting_document_number }}</td>
-                            <td><strong>{{ approval.inquiry_amount|floatformat:0 }}</strong></td>
-                            <td>{{ approval.tracking_number }}</td>
-                            <td>{{ approval.source_bank }}</td>
-                            <td>{{ approval.account_number }}</td>
-                            <td>{{ approval.shaba_number }}</td>
-                            <td>{{ approval.inquiry_name }}</td>
-                            <td>{{ approval.transfer_time|date:"Y/m/d H:i"|default:"-" }}</td>
-                            <td>{{ approval.created_at|date:"Y/m/d H:i"|default:"-" }}</td>
+                            <td>{{ doc.accounting_document_number|default:"-" }}</td>
+                            <td><strong>{{ doc.inquiry_amount|floatformat:0 }}</strong></td>
+                            <td>{{ doc.tracking_number|default:"-" }}</td>
+                            <td>{{ doc.source_bank|default:"-" }}</td>
+                            <td>{{ doc.approval_account_number|default:"-" }}</td>
+                            <td>{{ doc.shaba_number|default:"-" }}</td>
+                            <td>{{ doc.inquiry_name|default:"-" }}</td>
+                            <td>{{ doc.transfer_time|date:"Y/m/d H:i"|default:"-" }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
@@ -315,20 +329,33 @@
     </div>
 </div>
 
-{# فرم تأیید تراکنش #}
+{# فرم تأیید تراکنش - فقط اگر سندی انتخاب شده باشد #}
+{% if form and selected_document %}
 <div class="form-section">
     <div class="form-section-header">
-        فرم تأیید تراکنش
+        فرم تأیید تراکنش - سند {{ selected_document.accounting_document_number|default:selected_document.id }}
     </div>
     <div class="form-section-body">
+        <div style="background: #e7f3ff; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; border-right: 4px solid #0066cc;">
+            <strong>اطلاعات سند انتخابی:</strong>
+            <div style="margin-top: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.9rem;">
+                <div><strong>نوع تسویه:</strong> {{ selected_document.get_payment_type_display }}</div>
+                <div><strong>مبلغ سند:</strong> {{ selected_document.document_amount|floatformat:0 }} ریال</div>
+                <div><strong>تاریخ سررسید:</strong> {{ selected_document.due_date|default:"-" }}</div>
+                <div><strong>حساب مبدا:</strong> {{ selected_document.source_account|default:"-" }}</div>
+            </div>
+        </div>
+        
         <form method="post">
             {% csrf_token %}
+            <input type="hidden" name="document_id" value="{{ selected_document.id }}">
             
             <div class="form-grid">
                 <div class="form-group">
                     <label for="{{ form.accounting_document_number.id_for_label }}">شماره سند حسابداری <span style="color: #dc3545;">*</span></label>
                     {{ form.accounting_document_number }}
                     {{ form.accounting_document_number.errors }}
+                    <small style="color: var(--gray-600); margin-top: 0.25rem;">می‌توانید شماره سند حسابداری را تغییر دهید</small>
                 </div>
                 <div class="form-group">
                     <label for="{{ form.inquiry_amount.id_for_label }}">مبلغ استعلام گرفته شده <span style="color: #dc3545;">*</span></label>
@@ -356,9 +383,9 @@
             
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="{{ form.account_number.id_for_label }}">شماره حساب <span style="color: #dc3545;">*</span></label>
-                    {{ form.account_number }}
-                    {{ form.account_number.errors }}
+                    <label for="{{ form.approval_account_number.id_for_label }}">شماره حساب <span style="color: #dc3545;">*</span></label>
+                    {{ form.approval_account_number }}
+                    {{ form.approval_account_number.errors }}
                 </div>
                 <div class="form-group">
                     <label for="{{ form.shaba_number.id_for_label }}">شماره شبا <span style="color: #dc3545;">*</span></label>
@@ -381,12 +408,25 @@
             </div>
 
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary">تأیید تراکنش</button>
+                <button type="submit" class="btn btn-primary">{% if selected_document.inquiry_amount %}به‌روزرسانی تأیید{% else %}ثبت تأیید{% endif %}</button>
+                <a href="{% url 'sales:approve_transaction_receipt_detail' order.order_number %}" class="btn btn-secondary">لغو</a>
                 <a href="{% url 'sales:approve_transaction_receipt_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
             </div>
         </form>
     </div>
 </div>
+{% elif not selected_document %}
+<div class="info-card">
+    <div class="info-card-header">
+        فرم تأیید تراکنش
+    </div>
+    <div class="info-card-body">
+        <p style="text-align: center; color: var(--gray-600); padding: 2rem;">
+            لطفاً از لیست اسناد تراکنش بالا، یک سند را برای تأیید انتخاب کنید.
+        </p>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

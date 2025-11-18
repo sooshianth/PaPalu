@@ -119,7 +119,7 @@ def transaction_receipt_upload_view(request, order_number):
                         settlement.settlement_status = 'partial'
 
                     settlement.save(update_fields=['settled_amount', 'settlement_status'])
-                    
+
                     if order.status == 'pending_accounting_approval':
                         bug_logger.info(f"وضعیت سفارش {order_number} به pending_accounting_approval تغییر یافت")
 

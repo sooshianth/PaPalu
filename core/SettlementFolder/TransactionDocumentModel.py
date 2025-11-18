@@ -29,11 +29,11 @@ class TransactionDocument(models.Model):
     # شماره سند حسابداری
     accounting_document_number = models.CharField(
         max_length=50,
-        unique=True,
+        unique=False,  # ممکن است در مرحله تأیید override شود
         null=True,
         blank=True,
         verbose_name='شماره سند حسابداری',
-        help_text='شماره سند حسابداری (به صورت خودکار تولید می‌شود)'
+        help_text='شماره سند حسابداری (به صورت خودکار تولید می‌شود یا در مرحله تأیید وارد می‌شود)'
     )
 
     # ForeignKey به Settlement
@@ -123,10 +123,77 @@ class TransactionDocument(models.Model):
         blank=True
     )
 
+    # ========== فیلدهای تأیید تراکنش (override در مرحله تأیید) ==========
+    
+    # مبلغ استعلام گرفته شده
+    inquiry_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='مبلغ استعلام گرفته شده',
+        null=True,
+        blank=True
+    )
+
+    # شماره پیگیری واریز (یونیک به صورت جفتی با ساعت واریز)
+    tracking_number = models.CharField(
+        max_length=100,
+        verbose_name='شماره پیگیری واریز',
+        null=True,
+        blank=True,
+        help_text='شماره پیگیری واریز (در چک، شماره صیادی آن چک است)'
+    )
+
+    # بانک مبدا (برای تأیید)
+    source_bank = models.CharField(
+        max_length=100,
+        verbose_name='بانک مبدا',
+        null=True,
+        blank=True
+    )
+
+    # شماره حساب (برای تأیید)
+    approval_account_number = models.CharField(
+        max_length=50,
+        verbose_name='شماره حساب',
+        null=True,
+        blank=True
+    )
+
+    # شماره شبا (برای تأیید)
+    shaba_number = models.CharField(
+        max_length=26,
+        verbose_name='شماره شبا',
+        null=True,
+        blank=True
+    )
+
+    # نام استعلام شده
+    inquiry_name = models.CharField(
+        max_length=200,
+        verbose_name='نام استعلام شده',
+        null=True,
+        blank=True
+    )
+
+    # ساعت واریز (یونیک به صورت جفتی با شماره پیگیری)
+    transfer_time = jmodels.jDateTimeField(
+        verbose_name='ساعت واریز',
+        null=True,
+        blank=True
+    )
+
     class Meta:
         verbose_name = 'تسویه | سند تراکنش'
         verbose_name_plural = 'تسویه | اسناد تراکنش'
         ordering = ['-id', '-accounting_document_number', 'document_number']
+        # یونیک بودن جفتی tracking_number و transfer_time (فقط اگر هر دو پر شده باشند)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['tracking_number', 'transfer_time'],
+                condition=models.Q(tracking_number__isnull=False) & models.Q(transfer_time__isnull=False),
+                name='unique_tracking_transfer'
+            )
+        ]
 
     def __str__(self):
         return f"سند تراکنش {self.accounting_document_number or f'#{self.id}'} - {self.document_number or ''}"
