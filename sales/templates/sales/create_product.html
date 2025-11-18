@@ -481,7 +481,7 @@
                 {% for form in bom_formset %}
                 <div class="formset-row" data-form-index="{{ forloop.counter0 }}">
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <label class="form-label required-field">{{ form.raw_material.label }}</label>
                             {{ form.raw_material }}
                             {% if form.raw_material.errors %}
@@ -489,15 +489,7 @@
                             {% endif %}
                         </div>
 
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label required-field">{{ form.unit_used.label }}</label>
-                            {{ form.unit_used }}
-                            {% if form.unit_used.errors %}
-                                <div class="text-danger">{{ form.unit_used.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-3 mb-3">
+                        <div class="col-md-4 mb-3">
                             <label class="form-label required-field">{{ form.quantity.label }}</label>
                             {{ form.quantity }}
                             {% if form.quantity.errors %}

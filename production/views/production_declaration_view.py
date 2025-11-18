@@ -323,9 +323,11 @@ def production_program_crud_view(request, program_id=None):
                         started_at_str = request.POST.get('started_at')
                         if started_at_str:
                             try:
-                                # Convert from ISO datetime string to datetime object
+                                # Convert from ISO datetime string to timezone-aware datetime object
                                 from datetime import datetime
-                                instance.started_at = datetime.fromisoformat(started_at_str.replace('T', ' '))
+                                naive_dt = datetime.fromisoformat(started_at_str.replace('T', ' '))
+                                # Make it timezone-aware
+                                instance.started_at = timezone.make_aware(naive_dt)
                                 bug_logger.info(f"زمان شروع واقعی از popup دریافت شد: {instance.started_at}")
                             except ValueError as e:
                                 bug_logger.warning(f"خطا در تبدیل زمان شروع: {str(e)}")
@@ -349,13 +351,56 @@ def production_program_crud_view(request, program_id=None):
                         if completed_at_str:
                             try:
                                 from datetime import datetime
-                                instance.completed_at = datetime.fromisoformat(completed_at_str.replace('T', ' '))
+                                naive_dt = datetime.fromisoformat(completed_at_str.replace('T', ' '))
+                                # Make it timezone-aware
+                                instance.completed_at = timezone.make_aware(naive_dt)
                                 bug_logger.info(f"زمان تکمیل از popup دریافت شد: {instance.completed_at}")
                             except ValueError as e:
                                 bug_logger.warning(f"خطا در تبدیل زمان تکمیل: {str(e)}")
                                 instance.completed_at = timezone.now()
                         else:
                             instance.completed_at = timezone.now()
+                    
+                    # Handle actual consumption data (for IN_PROGRESS and COMPLETED status)
+                    if instance.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
+                        actual_consumption = {}
+                        # Collect actual consumption data from POST
+                        for key, value in request.POST.items():
+                            if key.startswith('actual_consumption_'):
+                                bom_id = key.replace('actual_consumption_', '')
+                                if value and value.strip():
+                                    try:
+                                        from decimal import Decimal
+                                        actual_consumption[bom_id] = str(Decimal(value))
+                                        bug_logger.debug(f"مصرف واقعی BOM {bom_id}: {value}")
+                                    except (ValueError, TypeError) as e:
+                                        bug_logger.warning(f"خطا در تبدیل مصرف واقعی BOM {bom_id}: {str(e)}")
+                        
+                        # Validate that all BOM items have actual consumption when completing
+                        if action == 'complete' and instance.production_info:
+                            bom_items = instance.production_info.bom_items.all()
+                            missing_consumption = []
+                            for bom in bom_items:
+                                bom_id_str = str(bom.id)
+                                if bom_id_str not in actual_consumption or not actual_consumption[bom_id_str]:
+                                    missing_consumption.append(bom.raw_material.name if bom.raw_material else f"BOM #{bom.id}")
+                            
+                            if missing_consumption:
+                                bug_logger.warning(f"تکمیل رد شد: مصرف واقعی برای {len(missing_consumption)} ماده اولیه وارد نشده است")
+                                messages.error(request, f'لطفاً مقدار مصرف واقعی را برای تمام مواد اولیه وارد کنید. موارد ناقص: {", ".join(missing_consumption)}')
+                                # Don't save and return to form
+                                context = {
+                                    'form': form,
+                                    'program': program,
+                                    'is_create': is_create,
+                                    'raw_materials_inventory': raw_materials_inventory,
+                                    'production_infos_json': json.dumps(production_infos_data),
+                                    'bom_data_json': json.dumps(bom_data),
+                                }
+                                return render(request, 'production_declaration_crud.html', context)
+                        
+                        instance.actual_consumption = actual_consumption
+                        bug_logger.info(f"داده‌های مصرف واقعی ذخیره شد: {len(actual_consumption)} آیتم")
                     
                     instance.save()
                     
@@ -431,6 +476,11 @@ def production_program_crud_view(request, program_id=None):
         production_infos_data = {}
         bom_data = {}
         
+        # Get actual consumption data if editing existing program
+        actual_consumption_data = {}
+        if not is_create and program:
+            actual_consumption_data = program.actual_consumption or {}
+        
         try:
             all_production_infos = ProductionInfo.objects.all().select_related('product').prefetch_related('bom_items')
             for prod_info in all_production_infos:
@@ -449,11 +499,17 @@ def production_program_crud_view(request, program_id=None):
                     # Prepare BOM data
                     bom_items = []
                     for bom in prod_info.bom_items.all():
+                        # Get actual consumption for this BOM item if exists
+                        bom_id_str = str(bom.id)
+                        actual_consumption = actual_consumption_data.get(bom_id_str, '')
+                        
                         bom_items.append({
+                            'id': bom.id,
                             'raw_material_id': bom.raw_material.raw_material_id if bom.raw_material else '-',
                             'raw_material_name': bom.raw_material.name if bom.raw_material else '-',
                             'quantity': str(bom.quantity) if bom.quantity else '0',
-                            'unit_used': bom.unit_used or '-',
+                            'unit_used': bom.raw_material.primary_unit if (bom.raw_material and bom.raw_material.primary_unit) else '-',
+                            'actual_consumption': str(actual_consumption) if actual_consumption else '',
                         })
                     
                     bom_data[prod_info.id] = {
@@ -472,6 +528,7 @@ def production_program_crud_view(request, program_id=None):
             'raw_materials_inventory': raw_materials_inventory,
             'production_infos_json': json.dumps(production_infos_data),
             'bom_data_json': json.dumps(bom_data),
+            'program_status': program.status if program else 'draft',
         }
         
         if is_create:
@@ -490,5 +547,8 @@ def production_program_crud_view(request, program_id=None):
             'program': None,
             'is_create': is_create,
             'raw_materials_inventory': [],
+            'production_infos_json': json.dumps({}),
+            'bom_data_json': json.dumps({}),
+            'program_status': 'draft',
         }
         return render(request, 'production_declaration_crud.html', context)

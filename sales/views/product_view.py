@@ -86,7 +86,6 @@ def create_product_view(request):
                         if all([
                             bom_form.cleaned_data.get('raw_material_id'),
                             bom_form.cleaned_data.get('raw_material'),
-                            bom_form.cleaned_data.get('unit_used'),
                             bom_form.cleaned_data.get('quantity') is not None,
                         ]):
                             bom_count += 1
@@ -124,7 +123,6 @@ def create_product_view(request):
                                     if all([
                                         bom_form.cleaned_data.get('raw_material_id'),
                                         bom_form.cleaned_data.get('raw_material'),
-                                        bom_form.cleaned_data.get('unit_used'),
                                         bom_form.cleaned_data.get('quantity') is not None,
                                     ]):
                                         bom = bom_form.save(commit=False)
@@ -375,7 +373,6 @@ def edit_product_view(request, product_id):
                         if all([
                             bom_form.cleaned_data.get('raw_material_id'),
                             bom_form.cleaned_data.get('raw_material'),
-                            bom_form.cleaned_data.get('unit_used'),
                             bom_form.cleaned_data.get('quantity') is not None,
                         ]):
                             bom_count += 1
@@ -423,7 +420,6 @@ def edit_product_view(request, product_id):
                                     if all([
                                         bom_form.cleaned_data.get('raw_material_id'),
                                         bom_form.cleaned_data.get('raw_material'),
-                                        bom_form.cleaned_data.get('unit_used'),
                                         bom_form.cleaned_data.get('quantity') is not None,
                                     ]):
                                         bom = bom_form.save(commit=False)
