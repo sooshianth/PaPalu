@@ -28,6 +28,7 @@ class Order(models.Model):
         # بعد از تکمیل بارگذاری رسیدها، سفارش به این وضعیت می‌رود
         ('pending_accounting_approval', 'در انتظار تایید حسابداری'),
         ('pending_allocation', 'در انتظار تخصیص'),
+        ('pending_allocation_approval', 'در انتظار تأیید تخصیص'),
         ('completed', 'تکمیل شده'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),
