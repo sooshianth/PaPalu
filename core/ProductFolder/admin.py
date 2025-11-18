@@ -63,9 +63,9 @@ class ProductionInfoAdmin(admin.ModelAdmin):
 
 @admin.register(BOM)
 class BOMAdmin(admin.ModelAdmin):
-    list_display = ['raw_material', 'production_info', 'unit_used']
-    search_fields = ['raw_material', 'production_info__product__name']
-    list_filter = ['unit_used']
+    list_display = ['raw_material', 'production_info', 'quantity']
+    search_fields = ['raw_material__name', 'production_info__product__name']
+    list_filter = ['raw_material']
 
 
 @admin.register(QualityControl)

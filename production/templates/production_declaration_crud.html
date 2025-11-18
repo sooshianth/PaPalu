@@ -347,6 +347,17 @@
         box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
     }
     
+    .modal-bom-input:focus {
+        outline: none;
+        border-color: #ffc107 !important;
+        box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2) !important;
+    }
+    
+    .modal-bom-input::placeholder {
+        color: #adb5bd;
+        font-size: 0.85rem;
+    }
+    
     .modal-footer {
         padding: 20px 24px;
         border-top: 1px solid #e9ecef;
@@ -647,20 +658,30 @@
 
 <!-- Complete Production Modal -->
 <div id="completeProductionModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
         <div class="modal-header">
             <h3>تکمیل تولید</h3>
             <button type="button" class="modal-close" onclick="closeModal('completeProductionModal')">&times;</button>
         </div>
         <div class="modal-body">
-            <p>آیا از تکمیل تولید این برنامه اطمینان دارید؟</p>
+            <p style="margin-bottom: 20px; font-weight: 600;">آیا از تکمیل تولید این برنامه اطمینان دارید؟</p>
+            
             <div class="modal-form-field">
-                <label for="producedWeight">وزن تولید شده (تن):</label>
+                <label for="producedWeight">وزن تولید شده (تن): <span style="color: red;">*</span></label>
                 <input type="number" id="producedWeight" class="form-control" step="0.001" min="0" required>
             </div>
+            
             <div class="modal-form-field">
-                <label for="completionTime">زمان تکمیل:</label>
+                <label for="completionTime">زمان تکمیل: <span style="color: red;">*</span></label>
                 <input type="datetime-local" id="completionTime" class="form-control" required>
+            </div>
+            
+            <!-- BOM Actual Consumption Section -->
+            <div id="bomActualConsumptionSection" style="margin-top: 24px; padding: 16px; background: #f8f9fa; border-radius: 8px; display: none;">
+                <h4 style="margin-bottom: 16px; color: #343a40; font-size: 1.1rem;">مصرف واقعی مواد اولیه <span style="color: red;">*</span></h4>
+                <div id="bomActualConsumptionList" style="max-height: 300px; overflow-y: auto;">
+                    <!-- Will be populated dynamically -->
+                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -674,6 +695,10 @@
 
 {% block extra_js %}
 <script>
+// Global data variables (parsed from Django context)
+const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
+const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
+
 // Modal functions
 function showModal(modalId) {
     document.getElementById(modalId).style.display = 'flex';
@@ -690,6 +715,9 @@ function closeModal(modalId) {
     } else if (modalId === 'completeProductionModal') {
         document.getElementById('producedWeight').value = '';
         document.getElementById('completionTime').value = '';
+        // Clear BOM inputs
+        const bomInputs = document.querySelectorAll('.modal-bom-input');
+        bomInputs.forEach(input => input.value = '');
     }
 }
 
@@ -717,6 +745,76 @@ function showCompleteProductionModal() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('completionTime').value = now.toISOString().slice(0, 16);
+    
+    // Get current production info ID
+    const productionInfoSelect = document.querySelector('#id_production_info');
+    const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+    
+    // Get planned weight for calculation
+    const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
+    const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
+    
+    // Populate BOM actual consumption fields
+    const bomSection = document.getElementById('bomActualConsumptionSection');
+    const bomList = document.getElementById('bomActualConsumptionList');
+    
+    if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
+        const data = bomData[selectedProductionInfoId];
+        const bomItems = data.bom_items || [];
+        const minBatch = parseFloat(data.min_batch_production) || 1;
+        
+        if (bomItems.length > 0) {
+            let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+            
+            bomItems.forEach(item => {
+                // Get current value from the main form input if exists
+                const mainFormInput = document.querySelector(`#actual_consumption_${item.id}`);
+                const currentValue = mainFormInput ? mainFormInput.value : (item.actual_consumption || '');
+                
+                // Calculate total consumption: BOM.quantity * planned_weight_ton / min_batch_production
+                const quantity = parseFloat(item.quantity) || 0;
+                const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(4) : '-';
+                
+                html += `
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #dee2e6;">
+                        <div>
+                            <strong style="color: #343a40;">${item.raw_material_name || '-'}</strong>
+                            <div style="font-size: 0.85rem; color: #6c757d;">کد: ${item.raw_material_id || '-'}</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.85rem; color: #6c757d;">مقدار مصرف کل</div>
+                            <strong style="color: var(--primary-green);">${totalConsumption}</strong>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 0.85rem; color: #6c757d;">واحد</div>
+                            <strong>${item.unit_used || '-'}</strong>
+                        </div>
+                        <div>
+                            <input type="number" 
+                                   id="modal_actual_consumption_${item.id}" 
+                                   class="form-control modal-bom-input" 
+                                   data-bom-id="${item.id}"
+                                   data-material-name="${item.raw_material_name || 'ماده اولیه'}"
+                                   value="${currentValue}" 
+                                   step="0.0001" 
+                                   min="0" 
+                                   required
+                                   placeholder="مقدار واقعی"
+                                   style="width: 100%; padding: 8px; border: 2px solid #ffc107;">
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            bomList.innerHTML = html;
+            bomSection.style.display = 'block';
+        } else {
+            bomSection.style.display = 'none';
+        }
+    } else {
+        bomSection.style.display = 'none';
+    }
     
     showModal('completeProductionModal');
 }
@@ -751,9 +849,47 @@ function confirmCompleteProduction() {
         return;
     }
     
+    // Validate and collect BOM actual consumption data
+    const bomInputs = document.querySelectorAll('.modal-bom-input');
+    const missingItems = [];
+    const bomDataToSave = {};
+    
+    bomInputs.forEach(input => {
+        const value = input.value.trim();
+        const bomId = input.dataset.bomId;
+        const materialName = input.dataset.materialName;
+        
+        if (!value || parseFloat(value) < 0) {
+            missingItems.push(materialName);
+        } else {
+            bomDataToSave[bomId] = value;
+        }
+    });
+    
+    // Check if there are any BOM items that need to be filled
+    if (bomInputs.length > 0 && missingItems.length > 0) {
+        alert(`لطفاً مقدار مصرف واقعی را برای تمام مواد اولیه وارد کنید.\n\nموارد ناقص:\n${missingItems.join('\n')}`);
+        return;
+    }
+    
     // Set hidden field values
     document.getElementById('producedWeightField').value = weight;
     document.getElementById('completedAtField').value = completionTime;
+    
+    // Transfer BOM actual consumption values to the main form inputs
+    Object.keys(bomDataToSave).forEach(bomId => {
+        const mainFormInput = document.querySelector(`input[name="actual_consumption_${bomId}"]`);
+        if (mainFormInput) {
+            mainFormInput.value = bomDataToSave[bomId];
+        } else {
+            // Create hidden input if it doesn't exist
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = `actual_consumption_${bomId}`;
+            hiddenInput.value = bomDataToSave[bomId];
+            document.getElementById('productionForm').appendChild(hiddenInput);
+        }
+    });
     
     // Submit form
     submitFormWithAction('complete');
@@ -794,10 +930,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const productionInfoSelect = document.querySelector('#id_production_info');
     const bomDetailsSection = document.getElementById('bom-details-section');
     const bomDetailsContent = document.getElementById('bom-details-content');
-    
-    // Parse context data
-    const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
-    const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
     
     // Initially disable production_info if no product is selected
     if (productSelect && !productSelect.value) {
@@ -866,6 +998,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
         const minBatch = parseFloat(data.min_batch_production) || 1;
         
+        // Get current status from the hidden status field or form context
+        const statusField = document.querySelector('#id_status');
+        const currentStatus = statusField ? statusField.value : '{{ program.status|default:"draft" }}';
+        
+        // Show actual consumption column only for in_progress or completed status
+        const showActualConsumption = ['in_progress', 'completed'].includes(currentStatus);
+        const isEditable = ['in_progress', 'completed'].includes(currentStatus);
+        
         let html = `
             <div style="margin-bottom: 16px;">
                 <strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>
@@ -879,6 +1019,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <th>نام ماده اولیه</th>
                         <th>مقدار (در فرمول)</th>
                         <th>مقدار مصرف کل</th>
+                        ${showActualConsumption ? '<th style="background: #fff6db;">مقدار مصرف واقعی</th>' : ''}
                         <th>واحد</th>
                     </tr>
                 </thead>
@@ -890,12 +1031,42 @@ document.addEventListener('DOMContentLoaded', function() {
             // Calculate: required = BOM.quantity * planned_weight_ton / min_batch_production
             const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(4) : '-';
             
+            // Get actual consumption value
+            const actualConsumption = item.actual_consumption || '';
+            
             html += `
                 <tr>
                     <td>${item.raw_material_id || '-'}</td>
                     <td>${item.raw_material_name || '-'}</td>
                     <td>${item.quantity || 0}</td>
                     <td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
+            `;
+            
+            if (showActualConsumption) {
+                if (isEditable) {
+                    html += `
+                        <td style="background: #fff6db;">
+                            <input type="number" 
+                                   name="actual_consumption_${item.id}" 
+                                   id="actual_consumption_${item.id}"
+                                   value="${actualConsumption}" 
+                                   step="0.0001" 
+                                   min="0"
+                                   class="form-control" 
+                                   style="width: 100%; padding: 6px; text-align: center;"
+                                   placeholder="مقدار واقعی"
+                                   ${currentStatus === 'completed' ? '' : ''}
+                            >
+                        </td>
+                    `;
+                } else {
+                    html += `
+                        <td style="background: #f8f9fa;">${actualConsumption || '-'}</td>
+                    `;
+                }
+            }
+            
+            html += `
                     <td>${item.unit_used || '-'}</td>
                 </tr>
             `;
@@ -905,6 +1076,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tbody>
             </table>
         `;
+        
+        if (showActualConsumption && isEditable) {
+            html += `
+                <div style="margin-top: 12px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 0.9rem;">
+                    <strong>توجه:</strong> لطفاً مقدار مصرف واقعی هر ماده اولیه را وارد کنید.
+                    ${currentStatus === 'in_progress' ? 'برای تکمیل برنامه، باید مقدار مصرف واقعی تمام مواد اولیه را وارد کنید.' : ''}
+                </div>
+            `;
+        }
         
         bomDetailsContent.innerHTML = html;
     }

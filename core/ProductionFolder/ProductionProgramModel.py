@@ -104,6 +104,11 @@ class ProductionProgram(models.Model):
         null=True, blank=True,
         verbose_name='خلاصه مصرف مواد اولیه'
     )
+    actual_consumption = models.JSONField(
+        null=True, blank=True,
+        verbose_name='مصرف واقعی مواد اولیه',
+        help_text='مقدار مصرف واقعی مواد اولیه به صورت {bom_id: actual_amount}'
+    )
     priority_index = models.DecimalField(
         max_digits=10, decimal_places=3,
         null=True, blank=True,
