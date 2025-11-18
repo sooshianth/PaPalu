@@ -1,0 +1,126 @@
+from django import forms
+from core.AllocationFolder.AllocationModel import Allocation
+from core.AllocationFolder.AllocationProductInfoModel import AllocationProductInfo
+from core.OrderFolder.OrderModel import Order
+from core.ProductFolder import Product
+from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
+
+
+class AllocationProductInfoForm(forms.ModelForm):
+    """فرم برای اقلام محصول تخصیص"""
+    
+    class Meta:
+        model = AllocationProductInfo
+        fields = ['product', 'unit', 'quantity']
+        widgets = {
+            'product': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'انتخاب محصول'
+            }),
+            'unit': forms.Select(attrs={
+                'class': 'form-control',
+                'placeholder': 'انتخاب واحد'
+            }),
+            'quantity': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'مقدار',
+                'step': '0.001',
+                'min': '0'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        order = kwargs.pop('order', None)
+        super().__init__(*args, **kwargs)
+        
+        # فیلتر محصولات بر اساس سفارش
+        if order:
+            order_products = order.order_items.values_list('product_id', flat=True).distinct()
+            self.fields['product'].queryset = Product.objects.filter(id__in=order_products)
+        else:
+            self.fields['product'].queryset = Product.objects.all()
+        
+        self.fields['product'].empty_label = '-- انتخاب محصول --'
+        self.fields['product'].required = True
+        self.fields['unit'].required = True
+        self.fields['quantity'].required = True
+
+
+BaseAllocationProductInfoFormSet = forms.inlineformset_factory(
+    Allocation,
+    AllocationProductInfo,
+    form=AllocationProductInfoForm,
+    extra=1,
+    can_delete=True,
+    min_num=1,
+    validate_min=True
+)
+
+
+class AllocationProductInfoFormSet(BaseAllocationProductInfoFormSet):
+    """FormSet سفارشی که order را به فرم‌ها پاس می‌دهد"""
+    
+    def __init__(self, *args, **kwargs):
+        self.order = kwargs.pop('order', None)
+        super().__init__(*args, **kwargs)
+    
+    def _construct_form(self, i, **kwargs):
+        """ساخت هر فرم با پاس دادن order"""
+        kwargs['order'] = self.order
+        return super()._construct_form(i, **kwargs)
+
+
+class CreateAllocationForm(forms.ModelForm):
+    """فرم ایجاد تخصیص"""
+    
+    class Meta:
+        model = Allocation
+        fields = ['allocation_number', 'allocation_priority', 'requested_machine', 'delivery_postal_code']
+        widgets = {
+            'allocation_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'شماره تخصیص'
+            }),
+            'allocation_priority': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'الویت تخصیص',
+                'min': '0'
+            }),
+            'requested_machine': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'ماشین درخواستی'
+            }),
+            'delivery_postal_code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'کد پستی تحویل',
+                'maxlength': '20'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        order = kwargs.pop('order', None)
+        super().__init__(*args, **kwargs)
+        
+        # تنظیم فیلدهای اجباری
+        self.fields['allocation_number'].required = True
+        self.fields['allocation_priority'].required = True
+        self.fields['requested_machine'].required = True
+        self.fields['delivery_postal_code'].required = True
+        
+        # اگر order وجود دارد، می‌توانیم لیست آدرس‌های تحویل را برای نمایش در تمپلیت آماده کنیم
+        # اما فیلد همچنان TextInput باقی می‌ماند تا کاربر بتواند کد پستی را وارد کند
+    
+    def clean_allocation_number(self):
+        allocation_number = self.cleaned_data.get('allocation_number')
+        if allocation_number:
+            # بررسی تکراری نبودن شماره تخصیص
+            if self.instance.pk:
+                existing = Allocation.objects.filter(allocation_number=allocation_number).exclude(pk=self.instance.pk)
+            else:
+                existing = Allocation.objects.filter(allocation_number=allocation_number)
+            
+            if existing.exists():
+                raise forms.ValidationError('شماره تخصیص تکراری است.')
+        
+        return allocation_number
+
