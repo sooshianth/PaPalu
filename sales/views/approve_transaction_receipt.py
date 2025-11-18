@@ -4,6 +4,8 @@ from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render, redirect
+import logging
+from core.logging_levels import *
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
@@ -11,13 +13,19 @@ from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionApprovalModel import TransactionApproval
 from sales.forms.approve_transaction_receipt import TransactionApprovalForm
 
+bug_logger = logging.getLogger("bugs")
+audit_logger = logging.getLogger("audit")
+
 
 @login_required
 def approve_transaction_receipt_list_view(request):
     """
     لیست سفارش‌های در وضعیت «در انتظار تأیید حسابداری»
     """
+    audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار تأیید حسابداری")
+    
     if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):  # TODO: باید task مناسب اضافه شود
+        audit_logger.activity("تلاش برای دسترسی به لیست تأیید تراکنش فروش بدون دسترسی")
         messages.error(request, 'شما دسترسی به تأیید تراکنش فروش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
@@ -25,6 +33,8 @@ def approve_transaction_receipt_list_view(request):
 
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
+
+    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار تأیید حسابداری لود شد")
 
     context = {
         'orders': orders_qs.select_related('registered_by', 'customer'),
@@ -42,17 +52,22 @@ def approve_transaction_receipt_detail_view(request, order_number):
     - فرم ثبت تأیید جدید
     - بعد از اینکه مجموع مبالغ استعلام = مبلغ کل، سفارش به "در انتظار تخصیص" می‌رود
     """
+    audit_logger.info(f"درخواست مشاهده جزئیات تأیید تراکنش سفارش {order_number}")
+    
     if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):  # TODO: باید task مناسب اضافه شود
+        audit_logger.activity(f"تلاش برای دسترسی به جزئیات تأیید تراکنش سفارش {order_number} بدون دسترسی")
         messages.error(request, 'شما دسترسی به تأیید تراکنش فروش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     order = get_object_or_404(Order, order_number=order_number)
 
     if not request.user.is_superuser and order.registered_by != request.user:
+        audit_logger.activity(f"تلاش برای دسترسی به سفارش {order_number} متعلق به کاربر دیگر")
         messages.error(request, 'شما دسترسی به این سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     if order.status != 'pending_accounting_approval':
+        bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_accounting_approval می‌رود")
         messages.error(request, 'این سفارش در وضعیت مناسب برای تأیید حسابداری نیست.')
         return redirect('sales:approve_transaction_receipt_list')
 
@@ -97,6 +112,7 @@ def approve_transaction_receipt_detail_view(request, order_number):
                     approval = form.save(commit=False)
                     approval.settlement = settlement
                     approval.save()
+                    bug_logger.info(f"تأیید تراکنش جدید برای سفارش {order_number} ثبت شد")
                     messages.success(request, 'تأیید تراکنش با موفقیت ثبت شد.')
                     
                     # Refresh settlement از دیتابیس
@@ -113,7 +129,7 @@ def approve_transaction_receipt_detail_view(request, order_number):
                         original_amount_float = float(settlement.original_document_amount)
                         
                         # Debug: نمایش مقادیر
-                        print(f"Debug: total_inquiry_float = {total_inquiry_float}, original_amount_float = {original_amount_float}")
+                        bug_logger.debug(f"مقایسه مبالغ برای سفارش {order_number}: total_inquiry={total_inquiry_float}, original_amount={original_amount_float}")
                         
                         if total_inquiry_float >= original_amount_float:
                             # Refresh order از دیتابیس
@@ -122,14 +138,17 @@ def approve_transaction_receipt_detail_view(request, order_number):
                             if order.status == 'pending_accounting_approval':
                                 order.status = 'pending_allocation'
                                 order.save(update_fields=['status'])
+                                bug_logger.info(f"وضعیت سفارش {order_number} به pending_allocation تغییر یافت")
                                 messages.success(request, 'مجموع مبالغ استعلام با مبلغ کل تسویه برابر شد. سفارش به مرحله "در انتظار تخصیص" منتقل شد.')
                                 # Redirect به لیست چون وضعیت تغییر کرده
                                 return redirect('sales:approve_transaction_receipt_list')
 
                 return redirect('sales:approve_transaction_receipt_detail', order_number=order_number)
             except Exception as e:
+                bug_logger.error(f"خطا در ثبت تأیید تراکنش سفارش {order_number}: {str(e)}", exc_info=True)
                 messages.error(request, f'خطا در ثبت تأیید تراکنش: {str(e)}')
         else:
+            bug_logger.warning(f"فرم تأیید تراکنش سفارش {order_number} معتبر نیست")
             messages.error(request, 'اطلاعات فرم معتبر نیست. لطفاً خطاها را بررسی کنید.')
     else:
         form = TransactionApprovalForm(settlement=settlement)
@@ -138,6 +157,8 @@ def approve_transaction_receipt_detail_view(request, order_number):
     remaining_amount = 0
     if settlement.original_document_amount:
         remaining_amount = float(settlement.original_document_amount) - float(total_inquiry_amount)
+
+    bug_logger.debug(f"نمایش صفحه جزئیات تأیید تراکنش سفارش {order_number}: {len(documents)} سند، {len(approvals)} تأیید")
 
     context = {
         'order': order,

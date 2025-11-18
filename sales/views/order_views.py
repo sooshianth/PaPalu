@@ -4,8 +4,13 @@ from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
 from django.db.models import Sum
+import logging
+from core.logging_levels import *
 
 from core.RBACModel import user_has_task, TaskChoices
+
+bug_logger = logging.getLogger("bugs")
+audit_logger = logging.getLogger("audit")
 from sales.forms.create_order_form import (
     CreateOrderForm,
     build_order_item_formset,
@@ -24,7 +29,10 @@ def create_order_view(request):
     - کنترل دسترسی‌ فیلدها با FieldAccessRule مشابه ایجاد مشتری
     - استفاده از فرم اقلام به صورت فرم‌ست
     """
+    audit_logger.info("درخواست ایجاد سفارش جدید")
+    
     if not user_has_task(request.user, TaskChoices.SALES_CREATE_ORDER.value):
+        audit_logger.activity("تلاش برای ایجاد سفارش بدون دسترسی")
         messages.error(request, 'شما دسترسی به ایجاد سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
@@ -84,18 +92,22 @@ def create_order_view(request):
                     warning_msg = 'سفارش ایجاد شد اما هیچ قلمی ذخیره نشد! لطفاً اطمینان حاصل کنید که اطلاعات اقلام (محصول، واحد، مقدار، قیمت) را کامل وارد کرده‌اید.'
                     if skipped_items:
                         warning_msg += f' اقلام رد شده: {"; ".join(skipped_items)}'
+                    bug_logger.warning(f"سفارش ایجاد شد اما هیچ قلمی ذخیره نشد. اقلام رد شده: {len(skipped_items)}")
                     messages.warning(request, warning_msg)
                 else:
                     success_msg = f'سفارش با موفقیت ایجاد شد و {items_saved} قلم ثبت شد. تسک بعد: صدور پیش فاکتور.'
                     if skipped_items:
                         success_msg += f' ({len(skipped_items)} قلم رد شد)'
+                    bug_logger.info(f"سفارش جدید با {items_saved} قلم ایجاد شد")
                     messages.success(request, success_msg)
                 
                 # Redirect to order list (proforma functionality will be added later)
                 return redirect('sales:order_list')
             except Exception as e:
+                bug_logger.error(f"خطا در ایجاد سفارش: {str(e)}", exc_info=True)
                 messages.error(request, f'خطا در ایجاد سفارش: {str(e)}')
         else:
+            bug_logger.warning("فرم ایجاد سفارش معتبر نیست")
             messages.error(request, 'اطلاعات وارد شده معتبر نیست. لطفاً خطاهای فرم را بررسی کنید.')
     else:
         temp_order_form = CreateOrderForm()
@@ -166,7 +178,10 @@ def order_list_view(request):
     """
     لیست سفارش‌ها با کنترل دسترسی و نمایش فیلدهای قابل مشاهده
     """
+    audit_logger.info("درخواست مشاهده لیست سفارش‌ها")
+    
     if not user_has_task(request.user, TaskChoices.SALES_VIEW_ORDER_LIST.value):
+        audit_logger.activity("تلاش برای مشاهده لیست سفارش‌ها بدون دسترسی")
         messages.error(request, 'شما دسترسی به مشاهده لیست سفارش‌ها ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
@@ -177,6 +192,8 @@ def order_list_view(request):
 
     # محاسبه مجموع بهای تمام شده خرید برای هر سفارش با annotate
     orders_qs = orders_qs.annotate(total_purchase_cost=Sum('order_items__total_purchase_cost'))
+
+    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش برای نمایش لود شد")
 
     accessible_fields = get_accessible_order_list_fields(request.user)
 

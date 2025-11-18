@@ -3,8 +3,13 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
+import logging
+from core.logging_levels import *
 
 from core.RBACModel import user_has_task, TaskChoices
+
+bug_logger = logging.getLogger("bugs")
+audit_logger = logging.getLogger("audit")
 from access.helpers import check_field_access_prefer_edit
 from sales.forms.create_customer_form import (
     CreateCustomerForm,
@@ -31,9 +36,11 @@ def create_customer_view(request):
     - بررسی دسترسی با TaskPermission
     - بررسی دسترسی فیلدها با FieldAccessRule
     """
+    audit_logger.info("درخواست ایجاد مشتری جدید")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_CREATE_CUSTOMER.value):
+        audit_logger.activity("تلاش برای ایجاد مشتری بدون دسترسی")
         messages.error(request, 'شما دسترسی به ایجاد مشتری ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -179,11 +186,16 @@ def create_customer_view(request):
                                 is_primary=False
                             )
                 
+                bug_logger.info(f"مشتری جدید با نام {person.name} ایجاد شد")
                 messages.success(request, f'مشتری "{person.name}" با موفقیت ایجاد شد.')
                 return redirect('sales:customer_list')
                 
             except Exception as e:
+                bug_logger.error(f"خطا در ایجاد مشتری: {str(e)}", exc_info=True)
                 messages.error(request, f'خطا در ایجاد مشتری: {str(e)}')
+        else:
+            # فرم معتبر نیست
+            bug_logger.warning("فرم ایجاد مشتری معتبر نیست")
     else:
         # در GET نیز فیلدهای غیرمجاز را از فرم حذف کن تا در UI نمایش داده نشوند
         temp_form_for_access = CreateCustomerForm()
@@ -496,9 +508,11 @@ def customer_list_view(request):
     ویو برای نمایش لیست مشتریان
     - فقط مشتریانی که کارشناس فروششان کاربر فعلی است نمایش داده می‌شوند
     """
+    audit_logger.info("درخواست مشاهده لیست مشتریان")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_CREATE_CUSTOMER.value):
+        audit_logger.activity("تلاش برای مشاهده لیست مشتریان بدون دسترسی")
         messages.error(request, 'شما دسترسی به مشاهده لیست مشتریان ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -511,6 +525,8 @@ def customer_list_view(request):
             type='customer',
             sales_expert=request.user.username
         ).order_by('-name')
+    
+    bug_logger.debug(f"تعداد {customers.count()} مشتری برای نمایش لود شد")
     
     # گرفتن فیلدهای قابل دسترسی برای کاربر
     accessible_fields = get_accessible_customer_fields(request.user)

@@ -5,6 +5,8 @@ from django.db import transaction
 from django.http import JsonResponse, HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.db.models import Q
+import logging
+from core.logging_levels import *
 
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
@@ -20,6 +22,9 @@ from sales.forms.create_product_form import (
 )
 from access.helpers import check_field_access_prefer_edit
 
+bug_logger = logging.getLogger("bugs")
+audit_logger = logging.getLogger("audit")
+
 
 @login_required
 def create_product_view(request):
@@ -28,9 +33,11 @@ def create_product_view(request):
     - بررسی دسترسی با TaskPermission
     - بررسی دسترسی فیلدها با FieldAccessRule
     """
+    audit_logger.info("درخواست ایجاد محصول جدید")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_CREATE_PRODUCT.value):
+        audit_logger.activity("تلاش برای ایجاد محصول بدون دسترسی")
         messages.error(request, 'شما دسترسی به ایجاد محصول ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -124,6 +131,7 @@ def create_product_view(request):
                                         bom.production_info = first_production_info
                                         bom.save()
                         
+                        bug_logger.info(f"محصول جدید با کد {product.code} ایجاد شد")
                         messages.success(
                             request,
                             f'محصول "{product.name}" با کد "{product.code}" با موفقیت ایجاد شد.'
@@ -132,14 +140,14 @@ def create_product_view(request):
                         return redirect('sales:product_list')
                     
             except Exception as e:
-                import traceback
+                bug_logger.error(f"خطا در ایجاد محصول: {str(e)}", exc_info=True)
                 messages.error(
                     request,
                     f'خطا در ایجاد محصول: {str(e)}'
                 )
-                print(traceback.format_exc())
         else:
             # نمایش خطاهای فرم
+            bug_logger.warning("فرم ایجاد محصول معتبر نیست")
             if not product_form.is_valid():
                 for field, errors in product_form.errors.items():
                     for error in errors:
@@ -185,9 +193,11 @@ def product_list_view(request):
     ویو لیست محصولات با قابلیت جستجو و فیلتر
     - بررسی دسترسی با TaskPermission
     """
+    audit_logger.info("درخواست مشاهده لیست محصولات")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_VIEW_PRODUCT_LIST.value):
+        audit_logger.activity("تلاش برای مشاهده لیست محصولات بدون دسترسی")
         messages.error(request, 'شما دسترسی به مشاهده لیست محصولات ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -239,6 +249,8 @@ def product_list_view(request):
     # دریافت فیلدهای قابل دسترسی برای کاربر
     accessible_fields = get_accessible_product_fields_for_view(request.user)
     
+    bug_logger.debug(f"تعداد {page_obj.paginator.count} محصول برای نمایش لود شد")
+    
     context = {
         'page_obj': page_obj,
         'products': page_obj,
@@ -260,9 +272,11 @@ def product_detail_view(request, product_id):
     ویو نمایش جزئیات محصول
     - بررسی دسترسی با TaskPermission
     """
+    audit_logger.info(f"درخواست مشاهده جزئیات محصول {product_id}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_VIEW_PRODUCT_DETAIL.value):
+        audit_logger.activity(f"تلاش برای مشاهده جزئیات محصول {product_id} بدون دسترسی")
         messages.error(request, 'شما دسترسی به مشاهده جزئیات محصول ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -270,6 +284,8 @@ def product_detail_view(request, product_id):
         Product,
         id=product_id
     )
+    
+    bug_logger.debug(f"نمایش جزئیات محصول {product.code}")
     
     # دریافت اطلاعات مرتبط
     production_infos = ProductionInfo.objects.filter(product=product).prefetch_related('bom_items')
@@ -298,9 +314,11 @@ def edit_product_view(request, product_id):
     - بررسی دسترسی با TaskPermission
     - بررسی دسترسی فیلدها با FieldAccessRule
     """
+    audit_logger.info(f"درخواست ویرایش محصول {product_id}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_EDIT_PRODUCT.value):
+        audit_logger.activity(f"تلاش برای ویرایش محصول {product_id} بدون دسترسی")
         messages.error(request, 'شما دسترسی به ویرایش محصول ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -437,6 +455,7 @@ def edit_product_view(request, product_id):
                                 if bom_form.instance and bom_form.instance.pk:
                                     bom_form.instance.delete()
                         
+                        bug_logger.info(f"محصول {product.code} با موفقیت ویرایش شد")
                         messages.success(
                             request,
                             f'محصول "{product.name}" با موفقیت ویرایش شد.'
@@ -445,14 +464,14 @@ def edit_product_view(request, product_id):
                         return redirect('sales:product_detail', product_id=product.id)
                     
             except Exception as e:
-                import traceback
+                bug_logger.error(f"خطا در ویرایش محصول {product_id}: {str(e)}", exc_info=True)
                 messages.error(
                     request,
                     f'خطا در ویرایش محصول: {str(e)}'
                 )
-                print(traceback.format_exc())
         else:
             # نمایش خطاهای فرم
+            bug_logger.warning(f"فرم ویرایش محصول {product_id} معتبر نیست")
             if not product_form.is_valid():
                 for field, errors in product_form.errors.items():
                     for error in errors:
@@ -514,9 +533,11 @@ def delete_product_view(request, product_id):
     ویو حذف محصول
     - بررسی دسترسی با TaskPermission
     """
+    audit_logger.info(f"درخواست حذف محصول {product_id}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_DELETE_PRODUCT.value):
+        audit_logger.activity(f"تلاش برای حذف محصول {product_id} بدون دسترسی")
         messages.error(request, 'شما دسترسی به حذف محصول ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -525,8 +546,10 @@ def delete_product_view(request, product_id):
     if request.method == 'POST':
         try:
             product_name = product.name
+            product_code = product.code
             product.delete()
             
+            bug_logger.info(f"محصول {product_code} با موفقیت حذف شد")
             messages.success(
                 request,
                 f'محصول "{product_name}" با موفقیت حذف شد.'
@@ -535,11 +558,14 @@ def delete_product_view(request, product_id):
             return redirect('sales:product_list')
             
         except Exception as e:
+            bug_logger.error(f"خطا در حذف محصول {product_id}: {str(e)}", exc_info=True)
             messages.error(
                 request,
                 f'خطا در حذف محصول: {str(e)}'
             )
             return redirect('sales:product_detail', product_id=product_id)
+    else:
+        bug_logger.debug(f"نمایش صفحه تأیید حذف محصول {product.code}")
     
     context = {
         'product': product,
@@ -555,13 +581,14 @@ def product_search_ajax(request):
     جستجوی AJAX برای محصولات
     - بررسی دسترسی با TaskPermission (نیاز به دسترسی مشاهده لیست)
     """
-    
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_VIEW_PRODUCT_LIST.value):
+        audit_logger.activity("تلاش برای جستجوی AJAX محصولات بدون دسترسی")
         return JsonResponse({'error': 'شما دسترسی به جستجوی محصولات ندارید.'}, status=403)
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         search_query = request.GET.get('q', '')
+        bug_logger.debug(f"جستجوی AJAX محصولات با عبارت: {search_query}")
         
         products = Product.objects.filter(
             Q(name__icontains=search_query) |
@@ -581,6 +608,7 @@ def product_search_ajax(request):
         
         return JsonResponse({'results': results})
     
+    audit_logger.alert("درخواست AJAX محصولات بدون هدر X-Requested-With")
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
