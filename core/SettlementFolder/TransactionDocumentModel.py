@@ -20,11 +20,20 @@ class TransactionDocument(models.Model):
         ('cheque', 'چک'),
     ]
 
-    # شماره سند حسابداری به عنوان Primary Key
+    # شناسه یکتا (Primary Key)
+    id = models.AutoField(
+        primary_key=True,
+        verbose_name='شناسه'
+    )
+
+    # شماره سند حسابداری
     accounting_document_number = models.CharField(
         max_length=50,
-        primary_key=True,
-        verbose_name='شماره سند حسابداری'
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name='شماره سند حسابداری',
+        help_text='شماره سند حسابداری (به صورت خودکار تولید می‌شود)'
     )
 
     # ForeignKey به Settlement
@@ -117,8 +126,24 @@ class TransactionDocument(models.Model):
     class Meta:
         verbose_name = 'تسویه | سند تراکنش'
         verbose_name_plural = 'تسویه | اسناد تراکنش'
-        ordering = ['-accounting_document_number', 'document_number']
+        ordering = ['-id', '-accounting_document_number', 'document_number']
 
     def __str__(self):
-        return f"سند تراکنش {self.accounting_document_number or 'بدون شماره'} - {self.document_number or ''}"
+        return f"سند تراکنش {self.accounting_document_number or f'#{self.id}'} - {self.document_number or ''}"
+    
+    def generate_accounting_document_number(self):
+        """
+        تولید خودکار شماره سند حسابداری
+        فرمت: TRX-{settlement_id}-{timestamp}-{random}
+        """
+        import uuid
+        from datetime import datetime
+        
+        if not self.accounting_document_number:
+            settlement_id = self.settlement.id if self.settlement else '000'
+            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+            unique_id = str(uuid.uuid4())[:8].upper()
+            self.accounting_document_number = f"TRX-{settlement_id}-{timestamp}-{unique_id}"
+        
+        return self.accounting_document_number
 

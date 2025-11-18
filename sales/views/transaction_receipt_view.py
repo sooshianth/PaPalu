@@ -86,6 +86,8 @@ def transaction_receipt_upload_view(request, order_number):
                 with transaction.atomic():
                     doc: TransactionDocument = form.save(commit=False)
                     doc.settlement = settlement
+                    # تولید خودکار شماره سند حسابداری
+                    doc.generate_accounting_document_number()
                     doc.save()
 
                     # به‌روزرسانی مبالغ تسویه

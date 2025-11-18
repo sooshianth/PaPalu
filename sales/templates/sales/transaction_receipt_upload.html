@@ -147,6 +147,27 @@
         font-family: inherit;
     }
     
+    .form-group {
+        position: relative;
+    }
+    
+    #id_due_date,
+    #id_check_receipt_date {
+        position: relative;
+        padding-left: 40px;
+    }
+    
+    .p-datepicker-trigger {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 1.2rem;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
     .form-group input:focus,
     .form-group select:focus,
     .form-group textarea:focus {
@@ -415,6 +436,122 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // تابع برای راه‌اندازی date picker برای یک فیلد
+    function setupDatePicker(inputId, hiddenInputName) {
+        var dateInput = $('#' + inputId);
+        
+        if (dateInput.length) {
+            // تبدیل type='date' به text برای استفاده از تقویم شمسی
+            dateInput.attr('type', 'text');
+            dateInput.attr('readonly', 'readonly');
+            dateInput.css('cursor', 'pointer');
+            
+            // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+            var initialValue = dateInput.val();
+            var persianDateValue = '';
+            
+            // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+            if (initialValue) {
+                var parts = initialValue.split('-');
+                if (parts.length === 3) {
+                    var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    var pDate = persianDate.fromGregorian(gregorianDate);
+                    persianDateValue = pDate.format('YYYY/MM/DD');
+                    dateInput.val(persianDateValue);
+                }
+            }
+            
+            // غیرفعال کردن name اصلی input برای جلوگیری از ارسال تاریخ شمسی
+            var originalName = dateInput.attr('name');
+            dateInput.removeAttr('name');
+            
+            // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+            var hiddenInput = $('<input>', {
+                type: 'hidden',
+                id: inputId + '_hidden',
+                name: hiddenInputName
+            });
+            if (initialValue) {
+                hiddenInput.val(initialValue);
+            }
+            dateInput.after(hiddenInput);
+            
+            // راه‌اندازی تقویم شمسی
+            dateInput.pDatepicker({
+                observer: true,
+                format: 'YYYY/MM/DD',
+                altField: '#' + inputId + '_hidden',
+                altFormat: 'YYYY-MM-DD',
+                calendarType: 'persian',
+                initialValue: persianDateValue || false,
+                timePicker: {
+                    enabled: false
+                },
+                onSelect: function() {
+                    // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                    var selectedDate = dateInput.val();
+                    if (selectedDate) {
+                        try {
+                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var formattedDate = gregorianDate.year + '-' + 
+                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                               String(gregorianDate.day).padStart(2, '0');
+                            
+                            hiddenInput.val(formattedDate);
+                        } catch (e) {
+                            console.error('خطا در تبدیل تاریخ:', e);
+                        }
+                    }
+                }
+            });
+            
+            // اضافه کردن آیکون تقویم
+            if (!dateInput.parent().find('.p-datepicker-trigger').length) {
+                var iconSpan = $('<span>', {
+                    class: 'p-datepicker-trigger',
+                    html: '📅',
+                    css: {
+                        'position': 'absolute',
+                        'right': '10px',
+                        'top': '50%',
+                        'transform': 'translateY(-50%)',
+                        'cursor': 'pointer',
+                        'font-size': '1.2rem',
+                        'z-index': '10',
+                        'pointer-events': 'none'
+                    }
+                });
+                dateInput.parent().css('position', 'relative');
+                dateInput.parent().append(iconSpan);
+            }
+            
+            // باز کردن تقویم با کلیک روی input
+            dateInput.on('click', function() {
+                dateInput.pDatepicker('show');
+            });
+        }
+    }
+    
+    // راه‌اندازی date picker برای تاریخ سررسید
+    setupDatePicker('id_due_date', 'due_date');
+    
+    // راه‌اندازی date picker برای تاریخ وصول
+    setupDatePicker('id_check_receipt_date', 'check_receipt_date');
+});
+</script>
 {% endblock %}
 
 

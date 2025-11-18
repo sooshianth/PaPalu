@@ -38,4 +38,7 @@ class BankAccount(models.Model):
         verbose_name_plural = 'شخص | حساب بانکی'
         ordering = ['account_number']
 
+    def __str__(self):
+        return f"{self.bank_name} - {self.account_number}"
+
 
