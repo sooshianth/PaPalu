@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+        cursor: pointer;
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .status-balanced {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .status-unbalanced {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-inquired {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .status-not-inquired {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .btn-outline-primary {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid var(--primary-green);
+        color: var(--primary-green);
+        transition: all 0.3s;
+        display: inline-block;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if orders_with_info %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>شماره سفارش</th>
+                        <th>مشتری</th>
+                        <th>تعداد تخصیص‌ها</th>
+                        <th>مقدار سفارش (کیلوگرم)</th>
+                        <th>مقدار تخصیص شده (کیلوگرم)</th>
+                        <th>وضعیت برابری</th>
+                        <th>وضعیت استعلام</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in orders_with_info %}
+                    <tr onclick="window.location.href='{% url 'sales:approve_allocation_detail' item.order.order_number %}'">
+                        <td>
+                            <span class="code-badge">{{ item.order.order_number }}</span>
+                        </td>
+                        <td>
+                            {{ item.order.customer.name|default:"-" }}
+                        </td>
+                        <td>
+                            {{ item.allocations_count }}
+                        </td>
+                        <td>
+                            {{ item.order_total|floatformat:2 }}
+                        </td>
+                        <td>
+                            {{ item.allocation_total|floatformat:2 }}
+                        </td>
+                        <td>
+                            {% if item.is_balanced %}
+                                <span class="status-badge status-balanced">برابر است</span>
+                            {% else %}
+                                <span class="status-badge status-unbalanced">برابر نیست</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.all_inquired %}
+                                <span class="status-badge status-inquired">همه استعلام شده</span>
+                            {% else %}
+                                <span class="status-badge status-not-inquired">در انتظار استعلام</span>
+                            {% endif %}
+                        </td>
+                        <td onclick="event.stopPropagation();">
+                            <a href="{% url 'sales:approve_allocation_detail' item.order.order_number %}" 
+                               class="btn-outline-primary">
+                                مشاهده و تأیید
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>هیچ سفارشی در انتظار تأیید تخصیص وجود ندارد.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

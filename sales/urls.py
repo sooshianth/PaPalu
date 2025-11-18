@@ -9,6 +9,7 @@ from sales.views import (
     transaction_receipt_view,
     approve_transaction_receipt,
     allocation_list,
+    approve_allocation,
 )
 
 app_name = 'sales'
@@ -47,6 +48,11 @@ urlpatterns = [
     path('allocation/<str:order_number>/create/', allocation_list.allocation_create_view, name='allocation_create'),
     path('allocation/<str:order_number>/<str:allocation_number>/edit/', allocation_list.allocation_edit_view, name='allocation_edit'),
     path('api/delivery-info/<str:postal_code>/', allocation_list.get_delivery_info_api, name='get_delivery_info_api'),
+    
+    # مسیرهای تأیید تخصیص
+    path('approve-allocation/list/', approve_allocation.approve_allocation_list_view, name='approve_allocation_list'),
+    path('approve-allocation/<str:order_number>/', approve_allocation.approve_allocation_detail_view, name='approve_allocation_detail'),
+    path('approve-allocation/<str:order_number>/<str:allocation_number>/inquiry/', approve_allocation.approve_allocation_inquiry_view, name='approve_allocation_inquiry'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     

@@ -29,6 +29,7 @@ class Order(models.Model):
         ('pending_accounting_approval', 'در انتظار تایید حسابداری'),
         ('pending_allocation', 'در انتظار تخصیص'),
         ('pending_allocation_approval', 'در انتظار تأیید تخصیص'),
+        ('pending_factory', 'در انتظار کارخانه'),
         ('completed', 'تکمیل شده'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),

@@ -384,6 +384,7 @@
             box-shadow: -2px 0 4px rgba(0,0,0,0.05);
             transition: width var(--transition-speed) ease;
             overflow-x: hidden;
+            overflow-y: auto;
             z-index: 999;
         }
         
@@ -393,6 +394,9 @@
         
         .sidebar-nav {
             padding: 20px 0;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         
         .nav-list {
@@ -468,20 +472,46 @@
             background-color: var(--gray-100);
             list-style: none;
             padding: 0;
+            position: relative;
+            z-index: 1;
         }
         
         .nav-item.has-submenu.expanded .submenu {
-            max-height: 500px;
+            max-height: 60vh;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        /* اسکرول بار سفارشی برای submenu */
+        .nav-item.has-submenu.expanded .submenu::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .nav-item.has-submenu.expanded .submenu::-webkit-scrollbar-track {
+            background: var(--gray-200);
+        }
+        
+        .nav-item.has-submenu.expanded .submenu::-webkit-scrollbar-thumb {
+            background: var(--primary-green);
+            border-radius: 3px;
+        }
+        
+        .nav-item.has-submenu.expanded .submenu::-webkit-scrollbar-thumb:hover {
+            background: var(--dark-green);
         }
         
         .submenu-item {
             margin: 0;
+            position: relative;
+            z-index: 1;
         }
         
         .submenu-link {
             padding-right: 50px;
             padding-left: 20px;
             font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
         }
         
         .submenu-link:hover {
@@ -927,6 +957,14 @@
                                 <span class="nav-text">تخصیص</span>
                             </a>
                         </li>
+                        <li class="submenu-item">
+                            <a href="{% url 'sales:approve_allocation_list' %}" class="nav-link submenu-link" title="تأیید تخصیص">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">تأیید تخصیص</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 <li class="nav-item">
@@ -1060,6 +1098,7 @@
             }
             .message-text {
                 /* For possible future RTL/LTR control or decoration */
+                display: block;
             }
         </style>
         {% endif %}
@@ -1275,7 +1314,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check if current page is in sales or production section
         const currentPath = window.location.pathname;
-        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/'];
+        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/approve-transaction-receipt/'];
         const productionPaths = ['/production/'];
         const isSalesPage = salesPaths.some(path => currentPath.includes(path));
         const isProductionPage = productionPaths.some(path => currentPath.includes(path));
