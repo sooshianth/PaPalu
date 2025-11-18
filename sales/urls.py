@@ -7,6 +7,7 @@ from sales.views import (
     proforma_view,
     approve_proforma_view,
     transaction_receipt_view,
+    approve_transaction_receipt,
 )
 
 app_name = 'sales'
@@ -35,6 +36,10 @@ urlpatterns = [
     # مسیرهای ثبت رسید تراکنش فروش
     path('transaction-receipts/orders/', transaction_receipt_view.transaction_receipt_order_list_view, name='transaction_receipt_order_list'),
     path('transaction-receipts/<str:order_number>/upload/', transaction_receipt_view.transaction_receipt_upload_view, name='transaction_receipt_upload'),
+    
+    # مسیرهای تأیید تراکنش فروش
+    path('approve-transaction-receipt/list/', approve_transaction_receipt.approve_transaction_receipt_list_view, name='approve_transaction_receipt_list'),
+    path('approve-transaction-receipt/<str:order_number>/', approve_transaction_receipt.approve_transaction_receipt_detail_view, name='approve_transaction_receipt_detail'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     

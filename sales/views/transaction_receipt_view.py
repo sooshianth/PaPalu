@@ -98,7 +98,7 @@ def transaction_receipt_upload_view(request, order_number):
                     # اگر مبلغ کل سند مبدا تعریف شده و مجموع اسناد >= آن شد
                     if settlement.original_document_amount and total_document_amount >= settlement.original_document_amount:
                         settlement.settlement_status = 'completed'
-                        order.status = 'pending_sales_transaction_approval'
+                        order.status = 'pending_accounting_approval'
                         order.save(update_fields=['status'])
                     else:
                         settlement.settlement_status = 'partial'

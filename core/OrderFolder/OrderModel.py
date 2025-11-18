@@ -26,8 +26,8 @@ class Order(models.Model):
         # بعد از آپلود تأیید پیش فاکتور، سفارش به این وضعیت می‌رود
         ('pending_transaction_receipt_upload', 'در انتظار بارگذاری رسید تراکنش'),
         # بعد از تکمیل بارگذاری رسیدها، سفارش به این وضعیت می‌رود
-        ('pending_sales_transaction_approval', 'در انتظار تایید تراکنش فروش'),
-        ('pending_payment_approval', 'در انتظار تایید پرداخت'),
+        ('pending_accounting_approval', 'در انتظار تایید حسابداری'),
+        ('pending_allocation', 'در انتظار تخصیص'),
         ('completed', 'تکمیل شده'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),

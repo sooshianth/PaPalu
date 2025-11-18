@@ -1,0 +1,536 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .info-card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid var(--gray-300);
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 1.1rem;
+    }
+    
+    .info-card-body {
+        padding: 1.5rem;
+    }
+    
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+    
+    .modern-table thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .modern-table th {
+        padding: 0.75rem;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--gray-300);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table td {
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--text-dark);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        padding: 1rem 1.5rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .form-section-body {
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        font-family: inherit;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    #id_transfer_time {
+        position: relative;
+        padding-left: 40px;
+    }
+    
+    .p-datepicker-trigger {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 1.2rem;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .errorlist li {
+        color: #dc3545;
+        font-size: 0.85rem;
+        padding: 0.25rem 0;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+</style>
+
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+{# اطلاعات سفارش و تسویه #}
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات سفارش و تسویه
+    </div>
+    <div class="info-card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+            <div>
+                <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">شماره سفارش:</strong>
+                <span>{{ order.order_number }}</span>
+            </div>
+            <div>
+                <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مشتری:</strong>
+                <span>{{ order.customer.name|default:"-" }}</span>
+            </div>
+            <div>
+                <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مبلغ کل سند مبدا:</strong>
+                <span style="font-weight: 600; color: var(--primary-green);">
+                    {{ settlement.original_document_amount|floatformat:0|default:"-" }} ریال
+                </span>
+            </div>
+            <div>
+                <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مبلغ کل تسویه شده:</strong>
+                <span style="font-weight: 600; color: var(--dark-green);">
+                    {{ settlement.settled_amount|floatformat:0|default:"0" }} ریال
+                </span>
+            </div>
+            <div>
+                <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مجموع مبالغ استعلام:</strong>
+                <span style="font-weight: 600; color: var(--primary-green);">
+                    {{ total_inquiry_amount|floatformat:0|default:"0" }} ریال
+                </span>
+            </div>
+            <div>
+                <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">باقیمانده:</strong>
+                <span style="font-weight: 600; {% if remaining_amount > 0 %}color: #dc3545;{% else %}color: var(--primary-green);{% endif %}">
+                    {{ remaining_amount|floatformat:0|default:"0" }} ریال
+                </span>
+            </div>
+        </div>
+        {% if can_approve %}
+        <div style="margin-top: 1rem; background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
+            ✓ مجموع مبالغ استعلام با مبلغ کل تسویه برابر شد! سفارش به مرحله "در انتظار تخصیص" منتقل شده است.
+        </div>
+        {% elif remaining_amount > 0 %}
+        <div style="margin-top: 1rem; background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; border-right: 4px solid #ffc107; font-weight: 500;">
+            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} ریال باقیمانده است. لطفاً تأییدهای تراکنش را تا رسیدن به مبلغ کل اضافه کنید.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{# لیست اسناد تراکنش #}
+<div class="info-card">
+    <div class="info-card-header">
+        اسناد تراکنش ثبت‌شده
+    </div>
+    <div class="info-card-body">
+        {% if documents %}
+            <div style="overflow-x: auto;">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>شماره سند حسابداری</th>
+                            <th>نوع تسویه</th>
+                            <th>مبلغ سند</th>
+                            <th>تاریخ سررسید</th>
+                            <th>حساب مبدا</th>
+                            <th>وضعیت وصول</th>
+                            <th>تاریخ وصول</th>
+                            <th>پیوست</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for doc in documents %}
+                        <tr>
+                            <td>{{ doc.accounting_document_number|default:"-" }}</td>
+                            <td>{{ doc.get_payment_type_display }}</td>
+                            <td><strong>{{ doc.document_amount|floatformat:0 }}</strong></td>
+                            <td>{{ doc.due_date|default:"-" }}</td>
+                            <td>{{ doc.source_account|default:"-" }}</td>
+                            <td>{{ doc.get_payment_status_display|default:"-" }}</td>
+                            <td>{{ doc.check_receipt_date|default:"-" }}</td>
+                            <td>
+                                {% if doc.document_attachment %}
+                                    <a href="{{ doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="text-align: center; color: var(--gray-600); padding: 2rem;">هنوز سند تراکنشی ثبت نشده است.</p>
+        {% endif %}
+    </div>
+</div>
+
+{# لیست تأییدهای تراکنش ثبت‌شده #}
+<div class="info-card">
+    <div class="info-card-header">
+        تأییدهای تراکنش ثبت‌شده
+    </div>
+    <div class="info-card-body">
+        {% if approvals %}
+            <div style="overflow-x: auto;">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>شماره سند حسابداری</th>
+                            <th>مبلغ استعلام</th>
+                            <th>شماره پیگیری واریز</th>
+                            <th>بانک مبدا</th>
+                            <th>شماره حساب</th>
+                            <th>شماره شبا</th>
+                            <th>نام استعلام شده</th>
+                            <th>ساعت واریز</th>
+                            <th>تاریخ ثبت</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for approval in approvals %}
+                        <tr>
+                            <td>{{ approval.accounting_document_number }}</td>
+                            <td><strong>{{ approval.inquiry_amount|floatformat:0 }}</strong></td>
+                            <td>{{ approval.tracking_number }}</td>
+                            <td>{{ approval.source_bank }}</td>
+                            <td>{{ approval.account_number }}</td>
+                            <td>{{ approval.shaba_number }}</td>
+                            <td>{{ approval.inquiry_name }}</td>
+                            <td>{{ approval.transfer_time|date:"Y/m/d H:i"|default:"-" }}</td>
+                            <td>{{ approval.created_at|date:"Y/m/d H:i"|default:"-" }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 1rem; padding: 1rem; background: var(--light-green); border-radius: 8px; font-weight: 600; color: var(--dark-green);">
+                جمع مبالغ استعلام: {{ total_inquiry_amount|floatformat:0 }} ریال
+            </div>
+        {% else %}
+            <p style="text-align: center; color: var(--gray-600); padding: 2rem;">هنوز تأیید تراکنشی ثبت نشده است.</p>
+        {% endif %}
+    </div>
+</div>
+
+{# فرم تأیید تراکنش #}
+<div class="form-section">
+    <div class="form-section-header">
+        فرم تأیید تراکنش
+    </div>
+    <div class="form-section-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.accounting_document_number.id_for_label }}">شماره سند حسابداری <span style="color: #dc3545;">*</span></label>
+                    {{ form.accounting_document_number }}
+                    {{ form.accounting_document_number.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.inquiry_amount.id_for_label }}">مبلغ استعلام گرفته شده <span style="color: #dc3545;">*</span></label>
+                    {{ form.inquiry_amount }}
+                    {{ form.inquiry_amount.errors }}
+                    {% if settlement.original_document_amount %}
+                        <small style="color: var(--gray-600); margin-top: 0.25rem;">مبلغ کل تسویه: {{ settlement.original_document_amount|floatformat:0 }} ریال | باقیمانده: {{ remaining_amount|floatformat:0 }} ریال</small>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.tracking_number.id_for_label }}">شماره پیگیری واریز <span style="color: #dc3545;">*</span></label>
+                    {{ form.tracking_number }}
+                    {{ form.tracking_number.errors }}
+                    <small style="color: var(--gray-600); margin-top: 0.25rem;">در چک، شماره صیادی آن چک است</small>
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.source_bank.id_for_label }}">بانک مبدا <span style="color: #dc3545;">*</span></label>
+                    {{ form.source_bank }}
+                    {{ form.source_bank.errors }}
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.account_number.id_for_label }}">شماره حساب <span style="color: #dc3545;">*</span></label>
+                    {{ form.account_number }}
+                    {{ form.account_number.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.shaba_number.id_for_label }}">شماره شبا <span style="color: #dc3545;">*</span></label>
+                    {{ form.shaba_number }}
+                    {{ form.shaba_number.errors }}
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.inquiry_name.id_for_label }}">نام استعلام شده <span style="color: #dc3545;">*</span></label>
+                    {{ form.inquiry_name }}
+                    {{ form.inquiry_name.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.transfer_time.id_for_label }}">ساعت واریز <span style="color: #dc3545;">*</span></label>
+                    {{ form.transfer_time }}
+                    {{ form.transfer_time.errors }}
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">تأیید تراکنش</button>
+                <a href="{% url 'sales:approve_transaction_receipt_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // راه‌اندازی date picker برای ساعت واریز
+    var transferTimeInput = $('#id_transfer_time');
+    
+    if (transferTimeInput.length) {
+        // تبدیل type='datetime-local' به text برای استفاده از تقویم شمسی
+        transferTimeInput.attr('type', 'text');
+        transferTimeInput.attr('readonly', 'readonly');
+        transferTimeInput.css('cursor', 'pointer');
+        
+        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+        var initialValue = transferTimeInput.val();
+        var persianDateTimeValue = '';
+        
+        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+        if (initialValue) {
+            // فرمت Django-jalali: YYYY-MM-DD HH:MM:SS یا YYYY-MM-DDTHH:MM
+            var datePart, timePart;
+            if (initialValue.includes('T')) {
+                // فرمت ISO: YYYY-MM-DDTHH:MM
+                var parts = initialValue.split('T');
+                datePart = parts[0];
+                timePart = parts[1] || '00:00:00';
+            } else if (initialValue.includes(' ')) {
+                // فرمت Django-jalali: YYYY-MM-DD HH:MM:SS
+                var parts = initialValue.split(' ');
+                datePart = parts[0];
+                timePart = parts[1] || '00:00:00';
+            }
+            
+            if (datePart) {
+                var dateParts = datePart.split('-');
+                var timeParts = timePart.split(':');
+                if (dateParts.length === 3) {
+                    var hour = parseInt(timeParts[0]) || 0;
+                    var minute = parseInt(timeParts[1]) || 0;
+                    var gregorianDate = new Date(
+                        parseInt(dateParts[0]), 
+                        parseInt(dateParts[1]) - 1, 
+                        parseInt(dateParts[2]),
+                        hour,
+                        minute
+                    );
+                    var pDate = persianDate.fromGregorian(gregorianDate);
+                    persianDateTimeValue = pDate.format('YYYY/MM/DD HH:mm');
+                    transferTimeInput.val(persianDateTimeValue);
+                }
+            }
+        }
+        
+        // غیرفعال کردن name اصلی input برای جلوگیری از ارسال تاریخ شمسی
+        var originalName = transferTimeInput.attr('name');
+        transferTimeInput.removeAttr('name');
+        
+        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+        var hiddenInput = $('<input>', {
+            type: 'hidden',
+            id: 'id_transfer_time_hidden',
+            name: 'transfer_time'
+        });
+        if (initialValue) {
+            hiddenInput.val(initialValue);
+        }
+        transferTimeInput.after(hiddenInput);
+        
+        // راه‌اندازی تقویم شمسی با قابلیت انتخاب زمان
+        transferTimeInput.pDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD HH:mm',
+            altField: '#id_transfer_time_hidden',
+            altFormat: 'YYYY-MM-DD HH:mm:ss',
+            calendarType: 'persian',
+            initialValue: persianDateTimeValue || false,
+            timePicker: {
+                enabled: true
+            },
+            onSelect: function() {
+                // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                var selectedDateTime = transferTimeInput.val();
+                if (selectedDateTime) {
+                    try {
+                        var parts = selectedDateTime.split(' ');
+                        if (parts.length === 2) {
+                            var datePart = parts[0];
+                            var timePart = parts[1];
+                            var persianDateObj = persianDate.fromString(datePart, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var timeParts = timePart.split(':');
+                            var hour = parseInt(timeParts[0]) || 0;
+                            var minute = parseInt(timeParts[1]) || 0;
+                            
+                            // فرمت مورد انتظار Django-jalali: YYYY-MM-DD HH:MM:SS
+                            var formattedDateTime = gregorianDate.year + '-' + 
+                                                   String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                                   String(gregorianDate.day).padStart(2, '0') + ' ' +
+                                                   String(hour).padStart(2, '0') + ':' +
+                                                   String(minute).padStart(2, '0') + ':00';
+                            
+                            hiddenInput.val(formattedDateTime);
+                        }
+                    } catch (e) {
+                        console.error('خطا در تبدیل تاریخ:', e);
+                    }
+                }
+            }
+        });
+        
+        // اضافه کردن آیکون تقویم
+        if (!transferTimeInput.parent().find('.p-datepicker-trigger').length) {
+            var iconSpan = $('<span>', {
+                class: 'p-datepicker-trigger',
+                html: '📅',
+                css: {
+                    'position': 'absolute',
+                    'right': '10px',
+                    'top': '50%',
+                    'transform': 'translateY(-50%)',
+                    'cursor': 'pointer',
+                    'font-size': '1.2rem',
+                    'z-index': '10',
+                    'pointer-events': 'none'
+                }
+            });
+            transferTimeInput.parent().css('position', 'relative');
+            transferTimeInput.parent().append(iconSpan);
+        }
+        
+        // باز کردن تقویم با کلیک روی input
+        transferTimeInput.on('click', function() {
+            transferTimeInput.pDatepicker('show');
+        });
+    }
+});
+</script>
+{% endblock %}
+
