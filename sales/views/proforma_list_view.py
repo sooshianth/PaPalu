@@ -12,7 +12,7 @@ from core.RBACModel import user_has_task, TaskChoices
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
-from sales.forms.create_proforma_form import (
+from sales.forms.proforma_create_form import (
     CreateProformaForm,
     get_accessible_proforma_fields,
 )

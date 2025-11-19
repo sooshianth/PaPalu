@@ -11,7 +11,7 @@ from core.RBACModel import user_has_task, TaskChoices
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
-from sales.forms.create_order_form import (
+from sales.forms.order_create_form import (
     CreateOrderForm,
     build_order_item_formset,
     get_accessible_order_fields,

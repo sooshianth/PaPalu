@@ -12,7 +12,7 @@ from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from core.RBACModel import user_has_task, TaskChoices
-from sales.forms.create_product_form import (
+from sales.forms.product_create_form import (
     CreateProductForm,
     ProductionInfoFormSet,
     BOMFormSet,

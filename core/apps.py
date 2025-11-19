@@ -38,6 +38,8 @@ class CoreConfig(AppConfig):
         from .AllocationFolder import (
             Allocation, AllocationProductInfo, AllocationSchedulingInfo
         )
+        # Import signals to register them
+        from .AllocationFolder import signals
         
         # Transport models
         from .TransportFolder import (

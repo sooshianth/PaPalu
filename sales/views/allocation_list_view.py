@@ -16,7 +16,7 @@ from core.AllocationFolder.AllocationProductInfoModel import AllocationProductIn
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
-from sales.forms.create_allocation import CreateAllocationForm, AllocationProductInfoFormSet
+from sales.forms.allocation_create_form import CreateAllocationForm, AllocationProductInfoFormSet
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

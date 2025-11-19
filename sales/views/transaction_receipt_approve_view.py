@@ -11,7 +11,7 @@ from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
-from sales.forms.approve_transaction_receipt import TransactionApprovalForm
+from sales.forms.transaction_receipt_approve_form import TransactionApprovalForm
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
