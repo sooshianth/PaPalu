@@ -33,7 +33,6 @@ urlpatterns = [
     # path('product/create/', program_views.create_program_view, name='product_create_alias'),
     path('sales/', include('sales.urls')),
     path('warehousing/', include('warehousing.urls')),
-    path('access/', include('access.urls')),
 ]
 
 # Serve media files in development

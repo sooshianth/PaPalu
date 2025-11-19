@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+{% block title %}درخواست اعلام بار{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {background:#fff;border:1px solid #e9ecef;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+  .card-header {padding:14px 18px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between}
+  .card-body {padding:18px}
+  .layout {display:grid;grid-template-columns: 1.2fr 0.8fr;gap:16px}
+  .section-title {font-size:1rem;margin-bottom:10px;color:#333}
+  .table-wrap{overflow:auto}
+  table.datatable{width:100%;border-collapse:collapse}
+  table.datatable th,table.datatable td{border:1px solid #e9ecef;padding:8px 10px;text-align:center}
+  table.datatable th{background:#f8f9fa}
+  .qty-input{width:110px}
+  .muted{color:#6c757d}
+  .rules{background:#f8f9fa;border:1px dashed #dee2e6;padding:10px;border-radius:8px;font-size:.92rem;color:#444}
+  .message{display:none;margin:0 0 12px 0;padding:10px 12px;border-radius:8px}
+  .message.success{display:block;background:#e6ffed;border:1px solid #ccebd8;color:#0f5132}
+  .message.error{display:block;background:#fff5f5;border:1px solid #f5c2c7;color:#842029}
+  .form-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .form-row label{min-width:80px}
+  .actions{display:flex;gap:10px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size:1.1rem">درخواست اعلام بار</h3>
+    <div class="actions">
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-clear">پاک‌سازی انتخاب‌ها</button>
+      <button type="submit" form="cargoForm" class="btn btn-primary btn-sm">ثبت درخواست</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div id="localMessage" class="message" role="alert"></div>
+
+    <form id="cargoForm" method="post" action="">
+      {% csrf_token %}
+      <input type="hidden" name="items_json" id="items_json">
+
+      <div class="layout">
+        <div>
+          <div class="section-title">فهرست موجودی / اقلام</div>
+          <div class="table-wrap">
+            <table id="inventoryTable" class="datatable">
+              <thead>
+                <tr>
+                  <th>انتخاب</th>
+                  <th>کد کالا</th>
+                  <th>نام کالا</th>
+                  <th>موجودی</th>
+                  <th>واحد</th>
+                  <th>مقدار اعلام</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in inventory_rows %}
+                <tr data-product-code="{{ r.product_code }}" data-unit="{{ r.unit }}" data-product-name="{{ r.product_name }}">
+                  <td><input type="checkbox" class="row-check"></td>
+                  <td class="muted">{{ r.product_code }}</td>
+                  <td>{{ r.product_name }}</td>
+                  <td>{{ r.inventory }}</td>
+                  <td>{{ r.unit }}</td>
+                  <td>
+                    <input type="number" step="0.001" min="0" class="qty-input" placeholder="0.000">
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">داده‌ای برای نمایش نیست.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section-title" style="margin-top:16px">فرمول / اطلاعات تولید مرتبط</div>
+          <div class="table-wrap">
+            <table id="infoTable" class="datatable">
+              <thead>
+                <tr>
+                  <th>شناسه فرمول</th>
+                  <th>محصول</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for r in info_rows %}
+                <tr>
+                  <td class="muted">{{ r.formula_id }}</td>
+                  <td>{{ r.product }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="2">داده‌ای برای نمایش نیست.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section-title" style="margin-top:16px">فهرست تخصیص‌ها</div>
+          <div class="table-wrap">
+            <table id="allocationsTable" class="datatable">
+              <thead>
+                <tr>
+                  <th>شماره تخصیص</th>
+                  <th>وضعیت</th>
+                  <th>اولویت</th>
+                  <th>محصول</th>
+                  <th>مجموع مقدار</th>
+                  <th>واحد</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in allocation_rows %}
+                <tr>
+                  <td class="muted">{{ a.number }}</td>
+                  <td>{{ a.status }}</td>
+                  <td>{{ a.priority }}</td>
+                  <td>{{ a.product }}</td>
+                  <td>{{ a.total_qty }}</td>
+                  <td>{{ a.unit }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">تخصیصی موجود نیست.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section-title" style="margin-top:16px">برنامه‌های تولید (تأیید شده / در حال اجرا)</div>
+          <div class="table-wrap">
+            <table id="programsTable" class="datatable">
+              <thead>
+                <tr>
+                  <th>شناسه</th>
+                  <th>محصول</th>
+                  <th>فرمول</th>
+                  <th>تناژ برنامه</th>
+                  <th>تاریخ اجرا</th>
+                  <th>وضعیت</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in program_rows %}
+                <tr>
+                  <td class="muted">{{ p.id }}</td>
+                  <td>{{ p.product }}</td>
+                  <td>{{ p.formula }}</td>
+                  <td>{{ p.planned }}</td>
+                  <td>{{ p.exec_date }}</td>
+                  <td>{{ p.status }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6">برنامه‌ای برای نمایش موجود نیست.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-title">تنظیمات و ثبت</div>
+          <div class="rules" style="margin-bottom:12px">
+            - شیوه اعلام بار را انتخاب کنید.\n
+            - می‌توانید چند قلم از جدول انتخاب و مقدار اعلام را وارد کنید، یا از بخش افزودن سریع استفاده نمایید.
+          </div>
+
+          <div class="form-row" style="margin-bottom:10px">
+            <label>شیوه اعلام بار:</label>
+            {{ form.method }}
+          </div>
+
+          <div class="form-row" style="margin-bottom:10px">
+            <label>افزودن سریع:</label>
+            {{ form.product }}
+            {{ form.quantity }}
+          </div>
+
+          <div class="form-row" style="margin-bottom:10px">
+            <label>توضیحات:</label>
+            {{ form.note }}
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="message error">{{ form.non_field_errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  function getCsrfToken(){
+    const name = 'csrftoken=';
+    const parts = document.cookie.split(';');
+    for (let c of parts){
+      c = c.trim();
+      if (c.startsWith(name)) return decodeURIComponent(c.substring(name.length));
+    }
+    return null;
+  }
+
+  function collectItems(){
+    const rows = document.querySelectorAll('#inventoryTable tbody tr');
+    const items = [];
+    rows.forEach(tr => {
+      const checked = tr.querySelector('.row-check').checked;
+      const qtyEl = tr.querySelector('.qty-input');
+      const qtyVal = qtyEl && qtyEl.value ? parseFloat(qtyEl.value) : 0;
+      if (checked && qtyVal > 0){
+        items.push({
+          product_code: tr.dataset.productCode,
+          product_name: tr.dataset.productName,
+          quantity: qtyVal,
+          unit: tr.dataset.unit
+        });
+      }
+    });
+    return items;
+  }
+
+  function clearSelections(){
+    document.querySelectorAll('#inventoryTable .row-check').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#inventoryTable .qty-input').forEach(inp => inp.value = '');
+    const msg = document.getElementById('localMessage');
+    msg.className = 'message';
+    msg.textContent = '';
+  }
+
+  document.getElementById('btn-clear').addEventListener('click', clearSelections);
+
+  // Enhance tables if DataTables is present
+  document.addEventListener('DOMContentLoaded', function(){
+    if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+      jQuery('#inventoryTable').DataTable({ language: { url: '/static/i18n/datatables/fa.json' } });
+      jQuery('#infoTable').DataTable({ paging:false, searching:false, info:false, language: { url: '/static/i18n/datatables/fa.json' } });
+      jQuery('#allocationsTable').DataTable({
+        paging:true,
+        searching:true,
+        info:true,
+        order:[[2,'desc']],
+        language:{ url: '/static/i18n/datatables/fa.json' }
+      });
+      jQuery('#programsTable').DataTable({
+        paging:true,
+        searching:true,
+        info:true,
+        order:[[0,'desc']],
+        language:{ url: '/static/i18n/datatables/fa.json' }
+      });
+    }
+  });
+
+  // Submit handler with AJAX; falls back to normal submit if fetch fails
+  const form = document.getElementById('cargoForm');
+  form.addEventListener('submit', async function(ev){
+    ev.preventDefault();
+
+    // Serialize selected items to hidden field
+    const items = collectItems();
+    document.getElementById('items_json').value = items.length ? JSON.stringify(items) : '';
+
+    const formData = new FormData(form);
+
+    try {
+      const resp = await fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        credentials: 'same-origin',
+        body: formData
+      });
+      const msg = document.getElementById('localMessage');
+      if (resp.ok){
+        const data = await resp.json();
+        if (data && data.ok){
+          msg.className = 'message success';
+          msg.textContent = 'درخواست اعلام بار با موفقیت ثبت شد.';
+          clearSelections();
+          form.reset();
+          return;
+        }
+      } else if (resp.status === 400) {
+        const data = await resp.json();
+        msg.className = 'message error';
+        if (data && data.errors){
+          // Show first error message
+          const firstKey = Object.keys(data.errors)[0];
+          msg.textContent = Array.isArray(data.errors[firstKey]) ? data.errors[firstKey][0] : data.errors[firstKey];
+        } else {
+          msg.textContent = 'خطا در اعتبارسنجی اطلاعات.';
+        }
+        return;
+      }
+      // Non-JSON or unexpected response -> fallback
+      form.submit();
+    } catch(e){
+      form.submit();
+    }
+  });
+}
+)();
+document.addEventListener('DOMContentLoaded', function(){
+        if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+            jQuery('#programsTable').DataTable({
+                paging: true,
+                searching: true,
+                info: true,
+                order: [[0,'desc']],
+                language: { url: '/static/i18n/datatables/fa.json' }
+            });
+        }
+    });
+</script>
+{% endblock %}
