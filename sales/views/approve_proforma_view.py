@@ -55,7 +55,7 @@ def approve_proforma_list_view(request):
         'orders_with_proformas': orders_with_proformas,
         'page_title': 'لیست سفارش‌های در انتظار آپلود پیش فاکتور مشتری',
     }
-    return render(request, 'sales/approve_proforma_list.html', context)
+    return render(request, 'proforma/approve_proforma_list.html', context)
 
 
 @login_required
@@ -137,5 +137,5 @@ def approve_proforma_upload_view(request, order_number):
         'order_document': order_document,
         'page_title': f'آپلود فایل تأیید پیش فاکتور - سفارش {order.order_number}',
     }
-    return render(request, 'sales/approve_proforma_upload.html', context)
+    return render(request, 'proforma/approve_proforma_upload.html', context)
 

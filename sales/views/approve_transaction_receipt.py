@@ -40,7 +40,7 @@ def approve_transaction_receipt_list_view(request):
         'orders': orders_qs.select_related('registered_by', 'customer'),
         'page_title': 'سفارش‌های در انتظار تأیید حسابداری',
     }
-    return render(request, 'sales/approve_transaction_receipt_list.html', context)
+    return render(request, 'transaction/approve_transaction_receipt_list.html', context)
 
 
 @login_required
@@ -219,5 +219,5 @@ def approve_transaction_receipt_detail_view(request, order_number):
         'selected_document': document,
         'page_title': f'تأیید تراکنش - سفارش {order.order_number}',
     }
-    return render(request, 'sales/approve_transaction_receipt_detail.html', context)
+    return render(request, 'transaction/approve_transaction_receipt_detail.html', context)
 

@@ -41,7 +41,7 @@ def transaction_receipt_order_list_view(request):
         'orders': orders_qs.select_related('registered_by'),
         'page_title': 'سفارش‌های در انتظار بارگذاری رسید تراکنش',
     }
-    return render(request, 'sales/transaction_receipt_order_list.html', context)
+    return render(request, 'transaction/transaction_receipt_order_list.html', context)
 
 
 @login_required
@@ -153,6 +153,6 @@ def transaction_receipt_upload_view(request, order_number):
         'form': form,
         'page_title': f'ثبت رسید تراکنش - سفارش {order.order_number}',
     }
-    return render(request, 'sales/transaction_receipt_upload.html', context)
+    return render(request, 'transaction/transaction_receipt_upload.html', context)
 
 

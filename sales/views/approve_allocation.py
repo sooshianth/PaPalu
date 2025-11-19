@@ -69,7 +69,7 @@ def approve_allocation_list_view(request):
         'orders_with_info': orders_with_info,
         'page_title': 'سفارش‌های در انتظار تأیید تخصیص',
     }
-    return render(request, 'sales/approve_allocation_list.html', context)
+    return render(request, 'allocation/approve_allocation_list.html', context)
 
 
 @login_required
@@ -154,7 +154,7 @@ def approve_allocation_detail_view(request, order_number):
         'all_inquired': all_inquired,
         'page_title': f'تأیید تخصیص سفارش {order_number}',
     }
-    return render(request, 'sales/approve_allocation_detail.html', context)
+    return render(request, 'allocation/approve_allocation_detail.html', context)
 
 
 @login_required

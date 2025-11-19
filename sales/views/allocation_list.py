@@ -144,7 +144,7 @@ def allocation_list_view(request):
         'orders_with_info': orders_with_allocation_info,
         'page_title': 'سفارش‌های در انتظار تخصیص',
     }
-    return render(request, 'sales/allocation_list.html', context)
+    return render(request, 'allocation/allocation_list.html', context)
 
 
 @login_required
@@ -240,7 +240,7 @@ def allocation_create_view(request, order_number):
         'delivery_addresses': delivery_addresses,
         'page_title': f'ایجاد تخصیص برای سفارش {order_number}',
     }
-    return render(request, 'sales/allocation_create.html', context)
+    return render(request, 'allocation/allocation_create.html', context)
 
 
 @login_required
@@ -357,7 +357,7 @@ def allocation_edit_view(request, order_number, allocation_number):
         'delivery_addresses': delivery_addresses,
         'page_title': f'ویرایش تخصیص {allocation_number}',
     }
-    return render(request, 'sales/allocation_edit.html', context)
+    return render(request, 'allocation/allocation_edit.html', context)
 
 
 @login_required

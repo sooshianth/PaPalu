@@ -162,7 +162,7 @@ def proforma_list_view(request):
         'accessible_fields': accessible_fields,
         'page_title': 'لیست پیش فاکتورها',
     }
-    return render(request, 'sales/proforma_list.html', context)
+    return render(request, 'proforma/proforma_list.html', context)
 
 
 @login_required
@@ -220,7 +220,7 @@ def proforma_create_view(request):
         'accessible_fields': access_map if 'access_map' in locals() else get_accessible_proforma_fields(request.user, form),
         'page_title': 'ایجاد پیش فاکتور جدید',
     }
-    return render(request, 'sales/proforma_create.html', context)
+    return render(request, 'proforma/proforma_create.html', context)
 
 
 @login_required
@@ -313,7 +313,7 @@ def proforma_detail_view(request, proforma_id):
         'company_info': company_info,
         'page_title': f'جزئیات پیش فاکتور {proforma.proforma_number or proforma.id}',
     }
-    return render(request, 'sales/proforma_detail.html', context)
+    return render(request, 'proforma/proforma_detail.html', context)
 
 
 @login_required
@@ -395,7 +395,7 @@ def proforma_download_pdf(request, proforma_id):
         
         # رندر HTML
         from django.template.loader import render_to_string
-        html_string = render_to_string('sales/proforma_pdf_template.html', {
+        html_string = render_to_string('proforma/proforma_pdf_template.html', {
             'proforma': proforma,
             'order': order,
             'order_items': order_items,

@@ -182,7 +182,7 @@ def create_product_view(request):
         'submit_button_text': 'ثبت محصول',
     }
     
-    return render(request, 'sales/create_product.html', context)
+    return render(request, 'product/create_product.html', context)
 
 
 @login_required
@@ -261,7 +261,7 @@ def product_list_view(request):
         'page_title': 'لیست محصولات',
     }
     
-    return render(request, 'sales/product_list.html', context)
+    return render(request, 'product/product_list.html', context)
 
 
 @login_required
@@ -302,7 +302,7 @@ def product_detail_view(request, product_id):
         'page_title': f'جزئیات محصول: {product.name}',
     }
     
-    return render(request, 'sales/product_detail.html', context)
+    return render(request, 'product/product_detail.html', context)
 
 
 @login_required
@@ -520,7 +520,7 @@ def edit_product_view(request, product_id):
         'submit_button_text': 'ذخیره تغییرات',
     }
     
-    return render(request, 'sales/edit_product.html', context)
+    return render(request, 'product/edit_product.html', context)
 
 
 @login_required
@@ -568,7 +568,7 @@ def delete_product_view(request, product_id):
         'page_title': f'حذف محصول: {product.name}',
     }
     
-    return render(request, 'sales/delete_product_confirm.html', context)
+    return render(request, 'product/delete_product_confirm.html', context)
 
 
 @login_required

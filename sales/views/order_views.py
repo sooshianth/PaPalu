@@ -137,7 +137,7 @@ def create_order_view(request):
         'next_task_label': 'صدور پیش فاکتور',
         'next_task_code': TaskChoices.SALES_ISSUE_PROFORMA.value,
     }
-    return render(request, 'sales/create_order.html', context)
+    return render(request, 'order/create_order.html', context)
 
 
 def get_accessible_order_list_fields(user):
@@ -202,6 +202,6 @@ def order_list_view(request):
         'accessible_fields': accessible_fields,
         'page_title': 'لیست سفارش‌ها',
     }
-    return render(request, 'sales/order_list.html', context)
+    return render(request, 'order/order_list.html', context)
 
 

@@ -71,7 +71,7 @@ def product_price_list_view(request):
         'page_title': 'لیست قیمت‌گذاری محصولات',
     }
     
-    return render(request, 'sales/product_price_list.html', context)
+    return render(request, 'product/product_price_list.html', context)
 
 
 @login_required
@@ -166,5 +166,5 @@ def set_product_price_view(request, product_id=None):
         'submit_button_text': 'ثبت قیمت',
     }
     
-    return render(request, 'sales/set_product_price.html', context)
+    return render(request, 'product/set_product_price.html', context)
 

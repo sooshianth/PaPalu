@@ -244,7 +244,7 @@ def create_customer_view(request):
         'page_title': 'ایجاد مشتری جدید'
     }
     
-    return render(request, 'sales/create_customer.html', context)
+    return render(request, 'customer/create_customer.html', context)
 
 
 def get_accessible_form_fields(user, form):
@@ -537,7 +537,7 @@ def customer_list_view(request):
         'page_title': 'لیست مشتریان'
     }
     
-    return render(request, 'sales/customer_list.html', context)
+    return render(request, 'customer/customer_list.html', context)
 
 
 @login_required
@@ -948,4 +948,4 @@ def edit_customer_view(request, national_id):
         'person': person,
     }
     
-    return render(request, 'sales/edit_customer.html', context)
+    return render(request, 'customer/edit_customer.html', context)
