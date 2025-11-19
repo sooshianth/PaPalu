@@ -6,4 +6,3 @@
 */migrations/
 logs/
 !logs/.gitkeep
-media/
