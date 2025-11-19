@@ -4,6 +4,11 @@ from distribution.views.shipping_announcement_view import (
     shipping_announcement_process_view,
     shipping_announcement_single_view
 )
+from distribution.views.vehicle_recruitment_view import (
+    vehicle_recruitment_list_view,
+    create_transport_view,
+    complete_vehicle_recruitment_view
+)
 
 app_name = 'distribution'
 
@@ -11,4 +16,7 @@ urlpatterns = [
     path('shipping-announcement/', shipping_announcement_list_view, name='shipping_announcement_list'),
     path('shipping-announcement/process/', shipping_announcement_process_view, name='shipping_announcement_process'),
     path('shipping-announcement/single/', shipping_announcement_single_view, name='shipping_announcement_single'),
+    path('vehicle-recruitment/', vehicle_recruitment_list_view, name='vehicle_recruitment_list'),
+    path('vehicle-recruitment/<str:allocation_number>/create-transport/', create_transport_view, name='create_transport'),
+    path('vehicle-recruitment/<str:allocation_number>/complete/', complete_vehicle_recruitment_view, name='complete_vehicle_recruitment'),
 ]

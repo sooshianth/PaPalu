@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+    
+    .btn-outline-primary {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid var(--primary-green);
+        color: var(--primary-green);
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+        background: white;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .btn-success {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid var(--dark-green);
+        color: white;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-success:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .delivery-info {
+        font-size: 0.9rem;
+        line-height: 1.8;
+    }
+    
+    .delivery-info-item {
+        margin-bottom: 5px;
+    }
+    
+    .delivery-info-label {
+        font-weight: 600;
+        color: var(--gray-800);
+        display: inline-block;
+        min-width: 120px;
+    }
+    
+    .delivery-info-value {
+        color: var(--gray-600);
+    }
+    
+    .transports-count {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        background: var(--light-green);
+        color: var(--dark-green);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    
+    /* مودال */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .modal-header h3 {
+        color: var(--primary-green);
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+    
+    .form-group label.required::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 25px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if allocations_with_info %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>شماره تخصیص</th>
+                        <th>شماره سفارش</th>
+                        <th>اطلاعات آدرس تحویل</th>
+                        <th>تعداد حمل‌ها</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in allocations_with_info %}
+                    <tr>
+                        <td>
+                            <span class="code-badge">{{ item.allocation.allocation_number }}</span>
+                        </td>
+                        <td>
+                            <span class="code-badge">{{ item.order_number }}</span>
+                        </td>
+                        <td>
+                            {% if item.delivery_info %}
+                                <div class="delivery-info">
+                                    <div class="delivery-info-item">
+                                        <span class="delivery-info-label">نام تحویل گیرنده:</span>
+                                        <span class="delivery-info-value">{{ item.delivery_info.recipient_name }}</span>
+                                    </div>
+                                    <div class="delivery-info-item">
+                                        <span class="delivery-info-label">کد ملی:</span>
+                                        <span class="delivery-info-value">{{ item.delivery_info.recipient_national_id }}</span>
+                                    </div>
+                                    <div class="delivery-info-item">
+                                        <span class="delivery-info-label">شناسه یکتا:</span>
+                                        <span class="delivery-info-value">{{ item.delivery_info.unique_delivery_id }}</span>
+                                    </div>
+                                    <div class="delivery-info-item">
+                                        <span class="delivery-info-label">آدرس:</span>
+                                        <span class="delivery-info-value">{{ item.delivery_info.address }}</span>
+                                    </div>
+                                    <div class="delivery-info-item">
+                                        <span class="delivery-info-label">شماره ثابت:</span>
+                                        <span class="delivery-info-value">{{ item.delivery_info.landline_phone }}</span>
+                                    </div>
+                                    <div class="delivery-info-item">
+                                        <span class="delivery-info-label">شماره همراه:</span>
+                                        <span class="delivery-info-value">{{ item.delivery_info.mobile_phone }}</span>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <span style="color: var(--gray-400);">اطلاعات آدرس یافت نشد</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="transports-count">{{ item.transports_count }} حمل</span>
+                        </td>
+                        <td onclick="event.stopPropagation();">
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <button type="button" 
+                                        class="btn-outline-primary" 
+                                        onclick="showCreateTransportModal('{{ item.allocation.allocation_number }}')">
+                                    ایجاد حمل
+                                </button>
+                                {% if item.transports_count > 0 %}
+                                <form method="post" 
+                                      action="{% url 'distribution:complete_vehicle_recruitment' item.allocation.allocation_number %}" 
+                                      style="display: inline;"
+                                      onsubmit="return confirm('آیا از تکمیل جذب خودرو برای این تخصیص اطمینان دارید؟');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-success">تکمیل جذب خودرو</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>تخصیصی در انتظار جذب خودرو وجود ندارد.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- مودال ایجاد حمل -->
+<div id="createTransportModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>ایجاد حمل جدید</h3>
+        </div>
+        <form method="post" 
+              action="{% url 'distribution:create_transport' 'ALLOCATION_NUMBER_PLACEHOLDER' %}" 
+              id="createTransportForm"
+              enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="allocation_number" id="modal_allocation_number">
+            
+            <div class="form-group">
+                <label for="waybill_number" class="required">شماره بارنامه</label>
+                <input type="text" 
+                       name="waybill_number" 
+                       id="waybill_number" 
+                       class="form-control" 
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="carrier_recruitment" class="required">باربری جذب</label>
+                <input type="text" 
+                       name="carrier_recruitment" 
+                       id="carrier_recruitment" 
+                       class="form-control" 
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="vehicle_type_official" class="required">نوع ماشین</label>
+                <select name="vehicle_type_official" 
+                        id="vehicle_type_official" 
+                        class="form-control" 
+                        required>
+                    <option value="">-- انتخاب کنید --</option>
+                    <option value="official">رسمی</option>
+                    <option value="unofficial">غیررسمی</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="driver_national_id">شماره ملی راننده</label>
+                <input type="text" 
+                       name="driver_national_id" 
+                       id="driver_national_id" 
+                       class="form-control" 
+                       maxlength="10">
+            </div>
+            
+            <div class="form-group">
+                <label for="driver_name">نام راننده</label>
+                <input type="text" 
+                       name="driver_name" 
+                       id="driver_name" 
+                       class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="driver_mobile">شماره همراه راننده</label>
+                <input type="tel" 
+                       name="driver_mobile" 
+                       id="driver_mobile" 
+                       class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="driver_description">توضیحات شخص</label>
+                <textarea name="driver_description" 
+                          id="driver_description" 
+                          class="form-control" 
+                          rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="national_card_file">کارت ملی</label>
+                <input type="file" 
+                       name="national_card_file" 
+                       id="national_card_file" 
+                       class="form-control" 
+                       accept="image/*,.pdf">
+            </div>
+            
+            <div class="form-group">
+                <label for="official_gazette_file">روزنامه رسمی</label>
+                <input type="file" 
+                       name="official_gazette_file" 
+                       id="official_gazette_file" 
+                       class="form-control" 
+                       accept="image/*,.pdf">
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" 
+                        class="btn-outline-primary" 
+                        onclick="closeCreateTransportModal()">
+                    انصراف
+                </button>
+                <button type="submit" class="btn-success">ایجاد حمل</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // نمایش مودال ایجاد حمل
+    function showCreateTransportModal(allocationNumber) {
+        document.getElementById('modal_allocation_number').value = allocationNumber;
+        const form = document.getElementById('createTransportForm');
+        form.action = form.action.replace('ALLOCATION_NUMBER_PLACEHOLDER', allocationNumber);
+        document.getElementById('createTransportModal').classList.add('active');
+    }
+    
+    // بستن مودال
+    function closeCreateTransportModal() {
+        document.getElementById('createTransportModal').classList.remove('active');
+        document.getElementById('createTransportForm').reset();
+    }
+    
+    // بستن مودال با کلیک روی پس‌زمینه
+    document.getElementById('createTransportModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeCreateTransportModal();
+        }
+    });
+</script>
+{% endblock %}
+
