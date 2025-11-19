@@ -28,6 +28,7 @@ urlpatterns = [
     path('accounting/', include('accounting.urls')),
     path('custody/', include('custody.urls')),
     path('distribution/', include('distribution.urls')),
+    path('supply/', include('supply.urls')),
     path('production/', include('production.urls')),  # Use only namespaced production routes
     # Backward-compatible alias: some users attempt /product/create -> map to program create
     # path('product/create/', program_views.create_program_view, name='product_create_alias'),
