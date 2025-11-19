@@ -45,13 +45,7 @@
                         <td>{{ p.planned_weight_ton }}</td>
                         <td>{{ p.execution_date }}</td>
                         <td>
-                            {% if p.status == p.Status.CONFIRMED %}
-                                <span class="status-chip">تأیید شده</span>
-                            {% elif p.status == p.Status.IN_PROGRESS %}
-                                <span class="status-chip">در حال اجرا</span>
-                            {% else %}
-                                {{ p.get_status_display }}
-                            {% endif %}
+                            {% if p.status == p.Status.CONFIRMED %}<span class="status-chip">تأیید شده</span>{% else %}{{ p.get_status_display }}{% endif %}
                         </td>
                         <td>
                             <a class="btn btn-secondary btn-sm" href="{% url 'production:program_edit' p.id %}">ویرایش</a>

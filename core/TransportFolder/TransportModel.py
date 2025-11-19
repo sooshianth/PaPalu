@@ -10,6 +10,21 @@ class Transport(models.Model):
         ('inbound', 'ورودی'),
         ('outbound', 'خروجی'),
     ]
+    
+    STATUS_CHOICES = [
+        ('pending_vehicle_entry', 'در انتظار ورود خودرو به کارخانه'),
+        ('vehicle_entered', 'خودرو وارد شده'),
+        ('loading', 'در حال بارگیری'),
+        ('loaded', 'بارگیری شده'),
+        ('in_transit', 'در حال حمل'),
+        ('delivered', 'تحویل شده'),
+        ('completed', 'تکمیل شده'),
+    ]
+    
+    VEHICLE_TYPE_OFFICIAL_CHOICES = [
+        ('official', 'رسمی'),
+        ('unofficial', 'غیررسمی'),
+    ]
 
     # شماره بارنامه به عنوان Primary Key
     waybill_number = models.CharField(
@@ -112,6 +127,31 @@ class Transport(models.Model):
     destination = models.CharField(
         max_length=100,
         verbose_name='مقصد',
+        null=True,
+        blank=True
+    )
+    
+    # فیلدهای جدید برای جذب خودرو
+    status = models.CharField(
+        max_length=30,
+        choices=STATUS_CHOICES,
+        default='pending_vehicle_entry',
+        verbose_name='وضعیت حمل',
+        null=True,
+        blank=True
+    )
+    
+    carrier_recruitment = models.CharField(
+        max_length=100,
+        verbose_name='باربری جذب',
+        null=True,
+        blank=True
+    )
+    
+    vehicle_type_official = models.CharField(
+        max_length=20,
+        choices=VEHICLE_TYPE_OFFICIAL_CHOICES,
+        verbose_name='نوع ماشین (رسمی/غیررسمی)',
         null=True,
         blank=True
     )

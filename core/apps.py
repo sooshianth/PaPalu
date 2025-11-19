@@ -51,9 +51,9 @@ class CoreConfig(AppConfig):
             InventoryItem, Warehouse, DefaultItem
         )
         
-        # Raw Material models
+        # Raw Material models (no separate Supplier model; suppliers are Persons)
         from .RawMaterialFolder import (
-            Supplier, QualityParameter, RawMaterialPurchaseInfo,
+            QualityParameter, RawMaterialPurchaseInfo,
             RawMaterialQualityControl, RawMaterial
         )
         
