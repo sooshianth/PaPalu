@@ -109,6 +109,11 @@ class ProductionProgram(models.Model):
         verbose_name='مصرف واقعی مواد اولیه',
         help_text='مقدار مصرف واقعی مواد اولیه به صورت {bom_id: actual_amount}'
     )
+    warehouse_distribution = models.JSONField(
+        null=True, blank=True,
+        verbose_name='توزیع انبار',
+        help_text='توزیع مواد اولیه از انبارها به صورت {bom_id: [{warehouse: str, percent: int, amount: str}]}'
+    )
     priority_index = models.DecimalField(
         max_digits=10, decimal_places=3,
         null=True, blank=True,

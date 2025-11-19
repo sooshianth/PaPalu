@@ -358,6 +358,129 @@
         font-size: 0.85rem;
     }
     
+    /* Warehouse slider styling */
+    .warehouse-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 8px;
+        border-radius: 5px;
+        background: linear-gradient(to right, var(--primary-green) 0%, var(--primary-green) 100%, #e9ecef 100%);
+        outline: none;
+        opacity: 0.9;
+        transition: opacity 0.2s;
+    }
+    
+    .warehouse-slider:hover {
+        opacity: 1;
+    }
+    
+    .warehouse-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary-green);
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .warehouse-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary-green);
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .warehouse-percent-input:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.25);
+    }
+    
+    .warehouse-distribution-item table {
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    
+    .warehouse-distribution-item tbody tr {
+        transition: all 0.2s ease;
+    }
+    
+    .warehouse-distribution-item tbody tr:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .warehouse-amount {
+        display: inline-block;
+        padding: 4px 8px;
+        background: linear-gradient(135deg, #e7f5e9 0%, #d4edda 100%);
+        border-radius: 6px;
+        border: 1px solid #28a745;
+    }
+    
+    /* Tooltip styles */
+    .warehouse-tooltip {
+        position: relative;
+        cursor: help;
+        border-bottom: 2px dotted var(--primary-green);
+    }
+    
+    .warehouse-tooltip .tooltip-content {
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        z-index: 1000;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #2c3e50;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        white-space: nowrap;
+        font-size: 0.85rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        transition: opacity 0.3s, visibility 0.3s;
+    }
+    
+    .warehouse-tooltip .tooltip-content::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #2c3e50;
+    }
+    
+    .warehouse-tooltip:hover .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    .tooltip-warehouse-item {
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .tooltip-warehouse-item:last-child {
+        border-bottom: none;
+    }
+    
+    .tooltip-warehouse-name {
+        font-weight: 600;
+        color: #3498db;
+    }
+    
+    .tooltip-warehouse-amount {
+        color: #2ecc71;
+        font-weight: 600;
+    }
+    
     .modal-footer {
         padding: 20px 24px;
         border-top: 1px solid #e9ecef;
@@ -637,16 +760,26 @@
 
 <!-- Start Production Modal -->
 <div id="startProductionModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 900px; max-height: 90vh; overflow-y: auto;">
         <div class="modal-header">
             <h3>شروع تولید</h3>
             <button type="button" class="modal-close" onclick="closeModal('startProductionModal')">&times;</button>
         </div>
         <div class="modal-body">
-            <p>آیا از شروع تولید این برنامه اطمینان دارید؟</p>
+            <p style="margin-bottom: 20px; font-weight: 600;">آیا از شروع تولید این برنامه اطمینان دارید؟</p>
+            
             <div class="modal-form-field">
-                <label for="actualStartTime">زمان شروع واقعی:</label>
+                <label for="actualStartTime">زمان شروع واقعی: <span style="color: red;">*</span></label>
                 <input type="datetime-local" id="actualStartTime" class="form-control" required>
+            </div>
+            
+            <!-- Warehouse Distribution Section -->
+            <div id="warehouseDistributionSection" style="margin-top: 24px; padding: 16px; background: #f8f9fa; border-radius: 8px; display: none;">
+                <h4 style="margin-bottom: 16px; color: #343a40; font-size: 1.1rem;">توزیع مواد اولیه از انبارها <span style="color: red;">*</span></h4>
+                <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 16px;">برای هر ماده اولیه، مشخص کنید چه مقداری از هر انبار برداشت شود. مجموع درصدها باید 100% باشد.</p>
+                <div id="warehouseDistributionList" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Will be populated dynamically -->
+                </div>
             </div>
         </div>
         <div class="modal-footer">
@@ -698,11 +831,107 @@
 // Global data variables (parsed from Django context)
 const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
 const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
+const warehouseDistributionData = JSON.parse('{{ warehouse_distribution_json|escapejs }}');
 
 // Modal functions
 function showModal(modalId) {
     document.getElementById(modalId).style.display = 'flex';
     document.body.style.overflow = 'hidden';
+}
+
+function setupWarehouseDistributionListeners() {
+    // Sync sliders with inputs and vice versa
+    document.querySelectorAll('.warehouse-slider').forEach(slider => {
+        slider.addEventListener('input', function() {
+            const bomId = this.dataset.bomId;
+            const warehouse = this.dataset.warehouse;
+            const value = parseInt(this.value);
+            
+            // Update corresponding input
+            const input = document.querySelector(`.warehouse-percent-input[data-bom-id="${bomId}"][data-warehouse="${warehouse}"]`);
+            if (input) {
+                input.value = value;
+            }
+            
+            // Update display
+            const sliderValue = this.parentElement.querySelector('.slider-value');
+            if (sliderValue) {
+                sliderValue.textContent = value + '%';
+            }
+            
+            updateWarehouseAmounts(bomId);
+            validateTotalPercent(bomId);
+        });
+    });
+    
+    document.querySelectorAll('.warehouse-percent-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const bomId = this.dataset.bomId;
+            const warehouse = this.dataset.warehouse;
+            let value = parseInt(this.value) || 0;
+            
+            // Clamp value between 0 and 100
+            value = Math.max(0, Math.min(100, value));
+            this.value = value;
+            
+            // Update corresponding slider
+            const slider = document.querySelector(`.warehouse-slider[data-bom-id="${bomId}"][data-warehouse="${warehouse}"]`);
+            if (slider) {
+                slider.value = value;
+                const sliderValue = slider.parentElement.querySelector('.slider-value');
+                if (sliderValue) {
+                    sliderValue.textContent = value + '%';
+                }
+            }
+            
+            updateWarehouseAmounts(bomId);
+            validateTotalPercent(bomId);
+        });
+    });
+}
+
+function updateWarehouseAmounts(bomId) {
+    const item = document.querySelector(`.warehouse-distribution-item[data-bom-id="${bomId}"]`);
+    if (!item) return;
+    
+    const totalNeeded = parseFloat(item.dataset.totalNeeded);
+    const sliders = item.querySelectorAll('.warehouse-slider');
+    
+    sliders.forEach(slider => {
+        const percent = parseInt(slider.value);
+        const amount = (totalNeeded * percent) / 100;
+        const row = slider.closest('.warehouse-slider-row');
+        const amountDisplay = row.querySelector('.warehouse-amount');
+        if (amountDisplay) {
+            amountDisplay.textContent = amount.toFixed(4) + ' ' + (amountDisplay.textContent.split(' ').pop() || 'تن');
+        }
+    });
+}
+
+function validateTotalPercent(bomId) {
+    const item = document.querySelector(`.warehouse-distribution-item[data-bom-id="${bomId}"]`);
+    if (!item) return;
+    
+    const sliders = item.querySelectorAll('.warehouse-slider');
+    let total = 0;
+    sliders.forEach(slider => {
+        total += parseInt(slider.value);
+    });
+    
+    const warning = item.querySelector('.total-percent-warning');
+    const currentTotal = item.querySelector('.current-total');
+    
+    if (total !== 100) {
+        warning.style.display = 'block';
+        warning.style.background = '#f8d7da';
+        warning.style.borderLeft = '4px solid #dc3545';
+        currentTotal.textContent = `فعلاً ${total}% است`;
+    } else {
+        warning.style.display = 'block';
+        warning.style.background = '#d1fadd';
+        warning.style.borderLeft = '4px solid #198754';
+        currentTotal.textContent = '✓ مجموع صحیح است (100%)';
+    }
 }
 
 function closeModal(modalId) {
@@ -736,6 +965,139 @@ function showStartProductionModal() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('actualStartTime').value = now.toISOString().slice(0, 16);
+    
+    // Get current production info ID
+    const productionInfoSelect = document.querySelector('#id_production_info');
+    const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+    
+    // Get planned weight for calculation
+    const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
+    const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
+    
+    // Populate warehouse distribution
+    const warehouseSection = document.getElementById('warehouseDistributionSection');
+    const warehouseList = document.getElementById('warehouseDistributionList');
+    
+    if (selectedProductionInfoId && bomData[selectedProductionInfoId] && plannedWeight > 0) {
+        const data = bomData[selectedProductionInfoId];
+        const bomItems = data.bom_items || [];
+        const minBatch = parseFloat(data.min_batch_production) || 1;
+        
+        // Get raw materials inventory (passed from context)
+        const rawMaterialsInventory = JSON.parse('{{ raw_materials_inventory_json|escapejs }}');
+        
+        if (bomItems.length > 0) {
+            let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
+            
+            bomItems.forEach(item => {
+                // Calculate total consumption needed
+                const quantity = parseFloat(item.quantity) || 0;
+                const totalConsumption = ((quantity * plannedWeight) / minBatch).toFixed(4);
+                
+                // Find warehouses that have this raw material
+                const warehouses = rawMaterialsInventory.filter(inv => 
+                    inv.raw_material_id === item.raw_material_id
+                );
+                
+                if (warehouses.length > 0) {
+                    html += `
+                        <div class="warehouse-distribution-item" data-bom-id="${item.id}" data-total-needed="${totalConsumption}" style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; border: 2px solid #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid var(--primary-green);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <div>
+                                        <strong style="color: #343a40; font-size: 1.1rem; display: block;">${item.raw_material_name || '-'}</strong>
+                                        <div style="font-size: 0.85rem; color: #6c757d; margin-top: 4px;">
+                                            کد: <strong>${item.raw_material_id || '-'}</strong>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; background: #e7f5e9; padding: 8px 16px; border-radius: 8px;">
+                                        <div style="font-size: 0.75rem; color: #28a745; text-transform: uppercase; font-weight: 600;">مقدار مورد نیاز کل</div>
+                                        <strong style="color: var(--primary-green); font-size: 1.2rem;">${totalConsumption} ${item.unit_used || 'تن'}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 12px;">
+                                <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                                    <thead>
+                                        <tr style="background: #f8f9fa;">
+                                            <th style="padding: 10px; text-align: right; border-radius: 6px 0 0 6px; font-size: 0.85rem; font-weight: 600; color: #495057;">انبار</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057;">موجودی</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057;">درصد توزیع</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057;">درصد</th>
+                                            <th style="padding: 10px; text-align: center; border-radius: 0 6px 6px 0; font-size: 0.85rem; font-weight: 600; color: #495057; background: #fff6db;">مقدار برداشت</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    
+                    warehouses.forEach((wh, index) => {
+                        const defaultPercent = index === 0 ? 100 : 0;
+                        const defaultAmount = ((parseFloat(totalConsumption) * defaultPercent) / 100).toFixed(4);
+                        html += `
+                            <tr class="warehouse-slider-row" style="background: #ffffff; border: 1px solid #e9ecef;">
+                                <td style="padding: 12px; border-radius: 6px 0 0 6px;">
+                                    <strong style="font-size: 0.95rem; color: #343a40;">${wh.warehouse}</strong>
+                                </td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <div style="font-size: 0.9rem; color: #6c757d;">${wh.quantity} ${wh.unit}</div>
+                                </td>
+                                <td style="padding: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="range" 
+                                               class="warehouse-slider" 
+                                               data-bom-id="${item.id}"
+                                               data-warehouse="${wh.warehouse}"
+                                               min="0" 
+                                               max="100" 
+                                               value="${defaultPercent}"
+                                               style="flex: 1;">
+                                        <div class="slider-value" style="min-width: 45px; text-align: center; font-weight: 600; color: var(--primary-green); font-size: 0.95rem;">${defaultPercent}%</div>
+                                    </div>
+                                </td>
+                                <td style="padding: 12px; text-align: center;">
+                                    <input type="number" 
+                                           class="warehouse-percent-input form-control" 
+                                           data-bom-id="${item.id}"
+                                           data-warehouse="${wh.warehouse}"
+                                           min="0" 
+                                           max="100" 
+                                           value="${defaultPercent}"
+                                           style="width: 70px; padding: 6px; text-align: center; border: 2px solid #28a745; border-radius: 6px;">
+                                </td>
+                                <td style="padding: 12px; text-align: center; background: #fffef5; border-radius: 0 6px 6px 0;">
+                                    <strong class="warehouse-amount" style="color: #28a745; font-size: 1rem;">${defaultAmount} ${item.unit_used || 'تن'}</strong>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="total-percent-warning" style="margin-top: 12px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; font-size: 0.9rem; display: none;">
+                                <strong>⚠️ توجه:</strong> مجموع درصدها باید 100% باشد. 
+                                <span class="current-total" style="font-weight: 600;"></span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += '</div>';
+            warehouseList.innerHTML = html;
+            
+            // Add event listeners for sliders and inputs
+            setupWarehouseDistributionListeners();
+            
+            warehouseSection.style.display = 'block';
+        } else {
+            warehouseSection.style.display = 'none';
+        }
+    } else {
+        warehouseSection.style.display = 'none';
+    }
     
     showModal('startProductionModal');
 }
@@ -825,6 +1187,63 @@ function confirmStartProduction() {
     if (!startTime) {
         alert('لطفاً زمان شروع واقعی را وارد کنید.');
         return;
+    }
+    
+    // Validate warehouse distribution if section is visible
+    const warehouseSection = document.getElementById('warehouseDistributionSection');
+    if (warehouseSection && warehouseSection.style.display !== 'none') {
+        const distributionItems = document.querySelectorAll('.warehouse-distribution-item');
+        const errors = [];
+        const warehouseData = {};
+        
+        distributionItems.forEach(item => {
+            const bomId = item.dataset.bomId;
+            const sliders = item.querySelectorAll('.warehouse-slider');
+            let total = 0;
+            const distributions = [];
+            
+            sliders.forEach(slider => {
+                const percent = parseInt(slider.value);
+                total += percent;
+                
+                if (percent > 0) {
+                    distributions.push({
+                        warehouse: slider.dataset.warehouse,
+                        percent: percent
+                    });
+                }
+            });
+            
+            if (total !== 100) {
+                const materialName = item.querySelector('strong').textContent;
+                errors.push(`${materialName}: مجموع درصدها ${total}% است (باید 100% باشد)`);
+            }
+            
+            warehouseData[bomId] = distributions;
+        });
+        
+        if (errors.length > 0) {
+            alert('خطا در توزیع انبارها:\n\n' + errors.join('\n'));
+            return;
+        }
+        
+        // Add warehouse distribution data to form as hidden inputs
+        Object.keys(warehouseData).forEach(bomId => {
+            const distributions = warehouseData[bomId];
+            distributions.forEach((dist, index) => {
+                const warehouseInput = document.createElement('input');
+                warehouseInput.type = 'hidden';
+                warehouseInput.name = `warehouse_dist_${bomId}_${index}_warehouse`;
+                warehouseInput.value = dist.warehouse;
+                document.getElementById('productionForm').appendChild(warehouseInput);
+                
+                const percentInput = document.createElement('input');
+                percentInput.type = 'hidden';
+                percentInput.name = `warehouse_dist_${bomId}_${index}_percent`;
+                percentInput.value = dist.percent;
+                document.getElementById('productionForm').appendChild(percentInput);
+            });
+        });
     }
     
     // Set hidden field values
@@ -1034,12 +1453,32 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get actual consumption value
             const actualConsumption = item.actual_consumption || '';
             
+            // Check if warehouse distribution data exists for this BOM item
+            let totalConsumptionDisplay = totalConsumption;
+            if (showActualConsumption && warehouseDistributionData && warehouseDistributionData[item.id]) {
+                const warehouses = warehouseDistributionData[item.id];
+                let tooltipContent = '';
+                
+                warehouses.forEach(wh => {
+                    tooltipContent += `انبار ${wh.warehouse}: ${wh.amount} ${item.unit_used || 'تن'} (${wh.percent}%)<br>`;
+                });
+                
+                totalConsumptionDisplay = `
+                    <div class="warehouse-tooltip">
+                        ${totalConsumption}
+                        <div class="tooltip-content">
+                            ${tooltipContent}
+                        </div>
+                    </div>
+                `;
+            }
+            
             html += `
                 <tr>
                     <td>${item.raw_material_id || '-'}</td>
                     <td>${item.raw_material_name || '-'}</td>
                     <td>${item.quantity || 0}</td>
-                    <td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
+                    <td style="font-weight: 600; color: var(--primary-green);">${totalConsumptionDisplay}</td>
             `;
             
             if (showActualConsumption) {

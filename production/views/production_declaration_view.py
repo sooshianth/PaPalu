@@ -7,6 +7,8 @@ from django.utils import timezone
 from django.http import JsonResponse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.template.loader import render_to_string
+from django.db import transaction
+from decimal import Decimal
 
 import logging
 from core.logging_levels import *
@@ -18,12 +20,130 @@ from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from core.ProductFolder.ProductModel import Product
+from core.StockEntryFolder.StockEntryModel import StockEntry
+from core.StockEntryFolder.SourceStockModel import SourceStock
+from core.StockEntryFolder.TargetStockModel import TargetStock
 from production.forms.program_form import ProductionProgramForm
 from production.forms.production_form import ProductionForm
 import json
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def create_production_stock_entry(production_program, warehouse_distribution, request):
+    """
+    ایجاد ثبت انبار برای شروع تولید
+    
+    Args:
+        production_program: برنامه تولید
+        warehouse_distribution: دیکشنری توزیع انبارها {bom_id: [{warehouse: str, percent: int}, ...]}
+        request: Django request object
+    
+    Returns:
+        StockEntry object or None if failed
+    """
+    try:
+        with transaction.atomic():
+            # ایجاد ثبت انبار
+            stock_entry = StockEntry.objects.create(
+                transaction_date=timezone.now(),
+                notes=f'شروع تولید برنامه {production_program.program_id or production_program.id}',
+                is_committed=False
+            )
+            
+            bug_logger.info(f"ثبت انبار {stock_entry.id} ایجاد شد")
+            
+            # دریافت content type برای ماده اولیه و محصول
+            raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
+            product_ct = ContentType.objects.get_for_model(Product)
+            
+            # محاسبه مقدار مصرف کل برای هر ماده اولیه
+            if not production_program.production_info:
+                bug_logger.error("برنامه تولید فاقد اطلاعات فرمول است")
+                return None
+            
+            planned_weight = production_program.planned_weight_ton or Decimal('0')
+            min_batch = production_program.production_info.min_batch_production or Decimal('1')
+            
+            # پردازش هر BOM item
+            for bom in production_program.production_info.bom_items.all():
+                bom_id_str = str(bom.id)
+                
+                # بررسی اینکه آیا توزیع برای این BOM موجود است
+                if bom_id_str not in warehouse_distribution:
+                    bug_logger.warning(f"توزیع انبار برای BOM {bom.id} یافت نشد")
+                    continue
+                
+                # محاسبه مقدار کل مورد نیاز
+                bom_quantity = bom.quantity or Decimal('0')
+                total_needed = (bom_quantity * planned_weight) / min_batch
+                
+                bug_logger.debug(f"BOM {bom.id}: مقدار کل مورد نیاز = {total_needed}")
+                
+                # ایجاد SourceStock برای هر انبار
+                for dist in warehouse_distribution[bom_id_str]:
+                    warehouse_id = dist['warehouse']
+                    percent = Decimal(str(dist['percent']))
+                    
+                    # محاسبه مقدار برداشت از این انبار (از درصد به عدد)
+                    # استفاده از Decimal برای جلوگیری از خطای float
+                    amount = (total_needed * percent) / Decimal('100')
+                    
+                    bug_logger.debug(f"برداشت {amount} از انبار {warehouse_id} ({percent}%)")
+                    
+                    # پیدا کردن انبار
+                    try:
+                        warehouse = Warehouse.objects.get(warehouse_id=warehouse_id)
+                    except Warehouse.DoesNotExist:
+                        bug_logger.error(f"انبار {warehouse_id} یافت نشد")
+                        continue
+                    
+                    # ایجاد SourceStock (کاهش از انبار اولیه)
+                    if amount > 0:
+                        source_stock = SourceStock.objects.create(
+                            stock_entry=stock_entry,
+                            from_content_type=raw_material_ct,
+                            from_object_id=bom.raw_material.id,
+                            from_warehouse=warehouse,
+                            quantity=amount,
+                            unit='ton'  # واحد پیش‌فرض
+                        )
+                        bug_logger.debug(f"SourceStock ایجاد شد: {source_stock}")
+            
+            # ایجاد TargetStock (افزایش به انبار تولید)
+            # پیدا کردن انبار تولید
+            try:
+                production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
+                if not production_warehouse:
+                    bug_logger.warning("انبار تولید یافت نشد - ثبت انبار بدون TargetStock ایجاد می‌شود")
+                else:
+                    # افزودن محصول به انبار تولید
+                    if production_program.product:
+                        target_stock = TargetStock.objects.create(
+                            stock_entry=stock_entry,
+                            to_content_type=product_ct,
+                            to_object_id=production_program.product.id,
+                            to_warehouse=production_warehouse,
+                            quantity=planned_weight,
+                            unit='ton'
+                        )
+                        bug_logger.debug(f"TargetStock ایجاد شد: {target_stock}")
+                
+            except Exception as e:
+                bug_logger.error(f"خطا در ایجاد TargetStock: {str(e)}")
+            
+            # تأیید تراکنش
+            stock_entry.commit()
+            bug_logger.info(f"ثبت انبار {stock_entry.id} تأیید شد")
+            
+            return stock_entry
+            
+    except Exception as e:
+        bug_logger.error(f"خطا در ایجاد ثبت انبار: {str(e)}")
+        import traceback
+        bug_logger.error(traceback.format_exc())
+        return None
 
 
 def production_declaration_view(request):
@@ -170,7 +290,7 @@ def production_declaration_view(request):
                                     'raw_material_id': getattr(raw_material, 'raw_material_id', '-'),
                                     'name': getattr(raw_material, 'name', '-'),
                                     'warehouse': item.warehouse.warehouse_id if item.warehouse else '-',
-                                    'quantity': item.quantity if item.quantity else 0,
+                                    'quantity': str(item.quantity) if item.quantity else '0',
                                     'unit': item.unit or 'تن',
                                 })
                         except Exception as e:
@@ -195,6 +315,7 @@ def production_declaration_view(request):
             'in_progress_programs': in_progress_programs,
             'completed_page': completed_page,
             'raw_materials_inventory': raw_materials_inventory,
+            'raw_materials_inventory_json': json.dumps(raw_materials_inventory),
             # Consolidated search parameters for each table
             'search_confirmed': search_confirmed,
             'search_progress': search_progress,
@@ -263,6 +384,7 @@ def production_declaration_view(request):
             'in_progress_programs': ProductionProgram.objects.none(),
             'completed_page': Paginator(ProductionProgram.objects.none(), 10).page(1),
             'raw_materials_inventory': [],
+            'raw_materials_inventory_json': json.dumps([]),
         }
         return render(request, 'production_declaration.html', context)
 
@@ -334,6 +456,79 @@ def production_program_crud_view(request, program_id=None):
                                 instance.started_at = timezone.now()
                         else:
                             instance.started_at = timezone.now()
+                        
+                        # Parse warehouse distribution data
+                        warehouse_distribution = {}
+                        for key in request.POST.keys():
+                            if key.startswith('warehouse_dist_'):
+                                parts = key.split('_')
+                                # Format: warehouse_dist_{bom_id}_{index}_warehouse or warehouse_dist_{bom_id}_{index}_percent
+                                if len(parts) >= 5:
+                                    bom_id = parts[2]
+                                    index = parts[3]
+                                    field_type = parts[4]
+                                    
+                                    if bom_id not in warehouse_distribution:
+                                        warehouse_distribution[bom_id] = {}
+                                    if index not in warehouse_distribution[bom_id]:
+                                        warehouse_distribution[bom_id][index] = {}
+                                    
+                                    warehouse_distribution[bom_id][index][field_type] = request.POST.get(key)
+                        
+                        # Convert to clean format
+                        clean_distribution = {}
+                        for bom_id, indices in warehouse_distribution.items():
+                            clean_distribution[bom_id] = []
+                            for index, data in indices.items():
+                                if 'warehouse' in data and 'percent' in data:
+                                    try:
+                                        percent_val = int(data['percent'])
+                                        if percent_val > 0:  # Only include if percent > 0
+                                            clean_distribution[bom_id].append({
+                                                'warehouse': data['warehouse'],
+                                                'percent': percent_val
+                                            })
+                                    except (ValueError, TypeError):
+                                        bug_logger.warning(f"خطا در تبدیل درصد برای BOM {bom_id}")
+                        
+                        bug_logger.info(f"توزیع انبار دریافت شد: {len(clean_distribution)} BOM item")
+                        
+                        # Calculate and store warehouse distribution with amounts
+                        if clean_distribution and instance.production_info:
+                            warehouse_dist_with_amounts = {}
+                            planned_weight = instance.planned_weight_ton or Decimal('0')
+                            min_batch = instance.production_info.min_batch_production or Decimal('1')
+                            
+                            for bom in instance.production_info.bom_items.all():
+                                bom_id_str = str(bom.id)
+                                if bom_id_str in clean_distribution:
+                                    bom_quantity = bom.quantity or Decimal('0')
+                                    total_needed = (bom_quantity * planned_weight) / min_batch
+                                    
+                                    warehouse_dist_with_amounts[bom_id_str] = []
+                                    for dist in clean_distribution[bom_id_str]:
+                                        percent = Decimal(str(dist['percent']))
+                                        amount = (total_needed * percent) / Decimal('100')
+                                        warehouse_dist_with_amounts[bom_id_str].append({
+                                            'warehouse': dist['warehouse'],
+                                            'percent': str(percent),
+                                            'amount': str(amount)
+                                        })
+                            
+                            instance.warehouse_distribution = warehouse_dist_with_amounts
+                            bug_logger.debug(f"توزیع انبار با مقادیر ذخیره شد: {warehouse_dist_with_amounts}")
+                        
+                        # Create stock entry if we have distribution data
+                        if clean_distribution:
+                            stock_entry = create_production_stock_entry(instance, clean_distribution, request)
+                            if stock_entry:
+                                bug_logger.info(f"ثبت انبار {stock_entry.id} برای برنامه {instance.id} ایجاد و تأیید شد")
+                                messages.success(request, f'ثبت انبار با موفقیت ایجاد شد (شناسه: {stock_entry.id})')
+                            else:
+                                bug_logger.error(f"خطا در ایجاد ثبت انبار برای برنامه {instance.id}")
+                                messages.warning(request, 'خطا در ایجاد ثبت انبار')
+                        else:
+                            bug_logger.warning("داده توزیع انبار دریافت نشد")
                     elif action == 'complete':
                         instance.status = ProductionProgram.Status.COMPLETED
                         # Handle popup data for complete action
@@ -342,7 +537,6 @@ def production_program_crud_view(request, program_id=None):
                         
                         if produced_weight_str:
                             try:
-                                from decimal import Decimal
                                 instance.produced_weight_ton = Decimal(produced_weight_str)
                                 bug_logger.info(f"وزن تولید شده از popup دریافت شد: {instance.produced_weight_ton}")
                             except (ValueError, TypeError) as e:
@@ -370,7 +564,6 @@ def production_program_crud_view(request, program_id=None):
                                 bom_id = key.replace('actual_consumption_', '')
                                 if value and value.strip():
                                     try:
-                                        from decimal import Decimal
                                         actual_consumption[bom_id] = str(Decimal(value))
                                         bug_logger.debug(f"مصرف واقعی BOM {bom_id}: {value}")
                                     except (ValueError, TypeError) as e:
@@ -389,13 +582,16 @@ def production_program_crud_view(request, program_id=None):
                                 bug_logger.warning(f"تکمیل رد شد: مصرف واقعی برای {len(missing_consumption)} ماده اولیه وارد نشده است")
                                 messages.error(request, f'لطفاً مقدار مصرف واقعی را برای تمام مواد اولیه وارد کنید. موارد ناقص: {", ".join(missing_consumption)}')
                                 # Don't save and return to form
+                                warehouse_dist_data = program.warehouse_distribution if program and program.warehouse_distribution else {}
                                 context = {
                                     'form': form,
                                     'program': program,
                                     'is_create': is_create,
                                     'raw_materials_inventory': raw_materials_inventory,
+                                    'raw_materials_inventory_json': json.dumps(raw_materials_inventory),
                                     'production_infos_json': json.dumps(production_infos_data),
                                     'bom_data_json': json.dumps(bom_data),
+                                    'warehouse_distribution_json': json.dumps(warehouse_dist_data),
                                 }
                                 return render(request, 'production_declaration_crud.html', context)
                         
@@ -455,7 +651,7 @@ def production_program_crud_view(request, program_id=None):
                                     'raw_material_id': getattr(raw_material, 'raw_material_id', '-'),
                                     'name': getattr(raw_material, 'name', '-'),
                                     'warehouse': item.warehouse.warehouse_id if item.warehouse else '-',
-                                    'quantity': item.quantity if item.quantity else 0,
+                                    'quantity': str(item.quantity) if item.quantity else '0',
                                     'unit': item.unit or 'تن',
                                 })
                         except Exception as e:
@@ -503,6 +699,10 @@ def production_program_crud_view(request, program_id=None):
                         bom_id_str = str(bom.id)
                         actual_consumption = actual_consumption_data.get(bom_id_str, '')
                         
+                        # Convert Decimal to string if needed
+                        if actual_consumption and hasattr(actual_consumption, '__float__'):
+                            actual_consumption = str(actual_consumption)
+                        
                         bom_items.append({
                             'id': bom.id,
                             'raw_material_id': bom.raw_material.raw_material_id if bom.raw_material else '-',
@@ -521,13 +721,20 @@ def production_program_crud_view(request, program_id=None):
         except Exception as e:
             bug_logger.error(f"خطا در آماده‌سازی داده‌های BOM: {str(e)}")
         
+        # Get warehouse distribution if exists
+        warehouse_distribution_data = {}
+        if program and program.warehouse_distribution:
+            warehouse_distribution_data = program.warehouse_distribution
+        
         context = {
             'form': form,
             'program': program,
             'is_create': is_create,
             'raw_materials_inventory': raw_materials_inventory,
+            'raw_materials_inventory_json': json.dumps(raw_materials_inventory),
             'production_infos_json': json.dumps(production_infos_data),
             'bom_data_json': json.dumps(bom_data),
+            'warehouse_distribution_json': json.dumps(warehouse_distribution_data),
             'program_status': program.status if program else 'draft',
         }
         
@@ -547,8 +754,10 @@ def production_program_crud_view(request, program_id=None):
             'program': None,
             'is_create': is_create,
             'raw_materials_inventory': [],
+            'raw_materials_inventory_json': json.dumps([]),
             'production_infos_json': json.dumps({}),
             'bom_data_json': json.dumps({}),
+            'warehouse_distribution_json': json.dumps({}),
             'program_status': 'draft',
         }
         return render(request, 'production_declaration_crud.html', context)
