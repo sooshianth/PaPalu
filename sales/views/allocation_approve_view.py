@@ -13,7 +13,7 @@ from core.AllocationFolder.AllocationProductInfoModel import AllocationProductIn
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
-from sales.views.allocation_list import (
+from sales.views.allocation_list_view import (
     calculate_order_total_quantity,
     calculate_allocation_total_quantity,
     get_delivery_address_info

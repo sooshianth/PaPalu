@@ -1,4 +1,4 @@
-from . import customer_views, proforma_view, approve_proforma_view
+from . import customer_views, proforma_list_view, proforma_approve_view
 
-__all__ = ['customer_views', 'proforma_view', 'approve_proforma_view']
+__all__ = ['customer_views', 'proforma_list_view', 'proforma_approve_view']
 

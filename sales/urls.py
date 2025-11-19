@@ -4,12 +4,12 @@ from sales.views import (
     order_views,
     product_view,
     product_price_view,
-    proforma_view,
-    approve_proforma_view,
+    proforma_list_view,
+    proforma_approve_view,
     transaction_receipt_view,
-    approve_transaction_receipt,
-    allocation_list,
-    approve_allocation,
+    transaction_receipt_approve_view,
+    allocation_list_view,
+    allocation_approve_view,
 )
 
 app_name = 'sales'
@@ -24,36 +24,36 @@ urlpatterns = [
     path('order/list/', order_views.order_list_view, name='order_list'),
     
     # مسیرهای پیش فاکتور
-    path('proforma/list/', proforma_view.proforma_list_view, name='proforma_list'),
-    path('proforma/create/', proforma_view.proforma_create_view, name='proforma_create'),
-    path('proforma/<int:proforma_id>/', proforma_view.proforma_detail_view, name='proforma_detail'),
-    path('proforma/<int:proforma_id>/download-pdf/', proforma_view.proforma_download_pdf, name='proforma_download_pdf'),
+    path('proforma/list/', proforma_list_view.proforma_list_view, name='proforma_list'),
+    path('proforma/create/', proforma_list_view.proforma_create_view, name='proforma_create'),
+    path('proforma/<int:proforma_id>/', proforma_list_view.proforma_detail_view, name='proforma_detail'),
+    path('proforma/<int:proforma_id>/download-pdf/', proforma_list_view.proforma_download_pdf, name='proforma_download_pdf'),
     
     # API برای دریافت اطلاعات سفارش
-    path('api/order/<str:order_number>/customer/', proforma_view.get_order_customer_api, name='get_order_customer_api'),
+    path('api/order/<str:order_number>/customer/', proforma_list_view.get_order_customer_api, name='get_order_customer_api'),
     
     # مسیرهای تأیید پیش فاکتور
-    path('approve-proforma/list/', approve_proforma_view.approve_proforma_list_view, name='approve_proforma_list'),
-    path('approve-proforma/<str:order_number>/upload/', approve_proforma_view.approve_proforma_upload_view, name='approve_proforma_upload'),
+    path('approve-proforma/list/', proforma_approve_view.approve_proforma_list_view, name='approve_proforma_list'),
+    path('approve-proforma/<str:order_number>/upload/', proforma_approve_view.approve_proforma_upload_view, name='approve_proforma_upload'),
 
     # مسیرهای ثبت رسید تراکنش فروش
     path('transaction-receipts/orders/', transaction_receipt_view.transaction_receipt_order_list_view, name='transaction_receipt_order_list'),
     path('transaction-receipts/<str:order_number>/upload/', transaction_receipt_view.transaction_receipt_upload_view, name='transaction_receipt_upload'),
     
     # مسیرهای تأیید تراکنش فروش
-    path('approve-transaction-receipt/list/', approve_transaction_receipt.approve_transaction_receipt_list_view, name='approve_transaction_receipt_list'),
-    path('approve-transaction-receipt/<str:order_number>/', approve_transaction_receipt.approve_transaction_receipt_detail_view, name='approve_transaction_receipt_detail'),
+    path('approve-transaction-receipt/list/', transaction_receipt_approve_view.approve_transaction_receipt_list_view, name='approve_transaction_receipt_list'),
+    path('approve-transaction-receipt/<str:order_number>/', transaction_receipt_approve_view.approve_transaction_receipt_detail_view, name='approve_transaction_receipt_detail'),
     
     # مسیرهای تخصیص
-    path('allocation/list/', allocation_list.allocation_list_view, name='allocation_list'),
-    path('allocation/<str:order_number>/create/', allocation_list.allocation_create_view, name='allocation_create'),
-    path('allocation/<str:order_number>/<str:allocation_number>/edit/', allocation_list.allocation_edit_view, name='allocation_edit'),
-    path('api/delivery-info/<str:postal_code>/', allocation_list.get_delivery_info_api, name='get_delivery_info_api'),
+    path('allocation/list/', allocation_list_view.allocation_list_view, name='allocation_list'),
+    path('allocation/<str:order_number>/create/', allocation_list_view.allocation_create_view, name='allocation_create'),
+    path('allocation/<str:order_number>/<str:allocation_number>/edit/', allocation_list_view.allocation_edit_view, name='allocation_edit'),
+    path('api/delivery-info/<str:postal_code>/', allocation_list_view.get_delivery_info_api, name='get_delivery_info_api'),
     
     # مسیرهای تأیید تخصیص
-    path('approve-allocation/list/', approve_allocation.approve_allocation_list_view, name='approve_allocation_list'),
-    path('approve-allocation/<str:order_number>/', approve_allocation.approve_allocation_detail_view, name='approve_allocation_detail'),
-    path('approve-allocation/<str:order_number>/<str:allocation_number>/inquiry/', approve_allocation.approve_allocation_inquiry_view, name='approve_allocation_inquiry'),
+    path('approve-allocation/list/', allocation_approve_view.approve_allocation_list_view, name='approve_allocation_list'),
+    path('approve-allocation/<str:order_number>/', allocation_approve_view.approve_allocation_detail_view, name='approve_allocation_detail'),
+    path('approve-allocation/<str:order_number>/<str:allocation_number>/inquiry/', allocation_approve_view.approve_allocation_inquiry_view, name='approve_allocation_inquiry'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     
