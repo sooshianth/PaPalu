@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from ..PersonFolder.PersonModel import Person
 from django_jalali.db import models as jmodels
 
 
@@ -102,6 +103,15 @@ class RawMaterial(models.Model):
         null=True,
         blank=True
     )
+    main_supplier = models.ForeignKey(
+        Person,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='main_supplied_materials',
+        verbose_name='تامین‌کننده اصلی این کالا',
+        help_text='فقط اشخاص با نوع "تامین" قابل انتخاب هستند.'
+    )
     veterinary_health_id = models.CharField(
         max_length=100,
         unique=True,
@@ -118,10 +128,13 @@ class RawMaterial(models.Model):
         null=True,
         blank=True
     )
-    expiration_date = jmodels.jDateField(
+    # تاریخ انقضا به صورت کاراکتری (درخواست کاربر: CharField نه تاریخ واقعی)
+    expiration_date = models.CharField(
+        max_length=50,
         verbose_name="تاریخ انقضا",
         null=True,
-        blank=True
+        blank=True,
+        help_text="مثال: 1404/12 یا Q4-1404 یا فرمت دلخواه"
     )
     
     # Timestamps

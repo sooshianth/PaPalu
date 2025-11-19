@@ -1,6 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
-from .SupplierModel import Supplier
+from ..PersonFolder.PersonModel import Person
 from .RawMaterialModel import RawMaterial
 from ..WarehouseFolder.WarehouseModel import Warehouse
 
@@ -17,12 +17,13 @@ class RawMaterialPurchaseInfo(models.Model):
         blank=True
     )
     supplier = models.ForeignKey(
-        Supplier,
+        Person,
         on_delete=models.SET_NULL,
-        related_name='purchase_infos',
-        verbose_name="تامین‌کنندگان",
+        related_name='purchase_infos_as_supplier',
+        verbose_name="تامین‌کننده",
         blank=True,
-        null=True
+        null=True,
+        help_text="فقط اشخاص با نوع 'تامین' باید انتخاب شوند."
     )
     minimum_order_quantity = models.DecimalField(
         max_digits=15,

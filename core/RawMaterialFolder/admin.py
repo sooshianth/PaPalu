@@ -1,5 +1,5 @@
 from django.contrib import admin
-from . import RawMaterial, RawMaterialPurchaseInfo, RawMaterialQualityControl, QualityParameter, Supplier
+from . import RawMaterial, RawMaterialPurchaseInfo, RawMaterialQualityControl, QualityParameter
 
 
 @admin.register(RawMaterial)
@@ -37,6 +37,4 @@ class QualityParameterAdmin(admin.ModelAdmin):
     list_display = ['id']
 
 
-@admin.register(Supplier)
-class SupplierAdmin(admin.ModelAdmin):
-    list_display = ['id']
+# No Supplier model: suppliers are Persons with type='supplier'
