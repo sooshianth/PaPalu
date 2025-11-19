@@ -65,12 +65,81 @@
     }
     .code-badge {
         display: inline-block;
-        padding: 6px 10px;
+        padding: 6px 12px;
         border-radius: 6px;
-        background: var(--gray-100);
-        color: var(--gray-800);
+        background-color: var(--primary-green);
+        color: white;
         font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 0.85rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .badge-pending {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .badge-confirmed {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .badge-processing {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .badge-pending-proforma {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .badge-pending-upload {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .badge-pending-accounting {
+        background-color: #6610f2;
+        color: white;
+    }
+    
+    .badge-pending-allocation {
+        background-color: #6f42c1;
+        color: white;
+    }
+    
+    .badge-pending-allocation-approval {
+        background-color: #0056b3;
+        color: white;
+    }
+    
+    .badge-pending-factory {
+        background-color: #0dcaf0;
+        color: #212529;
+    }
+    
+    .badge-completed {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .badge-cancelled {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .badge-archived {
+        background-color: var(--gray-600);
+        color: white;
     }
 </style>
 {% endblock %}
@@ -120,16 +189,35 @@
                             <td><span class="code-badge">{{ order.order_number }}</span></td>
                             {% if accessible_fields.status %}
                             <td>
-                                {% if order.status == 'pending' %}در انتظار
-                                {% elif order.status == 'confirmed' %}تایید شده
-                                {% elif order.status == 'processing' %}در حال پردازش
-                                {% elif order.status == 'pending_proforma_issue' %}در انتظار صدور پیش فاکتور
-                                {% elif order.status == 'pending_customer_proforma_upload' %}در انتظار آپلود پیش فاکتور مشتری
-                                {% elif order.status == 'pending_payment_approval' %}در انتظار تایید پرداخت
-                                {% elif order.status == 'completed' %}تکمیل شده
-                                {% elif order.status == 'cancelled' %}لغو شده
-                                {% elif order.status == 'archived' %}بایگانی شده
-                                {% else %}-{% endif %}
+                                {% if order.status == 'pending' %}
+                                    <span class="badge badge-pending">در انتظار</span>
+                                {% elif order.status == 'confirmed' %}
+                                    <span class="badge badge-confirmed">تایید شده</span>
+                                {% elif order.status == 'processing' %}
+                                    <span class="badge badge-processing">در حال پردازش</span>
+                                {% elif order.status == 'pending_proforma_issue' %}
+                                    <span class="badge badge-pending-proforma">در انتظار صدور پیش فاکتور</span>
+                                {% elif order.status == 'pending_customer_proforma_upload' %}
+                                    <span class="badge badge-pending-upload">در انتظار آپلود پیش فاکتور مشتری</span>
+                                {% elif order.status == 'pending_transaction_receipt_upload' %}
+                                    <span class="badge badge-pending-upload">در انتظار بارگذاری رسید تراکنش</span>
+                                {% elif order.status == 'pending_accounting_approval' %}
+                                    <span class="badge badge-pending-accounting">در انتظار تایید حسابداری</span>
+                                {% elif order.status == 'pending_allocation' %}
+                                    <span class="badge badge-pending-allocation">در انتظار تخصیص</span>
+                                {% elif order.status == 'pending_allocation_approval' %}
+                                    <span class="badge badge-pending-allocation-approval">در انتظار تأیید تخصیص</span>
+                                {% elif order.status == 'pending_factory' %}
+                                    <span class="badge badge-pending-factory">در انتظار کارخانه</span>
+                                {% elif order.status == 'completed' %}
+                                    <span class="badge badge-completed">تکمیل شده</span>
+                                {% elif order.status == 'cancelled' %}
+                                    <span class="badge badge-cancelled">لغو شده</span>
+                                {% elif order.status == 'archived' %}
+                                    <span class="badge badge-archived">بایگانی شده</span>
+                                {% else %}
+                                    <span class="badge badge-archived">-</span>
+                                {% endif %}
                             </td>
                             {% endif %}
                             {% if accessible_fields.total_purchase_cost %}

@@ -125,6 +125,27 @@
         opacity: 0.5;
     }
     
+    .btn-group {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-outline-warning {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid;
+        transition: all 0.3s;
+        color: #ffc107;
+        border-color: #ffc107;
+    }
+    
+    .btn-outline-warning:hover {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
     @media (max-width: 768px) {
         .page-header {
             flex-direction: column;
@@ -190,6 +211,7 @@
                         {% if accessible_fields.description %}
                         <th>توضیحات</th>
                         {% endif %}
+                        <th>عملیات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -221,6 +243,15 @@
                             {% if accessible_fields.description %}
                             <td>{{ customer.description|truncatewords:10|default:"-" }}</td>
                             {% endif %}
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{% url 'sales:edit_customer' customer.national_id %}" 
+                                       class="btn-outline-warning"
+                                       title="ویرایش">
+                                        ویرایش
+                                    </a>
+                                </div>
+                            </td>
                         </tr>
                     {% endfor %}
                 </tbody>

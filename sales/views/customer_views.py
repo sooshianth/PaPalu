@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
@@ -539,3 +539,413 @@ def customer_list_view(request):
     
     return render(request, 'sales/customer_list.html', context)
 
+
+@login_required
+def edit_customer_view(request, national_id):
+    """
+    ویو برای ویرایش مشتری موجود
+    - بررسی دسترسی با TaskPermission
+    - بررسی دسترسی فیلدها با FieldAccessRule
+    """
+    audit_logger.info(f"درخواست ویرایش مشتری با کد ملی {national_id}")
+    
+    # بررسی دسترسی TaskPermission
+    if not user_has_task(request.user, TaskChoices.SALES_CREATE_CUSTOMER.value):
+        audit_logger.activity("تلاش برای ویرایش مشتری بدون دسترسی")
+        messages.error(request, 'شما دسترسی به ویرایش مشتری ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت مشتری
+    person = get_object_or_404(Person, national_id=national_id, type='customer')
+    
+    # بررسی دسترسی: فقط superuser یا کارشناس فروش خود مشتری می‌تواند ویرایش کند
+    if not request.user.is_superuser and person.sales_expert != request.user.username:
+        audit_logger.activity(f"تلاش برای ویرایش مشتری {national_id} متعلق به کاربر دیگر")
+        messages.error(request, 'شما دسترسی به ویرایش این مشتری ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت اطلاعات مرتبط
+    person_content_type = ContentType.objects.get_for_model(Person)
+    # استفاده از int() برای تبدیل national_id به عدد (چون object_id یک PositiveIntegerField است)
+    try:
+        person_national_id_int = int(person.national_id)
+    except (ValueError, TypeError):
+        person_national_id_int = person.national_id
+    person_phones = PhoneNumber.objects.filter(
+        content_type=person_content_type,
+        object_id=person_national_id_int
+    )
+    mobile_number = person_phones.filter(phone_type='mobile', is_primary=True).first()
+    landline_number = person_phones.filter(phone_type='landline').first()
+    
+    # دریافت FinancialBanking
+    financial_banking = None
+    try:
+        financial_banking = person.financial_banking.first()
+    except:
+        pass
+    
+    # دریافت آدرس‌های تحویل
+    delivery_addresses = person.delivery_addresses.all()
+    
+    # دریافت نمایندگان
+    representatives = person.representatives.all()
+    
+    # دریافت حساب‌های بانکی
+    bank_accounts = []
+    if financial_banking:
+        bank_accounts = financial_banking.bank_accounts.all()
+    
+    if request.method == 'POST':
+        # ابتدا map دسترسی فیلدها را به دست آوریم و سپس فرم را با آن بسازیم
+        temp_form_for_access = CreateCustomerForm()
+        temp_delivery_form = DeliveryAddressForm()
+        temp_rep_form = RepresentativeForm()
+        temp_bank_form = BankAccountForm()
+        
+        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        accessible_delivery_fields = get_accessible_delivery_fields(request.user, temp_delivery_form)
+        accessible_rep_fields = get_accessible_representative_fields(request.user, temp_rep_form)
+        accessible_bank_fields = get_accessible_bank_account_fields(request.user, temp_bank_form)
+        
+        form = CreateCustomerForm(request.POST, request.FILES, user=request.user, accessible_fields=accessible_fields, instance=person)
+        delivery_formset = build_delivery_address_formset(request.POST, request.FILES, accessible_fields=accessible_delivery_fields, instance=person)
+        rep_formset = build_representative_formset(request.POST, request.FILES, accessible_fields=accessible_rep_fields, instance=person)
+        bank_formset = build_bank_account_formset(request.POST, request.FILES, accessible_fields=accessible_bank_fields, instance=financial_banking)
+        
+        if form.is_valid() and delivery_formset.is_valid() and rep_formset.is_valid() and bank_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    # به‌روزرسانی مشتری
+                    person = form.save_customer(request.user, update=True)
+                    
+                    # به‌روزرسانی یا ایجاد اطلاعات مالیاتی
+                    if any([
+                        form.cleaned_data.get('economic_code'),
+                        form.cleaned_data.get('tax_postal_code'),
+                        form.cleaned_data.get('tax_province'),
+                        form.cleaned_data.get('tax_city'),
+                        form.cleaned_data.get('tax_address')
+                    ]):
+                        if not financial_banking:
+                            from core.PersonFolder.FinancialBankingModel import FinancialBanking
+                            financial_banking = FinancialBanking.objects.create(
+                                person=person,
+                                economic_code=clean_empty_to_none(form.cleaned_data.get('economic_code')),
+                                tax_postal_code=clean_empty_to_none(form.cleaned_data.get('tax_postal_code')),
+                                tax_province=clean_empty_to_none(form.cleaned_data.get('tax_province')),
+                                tax_city=clean_empty_to_none(form.cleaned_data.get('tax_city')),
+                                tax_address=clean_empty_to_none(form.cleaned_data.get('tax_address'))
+                            )
+                        else:
+                            financial_banking.economic_code = clean_empty_to_none(form.cleaned_data.get('economic_code'))
+                            financial_banking.tax_postal_code = clean_empty_to_none(form.cleaned_data.get('tax_postal_code'))
+                            financial_banking.tax_province = clean_empty_to_none(form.cleaned_data.get('tax_province'))
+                            financial_banking.tax_city = clean_empty_to_none(form.cleaned_data.get('tax_city'))
+                            financial_banking.tax_address = clean_empty_to_none(form.cleaned_data.get('tax_address'))
+                            financial_banking.save()
+                    
+                    # مدیریت حساب‌های بانکی
+                    if financial_banking:
+                        for bank_form in bank_formset:
+                            if not getattr(bank_form, 'cleaned_data', None):
+                                continue
+                            
+                            if bank_form.cleaned_data.get('DELETE', False):
+                                # حذف حساب بانکی
+                                if bank_form.cleaned_data.get('id'):
+                                    BankAccount.objects.filter(id=bank_form.cleaned_data['id']).delete()
+                                continue
+                            
+                            account_number = bank_form.cleaned_data.get('account_number')
+                            if not account_number:
+                                continue
+                            
+                            bank_id = bank_form.cleaned_data.get('id')
+                            if bank_id:
+                                # به‌روزرسانی حساب بانکی موجود
+                                bank_account = BankAccount.objects.get(id=bank_id)
+                                bank_account.account_number = account_number
+                                bank_account.shaba_number = clean_empty_to_none(bank_form.cleaned_data.get('shaba_number'))
+                                bank_account.bank_name = clean_empty_to_none(bank_form.cleaned_data.get('bank_name'))
+                                bank_account.save()
+                            else:
+                                # ایجاد حساب بانکی جدید
+                                BankAccount.objects.create(
+                                    financial_banking=financial_banking,
+                                    account_number=account_number,
+                                    shaba_number=clean_empty_to_none(bank_form.cleaned_data.get('shaba_number')),
+                                    bank_name=clean_empty_to_none(bank_form.cleaned_data.get('bank_name'))
+                                )
+                    
+                    # مدیریت آدرس‌های تحویل
+                    for delivery_form in delivery_formset:
+                        if not getattr(delivery_form, 'cleaned_data', None):
+                            continue
+                        if delivery_form.cleaned_data.get('DELETE', False):
+                            # حذف آدرس تحویل
+                            if delivery_form.cleaned_data.get('postal_code'):
+                                DeliveryAddress.objects.filter(postal_code=delivery_form.cleaned_data['postal_code']).delete()
+                            continue
+                        postal_code = delivery_form.cleaned_data.get('postal_code')
+                        if not postal_code:
+                            continue
+                        
+                        delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+                        
+                        # بررسی وجود آدرس
+                        existing_address = DeliveryAddress.objects.filter(postal_code=postal_code, person=person).first()
+                        if existing_address:
+                            # به‌روزرسانی آدرس موجود
+                            existing_address.recipient_name = delivery_form.cleaned_data.get('recipient_name', person.name)
+                            existing_address.recipient_national_id = clean_empty_to_none(delivery_form.cleaned_data.get('recipient_national_id'))
+                            existing_address.unique_delivery_id = clean_empty_to_none(delivery_form.cleaned_data.get('unique_delivery_id'))
+                            existing_address.province = delivery_form.cleaned_data.get('province', '')
+                            existing_address.city = delivery_form.cleaned_data.get('city', '')
+                            existing_address.address = delivery_form.cleaned_data.get('address', '')
+                            existing_address.delivery_limit = clean_empty_to_none(delivery_form.cleaned_data.get('delivery_limit'))
+                            existing_address.recipient_type = clean_empty_to_none(delivery_form.cleaned_data.get('recipient_type'))
+                            existing_address.save()
+                            delivery_address = existing_address
+                        else:
+                            # ایجاد آدرس جدید
+                            delivery_address = DeliveryAddress.objects.create(
+                                person=person,
+                                postal_code=postal_code,
+                                recipient_name=delivery_form.cleaned_data.get('recipient_name', person.name),
+                                recipient_national_id=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_national_id')),
+                                unique_delivery_id=clean_empty_to_none(delivery_form.cleaned_data.get('unique_delivery_id')),
+                                province=delivery_form.cleaned_data.get('province', ''),
+                                city=delivery_form.cleaned_data.get('city', ''),
+                                address=delivery_form.cleaned_data.get('address', ''),
+                                delivery_limit=clean_empty_to_none(delivery_form.cleaned_data.get('delivery_limit')),
+                                recipient_type=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_type'))
+                            )
+                        
+                        # مدیریت شماره‌های تماس آدرس تحویل
+                        # حذف شماره‌های قدیمی
+                        PhoneNumber.objects.filter(
+                            content_type=delivery_content_type,
+                            object_id=delivery_address.postal_code
+                        ).delete()
+                        
+                        if delivery_form.cleaned_data.get('delivery_mobile'):
+                            PhoneNumber.objects.create(
+                                content_type=delivery_content_type,
+                                object_id=delivery_address.postal_code,
+                                phone_type='mobile',
+                                number=delivery_form.cleaned_data['delivery_mobile'],
+                                is_primary=True
+                            )
+                        
+                        if delivery_form.cleaned_data.get('delivery_landline'):
+                            PhoneNumber.objects.create(
+                                content_type=delivery_content_type,
+                                object_id=delivery_address.postal_code,
+                                phone_type='landline',
+                                number=delivery_form.cleaned_data['delivery_landline'],
+                                is_primary=False
+                            )
+                    
+                    # مدیریت نمایندگان
+                    for rep_form in rep_formset:
+                        if not getattr(rep_form, 'cleaned_data', None):
+                            continue
+                        if rep_form.cleaned_data.get('DELETE', False):
+                            # حذف نماینده
+                            if rep_form.cleaned_data.get('name'):
+                                Representative.objects.filter(name=rep_form.cleaned_data['name'], person=person).delete()
+                            continue
+                        rep_name = rep_form.cleaned_data.get('name')
+                        if not rep_name:
+                            continue
+                        
+                        rep_content_type = ContentType.objects.get_for_model(Representative)
+                        
+                        # بررسی وجود نماینده
+                        existing_rep = Representative.objects.filter(name=rep_name, person=person).first()
+                        if existing_rep:
+                            # به‌روزرسانی نماینده موجود
+                            existing_rep.position = rep_form.cleaned_data.get('position') or ''
+                            if rep_form.cleaned_data.get('confirmation_letter'):
+                                existing_rep.confirmation_letter = rep_form.cleaned_data.get('confirmation_letter')
+                            existing_rep.save()
+                            representative = existing_rep
+                        else:
+                            # ایجاد نماینده جدید
+                            representative = Representative.objects.create(
+                                person=person,
+                                name=rep_name,
+                                position=rep_form.cleaned_data.get('position') or '',
+                                confirmation_letter=rep_form.cleaned_data.get('confirmation_letter')
+                            )
+                        
+                        # مدیریت شماره‌های تماس نماینده
+                        # حذف شماره‌های قدیمی
+                        PhoneNumber.objects.filter(
+                            content_type=rep_content_type,
+                            object_id=representative.name
+                        ).delete()
+                        
+                        if rep_form.cleaned_data.get('mobile'):
+                            PhoneNumber.objects.create(
+                                content_type=rep_content_type,
+                                object_id=representative.name,
+                                phone_type='mobile',
+                                number=rep_form.cleaned_data['mobile'],
+                                is_primary=True
+                            )
+                        
+                        if rep_form.cleaned_data.get('landline'):
+                            PhoneNumber.objects.create(
+                                content_type=rep_content_type,
+                                object_id=representative.name,
+                                phone_type='landline',
+                                number=rep_form.cleaned_data['landline'],
+                                is_primary=False
+                            )
+                
+                bug_logger.info(f"مشتری {person.name} با موفقیت ویرایش شد")
+                messages.success(request, f'مشتری "{person.name}" با موفقیت ویرایش شد.')
+                return redirect('sales:customer_list')
+                
+            except Exception as e:
+                bug_logger.error(f"خطا در ویرایش مشتری: {str(e)}", exc_info=True)
+                messages.error(request, f'خطا در ویرایش مشتری: {str(e)}')
+        else:
+            # فرم معتبر نیست
+            bug_logger.warning("فرم ویرایش مشتری معتبر نیست")
+    else:
+        # در GET نیز فیلدهای غیرمجاز را از فرم حذف کن تا در UI نمایش داده نشوند
+        temp_form_for_access = CreateCustomerForm()
+        temp_delivery_form = DeliveryAddressForm()
+        temp_rep_form = RepresentativeForm()
+        temp_bank_form = BankAccountForm()
+        
+        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        accessible_delivery_fields = get_accessible_delivery_fields(request.user, temp_delivery_form)
+        accessible_rep_fields = get_accessible_representative_fields(request.user, temp_rep_form)
+        accessible_bank_fields = get_accessible_bank_account_fields(request.user, temp_bank_form)
+        
+        # پر کردن فرم با اطلاعات موجود
+        initial_data = {
+            'national_id': person.national_id,
+            'name': person.name,
+            'nature': person.nature,
+            'registration_number': person.registration_number,
+            'birth_date': person.birth_date.strftime('%Y/%m/%d') if person.birth_date else '',
+            'user_type': person.user_type,
+            'introducer': person.introducer,
+            'description': person.description,
+        }
+        
+        if mobile_number:
+            initial_data['mobile_number'] = mobile_number.number
+        if landline_number:
+            initial_data['landline_number'] = landline_number.number
+        
+        if financial_banking:
+            initial_data['economic_code'] = financial_banking.economic_code
+            initial_data['tax_postal_code'] = financial_banking.tax_postal_code
+            initial_data['tax_province'] = financial_banking.tax_province
+            initial_data['tax_city'] = financial_banking.tax_city
+            initial_data['tax_address'] = financial_banking.tax_address
+        
+        form = CreateCustomerForm(initial=initial_data, user=request.user, accessible_fields=accessible_fields, instance=person)
+        
+        # آماده‌سازی formsets با اطلاعات موجود
+        delivery_initial = []
+        for addr in delivery_addresses:
+            delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+            addr_mobile = PhoneNumber.objects.filter(
+                content_type=delivery_content_type,
+                object_id=addr.postal_code,
+                phone_type='mobile'
+            ).first()
+            addr_landline = PhoneNumber.objects.filter(
+                content_type=delivery_content_type,
+                object_id=addr.postal_code,
+                phone_type='landline'
+            ).first()
+            
+            delivery_initial.append({
+                'postal_code': addr.postal_code,
+                'recipient_name': addr.recipient_name,
+                'recipient_national_id': addr.recipient_national_id,
+                'unique_delivery_id': addr.unique_delivery_id,
+                'province': addr.province,
+                'city': addr.city,
+                'address': addr.address,
+                'delivery_limit': addr.delivery_limit,
+                'recipient_type': addr.recipient_type,
+                'delivery_mobile': addr_mobile.number if addr_mobile else '',
+                'delivery_landline': addr_landline.number if addr_landline else '',
+            })
+        
+        rep_initial = []
+        for rep in representatives:
+            rep_content_type = ContentType.objects.get_for_model(Representative)
+            rep_mobile = PhoneNumber.objects.filter(
+                content_type=rep_content_type,
+                object_id=rep.name,
+                phone_type='mobile'
+            ).first()
+            rep_landline = PhoneNumber.objects.filter(
+                content_type=rep_content_type,
+                object_id=rep.name,
+                phone_type='landline'
+            ).first()
+            
+            rep_initial.append({
+                'name': rep.name,
+                'position': rep.position,
+                'confirmation_letter': rep.confirmation_letter,
+                'mobile': rep_mobile.number if rep_mobile else '',
+                'landline': rep_landline.number if rep_landline else '',
+            })
+        
+        bank_initial = []
+        for bank in bank_accounts:
+            bank_initial.append({
+                'id': bank.id,
+                'account_number': bank.account_number,
+                'shaba_number': bank.shaba_number,
+                'bank_name': bank.bank_name,
+            })
+        
+        delivery_formset = build_delivery_address_formset(initial=delivery_initial, accessible_fields=accessible_delivery_fields)
+        rep_formset = build_representative_formset(initial=rep_initial, accessible_fields=accessible_rep_fields)
+        bank_formset = build_bank_account_formset(initial=bank_initial, accessible_fields=accessible_bank_fields)
+    
+    # گرفتن فیلدهای قابل دسترسی برای کاربر
+    if 'accessible_fields' not in locals():
+        temp_form_for_access = CreateCustomerForm()
+        temp_delivery_form = DeliveryAddressForm()
+        temp_rep_form = RepresentativeForm()
+        temp_bank_form = BankAccountForm()
+        accessible_fields = get_accessible_form_fields(request.user, temp_form_for_access)
+        accessible_delivery_fields = get_accessible_delivery_fields(request.user, temp_delivery_form)
+        accessible_rep_fields = get_accessible_representative_fields(request.user, temp_rep_form)
+        accessible_bank_fields = get_accessible_bank_account_fields(request.user, temp_bank_form)
+    
+    if 'delivery_formset' not in locals():
+        delivery_formset = build_delivery_address_formset(accessible_fields=accessible_delivery_fields)
+    if 'rep_formset' not in locals():
+        rep_formset = build_representative_formset(accessible_fields=accessible_rep_fields)
+    if 'bank_formset' not in locals():
+        bank_formset = build_bank_account_formset(accessible_fields=accessible_bank_fields)
+    
+    context = {
+        'form': form,
+        'delivery_formset': delivery_formset,
+        'rep_formset': rep_formset,
+        'bank_formset': bank_formset,
+        'accessible_fields': accessible_fields,
+        'accessible_delivery_fields': accessible_delivery_fields,
+        'accessible_rep_fields': accessible_rep_fields,
+        'accessible_bank_fields': accessible_bank_fields,
+        'page_title': f'ویرایش مشتری {person.name}',
+        'person': person,
+    }
+    
+    return render(request, 'sales/edit_customer.html', context)

@@ -18,6 +18,7 @@ urlpatterns = [
     # مسیرهای مشتری
     path('customer/create/', customer_views.create_customer_view, name='create_customer'),
     path('customer/list/', customer_views.customer_list_view, name='customer_list'),
+    path('customer/<str:national_id>/edit/', customer_views.edit_customer_view, name='edit_customer'),
     # مسیرهای سفارش
     path('order/create/', order_views.create_order_view, name='order_create'),
     path('order/list/', order_views.order_list_view, name='order_list'),

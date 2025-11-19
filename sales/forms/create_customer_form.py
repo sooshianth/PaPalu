@@ -144,7 +144,7 @@ class RepresentativeForm(forms.Form):
     )
 
 
-def build_delivery_address_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None):
+def build_delivery_address_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
     """سازنده فرم‌ست آدرس‌های تحویل"""
     DeliveryFormSet = formset_factory(
         form=DeliveryAddressForm,
@@ -152,11 +152,13 @@ def build_delivery_address_formset(data=None, files=None, accessible_fields: Opt
         can_delete=True
     )
     if data is None:
+        if initial:
+            return DeliveryFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields})
         return DeliveryFormSet(form_kwargs={'accessible_fields': accessible_fields})
     return DeliveryFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
 
 
-def build_representative_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None):
+def build_representative_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
     """سازنده فرم‌ست نمایندگان"""
     RepresentativeFormSet = formset_factory(
         form=RepresentativeForm,
@@ -164,6 +166,8 @@ def build_representative_formset(data=None, files=None, accessible_fields: Optio
         can_delete=True
     )
     if data is None:
+        if initial:
+            return RepresentativeFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields})
         return RepresentativeFormSet(form_kwargs={'accessible_fields': accessible_fields})
     return RepresentativeFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
 
@@ -179,6 +183,8 @@ class BankAccountForm(forms.Form):
             for field_name, allowed in list(accessible_fields.items()):
                 if not allowed and field_name in self.fields:
                     del self.fields[field_name]
+    
+    id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     
     account_number = forms.CharField(
         max_length=50,
@@ -200,7 +206,7 @@ class BankAccountForm(forms.Form):
     )
 
 
-def build_bank_account_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None):
+def build_bank_account_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
     """سازنده فرم‌ست حساب‌های بانکی"""
     BankAccountFormSet = formset_factory(
         form=BankAccountForm,
@@ -208,6 +214,8 @@ def build_bank_account_formset(data=None, files=None, accessible_fields: Optiona
         can_delete=True
     )
     if data is None:
+        if initial:
+            return BankAccountFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields})
         return BankAccountFormSet(form_kwargs={'accessible_fields': accessible_fields})
     return BankAccountFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
 
@@ -219,6 +227,7 @@ class CreateCustomerForm(forms.Form):
         # پارامترهای سفارشی
         self.request_user = kwargs.pop('user', None)
         accessible_fields = kwargs.pop('accessible_fields', None)
+        self.instance = kwargs.pop('instance', None)
         super().__init__(*args, **kwargs)
         
         # اگر map دسترسی‌ها داده شده، فیلدهای غیرمجاز را از فرم حذف کن
@@ -393,9 +402,15 @@ class CreateCustomerForm(forms.Form):
         if not national_id.isdigit():
             raise forms.ValidationError('کد ملی باید فقط شامل اعداد باشد.')
         
-        # بررسی تکراری نبودن
-        if Person.objects.filter(national_id=national_id).exists():
-            raise forms.ValidationError('این کد ملی قبلاً ثبت شده است.')
+        # بررسی تکراری نبودن (فقط در صورت ایجاد جدید)
+        if not self.instance:
+            if Person.objects.filter(national_id=national_id).exists():
+                raise forms.ValidationError('این کد ملی قبلاً ثبت شده است.')
+        else:
+            # در حالت ویرایش، اگر کد ملی تغییر کرده و تکراری است، خطا بده
+            if national_id != self.instance.national_id:
+                if Person.objects.filter(national_id=national_id).exists():
+                    raise forms.ValidationError('این کد ملی قبلاً ثبت شده است.')
         
         return national_id
     
@@ -433,10 +448,10 @@ class CreateCustomerForm(forms.Form):
         
         return cleaned_data
     
-    def save_customer(self, user):
+    def save_customer(self, user, update=False):
         """ذخیره اطلاعات مشتری"""
         
-        # ایجاد شخص
+        # ایجاد یا به‌روزرسانی شخص
         national_id = self.cleaned_data.get('national_id')
         name = self.cleaned_data.get('name')
         nature = self.cleaned_data.get('nature')
@@ -445,22 +460,73 @@ class CreateCustomerForm(forms.Form):
         if not national_id or not name or not nature:
             raise forms.ValidationError('شما دسترسی لازم برای ثبت تمامی فیلدهای ضروری را ندارید.')
         
-        person = Person.objects.create(
-            national_id=national_id,
-            name=name,
-            nature=nature,
-            type='customer',  # نوع شخص مشتری
-            registration_number=clean_empty_to_none(self.cleaned_data.get('registration_number')),
-            birth_date=clean_empty_to_none(self.cleaned_data.get('birth_date')),
-            user_type=clean_empty_to_none(self.cleaned_data.get('user_type')),
-            introducer=clean_empty_to_none(self.cleaned_data.get('introducer')),
-            description=clean_empty_to_none(self.cleaned_data.get('description')),
-            sales_expert=user.username  # کارشناس فروش فعلی
-        )
+        if update and self.instance:
+            # به‌روزرسانی شخص موجود
+            person = self.instance
+            person.name = name
+            person.nature = nature
+            person.registration_number = clean_empty_to_none(self.cleaned_data.get('registration_number'))
+            person.birth_date = clean_empty_to_none(self.cleaned_data.get('birth_date'))
+            person.user_type = clean_empty_to_none(self.cleaned_data.get('user_type'))
+            person.introducer = clean_empty_to_none(self.cleaned_data.get('introducer'))
+            person.description = clean_empty_to_none(self.cleaned_data.get('description'))
+            # sales_expert را تغییر نمی‌دهیم در حالت ویرایش
+            person.save()
+            
+            # اگر کد ملی تغییر کرده باشد
+            if national_id != person.national_id:
+                # حذف شماره تلفن‌های قدیمی
+                person_content_type = ContentType.objects.get_for_model(Person)
+                try:
+                    old_national_id_int = int(person.national_id)
+                except (ValueError, TypeError):
+                    old_national_id_int = person.national_id
+                PhoneNumber.objects.filter(
+                    content_type=person_content_type,
+                    object_id=old_national_id_int
+                ).delete()
+                # تغییر کد ملی
+                old_national_id = person.national_id
+                person.national_id = national_id
+                person.save()
+        else:
+            # ایجاد شخص جدید
+            person = Person.objects.create(
+                national_id=national_id,
+                name=name,
+                nature=nature,
+                type='customer',  # نوع شخص مشتری
+                registration_number=clean_empty_to_none(self.cleaned_data.get('registration_number')),
+                birth_date=clean_empty_to_none(self.cleaned_data.get('birth_date')),
+                user_type=clean_empty_to_none(self.cleaned_data.get('user_type')),
+                introducer=clean_empty_to_none(self.cleaned_data.get('introducer')),
+                description=clean_empty_to_none(self.cleaned_data.get('description')),
+                sales_expert=user.username  # کارشناس فروش فعلی
+            )
         
-        # ایجاد شماره موبایل
+        # ایجاد یا به‌روزرسانی شماره موبایل
         person_content_type = ContentType.objects.get_for_model(Person)
         mobile_number = self.cleaned_data.get('mobile_number')
+        
+        # تبدیل national_id به عدد برای استفاده در object_id
+        try:
+            person_national_id_int = int(person.national_id)
+        except (ValueError, TypeError):
+            person_national_id_int = person.national_id
+        
+        if update:
+            # در حالت ویرایش، شماره‌های قدیمی را حذف و جدید را اضافه می‌کنیم
+            PhoneNumber.objects.filter(
+                content_type=person_content_type,
+                object_id=person_national_id_int,
+                phone_type='mobile'
+            ).delete()
+            PhoneNumber.objects.filter(
+                content_type=person_content_type,
+                object_id=person_national_id_int,
+                phone_type='landline'
+            ).delete()
+        
         if not mobile_number:
             # اگر دسترسی به فیلد موبایل نبوده، ثبت مشتری بدون موبایل انجام شده است
             # (اجباری بودن فقط در صورت وجود فیلد بررسی می‌شود)
@@ -468,7 +534,7 @@ class CreateCustomerForm(forms.Form):
         else:
             PhoneNumber.objects.create(
                 content_type=person_content_type,
-                object_id=person.national_id,
+                object_id=person_national_id_int,
                 phone_type='mobile',
                 number=mobile_number,
                 is_primary=True
@@ -478,7 +544,7 @@ class CreateCustomerForm(forms.Form):
         if self.cleaned_data.get('landline_number'):
             PhoneNumber.objects.create(
                 content_type=person_content_type,
-                object_id=person.national_id,
+                object_id=person_national_id_int,
                 phone_type='landline',
                 number=self.cleaned_data['landline_number'],
                 is_primary=False
