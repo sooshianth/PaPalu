@@ -1369,7 +1369,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const isSalesPage = salesPaths.some(path => currentPath.includes(path));
         const isProductionPage = productionPaths.some(path => currentPath.includes(path));
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         const isDistributionPage = distributionPaths.some(path => currentPath.includes(path));
+=======
+        const supplyPaths = ['/supply/'];
+        const isSupplyPage = supplyPaths.some(path => currentPath.includes(path));
+>>>>>>> Stashed changes
 =======
         const supplyPaths = ['/supply/'];
         const isSupplyPage = supplyPaths.some(path => currentPath.includes(path));
@@ -1423,6 +1428,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         
         // Setup distribution submenu
         if (distributionSubmenu && distributionMainLink) {
@@ -1446,6 +1452,8 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savedState === 'true' && !isDistributionPage) {
                 distributionSubmenu.classList.add('expanded');
 =======
+=======
+>>>>>>> Stashed changes
 
         // Setup supply submenu
         if (supplySubmenu && supplyMainLink) {
@@ -1461,6 +1469,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const savedSupplyState = localStorage.getItem('supplySubmenuExpanded');
             if (savedSupplyState === 'true' && !isSupplyPage) {
                 supplySubmenu.classList.add('expanded');
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             }
         }
