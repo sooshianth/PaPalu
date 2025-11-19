@@ -40,7 +40,6 @@ INSTALLED_APPS = [
     'core.apps.CoreConfig',
     'authentication.apps.AuthenticationConfig',
     'perm_manager.apps.PermManagerConfig',
-    'access.apps.AccessConfig',
     'accounting.apps.AccountingConfig',
     'custody.apps.CustodyConfig',
     'distribution.apps.DistributionConfig',
