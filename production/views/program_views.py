@@ -19,20 +19,11 @@ def _get_dashboard_context():
     """Helper: gathers dashboard data for inventory, flow status, and allocations."""
     audit_logger.debug("جمع‌آوری داده‌های داشبورد برنامه تولید")
     try:
-        # Get unique raw materials from BOM and include primary_unit from RawMaterial
-        raw_material_inventory = []
-        bom_raw_materials = BOM.objects.select_related('raw_material').values_list('raw_material', flat=True).distinct()
-        for rm_id in bom_raw_materials:
-            if rm_id:
-                from core.RawMaterialFolder.RawMaterialModel import RawMaterial
-                rm = RawMaterial.objects.filter(id=rm_id).first()
-                if rm:
-                    raw_material_inventory.append({
-                        'raw_material_id': rm.raw_material_id,
-                        'raw_material': rm.name,
-                        'unit_used': rm.primary_unit,
-                        'current_inventory': 0
-                    })
+        raw_material_inventory = BOM.objects.values(
+            'raw_material_id', 'raw_material', 'unit_used'
+        ).distinct()
+        for item in raw_material_inventory:
+            item['current_inventory'] = 0
 
         product_flow_status = []
         production_infos = ProductionInfo.objects.select_related('product').all()
@@ -163,6 +154,7 @@ def program_list_view(request):
     audit_logger.info("نمایش لیست برنامه‌های تولید")
     try:
         programs = ProductionProgram.objects.all().select_related('product', 'production_info')
+        bug_logger.debug(f"Programs list count={programs.count()}")
         return render(request, 'program_list.html', {'programs': programs})
     except Exception as e:
         bug_logger.error(f"List programs error: {e}")
