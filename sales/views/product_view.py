@@ -84,7 +84,6 @@ def create_product_view(request):
                     if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
                         # بررسی اینکه آیا همه فیلدهای اجباری پر شده‌اند
                         if all([
-                            bom_form.cleaned_data.get('raw_material_id'),
                             bom_form.cleaned_data.get('raw_material'),
                             bom_form.cleaned_data.get('quantity') is not None,
                         ]):
@@ -121,7 +120,6 @@ def create_product_view(request):
                                 if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
                                     # بررسی اینکه آیا همه فیلدهای اجباری پر شده‌اند
                                     if all([
-                                        bom_form.cleaned_data.get('raw_material_id'),
                                         bom_form.cleaned_data.get('raw_material'),
                                         bom_form.cleaned_data.get('quantity') is not None,
                                     ]):
@@ -371,7 +369,6 @@ def edit_product_view(request, product_id):
                 for bom_form in bom_formset:
                     if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
                         if all([
-                            bom_form.cleaned_data.get('raw_material_id'),
                             bom_form.cleaned_data.get('raw_material'),
                             bom_form.cleaned_data.get('quantity') is not None,
                         ]):
@@ -418,7 +415,6 @@ def edit_product_view(request, product_id):
                             for bom_form in bom_formset:
                                 if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
                                     if all([
-                                        bom_form.cleaned_data.get('raw_material_id'),
                                         bom_form.cleaned_data.get('raw_material'),
                                         bom_form.cleaned_data.get('quantity') is not None,
                                     ]):
