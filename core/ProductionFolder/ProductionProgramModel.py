@@ -55,16 +55,16 @@ class ProductionProgram(models.Model):
         verbose_name='تناژ برنامه ریزی شده (تن)',
         null=True, blank=True
     )
-    predicted_start_time = models.DateTimeField(
-        verbose_name='ساعت شروع پیشبینی شده',
-        null=True, blank=True
-    )
-    predicted_end_time = models.DateTimeField(
-        verbose_name='ساعت پایان پیشبینی شده',
-        null=True, blank=True
-    )
     execution_date = jmodels.jDateField(
         verbose_name='تاریخ اجرای برنامه',
+        null=True, blank=True
+    )
+    predicted_start_time = models.TimeField(
+        verbose_name='شروع پیشبینی شده',
+        null=True, blank=True
+    )
+    predicted_end_time = models.TimeField(
+        verbose_name='پایان پیشبینی شده',
         null=True, blank=True
     )
     packaging_type = models.CharField(
@@ -137,10 +137,13 @@ class ProductionProgram(models.Model):
         verbose_name='درصد تحقق'
     )
 
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='ایجاد')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='آخرین ویرایش')
-    started_at = models.DateTimeField(blank=True, null=True, verbose_name='زمان شروع')
-    completed_at = models.DateTimeField(blank=True, null=True, verbose_name='زمان تکمیل')
+    created_at = jmodels.jDateTimeField(auto_now_add=True, verbose_name='ایجاد')
+    updated_at = jmodels.jDateTimeField(auto_now=True, verbose_name='آخرین ویرایش')
+    
+    # Actual execution date and times (separate fields)
+    actual_start_date = jmodels.jDateField(blank=True, null=True, verbose_name='تاریخ شروع واقعی')
+    started_at = models.TimeField(blank=True, null=True, verbose_name='زمان شروع واقعی')
+    completed_at = models.TimeField(blank=True, null=True, verbose_name='زمان تکمیل')
 
     class Meta:
         verbose_name = 'برنامه تولید'

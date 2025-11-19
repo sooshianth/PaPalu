@@ -527,6 +527,8 @@
         transform: none !important;
     }
 </style>
+<!-- Persian Datepicker CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
 {% endblock %}
 
 {% block content %}
@@ -588,6 +590,7 @@
             
             <!-- Hidden fields for popup data -->
             <input type="hidden" name="action" id="actionField">
+            <input type="hidden" name="actual_start_date" id="actualStartDateField">
             <input type="hidden" name="started_at" id="startedAtField">
             <input type="hidden" name="produced_weight_ton" id="producedWeightField">
             <input type="hidden" name="completed_at" id="completedAtField">
@@ -769,8 +772,13 @@
             <p style="margin-bottom: 20px; font-weight: 600;">آیا از شروع تولید این برنامه اطمینان دارید؟</p>
             
             <div class="modal-form-field">
+                <label for="actualStartDate">تاریخ شروع واقعی: <span style="color: red;">*</span></label>
+                <input type="text" id="actualStartDate" class="form-control jalali-date-modal" dir="ltr" required>
+            </div>
+            
+            <div class="modal-form-field">
                 <label for="actualStartTime">زمان شروع واقعی: <span style="color: red;">*</span></label>
-                <input type="datetime-local" id="actualStartTime" class="form-control" required>
+                <input type="time" id="actualStartTime" class="form-control" required>
             </div>
             
             <!-- Warehouse Distribution Section -->
@@ -806,7 +814,7 @@
             
             <div class="modal-form-field">
                 <label for="completionTime">زمان تکمیل: <span style="color: red;">*</span></label>
-                <input type="datetime-local" id="completionTime" class="form-control" required>
+                <input type="time" id="completionTime" class="form-control" required>
             </div>
             
             <!-- BOM Actual Consumption Section -->
@@ -827,6 +835,13 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- jQuery (needed for persian-datepicker) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- Persian Date Picker -->
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+
 <script>
 // Global data variables (parsed from Django context)
 const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
@@ -961,11 +976,6 @@ function showConfirmModal(action, title, message) {
 }
 
 function showStartProductionModal() {
-    // Set current date/time as default
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('actualStartTime').value = now.toISOString().slice(0, 16);
-    
     // Get current production info ID
     const productionInfoSelect = document.querySelector('#id_production_info');
     const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
@@ -1100,14 +1110,18 @@ function showStartProductionModal() {
     }
     
     showModal('startProductionModal');
+    
+    // Initialize Jalali date picker for modal (date only, no time)
+    if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
+        jQuery('#actualStartDate').persianDatepicker({
+            format: 'YYYY-MM-DD',
+            observer: true,
+            autoClose: true
+        });
+    }
 }
 
 function showCompleteProductionModal() {
-    // Set current date/time as default
-    const now = new Date();
-    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-    document.getElementById('completionTime').value = now.toISOString().slice(0, 16);
-    
     // Get current production info ID
     const productionInfoSelect = document.querySelector('#id_production_info');
     const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
@@ -1182,7 +1196,13 @@ function showCompleteProductionModal() {
 }
 
 function confirmStartProduction() {
+    const startDate = document.getElementById('actualStartDate').value;
     const startTime = document.getElementById('actualStartTime').value;
+    
+    if (!startDate) {
+        alert('لطفاً تاریخ شروع واقعی را وارد کنید.');
+        return;
+    }
     
     if (!startTime) {
         alert('لطفاً زمان شروع واقعی را وارد کنید.');
@@ -1247,6 +1267,7 @@ function confirmStartProduction() {
     }
     
     // Set hidden field values
+    document.getElementById('actualStartDateField').value = startDate;
     document.getElementById('startedAtField').value = startTime;
     
     // Submit form
@@ -1542,6 +1563,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Trigger change event on page load if there's already a selected value
     if (productionInfoSelect && productionInfoSelect.value) {
         productionInfoSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // Initialize Persian datepickers for all jalali date inputs
+    if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
+        // Initialize all inputs with jalali-date-input class
+        jQuery('.jalali-date-input').persianDatepicker({
+            format: 'YYYY-MM-DD',
+            observer: true,
+            autoClose: true,
+            calendar: {
+                persian: {
+                    locale: 'fa'
+                }
+            }
+        });
     }
 });
 </script>

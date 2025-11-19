@@ -1,5 +1,6 @@
 from django import forms
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
+from django_jalali.forms import jDateField
 
 
 class ProductionForm(forms.ModelForm):
@@ -36,20 +37,20 @@ class ProductionForm(forms.ModelForm):
         label='تناژ برنامه (تن)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
-    predicted_start_time = forms.DateTimeField(
-        required=False,
-        label='شروع پیشبینی شده',
-        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'})
-    )
-    predicted_end_time = forms.DateTimeField(
-        required=False,
-        label='پایان پیشبینی شده',
-        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'})
-    )
-    execution_date = forms.DateField(
+    execution_date = jDateField(
         required=False,
         label='تاریخ اجرای برنامه',
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+        widget=forms.TextInput(attrs={'class': 'form-control jalali-date-input', 'dir': 'ltr', 'placeholder': '1403-08-29'})
+    )
+    predicted_start_time = forms.TimeField(
+        required=False,
+        label='شروع پیشبینی شده',
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
+    )
+    predicted_end_time = forms.TimeField(
+        required=False,
+        label='پایان پیشبینی شده',
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
     packaging_type = forms.ChoiceField(
         required=False,
@@ -80,15 +81,20 @@ class ProductionForm(forms.ModelForm):
         label='وزن تولید شده',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
-    started_at = forms.DateTimeField(
+    actual_start_date = jDateField(
+        required=False,
+        label='تاریخ شروع واقعی',
+        widget=forms.TextInput(attrs={'class': 'form-control jalali-date-input', 'dir': 'ltr', 'placeholder': '1403-08-29'})
+    )
+    started_at = forms.TimeField(
         required=False,
         label='زمان شروع واقعی',
-        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'})
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
-    completed_at = forms.DateTimeField(
+    completed_at = forms.TimeField(
         required=False,
         label='زمان تکمیل',
-        widget=forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'})
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
     status = forms.CharField(widget=forms.HiddenInput(), required=False)
 
@@ -96,9 +102,9 @@ class ProductionForm(forms.ModelForm):
         model = ProductionProgram
         fields = [
             'production_info', 'product', 'program_id', 'planned_weight_ton',
-            'predicted_start_time', 'predicted_end_time', 'execution_date', 'packaging_type', 'extra_description',
+            'execution_date', 'predicted_start_time', 'predicted_end_time', 'packaging_type', 'extra_description',
             'inventory_snapshot', 'net_unplanned_requirement', 'produced_weight_ton',
-            'started_at', 'completed_at', 'status'
+            'actual_start_date', 'started_at', 'completed_at', 'status'
         ]
 
     def __init__(self, *args, **kwargs):
@@ -119,7 +125,8 @@ class ProductionForm(forms.ModelForm):
             for name in ['inventory_snapshot', 'net_unplanned_requirement']:
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
-            # Hide time fields in draft
+            # Hide actual date/time fields in draft
+            self.fields['actual_start_date'].widget = forms.HiddenInput()
             self.fields['started_at'].widget = forms.HiddenInput()
             self.fields['completed_at'].widget = forms.HiddenInput()
 
@@ -130,8 +137,8 @@ class ProductionForm(forms.ModelForm):
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
                     self.fields[name].widget.attrs['disabled'] = True
-            # For time fields, only use readonly (no disabled) so values get sent in POST
-            for name in ['started_at', 'completed_at']:
+            # For actual date/time fields, only use readonly (no disabled) so values get sent in POST
+            for name in ['actual_start_date', 'started_at', 'completed_at']:
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
                     # Do NOT set disabled for these fields
@@ -142,7 +149,9 @@ class ProductionForm(forms.ModelForm):
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
                     self.fields[name].widget.attrs['disabled'] = True
-            # Can edit started_at
+            # Can edit actual_start_date and started_at
+            self.fields['actual_start_date'].widget.attrs.pop('disabled', None)
+            self.fields['actual_start_date'].widget.attrs.pop('readonly', None)
             self.fields['started_at'].widget.attrs.pop('disabled', None)
             self.fields['started_at'].widget.attrs.pop('readonly', None)
             # Lock completed_at (readonly but not disabled)
@@ -160,7 +169,9 @@ class ProductionForm(forms.ModelForm):
             self.fields['produced_weight_ton'].widget.attrs.pop('readonly', None)
             self.fields['completed_at'].widget.attrs.pop('disabled', None)
             self.fields['completed_at'].widget.attrs.pop('readonly', None)
-            # Lock started_at but show it (readonly but not disabled)
+            # Lock actual_start_date and started_at but show them (readonly but not disabled)
+            self.fields['actual_start_date'].widget.attrs['readonly'] = True
+            self.fields['actual_start_date'].widget.attrs.pop('disabled', None)
             self.fields['started_at'].widget.attrs['readonly'] = True
             self.fields['started_at'].widget.attrs.pop('disabled', None)
 
@@ -219,14 +230,16 @@ class ProductionForm(forms.ModelForm):
                     if not current_val:
                         setattr(instance, attr, getattr(orig, attr))
             
-            # Also preserve started_at when not in IN_PROGRESS or COMPLETED
+            # Also preserve actual_start_date and started_at when not in IN_PROGRESS or COMPLETED
             if instance.status not in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
-                if not instance.started_at:  # only if not explicitly set
+                if not instance.actual_start_date:
+                    instance.actual_start_date = getattr(orig, 'actual_start_date')
+                if not instance.started_at:
                     instance.started_at = getattr(orig, 'started_at')
             
             # Also preserve completed_at when not COMPLETED
             if instance.status != ProductionProgram.Status.COMPLETED:
-                if not instance.completed_at:  # only if not explicitly set
+                if not instance.completed_at:
                     instance.completed_at = getattr(orig, 'completed_at')
         
         if commit:

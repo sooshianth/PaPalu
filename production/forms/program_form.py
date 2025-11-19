@@ -1,5 +1,7 @@
 from django import forms
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
+from django_jalali.forms import jDateField
+from django_jalali.forms.widgets import jDateInput
 
 
 class ProductionProgramForm(forms.ModelForm):
@@ -37,20 +39,20 @@ class ProductionProgramForm(forms.ModelForm):
         label='تناژ برنامه (تن)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
-    predicted_start_time = forms.DateTimeField(
-        required=False,
-        label='شروع پیشبینی شده',
-        widget=forms.TextInput(attrs={'class': 'form-control jalali-datetime', 'dir': 'ltr'})
-    )
-    predicted_end_time = forms.DateTimeField(
-        required=False,
-        label='پایان پیشبینی شده',
-        widget=forms.TextInput(attrs={'class': 'form-control jalali-datetime', 'dir': 'ltr'})
-    )
-    execution_date = forms.DateField(
+    execution_date = jDateField(
         required=False,
         label='تاریخ اجرای برنامه',
         widget=forms.TextInput(attrs={'class': 'form-control jalali-date', 'dir': 'ltr'})
+    )
+    predicted_start_time = forms.TimeField(
+        required=False,
+        label='شروع پیشبینی شده',
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
+    )
+    predicted_end_time = forms.TimeField(
+        required=False,
+        label='پایان پیشبینی شده',
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
     packaging_type = forms.ChoiceField(
         required=False,
@@ -87,7 +89,7 @@ class ProductionProgramForm(forms.ModelForm):
         model = ProductionProgram
         fields = [
             'production_info', 'product', 'program_id', 'planned_weight_ton',
-            'predicted_start_time', 'predicted_end_time', 'execution_date', 'packaging_type', 'extra_description',
+            'execution_date', 'predicted_start_time', 'predicted_end_time', 'packaging_type', 'extra_description',
             'inventory_snapshot', 'net_unplanned_requirement', 'produced_weight_ton', 'status'
         ]
 

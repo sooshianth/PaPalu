@@ -441,21 +441,23 @@ def production_program_crud_view(request, program_id=None):
                         instance.status = ProductionProgram.Status.CONFIRMED
                     elif action == 'start':
                         instance.status = ProductionProgram.Status.IN_PROGRESS
-                        # Handle popup data for start action
+                        # Handle popup data for start action (separate date and time)
+                        actual_start_date_str = request.POST.get('actual_start_date')
                         started_at_str = request.POST.get('started_at')
+                        
+                        # Set actual_start_date (Jalali date from form will be converted automatically)
+                        if actual_start_date_str:
+                            instance.actual_start_date = actual_start_date_str
+                            bug_logger.info(f"تاریخ شروع واقعی از popup دریافت شد: {instance.actual_start_date}")
+                        
+                        # Set started_at (time only)
                         if started_at_str:
-                            try:
-                                # Convert from ISO datetime string to timezone-aware datetime object
-                                from datetime import datetime
-                                naive_dt = datetime.fromisoformat(started_at_str.replace('T', ' '))
-                                # Make it timezone-aware
-                                instance.started_at = timezone.make_aware(naive_dt)
-                                bug_logger.info(f"زمان شروع واقعی از popup دریافت شد: {instance.started_at}")
-                            except ValueError as e:
-                                bug_logger.warning(f"خطا در تبدیل زمان شروع: {str(e)}")
-                                instance.started_at = timezone.now()
+                            instance.started_at = started_at_str
+                            bug_logger.info(f"زمان شروع واقعی از popup دریافت شد: {instance.started_at}")
                         else:
-                            instance.started_at = timezone.now()
+                            from datetime import datetime
+                            instance.started_at = timezone.now().time()
+                            bug_logger.info(f"زمان شروع واقعی به زمان فعلی تنظیم شد")
                         
                         # Parse warehouse distribution data
                         warehouse_distribution = {}
@@ -542,18 +544,14 @@ def production_program_crud_view(request, program_id=None):
                             except (ValueError, TypeError) as e:
                                 bug_logger.warning(f"خطا در تبدیل وزن تولید شده: {str(e)}")
                         
+                        # Set completed_at (time only)
                         if completed_at_str:
-                            try:
-                                from datetime import datetime
-                                naive_dt = datetime.fromisoformat(completed_at_str.replace('T', ' '))
-                                # Make it timezone-aware
-                                instance.completed_at = timezone.make_aware(naive_dt)
-                                bug_logger.info(f"زمان تکمیل از popup دریافت شد: {instance.completed_at}")
-                            except ValueError as e:
-                                bug_logger.warning(f"خطا در تبدیل زمان تکمیل: {str(e)}")
-                                instance.completed_at = timezone.now()
+                            instance.completed_at = completed_at_str
+                            bug_logger.info(f"زمان تکمیل از popup دریافت شد: {instance.completed_at}")
                         else:
-                            instance.completed_at = timezone.now()
+                            from datetime import datetime
+                            instance.completed_at = timezone.now().time()
+                            bug_logger.info(f"زمان تکمیل به زمان فعلی تنظیم شد")
                     
                     # Handle actual consumption data (for IN_PROGRESS and COMPLETED status)
                     if instance.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
