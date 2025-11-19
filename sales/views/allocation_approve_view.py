@@ -48,8 +48,8 @@ def approve_allocation_list_view(request):
         allocation_total = calculate_allocation_total_quantity(order)
         is_balanced = abs(order_total - allocation_total) < 0.001
         
-        # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند (وضعیت 'approved')
-        all_inquired = all(allocation.allocation_status == 'approved' for allocation in allocations)
+        # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند (وضعیت 'pending_shipping')
+        all_inquired = all(allocation.allocation_status == 'pending_shipping' for allocation in allocations)
         
         orders_with_info.append({
             'order': order,
@@ -117,8 +117,8 @@ def approve_allocation_detail_view(request, order_number):
         
         if allocation.delivery_postal_code:
             delivery_info = get_delivery_address_info(allocation.delivery_postal_code)
-            # بررسی اینکه آیا استعلام تأیید شده است (وضعیت allocation باید 'approved' باشد)
-            if allocation.allocation_status == 'approved':
+            # بررسی اینکه آیا استعلام تأیید شده است (وضعیت allocation باید 'pending_shipping' باشد)
+            if allocation.allocation_status == 'pending_shipping':
                 is_inquired = True
         
         # محاسبه مقدار این تخصیص
@@ -210,15 +210,15 @@ def approve_allocation_inquiry_view(request, order_number, allocation_number):
                 messages.error(request, 'مقادیر تخصیص‌ها با سفارش برابر نیست. لطفاً ابتدا تخصیص‌ها را اصلاح کنید.')
                 return redirect('sales:approve_allocation_detail', order_number=order_number)
             
-            # تغییر وضعیت تخصیص به 'approved' برای نشان دادن تأیید استعلام
-            allocation.allocation_status = 'approved'
+            # تغییر وضعیت تخصیص به 'pending_shipping' برای نشان دادن تأیید استعلام
+            allocation.allocation_status = 'pending_shipping'
             allocation.save(update_fields=['allocation_status'])
             
             # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند
             allocations = Allocation.objects.filter(order=order)
-            all_inquired = all(alloc.allocation_status == 'approved' for alloc in allocations)
+            all_inquired = all(alloc.allocation_status == 'pending_shipping' for alloc in allocations)
             
-            bug_logger.info(f"استعلام تخصیص {allocation_number} برای سفارش {order_number} تأیید شد و وضعیت به approved تغییر کرد")
+            bug_logger.info(f"استعلام تخصیص {allocation_number} برای سفارش {order_number} تأیید شد و وضعیت به pending_shipping تغییر کرد")
             
             if all_inquired:
                 # تغییر وضعیت سفارش به "در انتظار کارخانه"

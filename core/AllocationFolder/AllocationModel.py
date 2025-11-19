@@ -10,10 +10,17 @@ class Allocation(models.Model):
     STATUS_CHOICES = [
         ('planned', 'برنامه‌ریزی شده'),
         ('pending_approval', 'در انتظار تأیید'),
-        ('approved', 'تأیید شده'),
+        ('pending_shipping', 'در انتظار اعلام بار'),
+        ('pending_vehicle_recruitment', 'در انتظار جذب خودرو'),
         ('in_shipping', 'در حال ارسال'),
         ('delivered', 'تحویل شده'),
         ('canceled', 'لغو شده'),
+    ]
+    
+    # Shipping announcement method choices
+    SHIPPING_METHOD_CHOICES = [
+        ('customer_vehicle', 'ماشین مشتری'),
+        ('carrier', 'باربری'),
     ]
     
     # Basic Info fields (directly in main model)
@@ -43,7 +50,7 @@ class Allocation(models.Model):
         null=True
     )
     allocation_status = models.CharField(
-        max_length=20,
+        max_length=100,
         choices=STATUS_CHOICES,
         default='planned',
         verbose_name="وضعیت تخصیص",
@@ -53,6 +60,15 @@ class Allocation(models.Model):
     requested_machine = models.CharField(
         max_length=255,
         verbose_name="ماشین درخواستی",
+        blank=True,
+        null=True
+    )
+    
+    # Shipping announcement method
+    shipping_announcement_method = models.CharField(
+        max_length=20,
+        choices=SHIPPING_METHOD_CHOICES,
+        verbose_name="شیوه اعلام بار",
         blank=True,
         null=True
     )

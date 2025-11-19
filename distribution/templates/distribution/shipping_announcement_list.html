@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+    
+    .btn-outline-primary {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid var(--primary-green);
+        color: var(--primary-green);
+        transition: all 0.3s;
+        display: inline-block;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .btn-primary {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        border: none;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .info-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        margin-bottom: 25px;
+    }
+    
+    .info-section h3 {
+        color: var(--primary-green);
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .form-check {
+        margin-bottom: 10px;
+    }
+    
+    .form-check-input {
+        margin-left: 8px;
+        cursor: pointer;
+    }
+    
+    .form-check-label {
+        cursor: pointer;
+    }
+    
+    .group-actions {
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 8px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .group-actions h4 {
+        color: var(--gray-800);
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+    }
+    
+    .product-list {
+        font-size: 0.9rem;
+        color: var(--gray-600);
+    }
+    
+    .product-item {
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- اطلاعات برنامه‌های تولید -->
+    <div class="info-section">
+        <h3>برنامه‌های تولید</h3>
+        
+        <h4 style="color: var(--gray-700); font-size: 1rem; margin-top: 15px; margin-bottom: 10px;">در حال اجرا</h4>
+        {% if production_programs.in_progress %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>شناسه برنامه</th>
+                            <th>محصول</th>
+                            <th>تناژ برنامه‌ریزی شده (تن)</th>
+                            <th>وضعیت</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for program in production_programs.in_progress %}
+                        <tr>
+                            <td>{{ program.program_id|default:"-" }}</td>
+                            <td>{{ program.product.name|default:"-" }}</td>
+                            <td>{{ program.planned_weight_ton|default:"-" }}</td>
+                            <td>{{ program.get_status_display }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: var(--gray-600);">برنامه تولیدی در حال اجرا وجود ندارد.</p>
+        {% endif %}
+        
+        <h4 style="color: var(--gray-700); font-size: 1rem; margin-top: 20px; margin-bottom: 10px;">در صف تولید</h4>
+        {% if production_programs.in_queue %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>شناسه برنامه</th>
+                            <th>محصول</th>
+                            <th>تناژ برنامه‌ریزی شده (تن)</th>
+                            <th>وضعیت</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for program in production_programs.in_queue %}
+                        <tr>
+                            <td>{{ program.program_id|default:"-" }}</td>
+                            <td>{{ program.product.name|default:"-" }}</td>
+                            <td>{{ program.planned_weight_ton|default:"-" }}</td>
+                            <td>{{ program.get_status_display }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: var(--gray-600);">برنامه تولیدی در صف وجود ندارد.</p>
+        {% endif %}
+    </div>
+
+    <!-- موجودی محصولات -->
+    <div class="info-section">
+        <h3>موجودی محصولات در انبارهای مواد ثانویه</h3>
+        {% if inventory_dict %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>محصول</th>
+                            <th>کد محصول</th>
+                            <th>موجودی کل (کیلوگرم)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product_id, inv_data in inventory_dict.items %}
+                        <tr>
+                            <td>{{ inv_data.product.name }}</td>
+                            <td>{{ inv_data.product.code }}</td>
+                            <td>{{ inv_data.total_quantity|floatformat:2 }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p style="color: var(--gray-600);">موجودی محصولی در انبارهای مواد ثانویه وجود ندارد.</p>
+        {% endif %}
+    </div>
+
+    <!-- لیست تخصیص‌ها -->
+    <div class="info-section">
+        <h3>تخصیص‌های در انتظار اعلام بار</h3>
+        
+        {% if allocations_with_info %}
+            <form method="post" action="{% url 'distribution:shipping_announcement_process' %}" id="groupAnnouncementForm">
+                {% csrf_token %}
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">
+                                    <input type="checkbox" id="selectAll" title="انتخاب همه">
+                                </th>
+                                <th>شماره تخصیص</th>
+                                <th>شماره سفارش</th>
+                                <th>الویت</th>
+                                <th>محصولات</th>
+                                <th>مقدار کل (کیلوگرم)</th>
+                                <th>عملیات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in allocations_with_info %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox" 
+                                           name="allocation_numbers" 
+                                           value="{{ item.allocation.allocation_number }}" 
+                                           class="allocation-checkbox">
+                                </td>
+                                <td>
+                                    <span class="code-badge">{{ item.allocation.allocation_number }}</span>
+                                </td>
+                                <td>
+                                    <span class="code-badge">{{ item.order_number }}</span>
+                                </td>
+                                <td>{{ item.allocation.allocation_priority|default:"-" }}</td>
+                                <td>
+                                    <div class="product-list">
+                                        {% for product_info in item.products_info %}
+                                        <div class="product-item">
+                                            {{ product_info.product.name|default:"-" }}: 
+                                            {{ product_info.quantity }} {{ product_info.unit }}
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </td>
+                                <td>{{ item.total_quantity_kg|floatformat:2 }}</td>
+                                <td onclick="event.stopPropagation();">
+                                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                        <button type="button" 
+                                                class="btn-outline-primary" 
+                                                onclick="showAnnouncementModal('{{ item.allocation.allocation_number }}')">
+                                            اعلام بار
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- عملیات گروهی -->
+                <div class="group-actions" id="groupActions" style="display: none;">
+                    <h4>اعلام بار گروهی</h4>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="shipping_method" 
+                               value="customer_vehicle" id="method_customer">
+                        <label class="form-check-label" for="method_customer">
+                            ماشین مشتری
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="shipping_method" 
+                               value="carrier" id="method_carrier">
+                        <label class="form-check-label" for="method_carrier">
+                            باربری
+                        </label>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button type="submit" class="btn-primary">اعلام بار برای تخصیص‌های انتخاب شده</button>
+                    </div>
+                </div>
+            </form>
+        {% else %}
+            <div class="empty-state">
+                <p>تخصیصی در انتظار اعلام بار وجود ندارد.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- مودال اعلام بار جداگانه -->
+<div id="announcementModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 10000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+        <h3 style="margin-bottom: 20px; color: var(--gray-800);">اعلام بار</h3>
+        <form method="post" action="{% url 'distribution:shipping_announcement_single' %}" id="singleAnnouncementForm">
+            {% csrf_token %}
+            <input type="hidden" name="allocation_number" id="modal_allocation_number">
+            <div class="form-check" style="margin-bottom: 15px;">
+                <input class="form-check-input" type="radio" name="shipping_method" 
+                       value="customer_vehicle" id="modal_method_customer" required>
+                <label class="form-check-label" for="modal_method_customer">
+                    ماشین مشتری
+                </label>
+            </div>
+            <div class="form-check" style="margin-bottom: 20px;">
+                <input class="form-check-input" type="radio" name="shipping_method" 
+                       value="carrier" id="modal_method_carrier" required>
+                <label class="form-check-label" for="modal_method_carrier">
+                    باربری
+                </label>
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button type="button" class="btn-outline-primary" onclick="closeAnnouncementModal()">انصراف</button>
+                <button type="submit" class="btn-primary">تأیید</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // تابع برای نمایش/مخفی کردن بخش عملیات گروهی
+    function toggleGroupActions() {
+        const checkboxes = document.querySelectorAll('.allocation-checkbox');
+        const checkedBoxes = document.querySelectorAll('.allocation-checkbox:checked');
+        const groupActions = document.getElementById('groupActions');
+        
+        if (checkedBoxes.length > 0) {
+            groupActions.style.display = 'block';
+        } else {
+            groupActions.style.display = 'none';
+            // پاک کردن انتخاب شیوه اعلام بار
+            document.querySelectorAll('input[name="shipping_method"]').forEach(radio => {
+                radio.checked = false;
+                radio.removeAttribute('required');
+            });
+        }
+    }
+
+    // انتخاب همه
+    document.getElementById('selectAll')?.addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.allocation-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        toggleGroupActions();
+    });
+
+    // بررسی تغییرات در چک‌باکس‌های تخصیص
+    document.querySelectorAll('.allocation-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            // به‌روزرسانی چک‌باکس "انتخاب همه"
+            const allCheckboxes = document.querySelectorAll('.allocation-checkbox');
+            const checkedCount = document.querySelectorAll('.allocation-checkbox:checked').length;
+            const selectAll = document.getElementById('selectAll');
+            
+            if (selectAll) {
+                selectAll.checked = checkedCount === allCheckboxes.length;
+                selectAll.indeterminate = checkedCount > 0 && checkedCount < allCheckboxes.length;
+            }
+            
+            toggleGroupActions();
+        });
+    });
+
+    // بررسی انتخاب حداقل یک تخصیص برای اعلام بار گروهی
+    document.getElementById('groupAnnouncementForm')?.addEventListener('submit', function(e) {
+        const checkedBoxes = document.querySelectorAll('input[name="allocation_numbers"]:checked');
+        const checkedMethod = document.querySelector('input[name="shipping_method"]:checked');
+        
+        if (checkedBoxes.length === 0) {
+            e.preventDefault();
+            alert('لطفاً حداقل یک تخصیص را انتخاب کنید.');
+            return false;
+        }
+        
+        if (!checkedMethod) {
+            e.preventDefault();
+            alert('لطفاً شیوه اعلام بار را انتخاب کنید.');
+            return false;
+        }
+        
+        return confirm(`آیا از اعلام بار ${checkedBoxes.length} تخصیص انتخاب شده اطمینان دارید؟`);
+    });
+
+    // نمایش مودال اعلام بار جداگانه
+    function showAnnouncementModal(allocationNumber) {
+        document.getElementById('modal_allocation_number').value = allocationNumber;
+        document.getElementById('announcementModal').style.display = 'flex';
+    }
+
+    // بستن مودال
+    function closeAnnouncementModal() {
+        document.getElementById('announcementModal').style.display = 'none';
+        document.getElementById('singleAnnouncementForm').reset();
+    }
+
+    // بستن مودال با کلیک روی پس‌زمینه
+    document.getElementById('announcementModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAnnouncementModal();
+        }
+    });
+</script>
+{% endblock %}

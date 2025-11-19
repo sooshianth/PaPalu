@@ -92,7 +92,7 @@ def field_access_bulk_upload_view(request):
 
     try:
         wb = openpyxl.load_workbook(upload_file, data_only=True)
-        ws = wb.active
+        ws = wb.active 
     except Exception as e:
         messages.error(request, _('خواندن فایل اکسل ناموفق بود: ') + str(e))
         return redirect('access:field_access_bulk_upload')

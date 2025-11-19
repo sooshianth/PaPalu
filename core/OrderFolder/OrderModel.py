@@ -30,6 +30,7 @@ class Order(models.Model):
         ('pending_allocation', 'در انتظار تخصیص'),
         ('pending_allocation_approval', 'در انتظار تأیید تخصیص'),
         ('pending_factory', 'در انتظار کارخانه'),
+        ('pending_vehicle_recruitment', 'در انتظار جذب خودرو'),
         ('completed', 'تکمیل شده'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),
