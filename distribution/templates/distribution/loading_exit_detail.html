@@ -1,0 +1,437 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 30px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .form-section-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-green);
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+    
+    .form-group label.required::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .form-control[readonly] {
+        background-color: var(--gray-100);
+        cursor: not-allowed;
+    }
+    
+    .plate-input-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .plate-input-group .form-control {
+        flex: 1;
+    }
+    
+    .plate-separator {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--gray-600);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 25px;
+    }
+    
+    .readonly-info {
+        background: var(--gray-100);
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .readonly-info-item {
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .readonly-info-label {
+        font-weight: 600;
+        color: var(--gray-800);
+        display: inline-block;
+        min-width: 150px;
+    }
+    
+    .readonly-info-value {
+        color: var(--gray-600);
+    }
+    
+    .btn-success {
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: none;
+        color: white;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        transition: all 0.3s;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-secondary {
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        color: var(--gray-700);
+        background: white;
+        transition: all 0.3s;
+        cursor: pointer;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-secondary:hover {
+        background: var(--gray-100);
+    }
+    
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 6px;
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- اطلاعات فقط خواندنی -->
+    <div class="readonly-info">
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره بارنامه:</span>
+            <span class="readonly-info-value">{{ transport.waybill_number }}</span>
+        </div>
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شناسه تخصیص:</span>
+            <span class="readonly-info-value">{{ transport.allocation_id|default:"-" }}</span>
+        </div>
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره سفارش:</span>
+            <span class="readonly-info-value">{{ order_number }}</span>
+        </div>
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">محصول:</span>
+            <span class="readonly-info-value">{{ product_name }}</span>
+        </div>
+        {% if plate_number %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">پلاک خودرو:</span>
+            <span class="readonly-info-value">{{ plate_number }}</span>
+        </div>
+        {% endif %}
+        {% if vehicle_type %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">نوع ماشین:</span>
+            <span class="readonly-info-value">{{ vehicle_type }}</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <form method="post" id="loadingExitForm">
+        {% csrf_token %}
+        
+        <!-- بخش 1: فیلدهای اجباری وزن -->
+        <div class="form-section">
+            <h3 class="form-section-title">اطلاعات وزن (اجباری)</h3>
+            
+            <div class="form-group">
+                <label for="{{ form.empty_weight.id_for_label }}" class="required">وزن خالی</label>
+                {{ form.empty_weight }}
+                {% if form.empty_weight.errors %}
+                    <div class="alert alert-error">
+                        {{ form.empty_weight.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.gross_weight.id_for_label }}" class="required">وزن پر</label>
+                {{ form.gross_weight }}
+                {% if form.gross_weight.errors %}
+                    <div class="alert alert-error">
+                        {{ form.gross_weight.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.net_weight.id_for_label }}">وزن خالص (محاسبه خودکار)</label>
+                {{ form.net_weight }}
+                {% if form.net_weight.errors %}
+                    <div class="alert alert-error">
+                        {{ form.net_weight.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- بخش 2: فیلدهای اجباری بسته‌بندی و انبار -->
+        <div class="form-section">
+            <h3 class="form-section-title">اطلاعات بسته‌بندی و انبار (اجباری)</h3>
+            
+            <div class="form-group">
+                <label for="{{ form.packaging_type.id_for_label }}" class="required">نوع بسته‌بندی</label>
+                {{ form.packaging_type }}
+                {% if form.packaging_type.errors %}
+                    <div class="alert alert-error">
+                        {{ form.packaging_type.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.origin_warehouse.id_for_label }}" class="required">انبار مبدأ</label>
+                {{ form.origin_warehouse }}
+                {% if form.origin_warehouse.errors %}
+                    <div class="alert alert-error">
+                        {{ form.origin_warehouse.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.destination_warehouse.id_for_label }}" class="required">انبار مقصد</label>
+                {{ form.destination_warehouse }}
+                {% if form.destination_warehouse.errors %}
+                    <div class="alert alert-error">
+                        {{ form.destination_warehouse.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.driver_account_number.id_for_label }}" class="required">شماره حساب راننده</label>
+                {{ form.driver_account_number }}
+                {% if form.driver_account_number.errors %}
+                    <div class="alert alert-error">
+                        {{ form.driver_account_number.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- بخش 3: اطلاعات اختیاری راننده -->
+        <div class="form-section">
+            <h3 class="form-section-title">اطلاعات راننده (اختیاری - در صورت ناقص بودن)</h3>
+            
+            <div class="form-group">
+                <label for="{{ form.driver_national_id.id_for_label }}">شماره ملی راننده</label>
+                {{ form.driver_national_id }}
+                {% if form.driver_national_id.errors %}
+                    <div class="alert alert-error">
+                        {{ form.driver_national_id.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.driver_name.id_for_label }}">نام راننده</label>
+                {{ form.driver_name }}
+                {% if form.driver_name.errors %}
+                    <div class="alert alert-error">
+                        {{ form.driver_name.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.driver_mobile.id_for_label }}">شماره همراه راننده</label>
+                {{ form.driver_mobile }}
+                {% if form.driver_mobile.errors %}
+                    <div class="alert alert-error">
+                        {{ form.driver_mobile.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.driver_description.id_for_label }}">توضیحات راننده</label>
+                {{ form.driver_description }}
+                {% if form.driver_description.errors %}
+                    <div class="alert alert-error">
+                        {{ form.driver_description.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- بخش 4: اطلاعات اختیاری حمل -->
+        <div class="form-section">
+            <h3 class="form-section-title">اطلاعات حمل (اختیاری - در صورت ناقص بودن)</h3>
+            
+            <div class="form-group">
+                <label>پلاک خودرو</label>
+                <div class="plate-input-group">
+                    {{ form.plate_part1 }}
+                    <span class="plate-separator">|</span>
+                    {{ form.plate_part2 }}
+                    <span class="plate-separator">|</span>
+                    {{ form.plate_part3 }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.vehicle_type.id_for_label }}">نوع ماشین</label>
+                {{ form.vehicle_type }}
+                {% if form.vehicle_type.errors %}
+                    <div class="alert alert-error">
+                        {{ form.vehicle_type.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.loading_type.id_for_label }}">نوع بارگیر</label>
+                {{ form.loading_type }}
+                {% if form.loading_type.errors %}
+                    <div class="alert alert-error">
+                        {{ form.loading_type.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <a href="{% url 'distribution:loading_exit_list' %}" class="btn-secondary">
+                لغو عملیات
+            </a>
+            <button type="submit" class="btn-success" id="submitBtn">
+                ثبت خروج کالا
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // محاسبه خودکار وزن خالص
+    document.addEventListener('DOMContentLoaded', function() {
+        const emptyWeightInput = document.getElementById('{{ form.empty_weight.id_for_label }}');
+        const grossWeightInput = document.getElementById('{{ form.gross_weight.id_for_label }}');
+        const netWeightInput = document.getElementById('{{ form.net_weight.id_for_label }}');
+        
+        function calculateNetWeight() {
+            const emptyWeight = parseFloat(emptyWeightInput.value) || 0;
+            const grossWeight = parseFloat(grossWeightInput.value) || 0;
+            
+            if (grossWeight >= emptyWeight && emptyWeight > 0 && grossWeight > 0) {
+                const netWeight = grossWeight - emptyWeight;
+                netWeightInput.value = netWeight.toFixed(3);
+            } else {
+                netWeightInput.value = '';
+            }
+        }
+        
+        emptyWeightInput.addEventListener('input', calculateNetWeight);
+        grossWeightInput.addEventListener('input', calculateNetWeight);
+        
+        // بررسی اعتبار فرم قبل از ارسال
+        document.getElementById('loadingExitForm').addEventListener('submit', function(e) {
+            const emptyWeight = parseFloat(emptyWeightInput.value) || 0;
+            const grossWeight = parseFloat(grossWeightInput.value) || 0;
+            
+            if (grossWeight < emptyWeight) {
+                e.preventDefault();
+                alert('وزن پر باید بیشتر یا مساوی وزن خالی باشد.');
+                return false;
+            }
+        });
+    });
+</script>
+{% endblock %}
+

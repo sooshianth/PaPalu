@@ -1,5 +1,6 @@
 from django.db import models
 from django_jalali.db import models as jmodels
+from core.WarehouseFolder.WarehouseModel import Warehouse
 
 
 class Person(models.Model):
@@ -97,6 +98,17 @@ class Person(models.Model):
         null=True,
         blank=True,
         verbose_name='معرف'
+    )
+    
+    # انبار (برای مشتریان، نوع انبار باید consumer باشد)
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='persons',
+        verbose_name='انبار',
+        help_text='برای مشتریان، نوع انبار باید مصرف‌کننده باشد'
     )
 
     class Meta:

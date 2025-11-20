@@ -8,11 +8,18 @@ class ProductInfo(models.Model):
     """مدل اطلاعات محصول"""
 
     ITEM_TYPE_CHOICES = [
-        #TODO
+        ('product', 'محصول'),
+        ('raw_material', 'مواد اولیه'),
     ]
 
     PACKAGING_TYPE_CHOICES = [
-        #TODO
+        ('bag', 'کیسه'),
+        ('pallet', 'پالت'),
+        ('bulk', 'فله'),
+        ('box', 'جعبه'),
+        ('barrel', 'بشکه'),
+        ('sack', 'گونی'),
+        ('other', 'سایر'),
     ]
 
     transport = models.ForeignKey(
