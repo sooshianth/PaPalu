@@ -156,6 +156,18 @@ class ProductionProgram(models.Model):
         null=True,
         verbose_name='درصد تحقق'
     )
+    
+    is_denied = models.BooleanField(
+        default=False,
+        verbose_name='رد شده',
+        help_text='برنامه رد شده و دیگر قابل دسترسی نیست'
+    )
+    
+    is_archived = models.BooleanField(
+        default=False,
+        verbose_name='آرشیو شده',
+        help_text='برنامه آرشیو شده و در لیست اصلی نمایش داده نمی‌شود'
+    )
 
     created_at = jmodels.jDateTimeField(auto_now_add=True, verbose_name='ایجاد')
     updated_at = jmodels.jDateTimeField(auto_now=True, verbose_name='آخرین ویرایش')

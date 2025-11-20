@@ -14,4 +14,5 @@ urlpatterns = [
     path('declaration/', production_declaration_view.production_declaration_view, name='production_declaration'),
     path('declaration/crud/', production_declaration_view.production_program_crud_view, name='program_crud_create'),
     path('declaration/crud/<int:program_id>/', production_declaration_view.production_program_crud_view, name='program_crud'),
+    path('declaration/archived/', production_declaration_view.archived_programs_view, name='archived_programs'),
 ]

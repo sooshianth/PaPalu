@@ -14,6 +14,7 @@ import logging
 from core.logging_levels import *
 
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
+from core.ProductionFolder.ProductionRevertLogModel import ProductionRevertLog
 from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
@@ -313,6 +314,110 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
         return None
 
 
+def revert_production_stock_entry(production_program, request):
+    """
+    برگشت ثبت انبار برنامه تولید (از in_progress به confirmed)
+    ایجاد ثبت انبار معکوس برای برگرداندن مواد اولیه از انبار تولید به انبارهای اولیه
+    
+    Args:
+        production_program: برنامه تولید که باید برگردانده شود
+        request: Django request object
+    
+    Returns:
+        StockEntry object (reversal entry) or None if failed
+    """
+    try:
+        with transaction.atomic():
+            # دریافت توزیع انبار از برنامه تولید
+            warehouse_distribution = production_program.warehouse_distribution or {}
+            
+            if not warehouse_distribution:
+                bug_logger.warning(f"توزیع انبار برای برنامه {production_program.id} خالی است")
+                return None
+            
+            # ایجاد ثبت انبار معکوس
+            reversal_entry = StockEntry.objects.create(
+                transaction_date=timezone.now(),
+                notes=f'برگشت تولید برنامه {production_program.program_id or production_program.id} - برگشت مواد اولیه از انبار تولید به انبارهای اولیه',
+                is_committed=False
+            )
+            
+            bug_logger.info(f"ثبت انبار معکوس {reversal_entry.id} برای برگشت تولید ایجاد شد")
+            
+            # دریافت content type برای ماده اولیه
+            raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
+            
+            # دریافت انبار تولید
+            production_warehouse = production_program.production_warehouse
+            if not production_warehouse:
+                production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
+                if not production_warehouse:
+                    bug_logger.error("انبار تولید یافت نشد")
+                    return None
+            
+            # پردازش هر BOM item - معکوس کردن عملیات
+            for bom in production_program.production_info.bom_items.all():
+                bom_id_str = str(bom.id)
+                
+                if bom_id_str not in warehouse_distribution:
+                    continue
+                
+                # برای هر انبار، عملیات معکوس ایجاد کن
+                for dist in warehouse_distribution[bom_id_str]:
+                    warehouse_identifier = dist['warehouse']
+                    amount = Decimal(str(dist['amount']))
+                    
+                    # پیدا کردن انبار اولیه
+                    source_warehouse = None
+                    try:
+                        source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_identifier)
+                    except Warehouse.DoesNotExist:
+                        try:
+                            source_warehouse = Warehouse.objects.get(name=warehouse_identifier)
+                        except Warehouse.DoesNotExist:
+                            try:
+                                source_warehouse = Warehouse.objects.get(id=int(warehouse_identifier))
+                            except (Warehouse.DoesNotExist, ValueError):
+                                bug_logger.error(f"انبار {warehouse_identifier} یافت نشد")
+                                continue
+                    
+                    if not source_warehouse:
+                        continue
+                    
+                    if amount > 0:
+                        # معکوس: کاهش از انبار تولید (SourceStock)
+                        SourceStock.objects.create(
+                            stock_entry=reversal_entry,
+                            from_content_type=raw_material_ct,
+                            from_object_id=bom.raw_material.id,
+                            from_warehouse=production_warehouse,
+                            quantity=amount
+                        )
+                        
+                        # معکوس: افزایش به انبار اولیه (TargetStock)
+                        TargetStock.objects.create(
+                            stock_entry=reversal_entry,
+                            to_content_type=raw_material_ct,
+                            to_object_id=bom.raw_material.id,
+                            to_warehouse=source_warehouse,
+                            quantity=amount
+                        )
+                        
+                        bug_logger.debug(f"برگشت {amount} از انبار تولید به {warehouse_identifier} برای {bom.raw_material.name if bom.raw_material else 'ماده اولیه'}")
+            
+            # تأیید تراکنش
+            reversal_entry.commit()
+            bug_logger.info(f"ثبت انبار معکوس {reversal_entry.id} تأیید شد - مواد اولیه به انبارهای اولیه برگردانده شدند")
+            
+            return reversal_entry
+            
+    except Exception as e:
+        bug_logger.error(f"خطا در ایجاد ثبت انبار معکوس: {str(e)}")
+        import traceback
+        bug_logger.error(traceback.format_exc())
+        return None
+
+
 def production_declaration_view(request):
     """
     صفحه اعلام تولید
@@ -355,7 +460,9 @@ def production_declaration_view(request):
         # دریافت برنامه‌های تولید بر اساس وضعیت
         try:
             confirmed_programs = ProductionProgram.objects.filter(
-                status=ProductionProgram.Status.CONFIRMED
+                status=ProductionProgram.Status.CONFIRMED,
+                is_denied=False,
+                is_archived=False
             ).select_related('product', 'production_info')
             
             # Apply consolidated search filter for confirmed table
@@ -374,7 +481,9 @@ def production_declaration_view(request):
         
         try:
             in_progress_programs = ProductionProgram.objects.filter(
-                status=ProductionProgram.Status.IN_PROGRESS
+                status=ProductionProgram.Status.IN_PROGRESS,
+                is_denied=False,
+                is_archived=False
             ).select_related('product', 'production_info')
             
             # Apply consolidated search filter for in-progress table
@@ -394,7 +503,9 @@ def production_declaration_view(request):
         # Pagination for completed programs
         try:
             completed_programs_qs = ProductionProgram.objects.filter(
-                status=ProductionProgram.Status.COMPLETED
+                status=ProductionProgram.Status.COMPLETED,
+                is_denied=False,
+                is_archived=False
             ).select_related('product', 'production_info')
             
             # Apply consolidated search filter for completed table
@@ -607,6 +718,13 @@ def production_program_crud_view(request, program_id=None):
                     ProductionProgram.objects.select_related('product', 'production_info'),
                     id=program_id
                 )
+                
+                # Block access to denied programs
+                if program.is_denied:
+                    bug_logger.warning(f"تلاش برای دسترسی به برنامه رد شده {program_id}")
+                    messages.error(request, 'این برنامه تولید رد شده و قابل دسترسی نیست')
+                    return redirect(reverse('production:production_declaration'))
+                
                 bug_logger.debug(f"برنامه تولید {program_id} با موفقیت بارگذاری شد")
             except Exception as e:
                 bug_logger.error(f"خطا در بارگذاری برنامه تولید {program_id}: {str(e)}")
@@ -842,6 +960,118 @@ def production_program_crud_view(request, program_id=None):
                                 messages.warning(request, 'برنامه تکمیل شد اما خطا در ایجاد ثبت‌های انبار رخ داد')
                         else:
                             bug_logger.warning("انبار محصول یا مصرف واقعی موجود نیست - ثبت انبار ایجاد نشد")
+                    elif action == 'deny':
+                        # Deny a confirmed program
+                        if instance.status != ProductionProgram.Status.CONFIRMED:
+                            messages.error(request, 'فقط برنامه‌های تایید شده قابل رد هستند')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        
+                        reason = request.POST.get('deny_reason', '').strip()
+                        if not reason:
+                            messages.error(request, 'لطفاً دلیل رد برنامه را وارد کنید')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        
+                        instance.is_denied = True
+                        instance.save()
+                        
+                        # Create log
+                        ProductionRevertLog.objects.create(
+                            production_program=instance,
+                            action_type='denied',
+                            reason=reason,
+                            created_by=request.user.username if request.user.is_authenticated else 'ناشناس'
+                        )
+                        
+                        bug_logger.info(f"برنامه تولید {program_id} رد شد. دلیل: {reason}")
+                        messages.success(request, 'برنامه تولید با موفقیت رد شد')
+                        return redirect(reverse('production:production_declaration'))
+                    elif action == 'revert':
+                        # Revert an in-progress program back to confirmed
+                        if instance.status != ProductionProgram.Status.IN_PROGRESS:
+                            messages.error(request, 'فقط برنامه‌های در حال اجرا قابل برگشت هستند')
+                            # If request came from list view, stay on declaration page
+                            if request.POST.get('origin') == 'list':
+                                return redirect(reverse('production:production_declaration'))
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        
+                        reason = request.POST.get('revert_reason', '').strip()
+                        if not reason:
+                            messages.error(request, 'لطفاً دلیل برگشت برنامه را وارد کنید')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        
+                        # Create reversal stock entry
+                        reversal_entry = revert_production_stock_entry(instance, request)
+                        
+                        if reversal_entry:
+                            # Change status back to confirmed
+                            instance.status = ProductionProgram.Status.CONFIRMED
+                            instance.started_at = None
+                            instance.actual_start_date = None
+                            instance.save()
+                            
+                            # Create log
+                            ProductionRevertLog.objects.create(
+                                production_program=instance,
+                                action_type='reverted',
+                                reason=reason,
+                                created_by=request.user.username if request.user.is_authenticated else 'ناشناس',
+                                reversal_stock_entry_id=reversal_entry.id
+                            )
+                            
+                            bug_logger.info(f"برنامه تولید {program_id} به وضعیت تایید شده برگردانده شد. دلیل: {reason}")
+                            messages.success(request, f'برنامه تولید با موفقیت برگردانده شد. ثبت انبار معکوس: {reversal_entry.id}')
+                            # If request came from list view, redirect back to declaration list
+                            if request.POST.get('origin') == 'list':
+                                return redirect(reverse('production:production_declaration'))
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        else:
+                            bug_logger.error(f"خطا در ایجاد ثبت انبار معکوس برای برنامه {program_id}")
+                            messages.error(request, 'خطا در برگشت برنامه. ثبت انبار معکوس ایجاد نشد')
+                            if request.POST.get('origin') == 'list':
+                                return redirect(reverse('production:production_declaration'))
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                    elif action == 'archive':
+                        # Archive a completed program
+                        if instance.status != ProductionProgram.Status.COMPLETED:
+                            messages.error(request, 'فقط برنامه‌های تکمیل شده قابل آرشیو هستند')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        
+                        reason = request.POST.get('archive_reason', '').strip()
+                        
+                        instance.is_archived = True
+                        instance.save()
+                        
+                        # Create log
+                        ProductionRevertLog.objects.create(
+                            production_program=instance,
+                            action_type='archived',
+                            reason=reason if reason else None,
+                            created_by=request.user.username if request.user.is_authenticated else 'ناشناس'
+                        )
+                        
+                        bug_logger.info(f"برنامه تولید {program_id} آرشیو شد")
+                        messages.success(request, 'برنامه تولید با موفقیت آرشیو شد')
+                        return redirect(reverse('production:production_declaration'))
+                    elif action == 'unarchive':
+                        # Unarchive a program
+                        if not instance.is_archived:
+                            messages.error(request, 'این برنامه در آرشیو نیست')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        
+                        instance.is_archived = False
+                        instance.save()
+                        
+                        # Create log
+                        ProductionRevertLog.objects.create(
+                            production_program=instance,
+                            action_type='unarchived',
+                            reason='خروج از آرشیو',
+                            created_by=request.user.username if request.user.is_authenticated else 'ناشناس'
+                        )
+                        
+                        bug_logger.info(f"برنامه تولید {program_id} از آرشیو خارج شد")
+                        messages.success(request, 'برنامه تولید با موفقیت از آرشیو خارج شد')
+                        return redirect(reverse('production:production_declaration'))
                     
                     instance.save()
                     
@@ -1062,3 +1292,28 @@ def production_program_crud_view(request, program_id=None):
             'production_warehouses': production_warehouses,
         }
         return render(request, 'production_declaration_crud.html', context)
+
+
+def archived_programs_view(request):
+    """
+    نمایش برنامه‌های آرشیو شده
+    """
+    audit_logger.info("دسترسی به صفحه برنامه‌های آرشیو شده")
+    
+    try:
+        # Get archived programs
+        programs = ProductionProgram.objects.filter(
+            is_archived=True,
+            status='completed'
+        ).select_related('product', 'production_info').order_by('-execution_date', '-id')
+        
+        context = {
+            'programs': programs,
+        }
+        
+        return render(request, 'production_archived.html', context)
+    
+    except Exception as e:
+        bug_logger.error(f"خطا در بارگذاری برنامه‌های آرشیو: {str(e)}")
+        messages.error(request, 'خطا در بارگذاری برنامه‌های آرشیو')
+        return redirect(reverse('production:production_declaration'))
