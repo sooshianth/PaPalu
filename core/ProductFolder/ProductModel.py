@@ -33,7 +33,13 @@ class Product(models.Model):
     """
     
     PRODUCT_APPLICATION_CHOICES = [
-        ('3 year khar', 'خر 3 ساله'),
+        ('chicken_layer', 'مرغ تخم‌گذار'),
+        ('chicken_broiler', 'مرغ گوشتی'),
+        ('cow_dairy', 'گاو شیری'),
+        ('cow_beef', 'گاو گوشتی'),
+        ('sheep_dairy', 'گوسفند شیری'),
+        ('sheep_meat', 'گوسفند گوشتی'),
+        ('3 year khar', 'خر ۳ ساله'),
     ]
     
     # اطلاعات پایه

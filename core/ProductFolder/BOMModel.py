@@ -28,7 +28,7 @@ class BOM(models.Model):
     
     quantity = models.DecimalField(
         max_digits=15,
-        decimal_places=4,
+        decimal_places=3,
         verbose_name='مقدار ماده اولیه',
         null=True,
         blank=True,

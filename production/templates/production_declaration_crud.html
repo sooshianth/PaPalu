@@ -855,97 +855,64 @@ function showModal(modalId) {
 }
 
 function setupWarehouseDistributionListeners() {
-    // Sync sliders with inputs and vice versa
-    document.querySelectorAll('.warehouse-slider').forEach(slider => {
-        slider.addEventListener('input', function() {
-            const bomId = this.dataset.bomId;
-            const warehouse = this.dataset.warehouse;
-            const value = parseInt(this.value);
-            
-            // Update corresponding input
-            const input = document.querySelector(`.warehouse-percent-input[data-bom-id="${bomId}"][data-warehouse="${warehouse}"]`);
-            if (input) {
-                input.value = value;
-            }
-            
-            // Update display
-            const sliderValue = this.parentElement.querySelector('.slider-value');
-            if (sliderValue) {
-                sliderValue.textContent = value + '%';
-            }
-            
-            updateWarehouseAmounts(bomId);
-            validateTotalPercent(bomId);
-        });
-    });
-    
-    document.querySelectorAll('.warehouse-percent-input').forEach(input => {
+    // Only listen to amount input changes
+    document.querySelectorAll('.warehouse-amount-input').forEach(input => {
         input.addEventListener('input', function() {
             const bomId = this.dataset.bomId;
-            const warehouse = this.dataset.warehouse;
-            let value = parseInt(this.value) || 0;
-            
-            // Clamp value between 0 and 100
-            value = Math.max(0, Math.min(100, value));
-            this.value = value;
-            
-            // Update corresponding slider
-            const slider = document.querySelector(`.warehouse-slider[data-bom-id="${bomId}"][data-warehouse="${warehouse}"]`);
-            if (slider) {
-                slider.value = value;
-                const sliderValue = slider.parentElement.querySelector('.slider-value');
-                if (sliderValue) {
-                    sliderValue.textContent = value + '%';
-                }
-            }
-            
-            updateWarehouseAmounts(bomId);
-            validateTotalPercent(bomId);
+            updateTotalDifference(bomId);
         });
     });
 }
 
-function updateWarehouseAmounts(bomId) {
+function updateTotalDifference(bomId) {
     const item = document.querySelector(`.warehouse-distribution-item[data-bom-id="${bomId}"]`);
     if (!item) return;
     
     const totalNeeded = parseFloat(item.dataset.totalNeeded);
-    const sliders = item.querySelectorAll('.warehouse-slider');
+    const amountInputs = item.querySelectorAll('.warehouse-amount-input');
     
-    sliders.forEach(slider => {
-        const percent = parseInt(slider.value);
-        const amount = (totalNeeded * percent) / 100;
-        const row = slider.closest('.warehouse-slider-row');
-        const amountDisplay = row.querySelector('.warehouse-amount');
-        if (amountDisplay) {
-            amountDisplay.textContent = amount.toFixed(4) + ' ' + (amountDisplay.textContent.split(' ').pop() || 'تن');
+    let totalWithdrawal = 0;
+    amountInputs.forEach(input => {
+        totalWithdrawal += parseFloat(input.value) || 0;
+    });
+    
+    const difference = totalWithdrawal - totalNeeded;
+    
+    // Update display
+    const totalWithdrawalDisplay = item.querySelector('.total-withdrawal');
+    const totalDifferenceDisplay = item.querySelector('.total-difference');
+    const differenceContainer = item.querySelector('.total-difference-display');
+    
+    if (totalWithdrawalDisplay) {
+        totalWithdrawalDisplay.textContent = totalWithdrawal.toFixed(4) + ' ' + (totalWithdrawalDisplay.textContent.split(' ').pop() || 'تن');
+    }
+    
+    if (totalDifferenceDisplay) {
+        const absValue = Math.abs(difference);
+        const unit = totalDifferenceDisplay.textContent.split(' ').pop() || 'تن';
+        
+        if (difference > 0.0001) {
+            totalDifferenceDisplay.textContent = `+${absValue.toFixed(4)} ${unit} (بیش از حد)`;
+            totalDifferenceDisplay.style.color = '#dc3545';
+            if (differenceContainer) {
+                differenceContainer.style.background = '#f8d7da';
+                differenceContainer.style.borderLeft = '4px solid #dc3545';
+            }
+        } else if (difference < -0.0001) {
+            totalDifferenceDisplay.textContent = `-${absValue.toFixed(4)} ${unit} (کمبود)`;
+            totalDifferenceDisplay.style.color = '#ffc107';
+            if (differenceContainer) {
+                differenceContainer.style.background = '#fff3cd';
+                differenceContainer.style.borderLeft = '4px solid #ffc107';
+            }
+        } else {
+            totalDifferenceDisplay.textContent = `0.0000 ${unit} (دقیق ✓)`;
+            totalDifferenceDisplay.style.color = '#198754';
+            if (differenceContainer) {
+                differenceContainer.style.background = '#d1fadd';
+                differenceContainer.style.borderLeft = '4px solid #198754';
+            }
         }
-    });
-}
-
-function validateTotalPercent(bomId) {
-    const item = document.querySelector(`.warehouse-distribution-item[data-bom-id="${bomId}"]`);
-    if (!item) return;
-    
-    const sliders = item.querySelectorAll('.warehouse-slider');
-    let total = 0;
-    sliders.forEach(slider => {
-        total += parseInt(slider.value);
-    });
-    
-    const warning = item.querySelector('.total-percent-warning');
-    const currentTotal = item.querySelector('.current-total');
-    
-    if (total !== 100) {
-        warning.style.display = 'block';
-        warning.style.background = '#f8d7da';
-        warning.style.borderLeft = '4px solid #dc3545';
-        currentTotal.textContent = `فعلاً ${total}% است`;
-    } else {
-        warning.style.display = 'block';
-        warning.style.background = '#d1fadd';
-        warning.style.borderLeft = '4px solid #198754';
-        currentTotal.textContent = '✓ مجموع صحیح است (100%)';
     }
 }
 
@@ -1033,50 +1000,33 @@ function showStartProductionModal() {
                                         <tr style="background: #f8f9fa;">
                                             <th style="padding: 10px; text-align: right; border-radius: 6px 0 0 6px; font-size: 0.85rem; font-weight: 600; color: #495057;">انبار</th>
                                             <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057;">موجودی</th>
-                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057;">درصد توزیع</th>
-                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057;">درصد</th>
-                                            <th style="padding: 10px; text-align: center; border-radius: 0 6px 6px 0; font-size: 0.85rem; font-weight: 600; color: #495057; background: #fff6db;">مقدار برداشت</th>
+                                            <th style="padding: 10px; text-align: center; border-radius: 0 6px 6px 0; font-size: 0.85rem; font-weight: 600; color: #495057; background: #e7f5ff;">مقدار برداشت</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                     `;
                     
                     warehouses.forEach((wh, index) => {
-                        const defaultPercent = index === 0 ? 100 : 0;
-                        const defaultAmount = ((parseFloat(totalConsumption) * defaultPercent) / 100).toFixed(4);
+                        const defaultAmount = index === 0 ? parseFloat(totalConsumption).toFixed(4) : '0';
                         html += `
-                            <tr class="warehouse-slider-row" style="background: #ffffff; border: 1px solid #e9ecef;">
+                            <tr class="warehouse-amount-row" style="background: #ffffff; border: 1px solid #e9ecef;">
                                 <td style="padding: 12px; border-radius: 6px 0 0 6px;">
                                     <strong style="font-size: 0.95rem; color: #343a40;">${wh.warehouse}</strong>
                                 </td>
                                 <td style="padding: 12px; text-align: center;">
                                     <div style="font-size: 0.9rem; color: #6c757d;">${wh.quantity} ${wh.unit}</div>
                                 </td>
-                                <td style="padding: 12px;">
-                                    <div style="display: flex; align-items: center; gap: 8px;">
-                                        <input type="range" 
-                                               class="warehouse-slider" 
-                                               data-bom-id="${item.id}"
-                                               data-warehouse="${wh.warehouse}"
-                                               min="0" 
-                                               max="100" 
-                                               value="${defaultPercent}"
-                                               style="flex: 1;">
-                                        <div class="slider-value" style="min-width: 45px; text-align: center; font-weight: 600; color: var(--primary-green); font-size: 0.95rem;">${defaultPercent}%</div>
-                                    </div>
-                                </td>
-                                <td style="padding: 12px; text-align: center;">
+                                <td style="padding: 12px; text-align: center; background: #f0f8ff; border-radius: 0 6px 6px 0;">
                                     <input type="number" 
-                                           class="warehouse-percent-input form-control" 
+                                           class="warehouse-amount-input form-control" 
                                            data-bom-id="${item.id}"
                                            data-warehouse="${wh.warehouse}"
+                                           data-total-needed="${totalConsumption}"
                                            min="0" 
-                                           max="100" 
-                                           value="${defaultPercent}"
-                                           style="width: 70px; padding: 6px; text-align: center; border: 2px solid #28a745; border-radius: 6px;">
-                                </td>
-                                <td style="padding: 12px; text-align: center; background: #fffef5; border-radius: 0 6px 6px 0;">
-                                    <strong class="warehouse-amount" style="color: #28a745; font-size: 1rem;">${defaultAmount} ${item.unit_used || 'تن'}</strong>
+                                           step="0.0001"
+                                           value="${defaultAmount}"
+                                           placeholder="مقدار برداشت"
+                                           style="width: 120px; padding: 8px; text-align: center; border: 2px solid #0d6efd; border-radius: 6px; font-weight: 600;">
                                 </td>
                             </tr>
                         `;
@@ -1086,9 +1036,13 @@ function showStartProductionModal() {
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="total-percent-warning" style="margin-top: 12px; padding: 12px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; font-size: 0.9rem; display: none;">
-                                <strong>⚠️ توجه:</strong> مجموع درصدها باید 100% باشد. 
-                                <span class="current-total" style="font-weight: 600;"></span>
+                            <div class="total-difference-display" style="margin-top: 12px; padding: 12px; border-radius: 8px; border-left: 4px solid #6c757d; font-size: 0.9rem; background: #e9ecef;">
+                                <strong>🔢 جمع کل برداشت:</strong> 
+                                <span class="total-withdrawal" style="font-weight: 600;">0.0000 ${item.unit_used || 'تن'}</span> / 
+                                <span style="color: var(--primary-green);">${totalConsumption} ${item.unit_used || 'تن'}</span>
+                                <br>
+                                <strong>تفاوت:</strong> 
+                                <span class="total-difference" style="font-weight: 600; font-size: 1.1rem;">0.0000 ${item.unit_used || 'تن'}</span>
                             </div>
                         </div>
                     `;
@@ -1098,8 +1052,13 @@ function showStartProductionModal() {
             html += '</div>';
             warehouseList.innerHTML = html;
             
-            // Add event listeners for sliders and inputs
+            // Add event listeners for amount inputs
             setupWarehouseDistributionListeners();
+            
+            // Initialize difference calculations for all BOM items
+            bomItems.forEach(item => {
+                updateTotalDifference(item.id);
+            });
             
             warehouseSection.style.display = 'block';
         } else {
@@ -1172,7 +1131,7 @@ function showCompleteProductionModal() {
                                    data-bom-id="${item.id}"
                                    data-material-name="${item.raw_material_name || 'ماده اولیه'}"
                                    value="${currentValue}" 
-                                   step="0.0001" 
+                                   step="0.001" 
                                    min="0" 
                                    required
                                    placeholder="مقدار واقعی"
@@ -1218,25 +1177,27 @@ function confirmStartProduction() {
         
         distributionItems.forEach(item => {
             const bomId = item.dataset.bomId;
-            const sliders = item.querySelectorAll('.warehouse-slider');
-            let total = 0;
+            const amountInputs = item.querySelectorAll('.warehouse-amount-input');
             const distributions = [];
+            let hasAnyAmount = false;
             
-            sliders.forEach(slider => {
-                const percent = parseInt(slider.value);
-                total += percent;
+            amountInputs.forEach(input => {
+                const warehouse = input.dataset.warehouse;
+                const amount = parseFloat(input.value) || 0;
                 
-                if (percent > 0) {
+                if (amount > 0) {
+                    hasAnyAmount = true;
                     distributions.push({
-                        warehouse: slider.dataset.warehouse,
-                        percent: percent
+                        warehouse: warehouse,
+                        amount: amount.toFixed(4)
                     });
                 }
             });
             
-            if (total !== 100) {
+            // Check if at least one warehouse has an amount
+            if (!hasAnyAmount) {
                 const materialName = item.querySelector('strong').textContent;
-                errors.push(`${materialName}: مجموع درصدها ${total}% است (باید 100% باشد)`);
+                errors.push(`${materialName}: لطفاً مقدار برداشت را از حداقل یک انبار وارد کنید`);
             }
             
             warehouseData[bomId] = distributions;
@@ -1257,11 +1218,11 @@ function confirmStartProduction() {
                 warehouseInput.value = dist.warehouse;
                 document.getElementById('productionForm').appendChild(warehouseInput);
                 
-                const percentInput = document.createElement('input');
-                percentInput.type = 'hidden';
-                percentInput.name = `warehouse_dist_${bomId}_${index}_percent`;
-                percentInput.value = dist.percent;
-                document.getElementById('productionForm').appendChild(percentInput);
+                const amountInput = document.createElement('input');
+                amountInput.type = 'hidden';
+                amountInput.name = `warehouse_dist_${bomId}_${index}_amount`;
+                amountInput.value = dist.amount;
+                document.getElementById('productionForm').appendChild(amountInput);
             });
         });
     }
@@ -1481,7 +1442,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 let tooltipContent = '';
                 
                 warehouses.forEach(wh => {
-                    tooltipContent += `انبار ${wh.warehouse}: ${wh.amount} ${item.unit_used || 'تن'} (${wh.percent}%)<br>`;
+                    tooltipContent += `انبار ${wh.warehouse}: ${wh.amount} ${item.unit_used || 'تن'}<br>`;
                 });
                 
                 totalConsumptionDisplay = `
@@ -1510,7 +1471,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                    name="actual_consumption_${item.id}" 
                                    id="actual_consumption_${item.id}"
                                    value="${actualConsumption}" 
-                                   step="0.0001" 
+                                   step="0.001" 
                                    min="0"
                                    class="form-control" 
                                    style="width: 100%; padding: 6px; text-align: center;"
