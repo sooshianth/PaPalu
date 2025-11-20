@@ -66,11 +66,13 @@ class RawMaterialDefineForm(ModelForm):
 class PurchaseInfoInlineForm(ModelForm):
 	class Meta:
 		model = RawMaterialPurchaseInfo
-		fields = ['transportation_conditions', 'storage_conditions', 'minimum_order_quantity', 'vat_percentage', 'accounting_code']
+		fields = ['transportation_conditions', 'storage_conditions', 'minimum_order_quantity', 'vat_percentage', 'accounting_code', 'tax_code', 'supplier']
 		labels = {
 			'minimum_order_quantity': 'حداقل مقدار سفارش',
 			'vat_percentage': 'درصد مالیات بر ارزش افزوده',
 			'accounting_code': 'کد حسابداری مرتبط',
+			'tax_code': 'کد مالیاتی ماده',
+			'supplier': 'تامین‌کننده (Purchase Info)',
 			'transportation_conditions': 'شرایط حمل',
 			'storage_conditions': 'شرایط نگهداری',
 		}
@@ -80,6 +82,10 @@ class PurchaseInfoInlineForm(ModelForm):
 		# Per spec these two are required at define time
 		self.fields['transportation_conditions'].required = True
 		self.fields['storage_conditions'].required = True
+		# Optional supplier limited to type 'supplier'
+		if 'supplier' in self.fields:
+			self.fields['supplier'].queryset = Person.objects.filter(type='supplier').order_by('name')
+			self.fields['supplier'].required = False
 
 class RawMaterialPriceInquiryForm(ModelForm):
 	class Meta:
