@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% block title %}جزئیات تأمین‌کننده{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04);margin-bottom:20px}
+  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
+  .card-body {padding:22px}
+  .section-title {font-size:1rem;margin:16px 0 12px 0;color:#2d3e3f;font-weight:600;border-bottom:2px solid #28a745;padding-bottom:6px}
+  .info-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:20px}
+  .info-item {display:flex;flex-direction:column;gap:4px;padding:12px;background:#f8f9fa;border-radius:8px}
+  .info-label {font-size:.8rem;color:#607d8b;font-weight:600}
+  .info-value {font-size:.95rem;color:#37474f;font-weight:500}
+  .info-value.empty {color:#9e9e9e;font-style:italic}
+  .table-responsive {overflow-x:auto;margin-top:12px}
+  .table {width:100%;border-collapse:collapse;border:1px solid #e3e7ea;border-radius:8px;overflow:hidden;font-size:.88rem}
+  .table th, .table td {border:1px solid #e3e7ea;padding:10px 12px;text-align:center;vertical-align:middle}
+  .table thead th {background:#f2f6f5;font-weight:600;color:#37474f}
+  .table tbody tr:hover {background:#f8f9fa}
+  .badge {padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:600}
+  .badge-legal {background:#e3f2fd;color:#1976d2}
+  .badge-natural {background:#f3e5f5;color:#7b1fa2}
+  .btn-actions {display:flex;gap:10px;margin-bottom:16px}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size:1.1rem">جزئیات تأمین‌کننده: {{ supplier.name|default:supplier.national_id }}</h3>
+    <div>
+      <a href="{% url 'supply:supplier_list' %}" class="btn btn-secondary btn-sm">بازگشت به لیست</a>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="btn-actions">
+      <a href="{% url 'supply:supplier_edit' supplier.national_id %}" class="btn btn-warning btn-sm">ویرایش اطلاعات</a>
+    </div>
+
+    <div class="section-title">اطلاعات پایه</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">کد ملی</span>
+        <span class="info-value">{{ supplier.national_id }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">نام شخص/شرکت</span>
+        <span class="info-value">{{ supplier.name|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">نوع (حقوقی/حقیقی)</span>
+        <span class="info-value">
+          {% if supplier.nature == 'legal' %}
+            <span class="badge badge-legal">حقوقی</span>
+          {% elif supplier.nature == 'natural' %}
+            <span class="badge badge-natural">حقیقی</span>
+          {% else %}
+            —
+          {% endif %}
+        </span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">کد حسابداری</span>
+        <span class="info-value {% if not supplier.accounting_code %}empty{% endif %}">{{ supplier.accounting_code|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">شماره ثبت شرکت</span>
+        <span class="info-value {% if not supplier.registration_number %}empty{% endif %}">{{ supplier.registration_number|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">تاریخ تولد</span>
+        <span class="info-value {% if not supplier.birth_date %}empty{% endif %}">{{ supplier.birth_date|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">نوع کاربری</span>
+        <span class="info-value {% if not supplier.user_type %}empty{% endif %}">{{ supplier.get_user_type_display|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">کارشناس فروش</span>
+        <span class="info-value {% if not supplier.sales_expert %}empty{% endif %}">{{ supplier.sales_expert|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">شماره تلفن</span>
+        <span class="info-value {% if not supplier.phone_number %}empty{% endif %}">{{ supplier.phone_number|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">معرف</span>
+        <span class="info-value {% if not supplier.introducer %}empty{% endif %}">{{ supplier.introducer|default:"—" }}</span>
+      </div>
+      <div class="info-item" style="grid-column:1/-1">
+        <span class="info-label">توضیحات</span>
+        <span class="info-value {% if not supplier.description %}empty{% endif %}">{{ supplier.description|default:"—" }}</span>
+      </div>
+    </div>
+
+    {% if financial_banking %}
+    <div class="section-title">اطلاعات مالی/بانکی</div>
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">گروه مالیاتی</span>
+        <span class="info-value {% if not financial_banking.tax_group %}empty{% endif %}">{{ financial_banking.get_tax_group_display|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">مانده حساب</span>
+        <span class="info-value {% if not financial_banking.account_balance %}empty{% endif %}">{{ financial_banking.account_balance|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">کد اقتصادی</span>
+        <span class="info-value {% if not financial_banking.economic_code %}empty{% endif %}">{{ financial_banking.economic_code|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">کد پستی مالیاتی</span>
+        <span class="info-value {% if not financial_banking.tax_postal_code %}empty{% endif %}">{{ financial_banking.tax_postal_code|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">استان مالیاتی</span>
+        <span class="info-value {% if not financial_banking.tax_province %}empty{% endif %}">{{ financial_banking.tax_province|default:"—" }}</span>
+      </div>
+      <div class="info-item">
+        <span class="info-label">شهر مالیاتی</span>
+        <span class="info-value {% if not financial_banking.tax_city %}empty{% endif %}">{{ financial_banking.tax_city|default:"—" }}</span>
+      </div>
+      <div class="info-item" style="grid-column:1/-1">
+        <span class="info-label">آدرس مالیاتی</span>
+        <span class="info-value {% if not financial_banking.tax_address %}empty{% endif %}">{{ financial_banking.tax_address|default:"—" }}</span>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if representatives %}
+    <div class="section-title">نمایندگان</div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>نام</th>
+            <th>سمت</th>
+            <th>موبایل</th>
+            <th>تلفن</th>
+            <th>نامه تایید</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rep in representatives %}
+          <tr>
+            <td>{{ rep.name }}</td>
+            <td>{{ rep.position|default:"—" }}</td>
+            <td>{{ rep.mobile_number|default:"—" }}</td>
+            <td>{{ rep.phone_number|default:"—" }}</td>
+            <td>{% if rep.confirmation_letter %}<a href="{{ rep.confirmation_letter.url }}" target="_blank">مشاهده</a>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if bank_accounts %}
+    <div class="section-title">حساب‌های بانکی</div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>بانک</th>
+            <th>شماره حساب</th>
+            <th>شماره شبا</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ba in bank_accounts %}
+          <tr>
+            <td>{{ ba.bank_name|default:"—" }}</td>
+            <td>{{ ba.account_number|default:"—" }}</td>
+            <td>{{ ba.shaba_number|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if payment_preferences %}
+    <div class="section-title">ترجیحات پرداخت</div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>روش</th>
+            <th>شرایط (روز)</th>
+            <th>سقف اعتبار</th>
+            <th>توضیحات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pp in payment_preferences %}
+          <tr>
+            <td>{{ pp.get_payment_method_display|default:"—" }}</td>
+            <td>{{ pp.payment_term_days|default:"—" }}</td>
+            <td>{{ pp.credit_limit|default:"—" }}</td>
+            <td>{{ pp.notes|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if social_networks %}
+    <div class="section-title">شبکه‌های اجتماعی</div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>پلتفرم</th>
+            <th>شناسه</th>
+            <th>آدرس</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sn in social_networks %}
+          <tr>
+            <td>{{ sn.get_platform_display|default:"—" }}</td>
+            <td>{{ sn.handle|default:"—" }}</td>
+            <td>{% if sn.url %}<a href="{{ sn.url }}" target="_blank">{{ sn.url }}</a>{% else %}—{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if attachments %}
+    <div class="section-title">پیوست‌ها</div>
+    <div class="table-responsive">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>نوع</th>
+            <th>فایل</th>
+            <th>توضیح</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for att in attachments %}
+          <tr>
+            <td>{{ att.get_doc_type_display|default:"—" }}</td>
+            <td>{% if att.file %}<a href="{{ att.file.url }}" target="_blank">دانلود</a>{% else %}—{% endif %}</td>
+            <td>{{ att.description|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    <div class="btn-actions" style="margin-top:20px">
+      <a href="{% url 'supply:supplier_edit' supplier.national_id %}" class="btn btn-warning btn-sm">ویرایش اطلاعات</a>
+      <a href="{% url 'supply:supplier_list' %}" class="btn btn-secondary btn-sm">بازگشت به لیست</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

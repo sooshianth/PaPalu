@@ -1,0 +1,372 @@
+{% extends 'base.html' %}
+{% block title %}ویرایش تأمین کننده{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04)}
+  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
+  .card-body {padding:22px}
+  .section-title {font-size:1rem;margin:0 0 14px 0;color:#2d3e3f;font-weight:600;display:flex;align-items:center;gap:8px}
+  .section-title svg{width:18px;height:18px;color:#28a745}
+  .rules{background:#f8f9fa;border:1px dashed #cfd8dc;padding:12px 14px;border-radius:10px;font-size:.9rem;color:#37474f;margin-bottom:18px;line-height:1.6}
+  .form-wrapper{background:#fafafa;border:1px solid #e3e7ea;border-radius:12px;padding:18px 20px;margin-bottom:26px}
+  .form-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px}
+  .field input[type=text], .field input[type=number], .field select, .field textarea{width:100%;padding:8px 10px;border:1px solid #cfd8dc;background:#fff;border-radius:8px;font-size:.85rem;font-family:inherit;transition:.2s}
+  .field textarea{min-height:90px;resize:vertical}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none;border-color:#28a745;box-shadow:0 0 0 3px rgba(40,167,69,0.15)}
+  .required-marker{color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px}
+  .submit-row{margin-top:8px;display:flex;gap:10px}
+</style>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size:1.1rem">ویرایش تأمین‌کننده: {{ supplier.name|default:supplier.national_id }}</h3>
+    <div>
+      <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary btn-sm">بازگشت به جزئیات</a>
+      <a href="{% url 'supply:supplier_list' %}" class="btn btn-secondary btn-sm">لیست تأمین‌کنندگان</a>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          اطلاعات شخص/شرکت
+        </div>
+        <div class="form-groups">
+          <div class="field">
+            <label>{% if person_form.national_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.national_id.label }}</label>
+            {{ person_form.national_id }}
+            {% if person_form.national_id.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.national_id.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{% if person_form.name.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.name.label }}</label>
+            {{ person_form.name }}
+            {% if person_form.name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{% if person_form.nature.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.nature.label }}</label>
+            {{ person_form.nature }}
+            {% if person_form.nature.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.nature.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.registration_number.label }}</label>
+            {{ person_form.registration_number }}
+            {% if person_form.registration_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.registration_number.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.birth_date.label }}</label>
+            {{ person_form.birth_date }}
+            {% if person_form.birth_date.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.birth_date.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.accounting_code.label }}</label>
+            {{ person_form.accounting_code }}
+            {% if person_form.accounting_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.accounting_code.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.user_type.label }}</label>
+            {{ person_form.user_type }}
+            {% if person_form.user_type.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.user_type.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.phone_number.label }}</label>
+            {{ person_form.phone_number }}
+            {% if person_form.phone_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.phone_number.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.sales_expert.label }}</label>
+            {{ person_form.sales_expert }}
+            {% if person_form.sales_expert.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.sales_expert.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.introducer.label }}</label>
+            {{ person_form.introducer }}
+            {% if person_form.introducer.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.introducer.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>{{ person_form.description.label }}</label>
+            {{ person_form.description }}
+            {% if person_form.description.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.description.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          اطلاعات مالی/بانکی
+        </div>
+        <div class="form-groups">
+          <div class="field">
+            <label>{{ fb_form.tax_group.label }}</label>
+            {{ fb_form.tax_group }}
+            {% if fb_form.tax_group.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_group.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.account_balance.label }}</label>
+            {{ fb_form.account_balance }}
+            {% if fb_form.account_balance.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.account_balance.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.economic_code.label }}</label>
+            {{ fb_form.economic_code }}
+            {% if fb_form.economic_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.economic_code.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.tax_postal_code.label }}</label>
+            {{ fb_form.tax_postal_code }}
+            {% if fb_form.tax_postal_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_postal_code.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.tax_province.label }}</label>
+            {{ fb_form.tax_province }}
+            {% if fb_form.tax_province.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_province.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.tax_city.label }}</label>
+            {{ fb_form.tax_city }}
+            {% if fb_form.tax_city.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_city.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>{{ fb_form.tax_address.label }}</label>
+            {{ fb_form.tax_address }}
+            {% if fb_form.tax_address.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_address.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          نمایندگان
+        </div>
+        {{ rep_formset.management_form }}
+        {% for form in rep_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            {{ form.id }}
+            <div class="field">
+              <label>نام نماینده</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>سمت</label>
+              {{ form.position }}
+              {% if form.position.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.position.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>موبایل</label>
+              {{ form.mobile_number }}
+              {% if form.mobile_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.mobile_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>تلفن</label>
+              {{ form.phone_number }}
+              {% if form.phone_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.phone_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>نامه تایید</label>
+              {{ form.confirmation_letter }}
+              {% if form.confirmation_letter.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.confirmation_letter.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          حساب‌های بانکی
+        </div>
+        {{ ba_formset.management_form }}
+        {% for form in ba_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            {{ form.id }}
+            <div class="field">
+              <label>نام بانک</label>
+              {{ form.bank_name }}
+              {% if form.bank_name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.bank_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شماره حساب</label>
+              {{ form.account_number }}
+              {% if form.account_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.account_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شماره شبا</label>
+              {{ form.shaba_number }}
+              {% if form.shaba_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.shaba_number.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ترجیحات پرداخت
+        </div>
+        {{ pay_formset.management_form }}
+        {% for form in pay_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            {{ form.id }}
+            <div class="field">
+              <label>روش پرداخت</label>
+              {{ form.payment_method }}
+              {% if form.payment_method.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.payment_method.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شرایط (روز)</label>
+              {{ form.payment_term_days }}
+              {% if form.payment_term_days.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.payment_term_days.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>سقف اعتبار</label>
+              {{ form.credit_limit }}
+              {% if form.credit_limit.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.credit_limit.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label>توضیحات</label>
+              {{ form.notes }}
+              {% if form.notes.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.notes.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          شبکه‌های اجتماعی
+        </div>
+        {{ sn_formset.management_form }}
+        {% for form in sn_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            {{ form.id }}
+            <div class="field">
+              <label>پلتفرم</label>
+              {{ form.platform }}
+              {% if form.platform.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.platform.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شناسه</label>
+              {{ form.handle }}
+              {% if form.handle.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.handle.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>آدرس</label>
+              {{ form.url }}
+              {% if form.url.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.url.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          پیوست‌ها
+        </div>
+        {{ att_formset.management_form }}
+        {% for form in att_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            {{ form.id }}
+            <div class="field">
+              <label>نوع مدرک</label>
+              {{ form.doc_type }}
+              {% if form.doc_type.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.doc_type.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>فایل</label>
+              {{ form.file }}
+              {% if form.file.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.file.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label>توضیح</label>
+              {{ form.description }}
+              {% if form.description.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.description.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" class="btn btn-primary btn-sm">ذخیره تغییرات</button>
+        <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary btn-sm">انصراف</a>
+        <a href="{% url 'supply:supplier_list' %}" class="btn btn-outline-secondary btn-sm">بازگشت به لیست</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+  (function() {
+    function initJalali() {
+      var inputs = document.querySelectorAll('.jalali-date');
+      inputs.forEach(function(inp){
+        try {
+          if (!inp._pd_inited) {
+            $(inp).persianDatepicker({
+              format: 'YYYY-MM-DD',
+              autoClose: true,
+              initialValueType: 'gregorian'
+            });
+            inp._pd_inited = true;
+          }
+        } catch (e) {}
+      });
+    }
+    document.addEventListener('DOMContentLoaded', initJalali);
+  })();
+</script>
+{% endblock %}

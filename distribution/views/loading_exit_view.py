@@ -333,13 +333,16 @@ def register_loading_exit_view(request, waybill_number):
                                 loading_type=loading_type or None,
                             )
                     
-                    # ایجاد یا به‌روزرسانی ProductInfo
+                    # به‌روزرسانی وزن‌های Transport
+                    transport.gross_weight = gross_weight
+                    transport.empty_weight = empty_weight
+                    transport.net_weight = net_weight
+                    transport.save(update_fields=['gross_weight', 'empty_weight', 'net_weight'])
+                    
+                    # ایجاد یا به‌روزرسانی ProductInfo (بدون وزن‌ها)
                     product_info, created = ProductInfo.objects.get_or_create(
                         transport=transport,
                         defaults={
-                            'empty_weight': empty_weight,
-                            'gross_weight': gross_weight,
-                            'net_weight': net_weight,
                             'packaging_type': packaging_type,
                             'origin_warehouse': origin_warehouse,
                             'destination_warehouse': destination_warehouse,
@@ -347,9 +350,6 @@ def register_loading_exit_view(request, waybill_number):
                     )
                     
                     if not created:
-                        product_info.empty_weight = empty_weight
-                        product_info.gross_weight = gross_weight
-                        product_info.net_weight = net_weight
                         product_info.packaging_type = packaging_type
                         product_info.origin_warehouse = origin_warehouse
                         product_info.destination_warehouse = destination_warehouse
@@ -358,11 +358,6 @@ def register_loading_exit_view(request, waybill_number):
                     # TODO: کاهش موجودی انبار مبدأ
                     # این بخش باید با سیستم موجودی انبار یکپارچه شود
                     
-                    # تغییر وضعیت حمل به loaded (بارگیری شده)
-                    transport.status = 'loaded'
-                    transport.loading_date = timezone.now().date()
-                    transport.save()
-                    
                     # ثبت زمان خروج خودرو
                     schedule_info, created = LoadingScheduleInfo.objects.get_or_create(
                         transport=transport
@@ -370,20 +365,25 @@ def register_loading_exit_view(request, waybill_number):
                     schedule_info.vehicle_exit_time = timezone.now()
                     schedule_info.save(update_fields=['vehicle_exit_time'])
                     
+                    # تغییر وضعیت حمل به pending_waybill (در انتظار بارنامه)
+                    transport.status = 'pending_waybill'
+                    transport.loading_date = timezone.now().date()
+                    transport.save()
+                    
                     # بررسی تغییر وضعیت تخصیص
                     if transport.allocation_id:
                         allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
                         if allocation and allocation.allocation_status == 'pending_loading':
-                            # بررسی اینکه آیا همه حمل‌های تخصیص به loaded رسیدند
+                            # بررسی اینکه آیا همه حمل‌های تخصیص به pending_waybill رسیدند
                             all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
                             all_transports_count = all_transports.count()
-                            loaded_transports_count = all_transports.filter(status='loaded').count()
+                            pending_waybill_transports_count = all_transports.filter(status='pending_waybill').count()
                             
-                            # اگر همه حمل‌ها به loaded رسیدند، تخصیص را به in_shipping ببر
-                            if all_transports_count > 0 and all_transports_count == loaded_transports_count:
-                                allocation.allocation_status = 'in_shipping'
+                            # اگر همه حمل‌ها به pending_waybill رسیدند، تخصیص را به pending_waybill ببر
+                            if all_transports_count > 0 and all_transports_count == pending_waybill_transports_count:
+                                allocation.allocation_status = 'pending_waybill'
                                 allocation.save(update_fields=['allocation_status'])
-                                bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در حال ارسال' تغییر کرد")
+                                bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در انتظار بارنامه' تغییر کرد")
                                 
                                 # بررسی تغییر وضعیت سفارش
                                 if allocation.order:
@@ -403,18 +403,18 @@ def register_loading_exit_view(request, waybill_number):
                                             if alloc_transports.exists():
                                                 allocations_with_transports.append(alloc)
                                         
-                                        # بررسی اینکه آیا همه تخصیص‌های دارای حمل به in_shipping رسیدند
+                                        # بررسی اینکه آیا همه تخصیص‌های دارای حمل به pending_waybill رسیدند
                                         if allocations_with_transports:
-                                            all_in_shipping = all(
-                                                alloc.allocation_status == 'in_shipping' 
+                                            all_pending_waybill = all(
+                                                alloc.allocation_status == 'pending_waybill' 
                                                 for alloc in allocations_with_transports
                                             )
                                             
-                                            if all_in_shipping:
-                                                order.status = 'in_shipping'
+                                            if all_pending_waybill:
+                                                order.status = 'pending_waybill'
                                                 order.save(update_fields=['status'])
-                                                bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در حال ارسال' تغییر کرد")
-                                                audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در حال ارسال' تغییر کرد")
+                                                bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار بارنامه' تغییر کرد")
+                                                audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار بارنامه' تغییر کرد")
                     
                     bug_logger.info(f"خروج کالا برای حمل {waybill_number} ثبت شد")
                     messages.success(request, f'خروج کالا برای حمل {waybill_number} با موفقیت ثبت شد.')
@@ -519,9 +519,9 @@ def register_loading_exit_view(request, waybill_number):
         # دریافت اطلاعات ProductInfo موجود
         product_info = transport.product_infos.first()
         if product_info:
-            initial_data['empty_weight'] = product_info.empty_weight
-            initial_data['gross_weight'] = product_info.gross_weight
-            initial_data['net_weight'] = product_info.net_weight
+            initial_data['empty_weight'] = transport.empty_weight
+            initial_data['gross_weight'] = transport.gross_weight
+            initial_data['net_weight'] = transport.net_weight
             initial_data['packaging_type'] = product_info.packaging_type
             
             # تبدیل نام انبار به شیء

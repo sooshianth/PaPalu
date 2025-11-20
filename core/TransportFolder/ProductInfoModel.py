@@ -31,26 +31,10 @@ class ProductInfo(models.Model):
         blank=True
     )
     
-    gross_weight = models.DecimalField(
+    weight = models.DecimalField(
         max_digits=15,
         decimal_places=3,
-        verbose_name='وزن پر',
-        null=True,
-        blank=True
-    )
-    
-    empty_weight = models.DecimalField(
-        max_digits=15,
-        decimal_places=3,
-        verbose_name='وزن خالی',
-        null=True,
-        blank=True
-    )
-    
-    net_weight = models.DecimalField(
-        max_digits=15,
-        decimal_places=3,
-        verbose_name='وزن خالص',
+        verbose_name='وزن',
         null=True,
         blank=True
     )
