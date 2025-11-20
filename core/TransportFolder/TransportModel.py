@@ -14,7 +14,7 @@ class Transport(models.Model):
     STATUS_CHOICES = [
         ('pending_vehicle_entry', 'در انتظار ورود خودرو به کارخانه'),
         ('vehicle_entered', 'خودرو وارد شده'),
-        ('loading', 'در حال بارگیری'),
+        ('loading', 'در انتظار بارگیری'),
         ('loaded', 'بارگیری شده'),
         ('in_transit', 'در حال حمل'),
         ('delivered', 'تحویل شده'),
