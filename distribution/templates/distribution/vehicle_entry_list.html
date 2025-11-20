@@ -1,0 +1,622 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .data-table tbody tr.incomplete {
+        background-color: #fff3cd;
+    }
+    
+    .data-table tbody tr.incomplete:hover {
+        background-color: #ffe69c;
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+    
+    .btn-outline-primary {
+        padding: 8px 15px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid var(--primary-green);
+        color: var(--primary-green);
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+        background: white;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .btn-success {
+        padding: 8px 15px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid var(--dark-green);
+        color: white;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-success:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .warning-icon {
+        color: #ffc107;
+        margin-left: 5px;
+    }
+    
+    /* مودال */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal.active {
+        display: flex;
+    }
+    
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .modal-header h3 {
+        color: var(--primary-green);
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+    
+    .form-group label.required::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .plate-input-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    
+    .plate-input-group .form-control {
+        flex: 1;
+    }
+    
+    .plate-separator {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: var(--gray-600);
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 25px;
+    }
+    
+    .image-preview {
+        margin-top: 10px;
+        max-width: 100%;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        display: none;
+    }
+    
+    .image-preview.active {
+        display: block;
+    }
+    
+    .readonly-info {
+        background: var(--gray-100);
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .readonly-info-item {
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .readonly-info-label {
+        font-weight: 600;
+        color: var(--gray-800);
+        display: inline-block;
+        min-width: 150px;
+    }
+    
+    .readonly-info-value {
+        color: var(--gray-600);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if transports_with_info %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>شناسه حمل</th>
+                        <th>شناسه تخصیص</th>
+                        <th>نوع ماشین</th>
+                        <th>پلاک خودرو</th>
+                        <th>نام راننده</th>
+                        <th>شماره ملی راننده</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in transports_with_info %}
+                    <tr class="{% if not item.is_complete %}incomplete{% endif %}">
+                        <td>
+                            <span class="code-badge">{{ item.transport.waybill_number }}</span>
+                            {% if not item.is_complete %}
+                                <span class="warning-icon">⚠️</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="code-badge">{{ item.transport.allocation_id|default:"-" }}</span>
+                        </td>
+                        <td>
+                            {{ item.vehicle_type|default:"-" }}
+                        </td>
+                        <td>
+                            {% if item.plate_number %}
+                                <span class="code-badge">{{ item.plate_number }}</span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.driver_name %}
+                                {{ item.driver_name }}
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.driver_national_id %}
+                                <span class="code-badge">{{ item.driver_national_id }}</span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td onclick="event.stopPropagation();">
+                            <button type="button" 
+                                    class="btn-success" 
+                                    onclick="showVehicleEntryModal('{{ item.transport.waybill_number }}')">
+                                ثبت ورود
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>حملی در انتظار ورود به کارخانه وجود ندارد.</p>
+        </div>
+    {% endif %}
+</div>
+
+<!-- مودال ثبت ورود خودرو -->
+<div id="vehicleEntryModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>ثبت ورود خودرو به کارخانه</h3>
+        </div>
+        <form method="post" 
+              action="{% url 'distribution:register_vehicle_entry' 'WAYBILL_NUMBER_PLACEHOLDER' %}" 
+              id="vehicleEntryForm"
+              enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- اطلاعات فقط خواندنی -->
+            <div class="readonly-info">
+                <div class="readonly-info-item">
+                    <span class="readonly-info-label">شناسه حمل:</span>
+                    <span class="readonly-info-value" id="readonly_waybill_number">-</span>
+                </div>
+                <div class="readonly-info-item">
+                    <span class="readonly-info-label">شناسه تخصیص:</span>
+                    <span class="readonly-info-value" id="readonly_allocation_id">-</span>
+                </div>
+            </div>
+            
+            <!-- فیلدهای اجباری -->
+            <div class="form-group">
+                <label for="driver_national_id" class="required">شماره ملی راننده</label>
+                <input type="text" 
+                       name="driver_national_id" 
+                       id="driver_national_id" 
+                       class="form-control" 
+                       placeholder="شماره ملی راننده"
+                       maxlength="10"
+                       pattern="[0-9]{10}"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="driver_name" class="required">نام راننده</label>
+                <input type="text" 
+                       name="driver_name" 
+                       id="driver_name" 
+                       class="form-control" 
+                       placeholder="نام راننده"
+                       required>
+            </div>
+            
+            <div class="form-group">
+                <label for="driver_mobile" class="required">شماره همراه راننده</label>
+                <input type="tel" 
+                       name="driver_mobile" 
+                       id="driver_mobile" 
+                       class="form-control" 
+                       placeholder="09XXXXXXXXX"
+                       pattern="09[0-9]{9}"
+                       required>
+            </div>
+            
+            <!-- پلاک خودرو -->
+            <div class="form-group">
+                <label class="required">پلاک خودرو</label>
+                <div class="plate-input-group">
+                    <input type="text" 
+                           name="plate_part1" 
+                           id="plate_part1" 
+                           class="form-control plate-input" 
+                           placeholder="99"
+                           maxlength="2"
+                           required>
+                    <span class="plate-separator">|</span>
+                    <input type="text" 
+                           name="plate_part2" 
+                           id="plate_part2" 
+                           class="form-control plate-input" 
+                           placeholder="123ب"
+                           maxlength="5"
+                           required>
+                    <span class="plate-separator">|</span>
+                    <input type="text" 
+                           name="plate_part3" 
+                           id="plate_part3" 
+                           class="form-control plate-input" 
+                           placeholder="21"
+                           maxlength="2"
+                           required>
+                </div>
+            </div>
+            
+            <!-- فیلدهای اختیاری -->
+            <div class="form-group">
+                <label for="vehicle_type">نوع ماشین</label>
+                <select name="vehicle_type" 
+                        id="vehicle_type" 
+                        class="form-control">
+                    <option value="">-- انتخاب کنید --</option>
+                    <option value="truck">کامیون</option>
+                    <option value="trailer">تریلی</option>
+                    <option value="van">ون</option>
+                    <option value="pickup">وانت</option>
+                    <option value="other">سایر</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="loading_type">نوع بارگیر</label>
+                <select name="loading_type" 
+                        id="loading_type" 
+                        class="form-control">
+                    <option value="">-- انتخاب کنید --</option>
+                    <option value="open">باز</option>
+                    <option value="closed">بسته</option>
+                    <option value="refrigerated">یخچال دار</option>
+                    <option value="tank">تانکر</option>
+                    <option value="flatbed">کفی</option>
+                    <option value="other">سایر</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="driver_description">توضیحات شخص</label>
+                <textarea name="driver_description" 
+                          id="driver_description" 
+                          class="form-control" 
+                          rows="3"
+                          placeholder="توضیحات شخص"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="national_card_file" class="required">کارت ملی</label>
+                <input type="file" 
+                       name="national_card_file" 
+                       id="national_card_file" 
+                       class="form-control" 
+                       accept="image/*,.pdf"
+                       capture="environment"
+                       required>
+                <img id="national_card_preview" class="image-preview" alt="پیش‌نمایش کارت ملی">
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" 
+                        class="btn-outline-primary" 
+                        onclick="closeVehicleEntryModal()">
+                    انصراف
+                </button>
+                <button type="submit" class="btn-success" id="submitBtn">تأیید ورود خودرو</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentWaybillNumber = null;
+    
+    // نمایش مودال ثبت ورود
+    function showVehicleEntryModal(waybillNumber) {
+        currentWaybillNumber = waybillNumber;
+        const form = document.getElementById('vehicleEntryForm');
+        form.action = form.action.replace('WAYBILL_NUMBER_PLACEHOLDER', waybillNumber);
+        
+        // بارگذاری اطلاعات حمل از طریق AJAX
+        fetch(`/distribution/vehicle-entry/${waybillNumber}/register/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('readonly_waybill_number').textContent = data.waybill_number || '-';
+            document.getElementById('readonly_allocation_id').textContent = data.allocation_id || '-';
+            
+            if (data.driver_national_id) {
+                document.getElementById('driver_national_id').value = data.driver_national_id;
+            }
+            if (data.driver_name) {
+                document.getElementById('driver_name').value = data.driver_name;
+            }
+            if (data.driver_mobile) {
+                document.getElementById('driver_mobile').value = data.driver_mobile;
+            }
+            if (data.driver_description) {
+                document.getElementById('driver_description').value = data.driver_description;
+            }
+            if (data.plate_part1) {
+                document.getElementById('plate_part1').value = data.plate_part1;
+            }
+            if (data.plate_part2) {
+                document.getElementById('plate_part2').value = data.plate_part2;
+            }
+            if (data.plate_part3) {
+                document.getElementById('plate_part3').value = data.plate_part3;
+            }
+            if (data.vehicle_type) {
+                document.getElementById('vehicle_type').value = data.vehicle_type;
+            }
+            if (data.loading_type) {
+                document.getElementById('loading_type').value = data.loading_type;
+            }
+        })
+        .catch(error => {
+            console.error('خطا در بارگذاری اطلاعات:', error);
+        });
+        
+        document.getElementById('vehicleEntryModal').classList.add('active');
+    }
+    
+    // بستن مودال
+    function closeVehicleEntryModal() {
+        document.getElementById('vehicleEntryModal').classList.remove('active');
+        document.getElementById('vehicleEntryForm').reset();
+        document.getElementById('national_card_preview').classList.remove('active');
+        document.getElementById('national_card_preview').src = '';
+    }
+    
+    // بستن مودال با کلیک روی پس‌زمینه
+    document.getElementById('vehicleEntryModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeVehicleEntryModal();
+        }
+    });
+    
+    // پیش‌نمایش تصویر کارت ملی
+    document.getElementById('national_card_file')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('national_card_preview');
+                preview.src = e.target.result;
+                preview.classList.add('active');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            document.getElementById('national_card_preview').classList.remove('active');
+        }
+    });
+    
+    // اعتبارسنجی فرم قبل از ارسال
+    document.getElementById('vehicleEntryForm')?.addEventListener('submit', function(e) {
+        const driverNationalId = document.getElementById('driver_national_id').value;
+        const driverName = document.getElementById('driver_name').value;
+        const driverMobile = document.getElementById('driver_mobile').value;
+        const platePart1 = document.getElementById('plate_part1').value;
+        const platePart2 = document.getElementById('plate_part2').value;
+        const platePart3 = document.getElementById('plate_part3').value;
+        const nationalCardFile = document.getElementById('national_card_file').files[0];
+        
+        // بررسی فیلدهای اجباری
+        if (!driverNationalId || !driverName || !driverMobile || !platePart1 || !platePart2 || !platePart3 || !nationalCardFile) {
+            e.preventDefault();
+            alert('لطفاً تمام فیلدهای اجباری را پر کنید.');
+            return false;
+        }
+        
+        // بررسی فرمت شماره ملی
+        if (!/^\d{10}$/.test(driverNationalId)) {
+            e.preventDefault();
+            alert('شماره ملی باید 10 رقم باشد.');
+            return false;
+        }
+        
+        // بررسی فرمت شماره همراه
+        if (!/^09\d{9}$/.test(driverMobile)) {
+            e.preventDefault();
+            alert('شماره همراه باید با فرمت 09XXXXXXXXX باشد.');
+            return false;
+        }
+        
+        return true;
+    });
+</script>
+{% endblock %}
+

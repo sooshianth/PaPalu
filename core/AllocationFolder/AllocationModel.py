@@ -13,6 +13,7 @@ class Allocation(models.Model):
         ('pending_shipping', 'در انتظار اعلام بار'),
         ('pending_vehicle_recruitment', 'در انتظار جذب خودرو'),
         ('pending_vehicle_entry', 'در انتظار ورود خودرو به کارخانه'),
+        ('pending_loading', 'در انتظار بارگیری'),
         ('in_shipping', 'در حال ارسال'),
         ('delivered', 'تحویل شده'),
         ('canceled', 'لغو شده'),
