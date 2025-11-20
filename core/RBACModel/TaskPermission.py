@@ -91,6 +91,8 @@ class TaskChoices(models.TextChoices):
     DISTRIBUTION_VIEW_VEHICLE_RECRUITMENT_LIST = 'distribution.view_vehicle_recruitment_list', 'مشاهده لیست جذب خودرو'
     DISTRIBUTION_CREATE_TRANSPORT = 'distribution.create_transport', 'ایجاد حمل جدید'
     DISTRIBUTION_COMPLETE_VEHICLE_RECRUITMENT = 'distribution.complete_vehicle_recruitment', 'تکمیل جذب خودرو'
+    DISTRIBUTION_VIEW_LOADING_EXIT_LIST = 'distribution.view_loading_exit_list', 'مشاهده لیست خروج کالا'
+    DISTRIBUTION_REGISTER_LOADING_EXIT = 'distribution.register_loading_exit', 'ثبت خروج کالا'
 
     # Access (دسترسی‌ها)
     ACCESS_FIELD_ACCESS_BULK_UPLOAD = 'access.field_access_bulk_upload', 'آپلود دسته‌ای دسترسی فیلدها'

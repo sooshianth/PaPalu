@@ -13,6 +13,10 @@ from distribution.views.vehicle_entry_view import (
     vehicle_entry_list_view,
     register_vehicle_entry_view
 )
+from distribution.views.loading_exit_view import (
+    loading_exit_list_view,
+    register_loading_exit_view
+)
 
 app_name = 'distribution'
 
@@ -25,4 +29,6 @@ urlpatterns = [
     path('vehicle-recruitment/<str:allocation_number>/complete/', complete_vehicle_recruitment_view, name='complete_vehicle_recruitment'),
     path('vehicle-entry/', vehicle_entry_list_view, name='vehicle_entry_list'),
     path('vehicle-entry/<str:waybill_number>/register/', register_vehicle_entry_view, name='register_vehicle_entry'),
+    path('loading-exit/', loading_exit_list_view, name='loading_exit_list'),
+    path('loading-exit/<str:waybill_number>/register/', register_loading_exit_view, name='register_loading_exit'),
 ]
