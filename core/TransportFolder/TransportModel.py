@@ -16,6 +16,7 @@ class Transport(models.Model):
         ('vehicle_entered', 'خودرو وارد شده'),
         ('loading', 'در انتظار بارگیری'),
         ('loaded', 'بارگیری شده'),
+        ('pending_waybill', 'در انتظار بارنامه'),
         ('in_transit', 'در حال حمل'),
         ('delivered', 'تحویل شده'),
         ('completed', 'تکمیل شده'),
@@ -152,6 +153,31 @@ class Transport(models.Model):
         max_length=20,
         choices=VEHICLE_TYPE_OFFICIAL_CHOICES,
         verbose_name='نوع ماشین (رسمی/غیررسمی)',
+        null=True,
+        blank=True
+    )
+
+    # فیلدهای وزن حمل
+    gross_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن پر',
+        null=True,
+        blank=True
+    )
+    
+    empty_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن خالی',
+        null=True,
+        blank=True
+    )
+    
+    net_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن خالص',
         null=True,
         blank=True
     )
