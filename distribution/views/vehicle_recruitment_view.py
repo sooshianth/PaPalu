@@ -19,9 +19,67 @@ from core.TransportFolder.LoadingScheduleInfoModel import LoadingScheduleInfo
 from core.TransportFolder.TruckInfoModel import TruckInfo
 from django.contrib.contenttypes.models import ContentType
 from sales.views.allocation_list_view import get_delivery_address_info
+from access.helpers import check_field_access_prefer_edit
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_person_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Person"""
+    if user.is_superuser:
+        return {'name': True, 'national_id': True, 'description': True}
+    
+    accessible_fields = {}
+    accessible_fields['name'] = check_field_access_prefer_edit(user, Person, 'name')
+    accessible_fields['national_id'] = check_field_access_prefer_edit(user, Person, 'national_id')
+    accessible_fields['description'] = check_field_access_prefer_edit(user, Person, 'description')
+    return accessible_fields
+
+
+def get_accessible_delivery_address_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای DeliveryAddress"""
+    if user.is_superuser:
+        return {
+            'recipient_name': True,
+            'recipient_national_id': True,
+            'unique_delivery_id': True,
+            'address': True,
+            'province': True,
+            'city': True,
+            'postal_code': True
+        }
+    
+    accessible_fields = {}
+    accessible_fields['recipient_name'] = check_field_access_prefer_edit(user, DeliveryAddress, 'recipient_name')
+    accessible_fields['recipient_national_id'] = check_field_access_prefer_edit(user, DeliveryAddress, 'recipient_national_id')
+    accessible_fields['unique_delivery_id'] = check_field_access_prefer_edit(user, DeliveryAddress, 'unique_delivery_id')
+    accessible_fields['address'] = check_field_access_prefer_edit(user, DeliveryAddress, 'address')
+    accessible_fields['province'] = check_field_access_prefer_edit(user, DeliveryAddress, 'province')
+    accessible_fields['city'] = check_field_access_prefer_edit(user, DeliveryAddress, 'city')
+    accessible_fields['postal_code'] = check_field_access_prefer_edit(user, DeliveryAddress, 'postal_code')
+    return accessible_fields
+
+
+def get_accessible_allocation_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Allocation"""
+    if user.is_superuser:
+        return {'allocation_number': True, 'allocation_priority': True}
+    
+    accessible_fields = {}
+    accessible_fields['allocation_number'] = check_field_access_prefer_edit(user, Allocation, 'allocation_number')
+    accessible_fields['allocation_priority'] = check_field_access_prefer_edit(user, Allocation, 'allocation_priority')
+    return accessible_fields
+
+
+def get_accessible_order_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Order"""
+    if user.is_superuser:
+        return {'order_number': True}
+    
+    accessible_fields = {}
+    accessible_fields['order_number'] = check_field_access_prefer_edit(user, Order, 'order_number')
+    return accessible_fields
 
 
 @login_required
@@ -31,9 +89,9 @@ def vehicle_recruitment_list_view(request):
     """
     audit_logger.info("درخواست مشاهده لیست تخصیص‌های در انتظار جذب خودرو")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_RECRUIT_VEHICLE.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_VIEW_VEHICLE_RECRUITMENT_LIST.value):
         audit_logger.activity("تلاش برای دسترسی به لیست جذب خودرو بدون دسترسی")
-        messages.error(request, 'شما دسترسی به جذب خودرو را ندارید.')
+        messages.error(request, 'شما دسترسی به مشاهده لیست جذب خودرو را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     # دریافت تخصیص‌های در انتظار جذب خودرو
@@ -63,10 +121,20 @@ def vehicle_recruitment_list_view(request):
             'transports_count': transports_count,
         })
     
+    # بررسی دسترسی فیلدها
+    accessible_person_fields = get_accessible_person_fields(request.user)
+    accessible_delivery_fields = get_accessible_delivery_address_fields(request.user)
+    accessible_allocation_fields = get_accessible_allocation_fields(request.user)
+    accessible_order_fields = get_accessible_order_fields(request.user)
+    
     bug_logger.debug(f"تعداد {len(allocations_with_info)} تخصیص در انتظار جذب خودرو لود شد")
     
     context = {
         'allocations_with_info': allocations_with_info,
+        'accessible_person_fields': accessible_person_fields,
+        'accessible_delivery_fields': accessible_delivery_fields,
+        'accessible_allocation_fields': accessible_allocation_fields,
+        'accessible_order_fields': accessible_order_fields,
         'page_title': 'لیست تخصیص‌های در انتظار جذب خودرو',
     }
     return render(request, 'distribution/vehicle_recruitment_list.html', context)
@@ -79,9 +147,9 @@ def create_transport_view(request, allocation_number):
     """
     audit_logger.info(f"درخواست ایجاد حمل برای تخصیص {allocation_number}")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_RECRUIT_VEHICLE.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_CREATE_TRANSPORT.value):
         audit_logger.activity("تلاش برای ایجاد حمل بدون دسترسی")
-        messages.error(request, 'شما دسترسی به جذب خودرو را ندارید.')
+        messages.error(request, 'شما دسترسی به ایجاد حمل را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     allocation = get_object_or_404(Allocation, allocation_number=allocation_number)
@@ -222,9 +290,9 @@ def complete_vehicle_recruitment_view(request, allocation_number):
     """
     audit_logger.info(f"درخواست تکمیل جذب خودرو برای تخصیص {allocation_number}")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_RECRUIT_VEHICLE.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_COMPLETE_VEHICLE_RECRUITMENT.value):
         audit_logger.activity("تلاش برای تکمیل جذب خودرو بدون دسترسی")
-        messages.error(request, 'شما دسترسی به جذب خودرو را ندارید.')
+        messages.error(request, 'شما دسترسی به تکمیل جذب خودرو را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     allocation = get_object_or_404(Allocation, allocation_number=allocation_number)

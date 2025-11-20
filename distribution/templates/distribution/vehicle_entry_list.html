@@ -285,10 +285,18 @@
                     <tr>
                         <th>شناسه حمل</th>
                         <th>شناسه تخصیص</th>
+                        {% if accessible_truck_info_fields.vehicle_type %}
                         <th>نوع ماشین</th>
+                        {% endif %}
+                        {% if accessible_truck_info_fields.plate_number %}
                         <th>پلاک خودرو</th>
+                        {% endif %}
+                        {% if accessible_person_fields.name %}
                         <th>نام راننده</th>
+                        {% endif %}
+                        {% if accessible_person_fields.national_id %}
                         <th>شماره ملی راننده</th>
+                        {% endif %}
                         <th>عملیات</th>
                     </tr>
                 </thead>
@@ -304,9 +312,12 @@
                         <td>
                             <span class="code-badge">{{ item.transport.allocation_id|default:"-" }}</span>
                         </td>
+                        {% if accessible_truck_info_fields.vehicle_type %}
                         <td>
                             {{ item.vehicle_type|default:"-" }}
                         </td>
+                        {% endif %}
+                        {% if accessible_truck_info_fields.plate_number %}
                         <td>
                             {% if item.plate_number %}
                                 <span class="code-badge">{{ item.plate_number }}</span>
@@ -314,6 +325,8 @@
                                 <span style="color: var(--gray-400);">-</span>
                             {% endif %}
                         </td>
+                        {% endif %}
+                        {% if accessible_person_fields.name %}
                         <td>
                             {% if item.driver_name %}
                                 {{ item.driver_name }}
@@ -321,6 +334,8 @@
                                 <span style="color: var(--gray-400);">-</span>
                             {% endif %}
                         </td>
+                        {% endif %}
+                        {% if accessible_person_fields.national_id %}
                         <td>
                             {% if item.driver_national_id %}
                                 <span class="code-badge">{{ item.driver_national_id }}</span>
@@ -328,6 +343,7 @@
                                 <span style="color: var(--gray-400);">-</span>
                             {% endif %}
                         </td>
+                        {% endif %}
                         <td onclick="event.stopPropagation();">
                             <button type="button" 
                                     class="btn-success" 

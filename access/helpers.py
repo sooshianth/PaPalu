@@ -116,9 +116,10 @@ def get_model_dict_with_access(user, model_instance, access_type='view'):
 
 def check_field_access_prefer_edit(user, model_class, field_name):
     """
-    بررسی دسترسی به فیلد با اولویت edit
-    اگر کاربر دسترسی edit داشت، True برمی‌گرداند
-    در غیر این صورت دسترسی view بررسی می‌شود
+    بررسی دسترسی به فیلد برای فرم‌های ویرایش
+    
+    برای نمایش فیلد در فرم، کاربر باید هم دسترسی view و هم دسترسی edit داشته باشد.
+    اگر یکی از آنها محدود باشد، فیلد نمایش داده نمی‌شود.
     
     Args:
         user: شیء کاربر
@@ -126,15 +127,15 @@ def check_field_access_prefer_edit(user, model_class, field_name):
         field_name: نام فیلد
     
     Returns:
-        True اگر کاربر دسترسی دارد، در غیر این صورت False
+        True اگر کاربر می‌تواند فیلد را ببیند و ویرایش کند، در غیر این صورت False
     """
     if user.is_superuser:
         return True
     
-    # اولویت با edit است
-    if user_can_access_field(user, model_class, field_name, 'edit'):
-        return True
+    # باید هم دسترسی view و هم دسترسی edit داشته باشد
+    can_view = user_can_access_field(user, model_class, field_name, 'view')
+    can_edit = user_can_access_field(user, model_class, field_name, 'edit')
     
-    # در غیر این صورت view بررسی می‌شود
-    return user_can_access_field(user, model_class, field_name, 'view')
+    # هر دو باید True باشند
+    return can_view and can_edit
 

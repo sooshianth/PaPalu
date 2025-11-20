@@ -16,10 +16,37 @@ from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.AllocationFolder.AllocationModel import Allocation
 from django.contrib.contenttypes.models import ContentType
+from access.helpers import check_field_access_prefer_edit
 import re
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_person_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Person"""
+    if user.is_superuser:
+        return {'name': True, 'national_id': True, 'description': True}
+    
+    accessible_fields = {}
+    accessible_fields['name'] = check_field_access_prefer_edit(user, Person, 'name')
+    accessible_fields['national_id'] = check_field_access_prefer_edit(user, Person, 'national_id')
+    accessible_fields['description'] = check_field_access_prefer_edit(user, Person, 'description')
+    return accessible_fields
+
+
+def get_accessible_truck_info_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای TruckInfo"""
+    if user.is_superuser:
+        return {'plate_number': True, 'vehicle_type': True, 'loading_type': True}
+    
+    from core.TransportFolder.TruckInfoModel import TruckInfo
+    
+    accessible_fields = {}
+    accessible_fields['plate_number'] = check_field_access_prefer_edit(user, TruckInfo, 'plate_number')
+    accessible_fields['vehicle_type'] = check_field_access_prefer_edit(user, TruckInfo, 'vehicle_type')
+    accessible_fields['loading_type'] = check_field_access_prefer_edit(user, TruckInfo, 'loading_type')
+    return accessible_fields
 
 
 @login_required
@@ -29,9 +56,9 @@ def vehicle_entry_list_view(request):
     """
     audit_logger.info("درخواست مشاهده لیست حمل‌های در انتظار ورود به کارخانه")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_VALIDATE_VEHICLE_ENTRY.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_VIEW_VEHICLE_ENTRY_LIST.value):
         audit_logger.activity("تلاش برای دسترسی به لیست ورود خودرو بدون دسترسی")
-        messages.error(request, 'شما دسترسی به ثبت ورود خودرو را ندارید.')
+        messages.error(request, 'شما دسترسی به مشاهده لیست ورود خودرو را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     # دریافت حمل‌های در انتظار ورود به کارخانه
@@ -90,10 +117,16 @@ def vehicle_entry_list_view(request):
             'is_complete': is_complete,
         })
     
+    # بررسی دسترسی فیلدها
+    accessible_person_fields = get_accessible_person_fields(request.user)
+    accessible_truck_info_fields = get_accessible_truck_info_fields(request.user)
+    
     bug_logger.debug(f"تعداد {len(transports_with_info)} حمل در انتظار ورود به کارخانه لود شد")
     
     context = {
         'transports_with_info': transports_with_info,
+        'accessible_person_fields': accessible_person_fields,
+        'accessible_truck_info_fields': accessible_truck_info_fields,
         'page_title': 'لیست حمل‌های در انتظار ورود به کارخانه',
     }
     return render(request, 'distribution/vehicle_entry_list.html', context)
@@ -106,7 +139,7 @@ def register_vehicle_entry_view(request, waybill_number):
     """
     audit_logger.info(f"درخواست ثبت ورود خودرو برای حمل {waybill_number}")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_VALIDATE_VEHICLE_ENTRY.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_REGISTER_VEHICLE_ENTRY.value):
         audit_logger.activity("تلاش برای ثبت ورود خودرو بدون دسترسی")
         messages.error(request, 'شما دسترسی به ثبت ورود خودرو را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -364,19 +397,31 @@ def register_vehicle_entry_view(request, waybill_number):
             vehicle_type = truck_info.vehicle_type
             loading_type = truck_info.loading_type
         
-        return JsonResponse({
+        # بررسی دسترسی فیلدها
+        accessible_person_fields = get_accessible_person_fields(request.user)
+        
+        response_data = {
             'waybill_number': transport.waybill_number,
             'allocation_id': transport.allocation_id,
-            'driver_name': driver_name,
-            'driver_national_id': driver_national_id,
-            'driver_mobile': driver_mobile,
-            'driver_description': driver_description,
             'plate_part1': plate_part1,
             'plate_part2': plate_part2,
             'plate_part3': plate_part3,
             'vehicle_type': vehicle_type,
             'loading_type': loading_type,
-        })
+        }
+        
+        # فقط فیلدهایی که کاربر دسترسی دارد را اضافه کن
+        if accessible_person_fields.get('name'):
+            response_data['driver_name'] = driver_name
+        if accessible_person_fields.get('national_id'):
+            response_data['driver_national_id'] = driver_national_id
+        if accessible_person_fields.get('description'):
+            response_data['driver_description'] = driver_description
+        
+        # شماره همراه را همیشه نشان بده (چون مربوط به PhoneNumber است، نه Person)
+        response_data['driver_mobile'] = driver_mobile
+        
+        return JsonResponse(response_data)
     
     # در غیر این صورت به لیست برگرد
     return redirect('distribution:vehicle_entry_list')

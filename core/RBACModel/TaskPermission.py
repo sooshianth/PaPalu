@@ -82,6 +82,15 @@ class TaskChoices(models.TextChoices):
     DISTRIBUTION_CREATE_TRANSPORTATION = 'distribution.create_transportation', 'ایجاد حمل'
     DISTRIBUTION_CREATE_DRIVER = 'distribution.create_driver', 'ایجاد شخص راننده'
     DISTRIBUTION_SEND_WEIGHT_INFO = 'distribution.send_weight_info', 'ارسال اطلاعات وزنی به باربری'
+    
+    # Distribution - ویوهای دقیق
+    DISTRIBUTION_VIEW_SHIPPING_ANNOUNCEMENT_LIST = 'distribution.view_shipping_announcement_list', 'مشاهده لیست اعلام بار'
+    DISTRIBUTION_PROCESS_SHIPPING_ANNOUNCEMENT = 'distribution.process_shipping_announcement', 'پردازش اعلام بار'
+    DISTRIBUTION_VIEW_VEHICLE_ENTRY_LIST = 'distribution.view_vehicle_entry_list', 'مشاهده لیست ورود خودرو'
+    DISTRIBUTION_REGISTER_VEHICLE_ENTRY = 'distribution.register_vehicle_entry', 'ثبت ورود خودرو'
+    DISTRIBUTION_VIEW_VEHICLE_RECRUITMENT_LIST = 'distribution.view_vehicle_recruitment_list', 'مشاهده لیست جذب خودرو'
+    DISTRIBUTION_CREATE_TRANSPORT = 'distribution.create_transport', 'ایجاد حمل جدید'
+    DISTRIBUTION_COMPLETE_VEHICLE_RECRUITMENT = 'distribution.complete_vehicle_recruitment', 'تکمیل جذب خودرو'
 
     # Access (دسترسی‌ها)
     ACCESS_FIELD_ACCESS_BULK_UPLOAD = 'access.field_access_bulk_upload', 'آپلود دسته‌ای دسترسی فیلدها'
