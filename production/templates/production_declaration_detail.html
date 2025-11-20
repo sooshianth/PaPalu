@@ -320,30 +320,122 @@
     <div class="card">
         <div class="card-body">
             {% if raw_materials_inventory %}
+            <style>
+                .material-row {
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    background: white;
+                }
+                
+                .material-row:hover {
+                    background: #f0f7ff !important;
+                }
+                
+                .material-row.expanded {
+                    background: #e3f2fd !important;
+                    font-weight: 600;
+                }
+                
+                .expand-icon {
+                    display: inline-block;
+                    transition: transform 0.3s ease;
+                    margin-left: 8px;
+                    font-size: 0.8rem;
+                    color: var(--primary-green);
+                }
+                
+                .material-row.expanded .expand-icon {
+                    transform: rotate(90deg);
+                }
+                
+                .warehouse-row {
+                    background: #f8fafb !important;
+                    border-left: 3px solid var(--primary-green);
+                    font-size: 0.85rem;
+                }
+                
+                .warehouse-row td {
+                    padding: 8px 12px !important;
+                    color: #5a6c7d;
+                }
+                
+                .warehouse-row td:first-child {
+                    padding-right: 32px !important;
+                }
+                
+                .warehouse-indent {
+                    display: inline-block;
+                    margin-left: 16px;
+                    color: #6c757d;
+                }
+                
+                .total-badge {
+                    display: inline-block;
+                    background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+                    color: white;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    margin-right: 6px;
+                }
+            </style>
             <div class="table-wrap">
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>کد ماده</th>
                             <th>نام ماده اولیه</th>
-                            <th>انبار</th>
-                            <th>موجودی</th>
+                            <th>موجودی کل</th>
                             <th>واحد</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for item in raw_materials_inventory %}
-                        <tr>
-                            <td>{{ item.raw_material_id }}</td>
+                        <tr class="material-row" onclick="toggleWarehousesDetail('rm-detail-{{ forloop.counter }}', this)" data-rm-id="{{ item.raw_material_id }}">
+                            <td>
+                                <span class="expand-icon">▶</span>
+                                {{ item.raw_material_id }}
+                            </td>
                             <td>{{ item.name }}</td>
-                            <td>{{ item.warehouse }}</td>
-                            <td>{{ item.quantity|floatformat:2 }}</td>
+                            <td><span class="total-badge">{{ item.total_quantity|floatformat:2 }}</span></td>
                             <td>{{ item.unit }}</td>
                         </tr>
+                        {% for warehouse in item.warehouses %}
+                        <tr class="warehouse-row" id="rm-detail-{{ forloop.parentloop.counter }}-wh-{{ forloop.counter }}" style="display: none;">
+                            <td colspan="2">
+                                <span class="warehouse-indent">📦 {{ warehouse.warehouse_name }} ({{ warehouse.warehouse_id }})</span>
+                            </td>
+                            <td>{{ warehouse.quantity|floatformat:2 }}</td>
+                            <td>{{ item.unit }}</td>
+                        </tr>
+                        {% endfor %}
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            
+            <script>
+            function toggleWarehousesDetail(rmId, row) {
+                // Find all warehouse rows for this material
+                const warehouseRows = document.querySelectorAll(`[id^="${rmId}-wh-"]`);
+                const isExpanded = row.classList.contains('expanded');
+                
+                if (isExpanded) {
+                    // Collapse
+                    warehouseRows.forEach(whRow => {
+                        whRow.style.display = 'none';
+                    });
+                    row.classList.remove('expanded');
+                } else {
+                    // Expand
+                    warehouseRows.forEach(whRow => {
+                        whRow.style.display = 'table-row';
+                    });
+                    row.classList.add('expanded');
+                }
+            }
+            </script>
             {% else %}
             <div class="empty-state">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

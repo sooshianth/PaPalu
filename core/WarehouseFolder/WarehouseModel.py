@@ -25,6 +25,13 @@ class Warehouse(models.Model):
         blank=True
     )
     
+    name = models.CharField(
+        max_length=200,
+        verbose_name='نام انبار',
+        null=True,
+        blank=True
+    )
+    
     warehouse_capacity = models.DecimalField(
         max_digits=15,
         decimal_places=3,
@@ -86,6 +93,8 @@ class Warehouse(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
+        if self.name:
+            return self.name
         warehouse_id = self.warehouse_id or 'N/A'
         warehouse_type = self.get_warehouse_type_display() if self.warehouse_type else 'N/A'
         return f"{warehouse_id} - {warehouse_type}"

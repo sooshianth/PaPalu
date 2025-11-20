@@ -271,7 +271,16 @@ def production_declaration_view(request):
                     
                     bug_logger.debug(f"تعداد آیتم‌های موجودی مواد اولیه: {inventory_items.count()}")
                     
-                    # ساخت لیست موجودی مواد اولیه
+                    # گروه‌بندی مواد اولیه بر اساس ID و جمع موجودی از انبارها
+                    from collections import defaultdict
+                    raw_materials_grouped = defaultdict(lambda: {
+                        'raw_material_id': '',
+                        'name': '',
+                        'total_quantity': Decimal('0'),
+                        'unit': '',
+                        'warehouses': []
+                    })
+                    
                     for item in inventory_items:
                         try:
                             raw_material = item.item  # Generic relation
@@ -280,16 +289,34 @@ def production_declaration_view(request):
                                 continue
                             
                             if raw_material:
-                                raw_materials_inventory.append({
-                                    'raw_material_id': getattr(raw_material, 'raw_material_id', '-'),
-                                    'name': getattr(raw_material, 'name', '-'),
-                                    'warehouse': item.warehouse.warehouse_id if item.warehouse else '-',
-                                    'quantity': str(item.quantity) if item.quantity else '0',
-                                    'unit': item.unit or 'تن',
+                                rm_id = getattr(raw_material, 'raw_material_id', '-')
+                                quantity = item.quantity if item.quantity else Decimal('0')
+                                
+                                # جمع کردن موجودی کل
+                                raw_materials_grouped[rm_id]['raw_material_id'] = rm_id
+                                raw_materials_grouped[rm_id]['name'] = getattr(raw_material, 'name', '-')
+                                raw_materials_grouped[rm_id]['total_quantity'] += quantity
+                                raw_materials_grouped[rm_id]['unit'] = item.unit or 'تن'
+                                
+                                # ذخیره جزئیات انبار
+                                raw_materials_grouped[rm_id]['warehouses'].append({
+                                    'warehouse_id': item.warehouse.warehouse_id if item.warehouse else '-',
+                                    'warehouse_name': item.warehouse.name if (item.warehouse and item.warehouse.name) else (str(item.warehouse) if item.warehouse else '-'),
+                                    'quantity': str(quantity),
                                 })
                         except Exception as e:
                             bug_logger.warning(f"خطا در بارگذاری ماده اولیه: {str(e)}")
                             continue
+                    
+                    # تبدیل به لیست
+                    for rm_id, data in raw_materials_grouped.items():
+                        raw_materials_inventory.append({
+                            'raw_material_id': data['raw_material_id'],
+                            'name': data['name'],
+                            'total_quantity': str(data['total_quantity']),
+                            'unit': data['unit'],
+                            'warehouses': data['warehouses']
+                        })
                     
                     bug_logger.debug(f"تعداد مواد اولیه پردازش شده: {len(raw_materials_inventory)}")
                     
@@ -626,6 +653,16 @@ def production_program_crud_view(request, program_id=None):
                     
                     bug_logger.debug(f"تعداد آیتم‌های موجودی: {inventory_items.count()}")
                     
+                    # گروه‌بندی مواد اولیه بر اساس ID و جمع موجودی از انبارها
+                    from collections import defaultdict
+                    raw_materials_grouped = defaultdict(lambda: {
+                        'raw_material_id': '',
+                        'name': '',
+                        'total_quantity': Decimal('0'),
+                        'unit': '',
+                        'warehouses': []
+                    })
+                    
                     for item in inventory_items:
                         try:
                             raw_material = item.item
@@ -634,16 +671,34 @@ def production_program_crud_view(request, program_id=None):
                                 continue
                             
                             if raw_material:
-                                raw_materials_inventory.append({
-                                    'raw_material_id': getattr(raw_material, 'raw_material_id', '-'),
-                                    'name': getattr(raw_material, 'name', '-'),
-                                    'warehouse': item.warehouse.warehouse_id if item.warehouse else '-',
-                                    'quantity': str(item.quantity) if item.quantity else '0',
-                                    'unit': item.unit or 'تن',
+                                rm_id = getattr(raw_material, 'raw_material_id', '-')
+                                quantity = item.quantity if item.quantity else Decimal('0')
+                                
+                                # جمع کردن موجودی کل
+                                raw_materials_grouped[rm_id]['raw_material_id'] = rm_id
+                                raw_materials_grouped[rm_id]['name'] = getattr(raw_material, 'name', '-')
+                                raw_materials_grouped[rm_id]['total_quantity'] += quantity
+                                raw_materials_grouped[rm_id]['unit'] = item.unit or 'تن'
+                                
+                                # ذخیره جزئیات انبار
+                                raw_materials_grouped[rm_id]['warehouses'].append({
+                                    'warehouse_id': item.warehouse.warehouse_id if item.warehouse else '-',
+                                    'warehouse_name': item.warehouse.name if (item.warehouse and item.warehouse.name) else (str(item.warehouse) if item.warehouse else '-'),
+                                    'quantity': str(quantity),
                                 })
                         except Exception as e:
                             bug_logger.warning(f"خطا در بارگذاری ماده اولیه: {str(e)}")
                             continue
+                    
+                    # تبدیل به لیست
+                    for rm_id, data in raw_materials_grouped.items():
+                        raw_materials_inventory.append({
+                            'raw_material_id': data['raw_material_id'],
+                            'name': data['name'],
+                            'total_quantity': str(data['total_quantity']),
+                            'unit': data['unit'],
+                            'warehouses': data['warehouses']
+                        })
                     
                 except ContentType.DoesNotExist:
                     bug_logger.warning("ContentType برای RawMaterial یافت نشد")
