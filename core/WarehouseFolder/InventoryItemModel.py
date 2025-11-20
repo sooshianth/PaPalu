@@ -38,23 +38,6 @@ class InventoryItem(models.Model):
     )
     item = GenericForeignKey('content_type', 'object_id')
     
-    UNIT_CHOICES = [
-        ('gr', 'گرم'),
-        ('kg', 'کیلوگرم'),
-        ('ton', 'تن'),
-        ('m3', 'متر مکعب'),
-        ('ltr', 'لیتر'),
-        ('cc', 'میلی لیتر'),
-    ]
-
-    unit = models.CharField(
-        max_length=3,
-        choices=UNIT_CHOICES,
-        verbose_name='واحد',
-        blank=True,
-        null=True
-    )
-    
     quantity = models.DecimalField(
         max_digits=15,
         decimal_places=3,
@@ -85,6 +68,16 @@ class InventoryItem(models.Model):
         indexes = [
             models.Index(fields=['content_type', 'object_id']),
         ]
+    
+    @property
+    def unit(self):
+        """Get unit from the item's primary/main unit"""
+        if self.item:
+            if self.is_raw_material and hasattr(self.item, 'primary_unit'):
+                return self.item.primary_unit or 'تن'
+            elif self.is_product and hasattr(self.item, 'main_unit'):
+                return self.item.main_unit or 'تن'
+        return 'تن'
     
     def __str__(self):
         warehouse_id = self.warehouse.warehouse_id if self.warehouse else 'N/A'

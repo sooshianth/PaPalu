@@ -127,8 +127,7 @@ class StockEntry(models.Model):
             content_type=content_type,
             object_id=item_identifier,
             defaults={
-                'quantity': 0,
-                'unit': 'تن' if not is_product else getattr(item, 'unit', 'تن')
+                'quantity': 0
             }
         )
         
