@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% block title %}لیست تأمین‌کنندگان{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04);margin-bottom:20px}
+  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
+  .card-body {padding:22px}
+  .table-wrap {overflow-x:auto;background:#fff;border:1px solid #e3e7ea;border-radius:10px;padding:12px}
+  table.dataTable {width:100%;border-collapse:collapse;font-size:.88rem}
+  table.dataTable thead th {background:#f2f6f5;padding:10px 12px;text-align:center;border:1px solid #e3e7ea;font-weight:600;color:#37474f}
+  table.dataTable tbody td {padding:10px 12px;border:1px solid #e3e7ea;text-align:center;vertical-align:middle}
+  table.dataTable tbody tr:hover {background:#f8f9fa}
+  .btn-group {display:flex;gap:6px;justify-content:center}
+  .badge {padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:600}
+  .badge-legal {background:#e3f2fd;color:#1976d2}
+  .badge-natural {background:#f3e5f5;color:#7b1fa2}
+</style>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size:1.1rem">لیست تأمین‌کنندگان</h3>
+    <div>
+      <a href="{% url 'supply:create_supplier' %}" class="btn btn-primary btn-sm">ایجاد تأمین‌کننده جدید</a>
+      <a href="{% url 'supply:home' %}" class="btn btn-secondary btn-sm">دامنه تامین</a>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <div class="table-wrap">
+      <table id="suppliersTable" class="dataTable">
+        <thead>
+          <tr>
+            <th>کد ملی</th>
+            <th>نام تأمین‌کننده</th>
+            <th>نوع</th>
+            <th>شماره ثبت</th>
+            <th>شماره تلفن</th>
+            <th>عملیات</th>
+          </tr>
+          <tr class="filters">
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for supplier in suppliers %}
+          <tr>
+            <td>{{ supplier.national_id }}</td>
+            <td><strong>{{ supplier.name|default:"—" }}</strong></td>
+            <td>
+              {% if supplier.nature == 'legal' %}
+                <span class="badge badge-legal">حقوقی</span>
+              {% elif supplier.nature == 'natural' %}
+                <span class="badge badge-natural">حقیقی</span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ supplier.registration_number|default:"—" }}</td>
+            <td>{{ supplier.phone_number|default:"—" }}</td>
+            <td>
+              <div class="btn-group">
+                <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-info btn-sm">جزئیات</a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6">تأمین‌کننده‌ای برای نمایش موجود نیست.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script>
+  $(document).ready(function() {
+    var table = $('#suppliersTable').DataTable({
+      language: {
+        url: '//cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json',
+        searchPlaceholder: 'جستجو...',
+        search: 'فیلتر:',
+        lengthMenu: 'نمایش _MENU_ ردیف',
+        info: 'نمایش _START_ تا _END_ از _TOTAL_ ردیف',
+        infoEmpty: 'هیچ رکوردی موجود نیست',
+        infoFiltered: '(فیلتر شده از _MAX_ ردیف)',
+        paginate: {
+          first: 'اول',
+          last: 'آخر',
+          next: 'بعدی',
+          previous: 'قبلی'
+        }
+      },
+      orderCellsTop: true,
+      fixedHeader: true,
+      pageLength: 25,
+      order: [[0, 'desc']],
+      initComplete: function () {
+        var api = this.api();
+        api.columns().eq(0).each(function (colIdx) {
+          if (colIdx === 5) return; // Skip operations column
+          var cell = $('.filters th').eq(colIdx);
+          var title = $(cell).text();
+          $(cell).html('<input type="text" placeholder="' + title + '" style="width:100%;padding:4px;font-size:.8rem;border:1px solid #ccc;border-radius:4px" />');
+          $('input', $('.filters th').eq(colIdx)).on('keyup change', function () {
+            if (api.column(colIdx).search() !== this.value) {
+              api.column(colIdx).search(this.value).draw();
+            }
+          });
+        });
+      }
+    });
+  });
+</script>
+{% endblock %}

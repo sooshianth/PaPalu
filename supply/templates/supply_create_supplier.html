@@ -18,13 +18,6 @@
   .field input:focus, .field select:focus, .field textarea:focus{outline:none;border-color:#28a745;box-shadow:0 0 0 3px rgba(40,167,69,0.15)}
   .required-marker{color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px}
   .submit-row{margin-top:8px;display:flex;gap:10px}
-  /* Make .card.mb-3 blocks look like .form-wrapper */
-  .card.mb-3{background:#fafafa;border:1px solid #e3e7ea;border-radius:12px;margin-bottom:26px}
-  .card.mb-3 .card-header{background:linear-gradient(135deg,#f8f9fa,#eef5f1);border-bottom:1px solid #e3e7ea;padding:14px 20px}
-  .card.mb-3 .card-body{padding:18px 20px}
-  .card.mb-3 .table{width:100%;border-collapse:collapse;border:1px solid #e3e7ea;border-radius:8px;overflow:hidden}
-  .card.mb-3 .table th,.card.mb-3 .table td{border:1px solid #e3e7ea;padding:8px 10px;text-align:center;vertical-align:middle;font-size:.85rem}
-  .card.mb-3 .table thead th{background:#f2f6f5;font-weight:600;color:#37474f}
 </style>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
@@ -54,17 +47,61 @@
           اطلاعات شخص/شرکت
         </div>
         <div class="form-groups">
-          <div class="field"><label>{% if person_form.national_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.national_id.label }}</label>{{ person_form.national_id }}</div>
-          <div class="field"><label>{% if person_form.name.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.name.label }}</label>{{ person_form.name }}</div>
-          <div class="field"><label>{% if person_form.nature.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.nature.label }}</label>{{ person_form.nature }}</div>
-          <div class="field"><label>{{ person_form.registration_number.label }}</label>{{ person_form.registration_number }}</div>
-          <div class="field"><label>{{ person_form.birth_date.label }}</label>{{ person_form.birth_date }}</div>
-          <div class="field"><label>{{ person_form.accounting_code.label }}</label>{{ person_form.accounting_code }}</div>
-          <div class="field"><label>{{ person_form.user_type.label }}</label>{{ person_form.user_type }}</div>
-          <div class="field"><label>{{ person_form.phone_number.label }}</label>{{ person_form.phone_number }}</div>
-          <div class="field"><label>{{ person_form.sales_expert.label }}</label>{{ person_form.sales_expert }}</div>
-          <div class="field"><label>{{ person_form.introducer.label }}</label>{{ person_form.introducer }}</div>
-          <div class="field" style="grid-column:1/-1"><label>{{ person_form.description.label }}</label>{{ person_form.description }}</div>
+          <div class="field">
+            <label>{% if person_form.national_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.national_id.label }}</label>
+            {{ person_form.national_id }}
+            {% if person_form.national_id.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.national_id.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{% if person_form.name.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.name.label }}</label>
+            {{ person_form.name }}
+            {% if person_form.name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.name.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{% if person_form.nature.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.nature.label }}</label>
+            {{ person_form.nature }}
+            {% if person_form.nature.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.nature.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.registration_number.label }}</label>
+            {{ person_form.registration_number }}
+            {% if person_form.registration_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.registration_number.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.birth_date.label }}</label>
+            {{ person_form.birth_date }}
+            {% if person_form.birth_date.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.birth_date.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.accounting_code.label }}</label>
+            {{ person_form.accounting_code }}
+            {% if person_form.accounting_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.accounting_code.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.user_type.label }}</label>
+            {{ person_form.user_type }}
+            {% if person_form.user_type.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.user_type.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.phone_number.label }}</label>
+            {{ person_form.phone_number }}
+            {% if person_form.phone_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.phone_number.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.sales_expert.label }}</label>
+            {{ person_form.sales_expert }}
+            {% if person_form.sales_expert.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.sales_expert.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ person_form.introducer.label }}</label>
+            {{ person_form.introducer }}
+            {% if person_form.introducer.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.introducer.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>{{ person_form.description.label }}</label>
+            {{ person_form.description }}
+            {% if person_form.description.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.description.errors.0 }}</div>{% endif %}
+          </div>
         </div>
       </div>
 
@@ -74,166 +111,223 @@
           اطلاعات مالی/بانکی
         </div>
         <div class="form-groups">
-          <div class="field"><label>{{ fb_form.tax_group.label }}</label>{{ fb_form.tax_group }}</div>
-          <div class="field"><label>{{ fb_form.account_balance.label }}</label>{{ fb_form.account_balance }}</div>
-          <div class="field"><label>{{ fb_form.economic_code.label }}</label>{{ fb_form.economic_code }}</div>
-          <div class="field"><label>{{ fb_form.tax_postal_code.label }}</label>{{ fb_form.tax_postal_code }}</div>
-          <div class="field"><label>{{ fb_form.tax_province.label }}</label>{{ fb_form.tax_province }}</div>
-          <div class="field"><label>{{ fb_form.tax_city.label }}</label>{{ fb_form.tax_city }}</div>
-          <div class="field" style="grid-column:1/-1"><label>{{ fb_form.tax_address.label }}</label>{{ fb_form.tax_address }}</div>
+          <div class="field">
+            <label>{{ fb_form.tax_group.label }}</label>
+            {{ fb_form.tax_group }}
+            {% if fb_form.tax_group.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_group.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.account_balance.label }}</label>
+            {{ fb_form.account_balance }}
+            {% if fb_form.account_balance.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.account_balance.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.economic_code.label }}</label>
+            {{ fb_form.economic_code }}
+            {% if fb_form.economic_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.economic_code.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.tax_postal_code.label }}</label>
+            {{ fb_form.tax_postal_code }}
+            {% if fb_form.tax_postal_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_postal_code.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.tax_province.label }}</label>
+            {{ fb_form.tax_province }}
+            {% if fb_form.tax_province.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_province.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field">
+            <label>{{ fb_form.tax_city.label }}</label>
+            {{ fb_form.tax_city }}
+            {% if fb_form.tax_city.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_city.errors.0 }}</div>{% endif %}
+          </div>
+          <div class="field" style="grid-column:1/-1">
+            <label>{{ fb_form.tax_address.label }}</label>
+            {{ fb_form.tax_address }}
+            {% if fb_form.tax_address.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_address.errors.0 }}</div>{% endif %}
+          </div>
         </div>
       </div>
 
-    <div class="card mb-3">
-      <div class="card-header">نمایندگان</div>
-      <div class="card-body">
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          نمایندگان
+        </div>
         {{ rep_formset.management_form }}
-        <div class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>نام</th>
-                <th>سمت</th>
-                <th>موبایل</th>
-                <th>تلفن</th>
-                <th>نامه تایید</th>
-                <th>حذف؟</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for form in rep_formset.forms %}
-              <tr>
-                <td>{{ form.name }}</td>
-                <td>{{ form.position }}</td>
-                <td>{{ form.mobile_number }}</td>
-                <td>{{ form.phone_number }}</td>
-                <td>{{ form.confirmation_letter }}</td>
-                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        {% for form in rep_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            <div class="field">
+              <label>نام نماینده</label>
+              {{ form.name }}
+              {% if form.name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>سمت</label>
+              {{ form.position }}
+              {% if form.position.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.position.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>موبایل</label>
+              {{ form.mobile_number }}
+              {% if form.mobile_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.mobile_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>تلفن</label>
+              {{ form.phone_number }}
+              {% if form.phone_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.phone_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>نامه تایید</label>
+              {{ form.confirmation_letter }}
+              {% if form.confirmation_letter.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.confirmation_letter.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
-    </div>
 
-    <div class="card mb-3">
-      <div class="card-header">حساب‌های بانکی</div>
-      <div class="card-body">
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          حساب‌های بانکی
+        </div>
         {{ ba_formset.management_form }}
-        <div class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>بانک</th>
-                <th>شماره حساب</th>
-                <th>شماره شبا</th>
-                <th>حذف؟</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for form in ba_formset.forms %}
-              <tr>
-                <td>{{ form.bank_name }}</td>
-                <td>{{ form.account_number }}</td>
-                <td>{{ form.shaba_number }}</td>
-                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        {% for form in ba_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            <div class="field">
+              <label>نام بانک</label>
+              {{ form.bank_name }}
+              {% if form.bank_name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.bank_name.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شماره حساب</label>
+              {{ form.account_number }}
+              {% if form.account_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.account_number.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شماره شبا</label>
+              {{ form.shaba_number }}
+              {% if form.shaba_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.shaba_number.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
-    </div>
 
-    <div class="card mb-3">
-      <div class="card-header">ترجیحات پرداخت</div>
-      <div class="card-body">
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ترجیحات پرداخت
+        </div>
         {{ pay_formset.management_form }}
-        <div class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>روش</th>
-                <th>شرایط (روز)</th>
-                <th>سقف اعتبار</th>
-                <th>توضیحات</th>
-                <th>حذف؟</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for form in pay_formset.forms %}
-              <tr>
-                <td>{{ form.payment_method }}</td>
-                <td>{{ form.payment_term_days }}</td>
-                <td>{{ form.credit_limit }}</td>
-                <td>{{ form.notes }}</td>
-                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        {% for form in pay_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            <div class="field">
+              <label>روش پرداخت</label>
+              {{ form.payment_method }}
+              {% if form.payment_method.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.payment_method.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شرایط (روز)</label>
+              {{ form.payment_term_days }}
+              {% if form.payment_term_days.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.payment_term_days.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>سقف اعتبار</label>
+              {{ form.credit_limit }}
+              {% if form.credit_limit.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.credit_limit.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label>توضیحات</label>
+              {{ form.notes }}
+              {% if form.notes.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.notes.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
-    </div>
 
-    <div class="card mb-3">
-      <div class="card-header">شبکه‌های اجتماعی</div>
-      <div class="card-body">
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          شبکه‌های اجتماعی
+        </div>
         {{ sn_formset.management_form }}
-        <div class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>پلتفرم</th>
-                <th>شناسه</th>
-                <th>آدرس</th>
-                <th>حذف؟</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for form in sn_formset.forms %}
-              <tr>
-                <td>{{ form.platform }}</td>
-                <td>{{ form.handle }}</td>
-                <td>{{ form.url }}</td>
-                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
+        {% for form in sn_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            <div class="field">
+              <label>پلتفرم</label>
+              {{ form.platform }}
+              {% if form.platform.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.platform.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>شناسه</label>
+              {{ form.handle }}
+              {% if form.handle.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.handle.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>آدرس</label>
+              {{ form.url }}
+              {% if form.url.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.url.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
-    </div>
 
-    <div class="card mb-3">
-      <div class="card-header">پیوست‌ها</div>
-      <div class="card-body">
-        {{ att_formset.management_form }}
-        <div class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>نوع</th>
-                <th>فایل</th>
-                <th>توضیح</th>
-                <th>حذف؟</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for form in att_formset.forms %}
-              <tr>
-                <td>{{ form.doc_type }}</td>
-                <td>{{ form.file }}</td>
-                <td>{{ form.description }}</td>
-                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          پیوست‌ها
         </div>
+        {{ att_formset.management_form }}
+        {% for form in att_formset.forms %}
+          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
+            <div class="field">
+              <label>نوع مدرک</label>
+              {{ form.doc_type }}
+              {% if form.doc_type.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.doc_type.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field">
+              <label>فایل</label>
+              {{ form.file }}
+              {% if form.file.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.file.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="field" style="grid-column:1/-1">
+              <label>توضیح</label>
+              {{ form.description }}
+              {% if form.description.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.description.errors.0 }}</div>{% endif %}
+            </div>
+            {% if form.DELETE %}
+            <div class="field">
+              <label>حذف؟</label>
+              {{ form.DELETE }}
+            </div>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
-    </div>
 
       <div class="submit-row">
         <button type="submit" class="btn btn-primary btn-sm">ثبت تامین‌کننده</button>
