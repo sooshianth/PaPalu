@@ -569,28 +569,39 @@ def production_program_crud_view(request, program_id=None):
                             instance.completed_at = timezone.now().time()
                             bug_logger.info(f"زمان تکمیل به زمان فعلی تنظیم شد")
                     
-                    # Handle actual consumption data (for IN_PROGRESS and COMPLETED status)
-                    if instance.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
+                    # Handle actual consumption data (for COMPLETED status, warehouse-specific)
+                    if action == 'complete' and instance.status == ProductionProgram.Status.COMPLETED:
                         actual_consumption = {}
-                        # Collect actual consumption data from POST
+                        # Collect warehouse-specific actual consumption data from POST
+                        # Format: actual_consumption_{bom_id}_{warehouse}
                         for key, value in request.POST.items():
                             if key.startswith('actual_consumption_'):
-                                bom_id = key.replace('actual_consumption_', '')
-                                if value and value.strip():
-                                    try:
-                                        actual_consumption[bom_id] = str(Decimal(value))
-                                        bug_logger.debug(f"مصرف واقعی BOM {bom_id}: {value}")
-                                    except (ValueError, TypeError) as e:
-                                        bug_logger.warning(f"خطا در تبدیل مصرف واقعی BOM {bom_id}: {str(e)}")
+                                parts = key.replace('actual_consumption_', '').split('_', 1)
+                                if len(parts) == 2:
+                                    bom_id = parts[0]
+                                    warehouse = parts[1]
+                                    if value and value.strip():
+                                        try:
+                                            amount = str(Decimal(value))
+                                            if bom_id not in actual_consumption:
+                                                actual_consumption[bom_id] = {}
+                                            actual_consumption[bom_id][warehouse] = amount
+                                            bug_logger.debug(f"مصرف واقعی BOM {bom_id} از انبار {warehouse}: {amount}")
+                                        except (ValueError, TypeError) as e:
+                                            bug_logger.warning(f"خطا در تبدیل مصرف واقعی BOM {bom_id}, warehouse {warehouse}: {str(e)}")
                         
-                        # Validate that all BOM items have actual consumption when completing
-                        if action == 'complete' and instance.production_info:
+                        # Validate that all BOM items with warehouse distribution have actual consumption
+                        if instance.production_info and instance.warehouse_distribution:
                             bom_items = instance.production_info.bom_items.all()
                             missing_consumption = []
+                            
                             for bom in bom_items:
                                 bom_id_str = str(bom.id)
-                                if bom_id_str not in actual_consumption or not actual_consumption[bom_id_str]:
-                                    missing_consumption.append(bom.raw_material.name if bom.raw_material else f"BOM #{bom.id}")
+                                # Check if this BOM has warehouse distribution
+                                if bom_id_str in instance.warehouse_distribution:
+                                    # Check if it has actual consumption from at least one warehouse
+                                    if bom_id_str not in actual_consumption or not actual_consumption[bom_id_str]:
+                                        missing_consumption.append(bom.raw_material.name if bom.raw_material else f"BOM #{bom.id}")
                             
                             if missing_consumption:
                                 bug_logger.warning(f"تکمیل رد شد: مصرف واقعی برای {len(missing_consumption)} ماده اولیه وارد نشده است")
@@ -610,7 +621,7 @@ def production_program_crud_view(request, program_id=None):
                                 return render(request, 'production_declaration_crud.html', context)
                         
                         instance.actual_consumption = actual_consumption
-                        bug_logger.info(f"داده‌های مصرف واقعی ذخیره شد: {len(actual_consumption)} آیتم")
+                        bug_logger.info(f"داده‌های مصرف واقعی (انبار-محور) ذخیره شد: {len(actual_consumption)} BOM آیتم")
                     
                     instance.save()
                     
@@ -768,6 +779,11 @@ def production_program_crud_view(request, program_id=None):
         if program and program.warehouse_distribution:
             warehouse_distribution_data = program.warehouse_distribution
         
+        # Prepare actual consumption JSON
+        actual_consumption_data = {}
+        if program and program.actual_consumption:
+            actual_consumption_data = program.actual_consumption
+        
         context = {
             'form': form,
             'program': program,
@@ -777,6 +793,7 @@ def production_program_crud_view(request, program_id=None):
             'production_infos_json': json.dumps(production_infos_data),
             'bom_data_json': json.dumps(bom_data),
             'warehouse_distribution_json': json.dumps(warehouse_distribution_data),
+            'actual_consumption_json': json.dumps(actual_consumption_data),
             'program_status': program.status if program else 'draft',
         }
         

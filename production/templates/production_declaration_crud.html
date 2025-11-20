@@ -941,6 +941,7 @@
 const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
 const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
 const warehouseDistributionData = JSON.parse('{{ warehouse_distribution_json|escapejs }}');
+const actualConsumptionGlobal = JSON.parse('{{ actual_consumption_json|escapejs }}');
 
 // Modal functions
 function showModal(modalId) {
@@ -978,29 +979,29 @@ function updateTotalDifference(bomId) {
     const differenceContainer = item.querySelector('.total-difference-display');
     
     if (totalWithdrawalDisplay) {
-        totalWithdrawalDisplay.textContent = totalWithdrawal.toFixed(4) + ' ' + (totalWithdrawalDisplay.textContent.split(' ').pop() || 'تن');
+        totalWithdrawalDisplay.textContent = totalWithdrawal.toFixed(3) + ' ' + (totalWithdrawalDisplay.textContent.split(' ').pop() || 'تن');
     }
     
     if (totalDifferenceDisplay) {
         const absValue = Math.abs(difference);
         const unit = totalDifferenceDisplay.textContent.split(' ').pop() || 'تن';
         
-        if (difference > 0.0001) {
-            totalDifferenceDisplay.textContent = `+${absValue.toFixed(4)} ${unit} (بیش از حد)`;
+        if (difference > 0.001) {
+            totalDifferenceDisplay.textContent = `+${absValue.toFixed(3)} ${unit} (بیش از حد)`;
             totalDifferenceDisplay.style.color = '#dc3545';
             if (differenceContainer) {
                 differenceContainer.style.background = '#f8d7da';
                 differenceContainer.style.borderLeft = '4px solid #dc3545';
             }
-        } else if (difference < -0.0001) {
-            totalDifferenceDisplay.textContent = `-${absValue.toFixed(4)} ${unit} (کمبود)`;
+        } else if (difference < -0.001) {
+            totalDifferenceDisplay.textContent = `-${absValue.toFixed(3)} ${unit} (کمبود)`;
             totalDifferenceDisplay.style.color = '#ffc107';
             if (differenceContainer) {
                 differenceContainer.style.background = '#fff3cd';
                 differenceContainer.style.borderLeft = '4px solid #ffc107';
             }
         } else {
-            totalDifferenceDisplay.textContent = `0.0000 ${unit} (دقیق ✓)`;
+            totalDifferenceDisplay.textContent = `0.000 ${unit} (دقیق ✓)`;
             totalDifferenceDisplay.style.color = '#198754';
             if (differenceContainer) {
                 differenceContainer.style.background = '#d1fadd';
@@ -1063,12 +1064,13 @@ function showStartProductionModal() {
             bomItems.forEach(item => {
                 // Calculate total consumption needed
                 const quantity = parseFloat(item.quantity) || 0;
-                const totalConsumption = ((quantity * plannedWeight) / minBatch).toFixed(4);
+                const totalConsumption = ((quantity * plannedWeight) / minBatch).toFixed(3);
                 
-                // Find warehouses that have this raw material
-                const warehouses = rawMaterialsInventory.filter(inv => 
+                // Find raw material with matching ID and get its warehouses
+                const rmInventory = rawMaterialsInventory.find(inv => 
                     inv.raw_material_id === item.raw_material_id
                 );
+                const warehouses = rmInventory ? rmInventory.warehouses : [];
                 
                 if (warehouses.length > 0) {
                     html += `
@@ -1101,23 +1103,27 @@ function showStartProductionModal() {
                     `;
                     
                     warehouses.forEach((wh, index) => {
-                        const defaultAmount = index === 0 ? parseFloat(totalConsumption).toFixed(4) : '0';
+                        const defaultAmount = index === 0 ? parseFloat(totalConsumption).toFixed(3) : '0';
+                        const warehouseName = wh.warehouse_name || wh.warehouse_id || '-';
+                        const quantity = wh.quantity || '0';
+                        const unit = rmInventory.unit || item.unit_used || 'تن';
+                        
                         html += `
                             <tr class="warehouse-amount-row" style="background: #ffffff; border: 1px solid #e9ecef;">
                                 <td style="padding: 12px; border-radius: 6px 0 0 6px;">
-                                    <strong style="font-size: 0.95rem; color: #343a40;">${wh.warehouse}</strong>
+                                    <strong style="font-size: 0.95rem; color: #343a40;">${warehouseName}</strong>
                                 </td>
                                 <td style="padding: 12px; text-align: center;">
-                                    <div style="font-size: 0.9rem; color: #6c757d;">${wh.quantity} ${wh.unit}</div>
+                                    <div style="font-size: 0.9rem; color: #6c757d;">${quantity} ${unit}</div>
                                 </td>
                                 <td style="padding: 12px; text-align: center; background: #f0f8ff; border-radius: 0 6px 6px 0;">
                                     <input type="number" 
                                            class="warehouse-amount-input form-control" 
                                            data-bom-id="${item.id}"
-                                           data-warehouse="${wh.warehouse}"
+                                           data-warehouse="${warehouseName}"
                                            data-total-needed="${totalConsumption}"
                                            min="0" 
-                                           step="0.0001"
+                                           step="0.001"
                                            value="${defaultAmount}"
                                            placeholder="مقدار برداشت"
                                            style="width: 120px; padding: 8px; text-align: center; border: 2px solid #0d6efd; border-radius: 6px; font-weight: 600;">
@@ -1132,11 +1138,11 @@ function showStartProductionModal() {
                             </div>
                             <div class="total-difference-display" style="margin-top: 12px; padding: 12px; border-radius: 8px; border-left: 4px solid #6c757d; font-size: 0.9rem; background: #e9ecef;">
                                 <strong>🔢 جمع کل برداشت:</strong> 
-                                <span class="total-withdrawal" style="font-weight: 600;">0.0000 ${item.unit_used || 'تن'}</span> / 
+                                <span class="total-withdrawal" style="font-weight: 600;">0.000 ${item.unit_used || 'تن'}</span> / 
                                 <span style="color: var(--primary-green);">${totalConsumption} ${item.unit_used || 'تن'}</span>
                                 <br>
                                 <strong>تفاوت:</strong> 
-                                <span class="total-difference" style="font-weight: 600; font-size: 1.1rem;">0.0000 ${item.unit_used || 'تن'}</span>
+                                <span class="total-difference" style="font-weight: 600; font-size: 1.1rem;">0.000 ${item.unit_used || 'تن'}</span>
                             </div>
                         </div>
                     `;
@@ -1183,56 +1189,98 @@ function showCompleteProductionModal() {
     const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
     const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
     
-    // Populate BOM actual consumption fields
+    // Populate BOM actual consumption fields (warehouse-specific)
     const bomSection = document.getElementById('bomActualConsumptionSection');
     const bomList = document.getElementById('bomActualConsumptionList');
     
-    if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
+    if (selectedProductionInfoId && bomData[selectedProductionInfoId] && plannedWeight > 0) {
         const data = bomData[selectedProductionInfoId];
         const bomItems = data.bom_items || [];
         const minBatch = parseFloat(data.min_batch_production) || 1;
         
+        // Get raw materials inventory (passed from context)
+        const rawMaterialsInventory = JSON.parse('{{ raw_materials_inventory_json|escapejs }}');
+        
+        // Get program_id to fetch warehouse distribution if edit mode
+        const programId = '{{ program.id|default:"" }}';
+        const existingWarehouseDist = programId ? (warehouseDistributionData || {}) : {};
+        
         if (bomItems.length > 0) {
-            let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+            let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
             
             bomItems.forEach(item => {
-                // Get current value from the main form input if exists
-                const mainFormInput = document.querySelector(`#actual_consumption_${item.id}`);
-                const currentValue = mainFormInput ? mainFormInput.value : (item.actual_consumption || '');
-                
-                // Calculate total consumption: BOM.quantity * planned_weight_ton / min_batch_production
+                // Calculate total consumption needed
                 const quantity = parseFloat(item.quantity) || 0;
-                const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(4) : '-';
+                const totalConsumption = ((quantity * plannedWeight) / minBatch).toFixed(3);
                 
-                html += `
-                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; align-items: center; padding: 12px; background: white; border-radius: 6px; border: 1px solid #dee2e6;">
-                        <div>
-                            <strong style="color: #343a40;">${item.raw_material_name || '-'}</strong>
-                            <div style="font-size: 0.85rem; color: #6c757d;">کد: ${item.raw_material_id || '-'}</div>
+                // Find warehouses that have this raw material and non-zero amounts in distribution
+                const bomIdStr = String(item.id);
+                const warehousesForBom = existingWarehouseDist[bomIdStr] || [];
+                
+                // Filter to only warehouses with non-zero amounts
+                const warehousesWithAmount = warehousesForBom.filter(wh => parseFloat(wh.amount || 0) > 0);
+                
+                if (warehousesWithAmount.length > 0) {
+                    html += `
+                        <div class="warehouse-actual-consumption-item" data-bom-id="${item.id}" style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; border: 2px solid #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid #ffc107;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                    <div>
+                                        <strong style="color: #343a40; font-size: 1.1rem; display: block;">${item.raw_material_name || '-'}</strong>
+                                        <div style="font-size: 0.85rem; color: #6c757d; margin-top: 4px;">
+                                            کد: <strong>${item.raw_material_id || '-'}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-bottom: 12px;">
+                                <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
+                                    <thead>
+                                        <tr style="background: #f8f9fa;">
+                                            <th style="padding: 10px; text-align: right; border-radius: 6px 0 0 6px; font-size: 0.85rem; font-weight: 600; color: #495057;">انبار</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057; background: #e7f5ff;">مقدار مصرف کل (برنامه)</th>
+                                            <th style="padding: 10px; text-align: center; border-radius: 0 6px 6px 0; font-size: 0.85rem; font-weight: 600; color: #495057; background: #fff6db;">برداشت واقعی</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                    `;
+                    
+                    warehousesWithAmount.forEach(wh => {
+                        const plannedAmount = parseFloat(wh.amount || 0).toFixed(3);
+                        // Default actual withdrawal = planned amount
+                        const defaultActual = plannedAmount;
+                        
+                        html += `
+                            <tr class="warehouse-actual-row" style="background: #ffffff; border: 1px solid #e9ecef;">
+                                <td style="padding: 12px; border-radius: 6px 0 0 6px;">
+                                    <strong style="font-size: 0.95rem; color: #343a40;">${wh.warehouse}</strong>
+                                </td>
+                                <td style="padding: 12px; text-align: center; background: #f0f8ff;">
+                                    <div style="font-size: 0.9rem; color: #0d6efd; font-weight: 600;">${plannedAmount} ${item.unit_used || 'تن'}</div>
+                                </td>
+                                <td style="padding: 12px; text-align: center; background: #fffbf0; border-radius: 0 6px 6px 0;">
+                                    <input type="number" 
+                                           class="warehouse-actual-input form-control" 
+                                           data-bom-id="${item.id}"
+                                           data-warehouse="${wh.warehouse}"
+                                           min="0" 
+                                           step="0.001"
+                                           value="${defaultActual}"
+                                           placeholder="برداشت واقعی"
+                                           style="width: 120px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += `
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.85rem; color: #6c757d;">مقدار مصرف کل</div>
-                            <strong style="color: var(--primary-green);">${totalConsumption}</strong>
-                        </div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.85rem; color: #6c757d;">واحد</div>
-                            <strong>${item.unit_used || '-'}</strong>
-                        </div>
-                        <div>
-                            <input type="number" 
-                                   id="modal_actual_consumption_${item.id}" 
-                                   class="form-control modal-bom-input" 
-                                   data-bom-id="${item.id}"
-                                   data-material-name="${item.raw_material_name || 'ماده اولیه'}"
-                                   value="${currentValue}" 
-                                   step="0.001" 
-                                   min="0" 
-                                   required
-                                   placeholder="مقدار واقعی"
-                                   style="width: 100%; padding: 8px; border: 2px solid #ffc107;">
-                        </div>
-                    </div>
-                `;
+                    `;
+                }
             });
             
             html += '</div>';
@@ -1283,7 +1331,7 @@ function confirmStartProduction() {
                     hasAnyAmount = true;
                     distributions.push({
                         warehouse: warehouse,
-                        amount: amount.toFixed(4)
+                        amount: amount.toFixed(3)
                     });
                 }
             });
@@ -1344,26 +1392,40 @@ function confirmCompleteProduction() {
         return;
     }
     
-    // Validate and collect BOM actual consumption data
-    const bomInputs = document.querySelectorAll('.modal-bom-input');
-    const missingItems = [];
-    const bomDataToSave = {};
+    // Validate and collect warehouse-specific actual consumption data
+    const warehouseActualItems = document.querySelectorAll('.warehouse-actual-consumption-item');
+    const errors = [];
+    const actualConsumptionData = {};
     
-    bomInputs.forEach(input => {
-        const value = input.value.trim();
-        const bomId = input.dataset.bomId;
-        const materialName = input.dataset.materialName;
+    warehouseActualItems.forEach(item => {
+        const bomId = item.dataset.bomId;
+        const actualInputs = item.querySelectorAll('.warehouse-actual-input');
+        const materialName = item.querySelector('strong').textContent;
+        let hasAnyAmount = false;
+        const warehouseActuals = {};
         
-        if (!value || parseFloat(value) < 0) {
-            missingItems.push(materialName);
-        } else {
-            bomDataToSave[bomId] = value;
+        actualInputs.forEach(input => {
+            const warehouse = input.dataset.warehouse;
+            const amount = parseFloat(input.value) || 0;
+            
+            if (amount > 0) {
+                hasAnyAmount = true;
+                warehouseActuals[warehouse] = amount.toFixed(3);
+            }
+        });
+        
+        // Check if at least one warehouse has an amount
+        if (!hasAnyAmount && actualInputs.length > 0) {
+            errors.push(`${materialName}: لطفاً مقدار برداشت واقعی را از حداقل یک انبار وارد کنید`);
+        }
+        
+        if (hasAnyAmount) {
+            actualConsumptionData[bomId] = warehouseActuals;
         }
     });
     
-    // Check if there are any BOM items that need to be filled
-    if (bomInputs.length > 0 && missingItems.length > 0) {
-        alert(`لطفاً مقدار مصرف واقعی را برای تمام مواد اولیه وارد کنید.\n\nموارد ناقص:\n${missingItems.join('\n')}`);
+    if (errors.length > 0) {
+        alert('خطا در برداشت واقعی:\n\n' + errors.join('\n'));
         return;
     }
     
@@ -1371,19 +1433,18 @@ function confirmCompleteProduction() {
     document.getElementById('producedWeightField').value = weight;
     document.getElementById('completedAtField').value = completionTime;
     
-    // Transfer BOM actual consumption values to the main form inputs
-    Object.keys(bomDataToSave).forEach(bomId => {
-        const mainFormInput = document.querySelector(`input[name="actual_consumption_${bomId}"]`);
-        if (mainFormInput) {
-            mainFormInput.value = bomDataToSave[bomId];
-        } else {
-            // Create hidden input if it doesn't exist
+    // Transfer warehouse-specific actual consumption to hidden form inputs
+    // Format: actual_consumption_{bomId}_{warehouse}
+    Object.keys(actualConsumptionData).forEach(bomId => {
+        const warehouseActuals = actualConsumptionData[bomId];
+        Object.keys(warehouseActuals).forEach(warehouse => {
+            const amount = warehouseActuals[warehouse];
             const hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
-            hiddenInput.name = `actual_consumption_${bomId}`;
-            hiddenInput.value = bomDataToSave[bomId];
+            hiddenInput.name = `actual_consumption_${bomId}_${warehouse}`;
+            hiddenInput.value = amount;
             document.getElementById('productionForm').appendChild(hiddenInput);
-        }
+        });
     });
     
     // Submit form
@@ -1499,7 +1560,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Show actual consumption column only for in_progress or completed status
         const showActualConsumption = ['in_progress', 'completed'].includes(currentStatus);
-        const isEditable = ['in_progress', 'completed'].includes(currentStatus);
+        const programId = '{{ program.id|default:"" }}';
+        const existingWarehouseDist = programId ? (warehouseDistributionData || {}) : {};
+        const existingActualConsumption = actualConsumptionGlobal || {};
         
         let html = `
             <div style="margin-bottom: 16px;">
@@ -1512,9 +1575,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <tr>
                         <th>کد ماده اولیه</th>
                         <th>نام ماده اولیه</th>
+                        <th>انبار</th>
                         <th>مقدار (در فرمول)</th>
                         <th>مقدار مصرف کل</th>
-                        ${showActualConsumption ? '<th style="background: #fff6db;">مقدار مصرف واقعی</th>' : ''}
+                        ${showActualConsumption ? '<th style="background: #fff6db;">برداشت واقعی</th>' : ''}
                         <th>واحد</th>
                     </tr>
                 </thead>
@@ -1523,68 +1587,67 @@ document.addEventListener('DOMContentLoaded', function() {
         
         data.bom_items.forEach(item => {
             const quantity = parseFloat(item.quantity) || 0;
-            // Calculate: required = BOM.quantity * planned_weight_ton / min_batch_production
-            const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(4) : '-';
+            const bomIdStr = String(item.id);
             
-            // Get actual consumption value
-            const actualConsumption = item.actual_consumption || '';
+            // Check if this BOM has warehouse distribution
+            const warehousesForBom = existingWarehouseDist[bomIdStr] || [];
+            const warehousesWithAmount = warehousesForBom.filter(wh => parseFloat(wh.amount || 0) > 0);
             
-            // Check if warehouse distribution data exists for this BOM item
-            let totalConsumptionDisplay = totalConsumption;
-            if (showActualConsumption && warehouseDistributionData && warehouseDistributionData[item.id]) {
-                const warehouses = warehouseDistributionData[item.id];
-                let tooltipContent = '';
-                
-                warehouses.forEach(wh => {
-                    tooltipContent += `انبار ${wh.warehouse}: ${wh.amount} ${item.unit_used || 'تن'}<br>`;
+            if (warehousesWithAmount.length > 0) {
+                // Show one row per warehouse
+                warehousesWithAmount.forEach((wh, whIndex) => {
+                    const plannedAmount = parseFloat(wh.amount || 0).toFixed(3);
+                    
+                    // Get actual consumption for this warehouse
+                    let actualAmount = '';
+                    if (existingActualConsumption && existingActualConsumption[bomIdStr]) {
+                        actualAmount = existingActualConsumption[bomIdStr][wh.warehouse] || '';
+                    }
+                    
+                    html += `
+                        <tr>
+                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_id || '-'}</td>` : ''}
+                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_name || '-'}</td>` : ''}
+                            <td style="background: #f0f8ff; font-weight: 600;">${wh.warehouse}</td>
+                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.quantity || 0}</td>` : ''}
+                            <td style="font-weight: 600; color: var(--primary-green);">${plannedAmount}</td>
+                    `;
+                    
+                    if (showActualConsumption) {
+                        html += `
+                            <td style="background: #fff6db;">
+                                <span style="font-weight: 600; color: #b95c00;">${actualAmount || '-'}</span>
+                            </td>
+                        `;
+                    }
+                    
+                    html += `
+                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.unit_used || '-'}</td>` : ''}
+                        </tr>
+                    `;
                 });
+            } else {
+                // No warehouse distribution - show single row
+                const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(3) : '-';
                 
-                totalConsumptionDisplay = `
-                    <div class="warehouse-tooltip">
-                        ${totalConsumption}
-                        <div class="tooltip-content">
-                            ${tooltipContent}
-                        </div>
-                    </div>
+                html += `
+                    <tr>
+                        <td>${item.raw_material_id || '-'}</td>
+                        <td>${item.raw_material_name || '-'}</td>
+                        <td style="color: #6c757d; font-style: italic;">-</td>
+                        <td>${item.quantity || 0}</td>
+                        <td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
+                `;
+                
+                if (showActualConsumption) {
+                    html += `<td style="background: #f8f9fa;">-</td>`;
+                }
+                
+                html += `
+                        <td>${item.unit_used || '-'}</td>
+                    </tr>
                 `;
             }
-            
-            html += `
-                <tr>
-                    <td>${item.raw_material_id || '-'}</td>
-                    <td>${item.raw_material_name || '-'}</td>
-                    <td>${item.quantity || 0}</td>
-                    <td style="font-weight: 600; color: var(--primary-green);">${totalConsumptionDisplay}</td>
-            `;
-            
-            if (showActualConsumption) {
-                if (isEditable) {
-                    html += `
-                        <td style="background: #fff6db;">
-                            <input type="number" 
-                                   name="actual_consumption_${item.id}" 
-                                   id="actual_consumption_${item.id}"
-                                   value="${actualConsumption}" 
-                                   step="0.001" 
-                                   min="0"
-                                   class="form-control" 
-                                   style="width: 100%; padding: 6px; text-align: center;"
-                                   placeholder="مقدار واقعی"
-                                   ${currentStatus === 'completed' ? '' : ''}
-                            >
-                        </td>
-                    `;
-                } else {
-                    html += `
-                        <td style="background: #f8f9fa;">${actualConsumption || '-'}</td>
-                    `;
-                }
-            }
-            
-            html += `
-                    <td>${item.unit_used || '-'}</td>
-                </tr>
-            `;
         });
         
         html += `
@@ -1592,11 +1655,11 @@ document.addEventListener('DOMContentLoaded', function() {
             </table>
         `;
         
-        if (showActualConsumption && isEditable) {
+        if (showActualConsumption) {
             html += `
-                <div style="margin-top: 12px; padding: 10px; background: #fff3cd; border-radius: 8px; font-size: 0.9rem;">
-                    <strong>توجه:</strong> لطفاً مقدار مصرف واقعی هر ماده اولیه را وارد کنید.
-                    ${currentStatus === 'in_progress' ? 'برای تکمیل برنامه، باید مقدار مصرف واقعی تمام مواد اولیه را وارد کنید.' : ''}
+                <div style="margin-top: 12px; padding: 10px; background: ${currentStatus === 'completed' ? '#d1fadd' : '#fff3cd'}; border-radius: 8px; font-size: 0.9rem;">
+                    <strong>${currentStatus === 'completed' ? '✓ برنامه تکمیل شده' : 'توجه'}:</strong> 
+                    ${currentStatus === 'completed' ? 'مقادیر برداشت واقعی از انبارها ثبت شده است.' : 'برای تکمیل برنامه، از دکمه "تکمیل تولید" استفاده کنید.'}
                 </div>
             `;
         }

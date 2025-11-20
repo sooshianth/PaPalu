@@ -107,12 +107,12 @@ class ProductionProgram(models.Model):
     actual_consumption = models.JSONField(
         null=True, blank=True,
         verbose_name='مصرف واقعی مواد اولیه',
-        help_text='مقدار مصرف واقعی مواد اولیه به صورت {bom_id: actual_amount}'
+        help_text='مقدار مصرف واقعی مواد اولیه به صورت {bom_id: {warehouse: actual_amount}}'
     )
     warehouse_distribution = models.JSONField(
         null=True, blank=True,
         verbose_name='توزیع انبار',
-        help_text='توزیع مواد اولیه از انبارها به صورت {bom_id: [{warehouse: str, percent: int, amount: str}]}'
+        help_text='توزیع مواد اولیه از انبارها به صورت {bom_id: [{warehouse: str, amount: str}]}'
     )
     priority_index = models.DecimalField(
         max_digits=10, decimal_places=3,
@@ -173,7 +173,7 @@ class ProductionProgram(models.Model):
         for bom in self.production_info.bom_items.all():
             if bom.quantity and bom.raw_material:
                 required = (bom.quantity * self.planned_weight_ton) / min_batch
-                summary[bom.raw_material.raw_material_id or str(bom.id)] = float(round(required, 4))
+                summary[bom.raw_material.raw_material_id or str(bom.id)] = str(required.quantize(Decimal('0.001')))
         return summary
 
     def compute_priority(self):
@@ -189,7 +189,8 @@ class ProductionProgram(models.Model):
         if base_need is None:
             return None
         pr = base_need / self.planned_weight_ton
-        return float(round(min(max(pr, Decimal('0')), Decimal('1.5')), 3))
+        pr_clamped = min(max(pr, Decimal('0')), Decimal('1.5'))
+        return str(pr_clamped.quantize(Decimal('0.001')))
 
     def save(self, *args, **kwargs):
         # Auto populate formula/product from production_info if missing
