@@ -688,6 +688,7 @@
             <input type="hidden" name="started_at" id="startedAtField">
             <input type="hidden" name="produced_weight_ton" id="producedWeightField">
             <input type="hidden" name="completed_at" id="completedAtField">
+            <input type="hidden" name="product_warehouse" id="productWarehouseField">
 
             <!-- فیلدهای فرم -->
             <div class="detail-grid">
@@ -788,6 +789,12 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.completed_at.label }}:</span>
                 <span class="detail-value">{{ form.completed_at }}</span>
+            </div>
+            
+            <!-- انبار محصول نهایی (visible only when completed) -->
+            <div class="detail-row">
+                <span class="detail-label">انبار محصول نهایی:</span>
+                <span class="detail-value">{{ program.product_warehouse.name|default:"-" }} ({{ program.product_warehouse.warehouse_id|default:"-" }})</span>
             </div>
             {% endif %}
         </div>
@@ -909,6 +916,16 @@
             <div class="modal-form-field">
                 <label for="completionTime">زمان تکمیل: <span style="color: red;">*</span></label>
                 <input type="time" id="completionTime" class="form-control" required>
+            </div>
+            
+            <div class="modal-form-field">
+                <label for="productWarehouse">انبار محصول نهایی: <span style="color: red;">*</span></label>
+                <select id="productWarehouse" class="form-control" required>
+                    <option value="">انتخاب انبار محصول...</option>
+                    {% for warehouse in warehouses %}
+                    <option value="{{ warehouse.id }}">{{ warehouse.name }} ({{ warehouse.warehouse_id }})</option>
+                    {% endfor %}
+                </select>
             </div>
             
             <!-- BOM Actual Consumption Section -->
@@ -1429,9 +1446,17 @@ function confirmCompleteProduction() {
         return;
     }
     
+    // Get product warehouse
+    const productWarehouse = document.getElementById('productWarehouse').value;
+    if (!productWarehouse) {
+        alert('لطفاً انبار محصول نهایی را انتخاب کنید.');
+        return;
+    }
+    
     // Set hidden field values
     document.getElementById('producedWeightField').value = weight;
     document.getElementById('completedAtField').value = completionTime;
+    document.getElementById('productWarehouseField').value = productWarehouse;
     
     // Transfer warehouse-specific actual consumption to hidden form inputs
     // Format: actual_consumption_{bomId}_{warehouse}

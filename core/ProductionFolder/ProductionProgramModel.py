@@ -128,6 +128,16 @@ class ProductionProgram(models.Model):
         null=True, blank=True,
         verbose_name='وزن تولید شده واقعی'
     )
+    
+    product_warehouse = models.ForeignKey(
+        'core.Warehouse',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='completed_productions',
+        verbose_name='انبار محصول نهایی',
+        help_text='انبار مقصد برای محصول تولید شده'
+    )
 
     fulfillment_percentage = models.DecimalField(
         max_digits=6,

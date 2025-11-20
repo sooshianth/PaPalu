@@ -12,6 +12,7 @@
             -
         {% endif %}
     </td>
+    <td>{{ program.product_warehouse.name|default:"-" }}</td>
     <td>{{ program.started_at|date:"Y/m/d H:i"|default:"-" }}</td>
     <td>{{ program.completed_at|date:"Y/m/d H:i"|default:"-" }}</td>
     <td><span class="status-badge status-completed">{{ program.get_status_display }}</span></td>
