@@ -40,6 +40,8 @@
 </style>
 <!-- DataTables CSS (CDN) -->
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+<!-- Persian Datepicker CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
 {% endblock %}
 
 {% block content %}
@@ -144,6 +146,7 @@
         </tbody>
       </table>
     </div>
+    <div id="piModalHost"></div>
     <script>
       (function(){
         const toggle = document.getElementById('toggleOptional');
@@ -152,6 +155,123 @@
           toggle.addEventListener('click',()=>{
             const active = section.classList.toggle('active');
             toggle.textContent = active ? 'بستن اطلاعات تکمیلی ▲' : 'اطلاعات تکمیلی (اختیاری) ▼';
+          });
+        }
+
+        const host = document.getElementById('piModalHost');
+        const table = document.getElementById('materialsTable');
+
+        function initPriceInquiryModal(url){
+          const modal = document.getElementById('priceInquiryModal');
+          if (!modal) return;
+          modal.dataset.url = url;
+          const form = modal.querySelector('#piForm');
+          if (!form) return;
+          const pkInput = form.querySelector('#piPk');
+          const saveBtn = modal.querySelector('#piSaveBtn');
+          const resetBtn = modal.querySelector('#piResetBtn');
+          const closeBtn = modal.querySelector('#piCloseBtn');
+
+          // Initialize DataTable safely
+          if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
+            const tableEl = document.getElementById('piTable');
+            if (tableEl && tableEl.querySelector('thead') && tableEl.querySelector('tbody')) {
+              if (!jQuery.fn.DataTable.isDataTable('#piTable')) {
+                try {
+                  jQuery('#piTable').DataTable({ paging:true, searching:true, order:[[0,'desc']] });
+                } catch(e){ console.error('DataTable init error:', e); }
+              }
+            }
+          }
+
+          // Initialize Persian datepicker for jalali-date inputs
+          if (window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker) {
+            jQuery(modal).find('.jalali-date').each(function(){
+              const $el = jQuery(this);
+              // Convert any prefilled Gregorian value to Jalali for display
+              try {
+                const cur = ($el.val()||'').trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(cur) && !/^(13|14)\d{2}-/.test(cur) && typeof persianDate !== 'undefined') {
+                  const g = new Date(cur);
+                  if (!isNaN(g)) $el.val(new persianDate(g).format('YYYY-MM-DD'));
+                }
+              } catch(e) { /* ignore */ }
+              try {
+                $el.persianDatepicker({
+                  format: 'YYYY-MM-DD',
+                  initialValue: false,
+                  initialValueType: 'gregorian',
+                  autoClose: true,
+                  observer: true
+                });
+              } catch(e) { console.error('Persian datepicker init error:', e); }
+            });
+          } else {
+            console.warn('persianDatepicker not available');
+          }
+
+          function fillFormFromRow(tr){
+            if (!tr) return;
+            pkInput.value = tr.dataset.pk || '';
+            const tds = tr.querySelectorAll('td');
+            const setVal = (name, idx) => { const el = form.querySelector(`[name="${name}"]`); if (el && tds[idx]) el.value = tds[idx].textContent.trim(); };
+            setVal('inquiry_date',0);
+            // If inquiry_date came from table as Gregorian, convert to Jalali for the input
+            try {
+              const idEl = form.querySelector('[name="inquiry_date"]');
+              const s = (idEl && idEl.value) ? idEl.value.trim() : '';
+              if (idEl && /^\d{4}-\d{2}-\d{2}$/.test(s) && !/^(13|14)\d{2}-/.test(s) && typeof persianDate !== 'undefined') {
+                const g = new Date(s);
+                if (!isNaN(g)) idEl.value = new persianDate(g).format('YYYY-MM-DD');
+              }
+            } catch(e) { /* ignore */ }
+            const supplierSelect = form.querySelector('[name="supplier"]');
+            if (supplierSelect && tds[1]) {
+              const supplierName = tds[1].textContent.trim();
+              Array.from(supplierSelect.options).forEach(o=>{ if (o.text.trim()===supplierName) supplierSelect.value=o.value; });
+            }
+            setVal('price',2);
+            setVal('delivery_terms',4);
+            setVal('loading_location',5);
+            setVal('freight_unit_price',6);
+            setVal('negotiation_note',7);
+          }
+
+          modal.querySelectorAll('.pi-edit').forEach(btn=>{
+            btn.addEventListener('click', function(){ fillFormFromRow(this.closest('tr')); });
+          });
+
+          if (saveBtn){
+            saveBtn.onclick = async function(){
+              const fd = new FormData(form);
+              try {
+                const resp = await fetch(url, { method:'POST', body: fd, headers:{'X-Requested-With':'XMLHttpRequest'} });
+                const html = await resp.text();
+                host.innerHTML = html;
+                initPriceInquiryModal(url);
+              } catch(e){ console.error('PriceInquiry save error', e); }
+            };
+          }
+          if (resetBtn){ resetBtn.onclick = function(){ form.reset(); pkInput.value=''; }; }
+          if (closeBtn){ closeBtn.onclick = function(){ modal.remove(); }; }
+        }
+
+        async function loadPriceInquiryModal(rid){
+          const url = `/supply/price-inquiries/${encodeURIComponent(rid)}/`;
+          try {
+            const resp = await fetch(url, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+            const html = await resp.text();
+            host.innerHTML = html;
+            initPriceInquiryModal(url);
+          } catch(err){ console.error('failed to load price inquiries', err); }
+        }
+
+        if (table){
+          table.querySelector('tbody')?.addEventListener('click', function(e){
+            const tr = e.target.closest('tr');
+            if (!tr) return;
+            const rid = (tr.querySelector('td')?.textContent||'').trim();
+            if (rid) loadPriceInquiryModal(rid);
           });
         }
       })();
@@ -164,6 +284,9 @@
 <!-- jQuery and DataTables (CDN) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<!-- Persian Date core + Datepicker JS -->
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function(){
     if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {

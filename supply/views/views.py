@@ -2,13 +2,17 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.urls import reverse
 from django.db import transaction
-from django.forms import ModelForm
+from django import forms
+from django.forms import ModelForm, NumberInput, TextInput, Textarea
+from django.http import JsonResponse, HttpResponseBadRequest
 import logging
 from core.logging_levels import *
+from jdatetime import date as jdate
 
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
 from core.RawMaterialFolder.RawMaterialPurchaseInfoModel import RawMaterialPurchaseInfo
+from core.SupplyFolder.RawMaterialPriceInquiryModel import RawMaterialPriceInquiry
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -77,6 +81,53 @@ class PurchaseInfoInlineForm(ModelForm):
 		self.fields['transportation_conditions'].required = True
 		self.fields['storage_conditions'].required = True
 
+class RawMaterialPriceInquiryForm(ModelForm):
+	class Meta:
+		model = RawMaterialPriceInquiry
+		fields = [
+			'inquiry_date', 'supplier', 'price', 'raw_material',
+			'delivery_terms', 'loading_location', 'freight_unit_price', 'negotiation_note'
+		]
+		labels = {
+			'inquiry_date': 'تاریخ',
+			'supplier': 'تامین کننده',
+			'price': 'قیمت',
+			'raw_material': 'ماده',
+			'delivery_terms': 'شرایط تحویل',
+			'loading_location': 'محل بارگیری',
+			'freight_unit_price': 'فی کرایه',
+			'negotiation_note': 'شرح مذاکره',
+		}
+		widgets = {
+			'inquiry_date': TextInput(attrs={'class': 'form-control jalali-date', 'dir': 'ltr', 'placeholder': 'YYYY-MM-DD'}),
+			'price': NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+			'freight_unit_price': NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+			'delivery_terms': TextInput(attrs={'maxlength': 255, 'class': 'form-control'}),
+			'loading_location': TextInput(attrs={'maxlength': 255, 'class': 'form-control'}),
+			'negotiation_note': Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+			'supplier': forms.Select(attrs={'class': 'form-control'}),
+		}
+
+	def __init__(self, *args, **kwargs):
+		material = kwargs.pop('material', None)
+		super().__init__(*args, **kwargs)
+		self.fields['supplier'].queryset = Person.objects.filter(type='supplier').order_by('name')
+		self.fields['supplier'].required = True
+		self.fields['price'].required = True
+		self.fields['inquiry_date'].required = True
+		self.fields['delivery_terms'].required = True
+		self.fields['loading_location'].required = True
+		# Ensure default Jalali date appears for new forms
+		if not self.is_bound and not getattr(self.instance, 'pk', None):
+			try:
+				self.initial['inquiry_date'] = jdate.today().strftime('%Y-%m-%d')
+			except Exception:
+				pass
+		if material is not None:
+			self.fields['raw_material'].initial = material
+			self.fields['raw_material'].disabled = True
+			self.fields['raw_material'].required = True
+
 
 def supply_home_view(request):
 	audit_logger.info("دسترسی به دامنه تامین")
@@ -127,3 +178,44 @@ def define_basic_material_view(request):
 			'pi_form': PurchaseInfoInlineForm(),
 			'materials': RawMaterial.objects.none(),
 		})
+
+
+def price_inquiry_modal_view(request, raw_material_id: str):
+	audit_logger.info("مشاهده/ویرایش استعلام‌های قیمت ماده اولیه")
+	try:
+		material = RawMaterial.objects.get(raw_material_id=raw_material_id)
+		if request.method == 'POST':
+			# Create or update
+			post = request.POST.copy()
+			post['raw_material'] = str(material.id)
+			pk = post.get('pk')
+			if pk:
+				instance = RawMaterialPriceInquiry.objects.filter(pk=pk, raw_material=material).first()
+				form = RawMaterialPriceInquiryForm(post, instance=instance, material=material)
+			else:
+				form = RawMaterialPriceInquiryForm(post, material=material)
+			if form.is_valid():
+				with transaction.atomic():
+					rec = form.save(commit=False)
+					rec.raw_material = material
+					rec.save()
+				bug_logger.info(f"PriceInquiry saved for rid={raw_material_id}")
+				# After successful save return a fresh, reset form
+				form = RawMaterialPriceInquiryForm(material=material)
+			else:
+				bug_logger.warning(f"PriceInquiry form invalid rid={raw_material_id} errors={form.errors}")
+		else:
+			form = RawMaterialPriceInquiryForm(material=material)
+
+		inquiries = RawMaterialPriceInquiry.objects.filter(raw_material=material).order_by('-inquiry_date', '-created_at')
+		return render(request, 'partials/price_inquiry_modal.html', {
+			'material': material,
+			'form': form,
+			'inquiries': inquiries,
+		})
+	except RawMaterial.DoesNotExist:
+		bug_logger.warning(f"PriceInquiry modal: raw material not found rid={raw_material_id}")
+		return HttpResponseBadRequest("raw material not found")
+	except Exception as e:
+		bug_logger.error(f"PriceInquiry modal error: {e}")
+		return HttpResponseBadRequest("error")
