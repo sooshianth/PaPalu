@@ -12,6 +12,35 @@ class Attachment(models.Model):
         verbose_name='شخص'
     )
 
+    DOC_TYPE_CHOICES = [
+        ('contract', 'قرارداد'),
+        ('license', 'مجوز'),
+        ('certificate', 'گواهی'),
+        ('other', 'سایر'),
+    ]
+
+    doc_type = models.CharField(
+        max_length=20,
+        choices=DOC_TYPE_CHOICES,
+        verbose_name='نوع مدرک',
+        null=True,
+        blank=True,
+    )
+
+    file = models.FileField(
+        upload_to='person_attachments/%Y/%m/%d/',
+        verbose_name='فایل پیوست',
+        null=True,
+        blank=True,
+    )
+
+    description = models.CharField(
+        max_length=255,
+        verbose_name='توضیح پیوست',
+        null=True,
+        blank=True,
+    )
+
     class Meta:
         verbose_name = 'شخص | پیوست'
         verbose_name_plural = 'شخص | پیوست ها'

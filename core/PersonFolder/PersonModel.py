@@ -84,6 +84,13 @@ class Person(models.Model):
         null=True, 
         blank=True)
     
+    phone_number = models.CharField(
+        max_length=20,
+        verbose_name='شماره تلفن شخص',
+        null=True,
+        blank=True
+    )
+    
     # فیلد معرف
     introducer = models.CharField(
         max_length=100,

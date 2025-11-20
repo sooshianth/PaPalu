@@ -13,6 +13,8 @@ class Representative(models.Model):
     )
     name = models.CharField(max_length=100, verbose_name='نام نماینده', primary_key=True)
     position = models.CharField(max_length=100, verbose_name='سمت نماینده')
+    mobile_number = models.CharField(max_length=20, verbose_name='شماره موبایل نماینده', null=True, blank=True)
+    phone_number = models.CharField(max_length=20, verbose_name='شماره ثابت نماینده', null=True, blank=True)
     confirmation_letter = models.FileField(
         upload_to='representative_letters/%Y/%m/%d/',
         verbose_name='نامه تایید نماینده',

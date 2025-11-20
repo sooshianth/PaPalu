@@ -988,6 +988,14 @@
                                 <span class="nav-text">تعریف مواد اولیه</span>
                             </a>
                         </li>
+                        <li class="submenu-item">
+                            <a href="{% url 'supply:create_supplier' %}" class="nav-link submenu-link" title="ایجاد شخص تامین کننده">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">ایجاد شخص تامین کننده</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 <li class="nav-item has-submenu" id="productionSubmenu">
@@ -1480,24 +1488,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Setup supply submenu
         if (supplySubmenu && supplyMainLink) {
-            // Auto-expand if on supply page
+            // Auto-expand only when on a supply page
             if (isSupplyPage) {
                 supplySubmenu.classList.add('expanded');
             }
-            
+
             // Toggle submenu on main link click
             supplyMainLink.addEventListener('click', function(e) {
                 e.preventDefault();
                 supplySubmenu.classList.toggle('expanded');
-                
+
                 // Save state to localStorage
                 const isExpanded = supplySubmenu.classList.contains('expanded');
                 localStorage.setItem('supplySubmenuExpanded', isExpanded);
             });
-            
-            // Load saved state from localStorage
+
+            // Do NOT auto-expand from saved state when not on supply page
             const savedState = localStorage.getItem('supplySubmenuExpanded');
-            if (savedState === 'true' && !isSupplyPage) {
+            if (savedState === 'true' && isSupplyPage) {
                 supplySubmenu.classList.add('expanded');
             }
         }
