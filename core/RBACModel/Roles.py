@@ -212,18 +212,31 @@ def user_can_access_field(user, model_class, field_name, access_type='view'):
     
     content_type = ContentType.objects.get_for_model(model_class)
     
+    # متغیر برای نگهداری اینکه آیا حداقل یک FieldPermission برای این کاربر تعریف شده
+    has_any_field_permission = False
+    # متغیر برای نگهداری اینکه آیا قانونی برای این فیلد خاص وجود دارد
+    found_rule_for_this_field = False
+    
     # Check user's own field permission
     try:
         user_perm = user.field_permission
         if user_perm and user_perm.field_permission:
+            has_any_field_permission = True
+            
+            # بررسی آیا قانونی برای این access_type وجود دارد
             field_choices = user_perm.field_permission.field_choices.filter(
                 content_type=content_type,
                 field_name=field_name,
                 access_type=access_type
             )
-            for choice in field_choices:
-                if not choice.allowed:
-                    return False
+            
+            if field_choices.exists():
+                found_rule_for_this_field = True
+                # اگر حتی یکی allowed=False باشد، دسترسی ندارد
+                for choice in field_choices:
+                    if not choice.allowed:
+                        return False
+                # اگر همه allowed=True باشند، دسترسی دارد
                 return True
     except UserFieldPermission.DoesNotExist:
         pass
@@ -233,15 +246,32 @@ def user_can_access_field(user, model_class, field_name, access_type='view'):
     # Check roles
     for role in user.roles.all():
         if role.field_permission:
+            has_any_field_permission = True
+            
+            # بررسی آیا قانونی برای این access_type وجود دارد
             field_choices = role.field_permission.field_choices.filter(
                 content_type=content_type,
                 field_name=field_name,
                 access_type=access_type
             )
-            for choice in field_choices:
-                if not choice.allowed:
-                    return False
+            
+            if field_choices.exists():
+                found_rule_for_this_field = True
+                # اگر حتی یکی allowed=False باشد، دسترسی ندارد
+                for choice in field_choices:
+                    if not choice.allowed:
+                        return False
+                # اگر همه allowed=True باشند، دسترسی دارد
                 return True
     
-    # اگر قانونی تعریف نشده، به طور پیش‌فرض دسترسی داده می‌شود
+    # اگر قانونی برای این فیلد خاص پیدا شد و به اینجا رسیدیم، یعنی همه allowed=True بودند
+    if found_rule_for_this_field:
+        return True
+    
+    # اگر هیچ FieldPermission ای برای کاربر تعریف نشده، به طور پیش‌فرض دسترسی داده می‌شود
+    if not has_any_field_permission:
+        return True
+    
+    # اگر FieldPermission تعریف شده ولی قانونی برای این فیلد خاص نیست،
+    # به طور پیش‌فرض دسترسی داده می‌شود (فیلدهای غیرمدیریت شده)
     return True

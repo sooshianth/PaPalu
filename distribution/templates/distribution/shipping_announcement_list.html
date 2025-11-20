@@ -192,7 +192,9 @@
                     <thead>
                         <tr>
                             <th>شناسه برنامه</th>
+                            {% if accessible_product_fields.name %}
                             <th>محصول</th>
+                            {% endif %}
                             <th>تناژ برنامه‌ریزی شده (تن)</th>
                             <th>وضعیت</th>
                         </tr>
@@ -201,7 +203,11 @@
                         {% for program in production_programs.in_progress %}
                         <tr>
                             <td>{{ program.program_id|default:"-" }}</td>
-                            <td>{{ program.product.name|default:"-" }}</td>
+                            {% if accessible_product_fields.name %}
+                            <td>
+                                {{ program.product.name|default:"-" }}
+                            </td>
+                            {% endif %}
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
                             <td>{{ program.get_status_display }}</td>
                         </tr>
@@ -220,7 +226,9 @@
                     <thead>
                         <tr>
                             <th>شناسه برنامه</th>
+                            {% if accessible_product_fields.name %}
                             <th>محصول</th>
+                            {% endif %}
                             <th>تناژ برنامه‌ریزی شده (تن)</th>
                             <th>وضعیت</th>
                         </tr>
@@ -229,7 +237,11 @@
                         {% for program in production_programs.in_queue %}
                         <tr>
                             <td>{{ program.program_id|default:"-" }}</td>
-                            <td>{{ program.product.name|default:"-" }}</td>
+                            {% if accessible_product_fields.name %}
+                            <td>
+                                {{ program.product.name|default:"-" }}
+                            </td>
+                            {% endif %}
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
                             <td>{{ program.get_status_display }}</td>
                         </tr>
@@ -250,16 +262,28 @@
                 <table class="data-table">
                     <thead>
                         <tr>
+                            {% if accessible_product_fields.name %}
                             <th>محصول</th>
+                            {% endif %}
+                            {% if accessible_product_fields.code %}
                             <th>کد محصول</th>
+                            {% endif %}
                             <th>موجودی کل (کیلوگرم)</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for product_id, inv_data in inventory_dict.items %}
                         <tr>
-                            <td>{{ inv_data.product.name }}</td>
-                            <td>{{ inv_data.product.code }}</td>
+                            {% if accessible_product_fields.name %}
+                            <td>
+                                {{ inv_data.product.name }}
+                            </td>
+                            {% endif %}
+                            {% if accessible_product_fields.code %}
+                            <td>
+                                {{ inv_data.product.code }}
+                            </td>
+                            {% endif %}
                             <td>{{ inv_data.total_quantity|floatformat:2 }}</td>
                         </tr>
                         {% endfor %}
@@ -285,10 +309,18 @@
                                 <th style="width: 40px;">
                                     <input type="checkbox" id="selectAll" title="انتخاب همه">
                                 </th>
+                                {% if accessible_allocation_fields.allocation_number %}
                                 <th>شماره تخصیص</th>
+                                {% endif %}
+                                {% if accessible_order_fields.order_number %}
                                 <th>شماره سفارش</th>
+                                {% endif %}
+                                {% if accessible_allocation_fields.allocation_priority %}
                                 <th>الویت</th>
+                                {% endif %}
+                                {% if accessible_product_fields.name %}
                                 <th>محصولات</th>
+                                {% endif %}
                                 <th>مقدار کل (کیلوگرم)</th>
                                 <th>عملیات</th>
                             </tr>
@@ -302,13 +334,22 @@
                                            value="{{ item.allocation.allocation_number }}" 
                                            class="allocation-checkbox">
                                 </td>
+                                {% if accessible_allocation_fields.allocation_number %}
                                 <td>
                                     <span class="code-badge">{{ item.allocation.allocation_number }}</span>
                                 </td>
+                                {% endif %}
+                                {% if accessible_order_fields.order_number %}
                                 <td>
                                     <span class="code-badge">{{ item.order_number }}</span>
                                 </td>
-                                <td>{{ item.allocation.allocation_priority|default:"-" }}</td>
+                                {% endif %}
+                                {% if accessible_allocation_fields.allocation_priority %}
+                                <td>
+                                    {{ item.allocation.allocation_priority|default:"-" }}
+                                </td>
+                                {% endif %}
+                                {% if accessible_product_fields.name %}
                                 <td>
                                     <div class="product-list">
                                         {% for product_info in item.products_info %}
@@ -319,6 +360,7 @@
                                         {% endfor %}
                                     </div>
                                 </td>
+                                {% endif %}
                                 <td>{{ item.total_quantity_kg|floatformat:2 }}</td>
                                 <td onclick="event.stopPropagation();">
                                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">

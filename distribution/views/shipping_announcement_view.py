@@ -18,9 +18,42 @@ from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
 from core.ProductFolder import Product
 from django.contrib.contenttypes.models import ContentType
+from access.helpers import check_field_access_prefer_edit
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_product_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Product"""
+    if user.is_superuser:
+        return {'name': True, 'code': True}
+    
+    accessible_fields = {}
+    accessible_fields['name'] = check_field_access_prefer_edit(user, Product, 'name')
+    accessible_fields['code'] = check_field_access_prefer_edit(user, Product, 'code')
+    return accessible_fields
+
+
+def get_accessible_allocation_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Allocation"""
+    if user.is_superuser:
+        return {'allocation_number': True, 'allocation_priority': True}
+    
+    accessible_fields = {}
+    accessible_fields['allocation_number'] = check_field_access_prefer_edit(user, Allocation, 'allocation_number')
+    accessible_fields['allocation_priority'] = check_field_access_prefer_edit(user, Allocation, 'allocation_priority')
+    return accessible_fields
+
+
+def get_accessible_order_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Order"""
+    if user.is_superuser:
+        return {'order_number': True}
+    
+    accessible_fields = {}
+    accessible_fields['order_number'] = check_field_access_prefer_edit(user, Order, 'order_number')
+    return accessible_fields
 
 
 def get_product_inventory_aggregated():
@@ -113,9 +146,9 @@ def shipping_announcement_list_view(request):
     """
     audit_logger.info("درخواست مشاهده لیست تخصیص‌های در انتظار اعلام بار")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_NOTIFY_CARRIER.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_VIEW_SHIPPING_ANNOUNCEMENT_LIST.value):
         audit_logger.activity("تلاش برای دسترسی به لیست اعلام بار بدون دسترسی")
-        messages.error(request, 'شما دسترسی به اعلام بار را ندارید.')
+        messages.error(request, 'شما دسترسی به مشاهده لیست اعلام بار را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     # دریافت تخصیص‌های در انتظار اعلام بار
@@ -168,12 +201,20 @@ def shipping_announcement_list_view(request):
     # دریافت اطلاعات برنامه‌های تولید
     production_info = get_production_programs_info()
     
+    # بررسی دسترسی فیلدها
+    accessible_product_fields = get_accessible_product_fields(request.user)
+    accessible_allocation_fields = get_accessible_allocation_fields(request.user)
+    accessible_order_fields = get_accessible_order_fields(request.user)
+    
     bug_logger.debug(f"تعداد {len(allocations_with_info)} تخصیص در انتظار اعلام بار لود شد")
     
     context = {
         'allocations_with_info': allocations_with_info,
         'inventory_dict': inventory_dict,
         'production_programs': production_info,
+        'accessible_product_fields': accessible_product_fields,
+        'accessible_allocation_fields': accessible_allocation_fields,
+        'accessible_order_fields': accessible_order_fields,
         'page_title': 'لیست تخصیص‌های در انتظار اعلام بار',
     }
     return render(request, 'distribution/shipping_announcement_list.html', context)
@@ -186,9 +227,9 @@ def shipping_announcement_process_view(request):
     """
     audit_logger.info("درخواست پردازش اعلام بار")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_NOTIFY_CARRIER.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_PROCESS_SHIPPING_ANNOUNCEMENT.value):
         audit_logger.activity("تلاش برای پردازش اعلام بار بدون دسترسی")
-        messages.error(request, 'شما دسترسی به اعلام بار را ندارید.')
+        messages.error(request, 'شما دسترسی به پردازش اعلام بار را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     if request.method == 'POST':
@@ -268,9 +309,9 @@ def shipping_announcement_single_view(request):
     """
     audit_logger.info("درخواست پردازش اعلام بار جداگانه")
     
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_NOTIFY_CARRIER.value):
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_PROCESS_SHIPPING_ANNOUNCEMENT.value):
         audit_logger.activity("تلاش برای پردازش اعلام بار بدون دسترسی")
-        messages.error(request, 'شما دسترسی به اعلام بار را ندارید.')
+        messages.error(request, 'شما دسترسی به پردازش اعلام بار را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     if request.method == 'POST':

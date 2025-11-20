@@ -247,56 +247,76 @@
     {% if allocations_with_info %}
         <div class="table-container">
             <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>شماره تخصیص</th>
-                        <th>شماره سفارش</th>
-                        <th>اطلاعات آدرس تحویل</th>
-                        <th>تعداد حمل‌ها</th>
-                        <th>عملیات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in allocations_with_info %}
-                    <tr>
-                        <td>
-                            <span class="code-badge">{{ item.allocation.allocation_number }}</span>
-                        </td>
-                        <td>
-                            <span class="code-badge">{{ item.order_number }}</span>
-                        </td>
-                        <td>
-                            {% if item.delivery_info %}
-                                <div class="delivery-info">
-                                    <div class="delivery-info-item">
-                                        <span class="delivery-info-label">نام تحویل گیرنده:</span>
-                                        <span class="delivery-info-value">{{ item.delivery_info.recipient_name }}</span>
-                                    </div>
-                                    <div class="delivery-info-item">
-                                        <span class="delivery-info-label">کد ملی:</span>
-                                        <span class="delivery-info-value">{{ item.delivery_info.recipient_national_id }}</span>
-                                    </div>
-                                    <div class="delivery-info-item">
-                                        <span class="delivery-info-label">شناسه یکتا:</span>
-                                        <span class="delivery-info-value">{{ item.delivery_info.unique_delivery_id }}</span>
-                                    </div>
-                                    <div class="delivery-info-item">
-                                        <span class="delivery-info-label">آدرس:</span>
-                                        <span class="delivery-info-value">{{ item.delivery_info.address }}</span>
-                                    </div>
-                                    <div class="delivery-info-item">
-                                        <span class="delivery-info-label">شماره ثابت:</span>
-                                        <span class="delivery-info-value">{{ item.delivery_info.landline_phone }}</span>
-                                    </div>
-                                    <div class="delivery-info-item">
-                                        <span class="delivery-info-label">شماره همراه:</span>
-                                        <span class="delivery-info-value">{{ item.delivery_info.mobile_phone }}</span>
-                                    </div>
-                                </div>
-                            {% else %}
-                                <span style="color: var(--gray-400);">اطلاعات آدرس یافت نشد</span>
+                    <thead>
+                        <tr>
+                            {% if accessible_allocation_fields.allocation_number %}
+                            <th>شماره تخصیص</th>
                             {% endif %}
-                        </td>
+                            {% if accessible_order_fields.order_number %}
+                            <th>شماره سفارش</th>
+                            {% endif %}
+                            {% if accessible_delivery_fields.recipient_name or accessible_delivery_fields.recipient_national_id or accessible_delivery_fields.address %}
+                            <th>اطلاعات آدرس تحویل</th>
+                            {% endif %}
+                            <th>تعداد حمل‌ها</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in allocations_with_info %}
+                        <tr>
+                            {% if accessible_allocation_fields.allocation_number %}
+                            <td>
+                                <span class="code-badge">{{ item.allocation.allocation_number }}</span>
+                            </td>
+                            {% endif %}
+                            {% if accessible_order_fields.order_number %}
+                            <td>
+                                <span class="code-badge">{{ item.order_number }}</span>
+                            </td>
+                            {% endif %}
+                            {% if accessible_delivery_fields.recipient_name or accessible_delivery_fields.recipient_national_id or accessible_delivery_fields.address %}
+                            <td>
+                                {% if item.delivery_info %}
+                                    <div class="delivery-info">
+                                        {% if accessible_delivery_fields.recipient_name %}
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">نام تحویل گیرنده:</span>
+                                            <span class="delivery-info-value">{{ item.delivery_info.recipient_name }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if accessible_delivery_fields.recipient_national_id %}
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">کد ملی:</span>
+                                            <span class="delivery-info-value">{{ item.delivery_info.recipient_national_id }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if accessible_delivery_fields.unique_delivery_id %}
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">شناسه یکتا:</span>
+                                            <span class="delivery-info-value">{{ item.delivery_info.unique_delivery_id }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if accessible_delivery_fields.address %}
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">آدرس:</span>
+                                            <span class="delivery-info-value">{{ item.delivery_info.address }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">شماره ثابت:</span>
+                                            <span class="delivery-info-value">{{ item.delivery_info.landline_phone|default:"-" }}</span>
+                                        </div>
+                                        <div class="delivery-info-item">
+                                            <span class="delivery-info-label">شماره همراه:</span>
+                                            <span class="delivery-info-value">{{ item.delivery_info.mobile_phone|default:"-" }}</span>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <span style="color: var(--gray-400);">اطلاعات آدرس یافت نشد</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
                         <td>
                             <span class="transports-count">{{ item.transports_count }} حمل</span>
                         </td>
