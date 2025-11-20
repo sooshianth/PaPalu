@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% block title %}ایجاد شخص تامین کننده{% endblock %}
+
+{% block extra_css %}
+<style>
+  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04)}
+  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
+  .card-body {padding:22px}
+  .section-title {font-size:1rem;margin:0 0 14px 0;color:#2d3e3f;font-weight:600;display:flex;align-items:center;gap:8px}
+  .section-title svg{width:18px;height:18px;color:#28a745}
+  .rules{background:#f8f9fa;border:1px dashed #cfd8dc;padding:12px 14px;border-radius:10px;font-size:.9rem;color:#37474f;margin-bottom:18px;line-height:1.6}
+  .form-wrapper{background:#fafafa;border:1px solid #e3e7ea;border-radius:12px;padding:18px 20px;margin-bottom:26px}
+  .form-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px}
+  .field input[type=text], .field input[type=number], .field select, .field textarea{width:100%;padding:8px 10px;border:1px solid #cfd8dc;background:#fff;border-radius:8px;font-size:.85rem;font-family:inherit;transition:.2s}
+  .field textarea{min-height:90px;resize:vertical}
+  .field input:focus, .field select:focus, .field textarea:focus{outline:none;border-color:#28a745;box-shadow:0 0 0 3px rgba(40,167,69,0.15)}
+  .required-marker{color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px}
+  .submit-row{margin-top:8px;display:flex;gap:10px}
+  /* Make .card.mb-3 blocks look like .form-wrapper */
+  .card.mb-3{background:#fafafa;border:1px solid #e3e7ea;border-radius:12px;margin-bottom:26px}
+  .card.mb-3 .card-header{background:linear-gradient(135deg,#f8f9fa,#eef5f1);border-bottom:1px solid #e3e7ea;padding:14px 20px}
+  .card.mb-3 .card-body{padding:18px 20px}
+  .card.mb-3 .table{width:100%;border-collapse:collapse;border:1px solid #e3e7ea;border-radius:8px;overflow:hidden}
+  .card.mb-3 .table th,.card.mb-3 .table td{border:1px solid #e3e7ea;padding:8px 10px;text-align:center;vertical-align:middle;font-size:.85rem}
+  .card.mb-3 .table thead th{background:#f2f6f5;font-weight:600;color:#37474f}
+</style>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size:1.1rem">ایجاد شخص تامین کننده</h3>
+    <div>
+      <a href="{% url 'supply:home' %}" class="btn btn-secondary btn-sm">دامنه تامین</a>
+    </div>
+  </div>
+  <div class="card-body">
+    {% if messages %}
+      {% for message in messages %}
+        <div class="message {{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      {% csrf_token %}
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          اطلاعات شخص/شرکت
+        </div>
+        <div class="form-groups">
+          <div class="field"><label>{% if person_form.national_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.national_id.label }}</label>{{ person_form.national_id }}</div>
+          <div class="field"><label>{% if person_form.name.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.name.label }}</label>{{ person_form.name }}</div>
+          <div class="field"><label>{% if person_form.nature.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.nature.label }}</label>{{ person_form.nature }}</div>
+          <div class="field"><label>{{ person_form.registration_number.label }}</label>{{ person_form.registration_number }}</div>
+          <div class="field"><label>{{ person_form.birth_date.label }}</label>{{ person_form.birth_date }}</div>
+          <div class="field"><label>{{ person_form.accounting_code.label }}</label>{{ person_form.accounting_code }}</div>
+          <div class="field"><label>{{ person_form.user_type.label }}</label>{{ person_form.user_type }}</div>
+          <div class="field"><label>{{ person_form.phone_number.label }}</label>{{ person_form.phone_number }}</div>
+          <div class="field"><label>{{ person_form.sales_expert.label }}</label>{{ person_form.sales_expert }}</div>
+          <div class="field"><label>{{ person_form.introducer.label }}</label>{{ person_form.introducer }}</div>
+          <div class="field" style="grid-column:1/-1"><label>{{ person_form.description.label }}</label>{{ person_form.description }}</div>
+        </div>
+      </div>
+
+      <div class="form-wrapper">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          اطلاعات مالی/بانکی
+        </div>
+        <div class="form-groups">
+          <div class="field"><label>{{ fb_form.tax_group.label }}</label>{{ fb_form.tax_group }}</div>
+          <div class="field"><label>{{ fb_form.account_balance.label }}</label>{{ fb_form.account_balance }}</div>
+          <div class="field"><label>{{ fb_form.economic_code.label }}</label>{{ fb_form.economic_code }}</div>
+          <div class="field"><label>{{ fb_form.tax_postal_code.label }}</label>{{ fb_form.tax_postal_code }}</div>
+          <div class="field"><label>{{ fb_form.tax_province.label }}</label>{{ fb_form.tax_province }}</div>
+          <div class="field"><label>{{ fb_form.tax_city.label }}</label>{{ fb_form.tax_city }}</div>
+          <div class="field" style="grid-column:1/-1"><label>{{ fb_form.tax_address.label }}</label>{{ fb_form.tax_address }}</div>
+        </div>
+      </div>
+
+    <div class="card mb-3">
+      <div class="card-header">نمایندگان</div>
+      <div class="card-body">
+        {{ rep_formset.management_form }}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>نام</th>
+                <th>سمت</th>
+                <th>موبایل</th>
+                <th>تلفن</th>
+                <th>نامه تایید</th>
+                <th>حذف؟</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in rep_formset.forms %}
+              <tr>
+                <td>{{ form.name }}</td>
+                <td>{{ form.position }}</td>
+                <td>{{ form.mobile_number }}</td>
+                <td>{{ form.phone_number }}</td>
+                <td>{{ form.confirmation_letter }}</td>
+                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">حساب‌های بانکی</div>
+      <div class="card-body">
+        {{ ba_formset.management_form }}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>بانک</th>
+                <th>شماره حساب</th>
+                <th>شماره شبا</th>
+                <th>حذف؟</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in ba_formset.forms %}
+              <tr>
+                <td>{{ form.bank_name }}</td>
+                <td>{{ form.account_number }}</td>
+                <td>{{ form.shaba_number }}</td>
+                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">ترجیحات پرداخت</div>
+      <div class="card-body">
+        {{ pay_formset.management_form }}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>روش</th>
+                <th>شرایط (روز)</th>
+                <th>سقف اعتبار</th>
+                <th>توضیحات</th>
+                <th>حذف؟</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in pay_formset.forms %}
+              <tr>
+                <td>{{ form.payment_method }}</td>
+                <td>{{ form.payment_term_days }}</td>
+                <td>{{ form.credit_limit }}</td>
+                <td>{{ form.notes }}</td>
+                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">شبکه‌های اجتماعی</div>
+      <div class="card-body">
+        {{ sn_formset.management_form }}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>پلتفرم</th>
+                <th>شناسه</th>
+                <th>آدرس</th>
+                <th>حذف؟</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in sn_formset.forms %}
+              <tr>
+                <td>{{ form.platform }}</td>
+                <td>{{ form.handle }}</td>
+                <td>{{ form.url }}</td>
+                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">پیوست‌ها</div>
+      <div class="card-body">
+        {{ att_formset.management_form }}
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>نوع</th>
+                <th>فایل</th>
+                <th>توضیح</th>
+                <th>حذف؟</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for form in att_formset.forms %}
+              <tr>
+                <td>{{ form.doc_type }}</td>
+                <td>{{ form.file }}</td>
+                <td>{{ form.description }}</td>
+                <td class="text-center">{% if form.DELETE %}{{ form.DELETE }}{% endif %}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+      <div class="submit-row">
+        <button type="submit" class="btn btn-primary btn-sm">ثبت تامین‌کننده</button>
+        <button type="reset" class="btn btn-secondary btn-sm">پاکسازی</button>
+        <a href="{% url 'supply:home' %}" class="btn btn-outline-secondary btn-sm">بازگشت</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+  (function() {
+    function initJalali() {
+      var inputs = document.querySelectorAll('.jalali-date');
+      inputs.forEach(function(inp){
+        try {
+          if (!inp._pd_inited) {
+            $(inp).persianDatepicker({
+              format: 'YYYY-MM-DD',
+              autoClose: true,
+              initialValueType: 'gregorian'
+            });
+            inp._pd_inited = true;
+          }
+        } catch (e) {}
+      });
+    }
+    document.addEventListener('DOMContentLoaded', initJalali);
+  })();
+</script>
+{% endblock %}

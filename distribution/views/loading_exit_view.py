@@ -1,0 +1,667 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.http import HttpResponseForbidden, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils import timezone
+import logging
+from core.logging_levels import *
+
+from core.RBACModel import user_has_task, TaskChoices
+from core.TransportFolder.TransportModel import Transport
+from core.TransportFolder.ProductInfoModel import ProductInfo
+from core.TransportFolder.LoadingScheduleInfoModel import LoadingScheduleInfo
+from core.TransportFolder.TruckInfoModel import TruckInfo
+from core.PersonFolder.PersonModel import Person
+from core.PersonFolder.PhoneNumberModel import PhoneNumber
+from core.PersonFolder.BankAccountModel import BankAccount
+from core.PersonFolder.FinancialBankingModel import FinancialBanking
+from core.AllocationFolder.AllocationModel import Allocation
+from core.WarehouseFolder.WarehouseModel import Warehouse
+from django.contrib.contenttypes.models import ContentType
+from access.helpers import check_field_access_prefer_edit
+from distribution.forms.loading_exit_form import LoadingExitForm
+import re
+
+bug_logger = logging.getLogger("bugs")
+audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_person_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Person"""
+    if user.is_superuser:
+        return {'name': True, 'national_id': True, 'description': True}
+    
+    accessible_fields = {}
+    accessible_fields['name'] = check_field_access_prefer_edit(user, Person, 'name')
+    accessible_fields['national_id'] = check_field_access_prefer_edit(user, Person, 'national_id')
+    accessible_fields['description'] = check_field_access_prefer_edit(user, Person, 'description')
+    return accessible_fields
+
+
+def get_accessible_truck_info_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای TruckInfo"""
+    if user.is_superuser:
+        return {'plate_number': True, 'vehicle_type': True, 'loading_type': True}
+    
+    accessible_fields = {}
+    accessible_fields['plate_number'] = check_field_access_prefer_edit(user, TruckInfo, 'plate_number')
+    accessible_fields['vehicle_type'] = check_field_access_prefer_edit(user, TruckInfo, 'vehicle_type')
+    accessible_fields['loading_type'] = check_field_access_prefer_edit(user, TruckInfo, 'loading_type')
+    return accessible_fields
+
+
+@login_required
+def loading_exit_list_view(request):
+    """
+    لیست حمل‌های در انتظار بارگیری
+    """
+    audit_logger.info("درخواست مشاهده لیست حمل‌های در انتظار بارگیری")
+    
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_VIEW_LOADING_EXIT_LIST.value):
+        audit_logger.activity("تلاش برای دسترسی به لیست خروج کالا بدون دسترسی")
+        messages.error(request, 'شما دسترسی به مشاهده لیست خروج کالا را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت حمل‌های در انتظار بارگیری
+    transports = Transport.objects.filter(
+        status='loading'
+    ).select_related('driver').prefetch_related(
+        'truck_infos', 'product_infos'
+    ).order_by('-waybill_date', 'waybill_number')
+    
+    # آماده‌سازی اطلاعات حمل‌ها
+    transports_with_info = []
+    for transport in transports:
+        # دریافت اطلاعات راننده
+        driver_name = None
+        driver_national_id = None
+        if transport.driver:
+            driver_name = transport.driver.name
+            driver_national_id = transport.driver.national_id
+        
+        # دریافت اطلاعات کامیون
+        truck_info = transport.truck_infos.first()
+        plate_number = None
+        vehicle_type = None
+        if truck_info:
+            plate_number = truck_info.plate_number
+            vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
+        
+        # دریافت اطلاعات محصول از ProductInfo یا Allocation
+        product_name = None
+        allocated_quantity = None
+        unit = None
+        
+        # ابتدا از ProductInfo بررسی می‌کنیم
+        product_info = transport.product_infos.first()
+        if product_info:
+            if product_info.product:
+                product_name = product_info.product.name
+            elif product_info.raw_material:
+                product_name = product_info.raw_material.name
+        
+        # اگر از ProductInfo پیدا نشد، از Allocation بررسی می‌کنیم
+        if not product_name and transport.allocation_id:
+            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+            if allocation and allocation.order:
+                # TODO: اگر AllocationItem وجود دارد، از آن استفاده کنیم
+                # برای حالا از order استفاده می‌کنیم
+                pass
+        
+        # دریافت شماره سفارش
+        order_number = None
+        if transport.allocation_id:
+            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+            if allocation and allocation.order:
+                order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+        
+        transports_with_info.append({
+            'transport': transport,
+            'driver_name': driver_name,
+            'driver_national_id': driver_national_id,
+            'plate_number': plate_number,
+            'vehicle_type': vehicle_type,
+            'product_name': product_name or 'نامشخص',
+            'allocated_quantity': allocated_quantity or 'نامشخص',
+            'unit': unit or 'کیلوگرم',
+            'order_number': order_number or 'نامشخص',
+        })
+    
+    # بررسی دسترسی فیلدها
+    accessible_person_fields = get_accessible_person_fields(request.user)
+    accessible_truck_info_fields = get_accessible_truck_info_fields(request.user)
+    
+    bug_logger.debug(f"تعداد {len(transports_with_info)} حمل در انتظار بارگیری لود شد")
+    
+    context = {
+        'transports_with_info': transports_with_info,
+        'accessible_person_fields': accessible_person_fields,
+        'accessible_truck_info_fields': accessible_truck_info_fields,
+        'page_title': 'لیست حمل‌های در انتظار بارگیری',
+    }
+    return render(request, 'distribution/loading_exit_list.html', context)
+
+
+@login_required
+def register_loading_exit_view(request, waybill_number):
+    """
+    ثبت خروج کالا
+    """
+    audit_logger.info(f"درخواست ثبت خروج کالا برای حمل {waybill_number}")
+    
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_REGISTER_LOADING_EXIT.value):
+        audit_logger.activity("تلاش برای ثبت خروج کالا بدون دسترسی")
+        messages.error(request, 'شما دسترسی به ثبت خروج کالا را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    transport = get_object_or_404(Transport, waybill_number=waybill_number)
+    
+    if transport.status != 'loading':
+        messages.error(request, 'این حمل در وضعیت مناسب برای ثبت خروج کالا نیست.')
+        return redirect('distribution:loading_exit_list')
+    
+    # دریافت انبار مشتری از طریق Allocation -> Order -> Customer
+    customer_warehouse = None
+    if transport.allocation_id:
+        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if allocation and allocation.order and allocation.order.customer:
+            customer = allocation.order.customer
+            if customer.warehouse:
+                customer_warehouse = customer.warehouse
+    
+    # دریافت حساب‌های بانکی راننده
+    driver_account_choices = []
+    if transport.driver:
+        financial_banking = FinancialBanking.objects.filter(person=transport.driver).first()
+        if financial_banking:
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking)
+            for account in bank_accounts:
+                account_display = f"{account.account_number}"
+                if account.bank_name:
+                    account_display += f" ({account.bank_name})"
+                driver_account_choices.append((account.account_number, account_display))
+    
+    if request.method == 'POST':
+        form = LoadingExitForm(request.POST)
+        
+        # تنظیم queryset و choices برای فیلدهای داینامیک قبل از اعتبارسنجی
+        # انبار مقصد: انبار مشتری
+        if customer_warehouse:
+            form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                pk=customer_warehouse.pk
+            )
+        else:
+            form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                warehouse_type='consumer'
+            )
+        
+        # حساب‌های بانکی راننده
+        if driver_account_choices:
+            form.fields['driver_account_number'].choices = driver_account_choices
+            form.fields['driver_account_number'].required = True
+        else:
+            form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
+            form.fields['driver_account_number'].required = False
+        
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    # دریافت داده‌های فرم
+                    empty_weight = form.cleaned_data['empty_weight']
+                    gross_weight = form.cleaned_data['gross_weight']
+                    net_weight = form.cleaned_data.get('net_weight', gross_weight - empty_weight)
+                    packaging_type = form.cleaned_data['packaging_type']
+                    origin_warehouse_obj = form.cleaned_data['origin_warehouse']
+                    destination_warehouse_obj = form.cleaned_data['destination_warehouse']
+                    driver_account_number = form.cleaned_data.get('driver_account_number', '').strip()
+                    
+                    # بررسی اینکه انبار مبدأ انتخاب شده است
+                    if not origin_warehouse_obj:
+                        messages.error(request, 'انتخاب انبار مبدأ الزامی است.')
+                        return redirect('distribution:loading_exit_list')
+                    
+                    # بررسی اینکه انبار مقصد انتخاب شده است
+                    if not destination_warehouse_obj:
+                        messages.error(request, 'انتخاب انبار مقصد الزامی است.')
+                        return redirect('distribution:loading_exit_list')
+                    
+                    # تبدیل انبارها به نام (چون ProductInfo از CharField استفاده می‌کند)
+                    origin_warehouse = origin_warehouse_obj.name if origin_warehouse_obj else ''
+                    destination_warehouse = destination_warehouse_obj.name if destination_warehouse_obj else ''
+                    
+                    # بررسی اینکه اگر راننده وجود دارد، باید حساب بانکی داشته باشد
+                    if transport.driver and not driver_account_number:
+                        financial_banking = FinancialBanking.objects.filter(person=transport.driver).first()
+                        if financial_banking:
+                            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking)
+                            if bank_accounts.exists() and not driver_account_number:
+                                messages.error(request, 'انتخاب شماره حساب راننده الزامی است.')
+                                return redirect('distribution:loading_exit_list')
+                    
+                    # اطلاعات اختیاری راننده
+                    driver_national_id = form.cleaned_data.get('driver_national_id', '').strip()
+                    driver_name = form.cleaned_data.get('driver_name', '').strip()
+                    driver_mobile = form.cleaned_data.get('driver_mobile', '').strip()
+                    driver_description = form.cleaned_data.get('driver_description', '').strip()
+                    
+                    # اطلاعات اختیاری حمل
+                    plate_part1 = form.cleaned_data.get('plate_part1', '').strip()
+                    plate_part2 = form.cleaned_data.get('plate_part2', '').strip()
+                    plate_part3 = form.cleaned_data.get('plate_part3', '').strip()
+                    vehicle_type = form.cleaned_data.get('vehicle_type', '').strip()
+                    loading_type = form.cleaned_data.get('loading_type', '').strip()
+                    
+                    # اگر اطلاعات راننده ناقص است، تکمیل می‌کنیم
+                    if not transport.driver and driver_national_id:
+                        driver_person, created = Person.objects.get_or_create(
+                            national_id=driver_national_id,
+                            defaults={
+                                'name': driver_name or None,
+                                'type': 'driver',
+                                'description': driver_description or None,
+                            }
+                        )
+                        
+                        if not created:
+                            if driver_name:
+                                driver_person.name = driver_name
+                            if driver_description:
+                                driver_person.description = driver_description
+                            driver_person.type = 'driver'
+                            driver_person.save()
+                        
+                        # اضافه یا به‌روزرسانی شماره همراه
+                        if driver_mobile:
+                            person_content_type = ContentType.objects.get_for_model(Person)
+                            phone_number, created = PhoneNumber.objects.get_or_create(
+                                content_type=person_content_type,
+                                object_id=driver_person.national_id,
+                                phone_type='mobile',
+                                defaults={'number': driver_mobile, 'is_primary': True}
+                            )
+                            if not created:
+                                phone_number.number = driver_mobile
+                                phone_number.save()
+                        
+                        transport.driver = driver_person
+                    
+                    # اگر راننده وجود دارد، از حساب بانکی موجود استفاده می‌کنیم
+                    # driver_account_number در فرم از ChoiceField است و شماره حساب انتخاب شده را برمی‌گرداند
+                    # نیازی به ایجاد حساب جدید نیست، فقط بررسی می‌کنیم که حساب وجود دارد
+                    if transport.driver:
+                        financial_banking = FinancialBanking.objects.filter(person=transport.driver).first()
+                        if financial_banking:
+                            bank_account = BankAccount.objects.filter(
+                                financial_banking=financial_banking,
+                                account_number=driver_account_number
+                            ).first()
+                            if not bank_account:
+                                # اگر حساب پیدا نشد، یک حساب جدید ایجاد می‌کنیم
+                                BankAccount.objects.create(
+                                    financial_banking=financial_banking,
+                                    account_number=driver_account_number,
+                                    bank_name='نامشخص'
+                                )
+                    
+                    # اگر اطلاعات کامیون ناقص است، تکمیل می‌کنیم
+                    if plate_part1 and plate_part2 and plate_part3:
+                        plate_number = f"{plate_part1}|{plate_part2}|{plate_part3}"
+                        
+                        existing_truck = transport.truck_infos.first()
+                        if existing_truck:
+                            if existing_truck.plate_number != plate_number:
+                                existing_truck.delete()
+                                truck_info = TruckInfo.objects.create(
+                                    plate_number=plate_number,
+                                    transport=transport,
+                                    vehicle_type=vehicle_type or None,
+                                    loading_type=loading_type or None,
+                                )
+                            else:
+                                truck_info = existing_truck
+                                if vehicle_type:
+                                    truck_info.vehicle_type = vehicle_type
+                                if loading_type:
+                                    truck_info.loading_type = loading_type
+                                truck_info.save()
+                        else:
+                            truck_info = TruckInfo.objects.create(
+                                plate_number=plate_number,
+                                transport=transport,
+                                vehicle_type=vehicle_type or None,
+                                loading_type=loading_type or None,
+                            )
+                    
+                    # ایجاد یا به‌روزرسانی ProductInfo
+                    product_info, created = ProductInfo.objects.get_or_create(
+                        transport=transport,
+                        defaults={
+                            'empty_weight': empty_weight,
+                            'gross_weight': gross_weight,
+                            'net_weight': net_weight,
+                            'packaging_type': packaging_type,
+                            'origin_warehouse': origin_warehouse,
+                            'destination_warehouse': destination_warehouse,
+                        }
+                    )
+                    
+                    if not created:
+                        product_info.empty_weight = empty_weight
+                        product_info.gross_weight = gross_weight
+                        product_info.net_weight = net_weight
+                        product_info.packaging_type = packaging_type
+                        product_info.origin_warehouse = origin_warehouse
+                        product_info.destination_warehouse = destination_warehouse
+                        product_info.save()
+                    
+                    # TODO: کاهش موجودی انبار مبدأ
+                    # این بخش باید با سیستم موجودی انبار یکپارچه شود
+                    
+                    # تغییر وضعیت حمل به loaded (بارگیری شده)
+                    transport.status = 'loaded'
+                    transport.loading_date = timezone.now().date()
+                    transport.save()
+                    
+                    # ثبت زمان خروج خودرو
+                    schedule_info, created = LoadingScheduleInfo.objects.get_or_create(
+                        transport=transport
+                    )
+                    schedule_info.vehicle_exit_time = timezone.now()
+                    schedule_info.save(update_fields=['vehicle_exit_time'])
+                    
+                    # بررسی تغییر وضعیت تخصیص
+                    if transport.allocation_id:
+                        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+                        if allocation and allocation.allocation_status == 'pending_loading':
+                            # بررسی اینکه آیا همه حمل‌های تخصیص به loaded رسیدند
+                            all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
+                            all_transports_count = all_transports.count()
+                            loaded_transports_count = all_transports.filter(status='loaded').count()
+                            
+                            # اگر همه حمل‌ها به loaded رسیدند، تخصیص را به in_shipping ببر
+                            if all_transports_count > 0 and all_transports_count == loaded_transports_count:
+                                allocation.allocation_status = 'in_shipping'
+                                allocation.save(update_fields=['allocation_status'])
+                                bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در حال ارسال' تغییر کرد")
+                                
+                                # بررسی تغییر وضعیت سفارش
+                                if allocation.order:
+                                    order = allocation.order
+                                    if hasattr(order, 'status') and order.status == 'pending_loading':
+                                        # دریافت همه تخصیص‌های سفارش
+                                        relevant_allocations = Allocation.objects.filter(
+                                            order=order
+                                        ).exclude(
+                                            allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
+                                        )
+                                        
+                                        # فقط تخصیص‌هایی که حداقل یک حمل دارند را بررسی می‌کنیم
+                                        allocations_with_transports = []
+                                        for alloc in relevant_allocations:
+                                            alloc_transports = Transport.objects.filter(allocation_id=alloc.allocation_number)
+                                            if alloc_transports.exists():
+                                                allocations_with_transports.append(alloc)
+                                        
+                                        # بررسی اینکه آیا همه تخصیص‌های دارای حمل به in_shipping رسیدند
+                                        if allocations_with_transports:
+                                            all_in_shipping = all(
+                                                alloc.allocation_status == 'in_shipping' 
+                                                for alloc in allocations_with_transports
+                                            )
+                                            
+                                            if all_in_shipping:
+                                                order.status = 'in_shipping'
+                                                order.save(update_fields=['status'])
+                                                bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در حال ارسال' تغییر کرد")
+                                                audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در حال ارسال' تغییر کرد")
+                    
+                    bug_logger.info(f"خروج کالا برای حمل {waybill_number} ثبت شد")
+                    messages.success(request, f'خروج کالا برای حمل {waybill_number} با موفقیت ثبت شد.')
+                    audit_logger.activity(f"خروج کالا برای حمل {waybill_number} ثبت شد توسط کاربر {request.user.username}")
+                    
+                    return redirect('distribution:loading_exit_list')
+                    
+            except Exception as e:
+                bug_logger.error(f"خطا در ثبت خروج کالا: {str(e)}")
+                messages.error(request, f'خطا در ثبت خروج کالا: {str(e)}')
+        else:
+            # نمایش خطاهای فرم
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+            
+            # تنظیم مجدد queryset و choices برای نمایش فرم با خطا
+            # این تنظیمات قبلاً انجام شده، اما برای اطمینان دوباره انجام می‌دهیم
+            if customer_warehouse:
+                form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                    pk=customer_warehouse.pk
+                )
+            else:
+                form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                    warehouse_type='consumer'
+                )
+            
+            if driver_account_choices:
+                form.fields['driver_account_number'].choices = driver_account_choices
+                form.fields['driver_account_number'].required = True
+            else:
+                form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
+                form.fields['driver_account_number'].required = False
+                form.fields['driver_account_number'].widget.attrs.pop('disabled', None)
+            
+            # آماده‌سازی context برای نمایش مجدد فرم با خطا
+            driver_name = None
+            driver_national_id = None
+            driver_mobile = None
+            if transport.driver:
+                driver_name = transport.driver.name
+                driver_national_id = transport.driver.national_id
+                person_content_type = ContentType.objects.get_for_model(Person)
+                mobile_phone = PhoneNumber.objects.filter(
+                    content_type=person_content_type,
+                    object_id=transport.driver.national_id,
+                    phone_type='mobile'
+                ).first()
+                if mobile_phone:
+                    driver_mobile = mobile_phone.number
+            
+            truck_info = transport.truck_infos.first()
+            plate_number = None
+            vehicle_type = None
+            if truck_info:
+                plate_number = truck_info.plate_number
+                vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
+            
+            product_info = transport.product_infos.first()
+            product_name = None
+            if product_info:
+                if product_info.product:
+                    product_name = product_info.product.name
+                elif product_info.raw_material:
+                    product_name = product_info.raw_material.name
+            
+            order_number = None
+            if transport.allocation_id:
+                allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+                if allocation and allocation.order:
+                    order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+            
+            accessible_person_fields = get_accessible_person_fields(request.user)
+            
+            context = {
+                'form': form,
+                'transport': transport,
+                'driver_name': driver_name,
+                'driver_national_id': driver_national_id,
+                'driver_mobile': driver_mobile,
+                'plate_number': plate_number,
+                'vehicle_type': vehicle_type,
+                'product_name': product_name or 'نامشخص',
+                'order_number': order_number or 'نامشخص',
+                'accessible_person_fields': accessible_person_fields,
+                'page_title': f'ثبت خروج کالا - {transport.waybill_number}',
+            }
+            return render(request, 'distribution/loading_exit_detail.html', context)
+    else:
+        # برای GET request، فرم را با داده‌های موجود پر می‌کنیم
+        initial_data = {}
+        
+        # دریافت انبار مشتری از طریق Allocation -> Order -> Customer
+        customer_warehouse = None
+        if transport.allocation_id:
+            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+            if allocation and allocation.order and allocation.order.customer:
+                customer = allocation.order.customer
+                if customer.warehouse:
+                    customer_warehouse = customer.warehouse
+        
+        # دریافت اطلاعات ProductInfo موجود
+        product_info = transport.product_infos.first()
+        if product_info:
+            initial_data['empty_weight'] = product_info.empty_weight
+            initial_data['gross_weight'] = product_info.gross_weight
+            initial_data['net_weight'] = product_info.net_weight
+            initial_data['packaging_type'] = product_info.packaging_type
+            
+            # تبدیل نام انبار به شیء
+            if product_info.origin_warehouse:
+                origin_warehouse_obj = Warehouse.objects.filter(
+                    name=product_info.origin_warehouse,
+                    warehouse_type='secondary'
+                ).first()
+                if origin_warehouse_obj:
+                    initial_data['origin_warehouse'] = origin_warehouse_obj
+            
+            if product_info.destination_warehouse and customer_warehouse:
+                if product_info.destination_warehouse == customer_warehouse.name:
+                    initial_data['destination_warehouse'] = customer_warehouse
+            elif customer_warehouse:
+                initial_data['destination_warehouse'] = customer_warehouse
+        
+        # اگر انبار مقصد در initial_data نیست، از انبار مشتری استفاده می‌کنیم
+        if 'destination_warehouse' not in initial_data and customer_warehouse:
+            initial_data['destination_warehouse'] = customer_warehouse
+        
+        # دریافت اطلاعات راننده
+        driver_account_choices = []
+        if transport.driver:
+            initial_data['driver_national_id'] = transport.driver.national_id
+            initial_data['driver_name'] = transport.driver.name
+            initial_data['driver_description'] = transport.driver.description
+            
+            person_content_type = ContentType.objects.get_for_model(Person)
+            mobile_phone = PhoneNumber.objects.filter(
+                content_type=person_content_type,
+                object_id=transport.driver.national_id,
+                phone_type='mobile'
+            ).first()
+            if mobile_phone:
+                initial_data['driver_mobile'] = mobile_phone.number
+            
+            # دریافت حساب‌های بانکی راننده
+            financial_banking = FinancialBanking.objects.filter(person=transport.driver).first()
+            if financial_banking:
+                bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking)
+                for account in bank_accounts:
+                    account_display = f"{account.account_number}"
+                    if account.bank_name:
+                        account_display += f" ({account.bank_name})"
+                    driver_account_choices.append((account.account_number, account_display))
+                
+                # اگر حساب وجود دارد، اولین حساب را به عنوان پیش‌فرض انتخاب می‌کنیم
+                if bank_accounts.exists():
+                    initial_data['driver_account_number'] = bank_accounts.first().account_number
+        
+        # دریافت اطلاعات کامیون
+        truck_info = transport.truck_infos.first()
+        if truck_info:
+            plate_parts = truck_info.plate_number.split('|')
+            if len(plate_parts) == 3:
+                initial_data['plate_part1'] = plate_parts[0]
+                initial_data['plate_part2'] = plate_parts[1]
+                initial_data['plate_part3'] = plate_parts[2]
+            initial_data['vehicle_type'] = truck_info.vehicle_type
+            initial_data['loading_type'] = truck_info.loading_type
+        
+        # ایجاد فرم با مقداردهی اولیه
+        form = LoadingExitForm(initial=initial_data)
+        
+        # تنظیم queryset و choices برای فیلدهای داینامیک
+        # انبار مقصد: انبار مشتری
+        if customer_warehouse:
+            form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                pk=customer_warehouse.pk
+            )
+        else:
+            form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                warehouse_type='consumer'
+            )
+        
+        # حساب‌های بانکی راننده
+        if driver_account_choices:
+            form.fields['driver_account_number'].choices = driver_account_choices
+            form.fields['driver_account_number'].required = True
+        else:
+            # اگر حساب وجود ندارد، فیلد را اختیاری می‌کنیم
+            form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
+            form.fields['driver_account_number'].required = False
+            form.fields['driver_account_number'].widget.attrs['disabled'] = True
+    
+    # آماده‌سازی اطلاعات برای نمایش
+    driver_name = None
+    driver_national_id = None
+    driver_mobile = None
+    if transport.driver:
+        driver_name = transport.driver.name
+        driver_national_id = transport.driver.national_id
+        person_content_type = ContentType.objects.get_for_model(Person)
+        mobile_phone = PhoneNumber.objects.filter(
+            content_type=person_content_type,
+            object_id=transport.driver.national_id,
+            phone_type='mobile'
+        ).first()
+        if mobile_phone:
+            driver_mobile = mobile_phone.number
+    
+    truck_info = transport.truck_infos.first()
+    plate_number = None
+    vehicle_type = None
+    if truck_info:
+        plate_number = truck_info.plate_number
+        vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
+    
+    # دریافت اطلاعات محصول
+    product_info = transport.product_infos.first()
+    product_name = None
+    if product_info:
+        if product_info.product:
+            product_name = product_info.product.name
+        elif product_info.raw_material:
+            product_name = product_info.raw_material.name
+    
+    # دریافت شماره سفارش
+    order_number = None
+    if transport.allocation_id:
+        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if allocation and allocation.order:
+            order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+    
+    # بررسی دسترسی فیلدها
+    accessible_person_fields = get_accessible_person_fields(request.user)
+    
+    context = {
+        'form': form,
+        'transport': transport,
+        'driver_name': driver_name,
+        'driver_national_id': driver_national_id,
+        'driver_mobile': driver_mobile,
+        'plate_number': plate_number,
+        'vehicle_type': vehicle_type,
+        'product_name': product_name or 'نامشخص',
+        'order_number': order_number or 'نامشخص',
+        'accessible_person_fields': accessible_person_fields,
+        'page_title': f'ثبت خروج کالا - {transport.waybill_number}',
+    }
+    return render(request, 'distribution/loading_exit_detail.html', context)
+

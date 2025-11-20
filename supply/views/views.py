@@ -4,6 +4,8 @@ from django.urls import reverse
 from django.db import transaction
 from django import forms
 from django.forms import ModelForm, NumberInput, TextInput, Textarea
+from django.forms import inlineformset_factory
+from django.forms import FileInput, URLInput, ClearableFileInput
 from django.http import JsonResponse, HttpResponseBadRequest
 import logging
 from core.logging_levels import *
@@ -11,6 +13,12 @@ from jdatetime import date as jdate
 
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
+from core.PersonFolder.FinancialBankingModel import FinancialBanking
+from core.PersonFolder.BankAccountModel import BankAccount
+from core.PersonFolder.RepresentativeModel import Representative
+from core.PersonFolder.PaymentPreferenceModel import PaymentPreference
+from core.PersonFolder.SocialNetworkModel import SocialNetwork
+from core.PersonFolder.AttachmentModel import Attachment
 from core.RawMaterialFolder.RawMaterialPurchaseInfoModel import RawMaterialPurchaseInfo
 from core.SupplyFolder.RawMaterialPriceInquiryModel import RawMaterialPriceInquiry
 
@@ -133,6 +141,267 @@ class RawMaterialPriceInquiryForm(ModelForm):
 			self.fields['raw_material'].initial = material
 			self.fields['raw_material'].disabled = True
 			self.fields['raw_material'].required = True
+
+
+class SupplierPersonForm(ModelForm):
+	class Meta:
+		model = Person
+		fields = [
+			'national_id', 'accounting_code', 'name', 'nature', 'registration_number',
+			'birth_date', 'user_type', 'sales_expert', 'description', 'phone_number', 'introducer'
+		]
+		labels = {
+			'national_id': 'کد ملی',
+			'accounting_code': 'کد حسابداری',
+			'name': 'نام شخص/شرکت',
+			'nature': 'ماهیت (حقوقی/حقیقی)',
+			'registration_number': 'شماره ثبت شرکت',
+			'birth_date': 'تاریخ تولد',
+			'user_type': 'نوع کاربری',
+			'sales_expert': 'کارشناس فروش',
+			'description': 'توضیحات',
+			'phone_number': 'تلفن',
+			'introducer': 'معرف',
+		}
+		widgets = {
+			'national_id': TextInput(attrs={'class': 'form-control'}),
+			'accounting_code': TextInput(attrs={'class': 'form-control'}),
+			'name': TextInput(attrs={'class': 'form-control'}),
+			'nature': forms.Select(attrs={'class': 'form-control'}),
+			'registration_number': TextInput(attrs={'class': 'form-control'}),
+			'birth_date': TextInput(attrs={'class': 'form-control jalali-date', 'dir': 'ltr', 'placeholder': 'YYYY-MM-DD'}),
+			'user_type': forms.Select(attrs={'class': 'form-control'}),
+			'sales_expert': TextInput(attrs={'class': 'form-control'}),
+			'description': Textarea(attrs={'class': 'form-control', 'rows': 3}),
+			'phone_number': TextInput(attrs={'class': 'form-control'}),
+			'introducer': TextInput(attrs={'class': 'form-control'}),
+		}
+
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.fields['national_id'].required = True
+		self.fields['name'].required = True
+		self.fields['nature'].required = True
+
+
+class FinancialBankingForm(ModelForm):
+	class Meta:
+		model = FinancialBanking
+		fields = [
+			'tax_group', 'account_balance', 'economic_code', 'tax_postal_code',
+			'tax_province', 'tax_city', 'tax_address'
+		]
+		labels = {
+			'tax_group': 'گروه مالیاتی',
+			'account_balance': 'مانده حساب',
+			'economic_code': 'کد اقتصادی',
+			'tax_postal_code': 'کد پستی مالیاتی',
+			'tax_province': 'استان مالیاتی',
+			'tax_city': 'شهر مالیاتی',
+			'tax_address': 'آدرس مالیاتی',
+		}
+		widgets = {
+			'tax_group': forms.Select(attrs={'class': 'form-control'}),
+			'account_balance': NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+			'economic_code': TextInput(attrs={'class': 'form-control'}),
+			'tax_postal_code': TextInput(attrs={'class': 'form-control'}),
+			'tax_province': TextInput(attrs={'class': 'form-control'}),
+			'tax_city': TextInput(attrs={'class': 'form-control'}),
+			'tax_address': Textarea(attrs={'class': 'form-control', 'rows': 2}),
+		}
+
+
+ 
+
+
+class RepresentativeForm(ModelForm):
+	class Meta:
+		model = Representative
+		fields = ['name', 'position', 'mobile_number', 'phone_number', 'confirmation_letter']
+		widgets = {
+			'name': TextInput(attrs={'class': 'form-control'}),
+			'position': TextInput(attrs={'class': 'form-control'}),
+			'mobile_number': TextInput(attrs={'class': 'form-control'}),
+			'phone_number': TextInput(attrs={'class': 'form-control'}),
+			'confirmation_letter': ClearableFileInput(attrs={'class': 'form-control'}),
+		}
+
+RepresentativeFormSet = inlineformset_factory(
+	Person,
+	Representative,
+	form=RepresentativeForm,
+	fields=['name', 'position', 'mobile_number', 'phone_number', 'confirmation_letter'],
+	extra=1,
+	can_delete=True
+)
+
+
+class BankAccountForm(ModelForm):
+	class Meta:
+		model = BankAccount
+		fields = ['bank_name', 'account_number', 'shaba_number']
+		widgets = {
+			'bank_name': TextInput(attrs={'class': 'form-control'}),
+			'account_number': TextInput(attrs={'class': 'form-control'}),
+			'shaba_number': TextInput(attrs={'class': 'form-control'}),
+		}
+
+BankAccountFormSet = inlineformset_factory(
+	FinancialBanking,
+	BankAccount,
+	form=BankAccountForm,
+	fields=['bank_name', 'account_number', 'shaba_number'],
+	extra=1,
+	can_delete=True
+)
+
+
+class PaymentPreferenceForm(ModelForm):
+	class Meta:
+		model = PaymentPreference
+		fields = ['payment_method', 'payment_term_days', 'credit_limit', 'notes']
+		widgets = {
+			'payment_method': forms.Select(attrs={'class': 'form-control'}),
+			'payment_term_days': NumberInput(attrs={'class': 'form-control'}),
+			'credit_limit': NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+			'notes': Textarea(attrs={'class': 'form-control', 'rows': 3}),
+		}
+
+PaymentPreferenceFormSet = inlineformset_factory(
+	Person,
+	PaymentPreference,
+	form=PaymentPreferenceForm,
+	fields=['payment_method', 'payment_term_days', 'credit_limit', 'notes'],
+	extra=1,
+	can_delete=True
+)
+
+
+class SocialNetworkForm(ModelForm):
+	class Meta:
+		model = SocialNetwork
+		fields = ['platform', 'handle', 'url']
+		widgets = {
+			'platform': forms.Select(attrs={'class': 'form-control'}),
+			'handle': TextInput(attrs={'class': 'form-control'}),
+			'url': URLInput(attrs={'class': 'form-control'}),
+		}
+
+SocialNetworkFormSet = inlineformset_factory(
+	Person,
+	SocialNetwork,
+	form=SocialNetworkForm,
+	fields=['platform', 'handle', 'url'],
+	extra=1,
+	can_delete=True
+)
+
+
+class AttachmentForm(ModelForm):
+	class Meta:
+		model = Attachment
+		fields = ['doc_type', 'file', 'description']
+		widgets = {
+			'doc_type': forms.Select(attrs={'class': 'form-control'}),
+			'file': ClearableFileInput(attrs={'class': 'form-control'}),
+			'description': TextInput(attrs={'class': 'form-control'}),
+		}
+
+AttachmentFormSet = inlineformset_factory(
+	Person,
+	Attachment,
+	form=AttachmentForm,
+	fields=['doc_type', 'file', 'description'],
+	extra=1,
+	can_delete=True
+)
+
+
+def create_supplier_view(request):
+	audit_logger.info("تعریف تامین‌کننده جدید - نمایش و عملیات")
+	try:
+		if request.method == 'POST':
+			person_form = SupplierPersonForm(request.POST)
+			# We'll create FinancialBanking after person saved
+			fb_form = FinancialBankingForm(request.POST)
+
+			# Initialize empty parent instances for binding formsets later after save
+			if person_form.is_valid() and fb_form.is_valid():
+				with transaction.atomic():
+					person = person_form.save(commit=False)
+					person.type = 'supplier'
+					person.save()
+
+					# Financial/Banking single row per person
+					financial, _ = FinancialBanking.objects.get_or_create(person=person)
+					# Update with form values
+					for f, v in fb_form.cleaned_data.items():
+						setattr(financial, f, v)
+					financial.save()
+
+					# Bind and save formsets
+					rep_fs = RepresentativeFormSet(request.POST, request.FILES, instance=person, prefix='rep')
+					ba_fs = BankAccountFormSet(request.POST, instance=financial, prefix='ba')
+					pay_fs = PaymentPreferenceFormSet(request.POST, instance=person, prefix='pay')
+					sn_fs = SocialNetworkFormSet(request.POST, instance=person, prefix='sn')
+					att_fs = AttachmentFormSet(request.POST, request.FILES, instance=person, prefix='att')
+
+					all_valid = rep_fs.is_valid() and ba_fs.is_valid() and pay_fs.is_valid() and sn_fs.is_valid() and att_fs.is_valid()
+					if not all_valid:
+						raise ValueError(f"invalid formsets: rep={rep_fs.errors} ba={ba_fs.errors} pay={pay_fs.errors} sn={sn_fs.errors} att={att_fs.errors}")
+
+					rep_fs.save()
+					ba_fs.save()
+					pay_fs.save()
+					sn_fs.save()
+					att_fs.save()
+
+				messages.success(request, 'تامین‌کننده با موفقیت ثبت شد.')
+				return redirect(reverse('supply:create_supplier'))
+			else:
+				bug_logger.warning(f"Supplier form invalid person={person_form.errors} fb={fb_form.errors}")
+
+			# Fall-through on invalid: rebuild blank formsets to display errors with entered data
+			person_form = SupplierPersonForm(request.POST)
+			fb_form = FinancialBankingForm(request.POST)
+			rep_fs = RepresentativeFormSet(request.POST, request.FILES, prefix='rep')
+			ba_fs = BankAccountFormSet(request.POST, prefix='ba')
+			pay_fs = PaymentPreferenceFormSet(request.POST, prefix='pay')
+			sn_fs = SocialNetworkFormSet(request.POST, prefix='sn')
+			att_fs = AttachmentFormSet(request.POST, request.FILES, prefix='att')
+		else:
+			person_form = SupplierPersonForm()
+			fb_form = FinancialBankingForm()
+			rep_fs = RepresentativeFormSet(prefix='rep')
+			ba_fs = BankAccountFormSet(prefix='ba')
+			pay_fs = PaymentPreferenceFormSet(prefix='pay')
+			sn_fs = SocialNetworkFormSet(prefix='sn')
+			att_fs = AttachmentFormSet(prefix='att')
+
+		context = {
+			'person_form': person_form,
+			'fb_form': fb_form,
+			'rep_formset': rep_fs,
+			'ba_formset': ba_fs,
+			'pay_formset': pay_fs,
+			'sn_formset': sn_fs,
+			'att_formset': att_fs,
+		}
+		return render(request, 'supply_create_supplier.html', context)
+	except Exception as e:
+			bug_logger.error(f"Create supplier error: {e}")
+			if request.method == 'POST':
+				messages.error(request, 'خطا در ثبت تامین‌کننده. لطفاً مجدداً تلاش کنید.')
+			# Show clean forms on exception
+			return render(request, 'supply_create_supplier.html', {
+				'person_form': SupplierPersonForm(),
+				'fb_form': FinancialBankingForm(),
+				'rep_formset': RepresentativeFormSet(prefix='rep'),
+				'ba_formset': BankAccountFormSet(prefix='ba'),
+				'pay_formset': PaymentPreferenceFormSet(prefix='pay'),
+				'sn_formset': SocialNetworkFormSet(prefix='sn'),
+				'att_formset': AttachmentFormSet(prefix='att'),
+			})
 
 
 def supply_home_view(request):

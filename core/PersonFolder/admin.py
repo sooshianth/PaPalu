@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.core.exceptions import ValidationError
 from . import (
     Person, PhoneNumber, DeliveryAddress, BankAccount, FinancialBanking,
     PaymentPreference, PurchasePreference, Representative, SocialNetwork, Attachment
@@ -7,8 +8,8 @@ from . import (
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
-    list_display = ['national_id', 'name', 'type', 'nature', 'accounting_code', 'sales_expert']
-    list_filter = ['type', 'nature', 'user_type']
+    list_display = ['national_id', 'name', 'type', 'nature', 'accounting_code', 'sales_expert', 'warehouse']
+    list_filter = ['type', 'nature', 'user_type', 'warehouse']
     search_fields = ['national_id', 'name', 'accounting_code', 'registration_number']
     fieldsets = (
         ('اطلاعات پایه', {
@@ -17,10 +18,24 @@ class PersonAdmin(admin.ModelAdmin):
         ('اطلاعات تکمیلی', {
             'fields': ('registration_number', 'birth_date', 'user_type', 'sales_expert', 'introducer')
         }),
+        ('انبار', {
+            'fields': ('warehouse',),
+            'description': 'برای مشتریان، نوع انبار باید مصرف‌کننده باشد'
+        }),
         ('توضیحات', {
             'fields': ('description',)
         }),
     )
+    
+    def save_model(self, request, obj, form, change):
+        """اعتبارسنجی: اگر شخص مشتری است، نوع انبار باید consumer باشد"""
+        if obj.type == 'customer' and obj.warehouse:
+            if obj.warehouse.warehouse_type != 'consumer':
+                raise ValidationError(
+                    'برای مشتریان، نوع انبار باید "مصرف‌کننده" باشد. '
+                    f'انبار انتخاب شده از نوع "{obj.warehouse.get_warehouse_type_display()}" است.'
+                )
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(PhoneNumber)
