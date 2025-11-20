@@ -53,23 +53,6 @@ class TargetStock(models.Model):
         verbose_name='مقدار'
     )
     
-    UNIT_CHOICES = [
-        ('gr', 'گرم'),
-        ('kg', 'کیلوگرم'),
-        ('ton', 'تن'),
-        ('m3', 'متر مکعب'),
-        ('ltr', 'لیتر'),
-        ('cc', 'میلی لیتر'),
-    ]
-
-    unit = models.CharField(
-        max_length=3,
-        choices=UNIT_CHOICES,
-        null=True,
-        blank=True,
-        verbose_name='واحد'
-    )
-    
     class Meta:
         verbose_name = 'انبار | شب بخیر (مقصد)'
         verbose_name_plural = 'انبار | شب بخیرها (مقصد)'
@@ -90,6 +73,16 @@ class TargetStock(models.Model):
         
         if self.quantity and self.quantity <= 0:
             raise ValidationError('مقدار باید بزرگتر از صفر باشد.')
+    
+    @property
+    def unit(self):
+        """Get unit from the item's primary/main unit"""
+        if self.to_item:
+            if self.is_raw_material and hasattr(self.to_item, 'primary_unit'):
+                return self.to_item.primary_unit or 'تن'
+            elif self.is_product and hasattr(self.to_item, 'main_unit'):
+                return self.to_item.main_unit or 'تن'
+        return 'تن'
     
     @property
     def is_product(self):

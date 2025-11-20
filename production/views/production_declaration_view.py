@@ -109,7 +109,6 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                                 from_object_id=bom.raw_material.id,
                                 from_warehouse=source_warehouse,
                                 quantity=difference,
-                                unit='ton'
                             )
                             
                             TargetStock.objects.create(
@@ -118,7 +117,6 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                                 to_object_id=bom.raw_material.id,
                                 to_warehouse=production_warehouse,
                                 quantity=difference,
-                                unit='ton'
                             )
                         else:
                             # برداشت کمتر از برنامه - برگشت به انبار اولیه
@@ -131,7 +129,6 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                                 from_object_id=bom.raw_material.id,
                                 from_warehouse=production_warehouse,
                                 quantity=return_amount,
-                                unit='ton'
                             )
                             
                             TargetStock.objects.create(
@@ -140,7 +137,6 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                                 to_object_id=bom.raw_material.id,
                                 to_warehouse=source_warehouse,
                                 quantity=return_amount,
-                                unit='ton'
                             )
                         
                         correction_entry.commit()
@@ -173,7 +169,6 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                             from_object_id=bom.raw_material.id,
                             from_warehouse=production_warehouse,
                             quantity=total_actual,
-                            unit='ton'
                         )
                         bug_logger.debug(f"کاهش {total_actual} تن {bom.raw_material.name if bom.raw_material else 'ماده اولیه'} از انبار تولید")
                 
@@ -184,7 +179,6 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                     to_object_id=production_program.product.id,
                     to_warehouse=product_warehouse,
                     quantity=produced_weight,
-                    unit='ton'
                 )
                 bug_logger.info(f"افزایش {produced_weight} تن محصول {production_program.product.name} به انبار {product_warehouse.name}")
                 
@@ -234,11 +228,14 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                 bug_logger.error("برنامه تولید فاقد اطلاعات فرمول است")
                 return None
             
-            # پیدا کردن انبار تولید
-            production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
+            # استفاده از انبار تولید از برنامه (اگر انتخاب شده باشد)
+            production_warehouse = production_program.production_warehouse
             if not production_warehouse:
-                bug_logger.error("انبار تولید یافت نشد")
-                return None
+                # در صورت نبودن، اولین انبار تولید را استفاده کن
+                production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
+                if not production_warehouse:
+                    bug_logger.error("انبار تولید یافت نشد")
+                    return None
             
             # پردازش هر BOM item
             for bom in production_program.production_info.bom_items.all():
@@ -253,16 +250,33 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                 
                 # ایجاد SourceStock و TargetStock برای هر انبار (انتقال یک به یک)
                 for dist in warehouse_distribution[bom_id_str]:
-                    warehouse_id = dist['warehouse']
+                    warehouse_identifier = dist['warehouse']
                     amount = Decimal(str(dist['amount']))
                     
-                    bug_logger.debug(f"انتقال {amount} از انبار {warehouse_id} به انبار تولید")
+                    bug_logger.debug(f"انتقال {amount} از انبار {warehouse_identifier} به انبار تولید")
                     
-                    # پیدا کردن انبار اولیه
+                    # پیدا کردن انبار اولیه - try warehouse_id, name, or id
+                    source_warehouse = None
                     try:
-                        source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_id)
+                        # First try as warehouse_id (numeric string like "33", "22", "11")
+                        source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_identifier)
+                        bug_logger.debug(f"انبار پیدا شد با warehouse_id: {warehouse_identifier}")
                     except Warehouse.DoesNotExist:
-                        bug_logger.error(f"انبار {warehouse_id} یافت نشد")
+                        try:
+                            # Then try as name (display name like "سیلو 1", "انبار زمینی")
+                            source_warehouse = Warehouse.objects.get(name=warehouse_identifier)
+                            bug_logger.debug(f"انبار پیدا شد با name: {warehouse_identifier}")
+                        except Warehouse.DoesNotExist:
+                            try:
+                                # Finally try as primary key (integer id)
+                                source_warehouse = Warehouse.objects.get(id=int(warehouse_identifier))
+                                bug_logger.debug(f"انبار پیدا شد با id: {warehouse_identifier}")
+                            except (Warehouse.DoesNotExist, ValueError):
+                                bug_logger.error(f"انبار {warehouse_identifier} یافت نشد (warehouse_id، name یا id)")
+                                continue
+                    
+                    if not source_warehouse:
+                        bug_logger.error(f"انبار {warehouse_identifier} یافت نشد")
                         continue
                     
                     if amount > 0:
@@ -273,7 +287,6 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                             from_object_id=bom.raw_material.id,
                             from_warehouse=source_warehouse,
                             quantity=amount,
-                            unit='ton'
                         )
                         bug_logger.debug(f"SourceStock ایجاد شد: {source_stock}")
                         
@@ -284,7 +297,6 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                             to_object_id=bom.raw_material.id,
                             to_warehouse=production_warehouse,
                             quantity=amount,
-                            unit='ton'
                         )
                         bug_logger.debug(f"TargetStock به انبار تولید ایجاد شد: {target_stock}")
             
@@ -626,6 +638,7 @@ def production_program_crud_view(request, program_id=None):
                         # Handle popup data for start action (separate date and time)
                         actual_start_date_str = request.POST.get('actual_start_date')
                         started_at_str = request.POST.get('started_at')
+                        production_warehouse_id = request.POST.get('production_warehouse')
                         
                         # Set actual_start_date (Jalali date from form will be converted automatically)
                         if actual_start_date_str:
@@ -640,6 +653,16 @@ def production_program_crud_view(request, program_id=None):
                             from datetime import datetime
                             instance.started_at = timezone.now().time()
                             bug_logger.info(f"زمان شروع واقعی به زمان فعلی تنظیم شد")
+                        
+                        # Set production warehouse
+                        if production_warehouse_id:
+                            try:
+                                instance.production_warehouse = Warehouse.objects.get(id=production_warehouse_id)
+                                bug_logger.info(f"انبار تولید: {instance.production_warehouse.name}")
+                            except Warehouse.DoesNotExist:
+                                bug_logger.error(f"انبار تولید با شناسه {production_warehouse_id} یافت نشد")
+                                messages.error(request, 'انبار تولید نامعتبر است')
+                                return redirect(reverse('production:program_crud', args=[program_id]))
                         
                         # Parse warehouse distribution data
                         warehouse_distribution = {}
@@ -783,6 +806,9 @@ def production_program_crud_view(request, program_id=None):
                                 available_warehouses = Warehouse.objects.exclude(
                                     warehouse_type__in=['supplier', 'production']
                                 ).order_by('name')
+                                production_warehouses = Warehouse.objects.filter(
+                                    warehouse_type='production'
+                                ).order_by('name')
                                 context = {
                                     'form': form,
                                     'program': program,
@@ -793,6 +819,7 @@ def production_program_crud_view(request, program_id=None):
                                     'bom_data_json': json.dumps(bom_data),
                                     'warehouse_distribution_json': json.dumps(warehouse_dist_data),
                                     'warehouses': available_warehouses,
+                                    'production_warehouses': production_warehouses,
                                 }
                                 return render(request, 'production_declaration_crud.html', context)
                         
@@ -983,6 +1010,11 @@ def production_program_crud_view(request, program_id=None):
             warehouse_type__in=['supplier', 'production']
         ).order_by('name')
         
+        # Get production warehouses
+        production_warehouses = Warehouse.objects.filter(
+            warehouse_type='production'
+        ).order_by('name')
+        
         context = {
             'form': form,
             'program': program,
@@ -995,6 +1027,7 @@ def production_program_crud_view(request, program_id=None):
             'actual_consumption_json': json.dumps(actual_consumption_data),
             'program_status': program.status if program else 'draft',
             'warehouses': available_warehouses,
+            'production_warehouses': production_warehouses,
         }
         
         if is_create:
@@ -1011,6 +1044,9 @@ def production_program_crud_view(request, program_id=None):
         available_warehouses = Warehouse.objects.exclude(
             warehouse_type__in=['supplier', 'production']
         ).order_by('name')
+        production_warehouses = Warehouse.objects.filter(
+            warehouse_type='production'
+        ).order_by('name')
         
         context = {
             'form': ProductionForm(),
@@ -1023,5 +1059,6 @@ def production_program_crud_view(request, program_id=None):
             'warehouse_distribution_json': json.dumps({}),
             'program_status': 'draft',
             'warehouses': available_warehouses,
+            'production_warehouses': production_warehouses,
         }
         return render(request, 'production_declaration_crud.html', context)

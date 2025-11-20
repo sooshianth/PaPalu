@@ -686,6 +686,7 @@
             <input type="hidden" name="action" id="actionField">
             <input type="hidden" name="actual_start_date" id="actualStartDateField">
             <input type="hidden" name="started_at" id="startedAtField">
+            <input type="hidden" name="production_warehouse" id="productionWarehouseField">
             <input type="hidden" name="produced_weight_ton" id="producedWeightField">
             <input type="hidden" name="completed_at" id="completedAtField">
             <input type="hidden" name="product_warehouse" id="productWarehouseField">
@@ -880,6 +881,16 @@
             <div class="modal-form-field">
                 <label for="actualStartTime">زمان شروع واقعی: <span style="color: red;">*</span></label>
                 <input type="time" id="actualStartTime" class="form-control" required>
+            </div>
+            
+            <div class="modal-form-field">
+                <label for="productionWarehouse">انبار تولید: <span style="color: red;">*</span></label>
+                <select id="productionWarehouse" class="form-control" required>
+                    <option value="">انتخاب انبار تولید...</option>
+                    {% for warehouse in production_warehouses %}
+                    <option value="{{ warehouse.id }}">{{ warehouse.name }} ({{ warehouse.warehouse_id }})</option>
+                    {% endfor %}
+                </select>
             </div>
             
             <!-- Warehouse Distribution Section -->
@@ -1316,6 +1327,7 @@ function showCompleteProductionModal() {
 function confirmStartProduction() {
     const startDate = document.getElementById('actualStartDate').value;
     const startTime = document.getElementById('actualStartTime').value;
+    const productionWarehouse = document.getElementById('productionWarehouse').value;
     
     if (!startDate) {
         alert('لطفاً تاریخ شروع واقعی را وارد کنید.');
@@ -1324,6 +1336,11 @@ function confirmStartProduction() {
     
     if (!startTime) {
         alert('لطفاً زمان شروع واقعی را وارد کنید.');
+        return;
+    }
+    
+    if (!productionWarehouse) {
+        alert('لطفاً انبار تولید را انتخاب کنید.');
         return;
     }
     
@@ -1389,6 +1406,7 @@ function confirmStartProduction() {
     // Set hidden field values
     document.getElementById('actualStartDateField').value = startDate;
     document.getElementById('startedAtField').value = startTime;
+    document.getElementById('productionWarehouseField').value = productionWarehouse;
     
     // Submit form
     submitFormWithAction('start');
