@@ -75,22 +75,16 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                     bug_logger.warning(f"توزیع انبار برای BOM {bom.id} یافت نشد")
                     continue
                 
-                # محاسبه مقدار کل مورد نیاز
-                bom_quantity = bom.quantity or Decimal('0')
-                total_needed = (bom_quantity * planned_weight) / min_batch
-                
-                bug_logger.debug(f"BOM {bom.id}: مقدار کل مورد نیاز = {total_needed}")
+                bug_logger.debug(f"پردازش BOM {bom.id}: {bom.raw_material.name if bom.raw_material else 'نامشخص'}")
                 
                 # ایجاد SourceStock برای هر انبار
                 for dist in warehouse_distribution[bom_id_str]:
                     warehouse_id = dist['warehouse']
-                    percent = Decimal(str(dist['percent']))
                     
-                    # محاسبه مقدار برداشت از این انبار (از درصد به عدد)
-                    # استفاده از Decimal برای جلوگیری از خطای float
-                    amount = (total_needed * percent) / Decimal('100')
+                    # Use the actual amount provided from frontend
+                    amount = Decimal(str(dist['amount']))
                     
-                    bug_logger.debug(f"برداشت {amount} از انبار {warehouse_id} ({percent}%)")
+                    bug_logger.debug(f"برداشت {amount} از انبار {warehouse_id}")
                     
                     # پیدا کردن انبار
                     try:
@@ -464,7 +458,7 @@ def production_program_crud_view(request, program_id=None):
                         for key in request.POST.keys():
                             if key.startswith('warehouse_dist_'):
                                 parts = key.split('_')
-                                # Format: warehouse_dist_{bom_id}_{index}_warehouse or warehouse_dist_{bom_id}_{index}_percent
+                                # Format: warehouse_dist_{bom_id}_{index}_warehouse or warehouse_dist_{bom_id}_{index}_amount
                                 if len(parts) >= 5:
                                     bom_id = parts[2]
                                     index = parts[3]
@@ -482,38 +476,33 @@ def production_program_crud_view(request, program_id=None):
                         for bom_id, indices in warehouse_distribution.items():
                             clean_distribution[bom_id] = []
                             for index, data in indices.items():
-                                if 'warehouse' in data and 'percent' in data:
+                                if 'warehouse' in data and 'amount' in data:
                                     try:
-                                        percent_val = int(data['percent'])
-                                        if percent_val > 0:  # Only include if percent > 0
+                                        # Parse amount
+                                        amount_val = Decimal(str(data['amount']))
+                                        
+                                        if amount_val > 0:  # Only include if amount > 0
                                             clean_distribution[bom_id].append({
                                                 'warehouse': data['warehouse'],
-                                                'percent': percent_val
+                                                'amount': amount_val
                                             })
-                                    except (ValueError, TypeError):
-                                        bug_logger.warning(f"خطا در تبدیل درصد برای BOM {bom_id}")
+                                    except (ValueError, TypeError) as e:
+                                        bug_logger.warning(f"خطا در تبدیل مقدار برای BOM {bom_id}: {str(e)}")
                         
                         bug_logger.info(f"توزیع انبار دریافت شد: {len(clean_distribution)} BOM item")
                         
-                        # Calculate and store warehouse distribution with amounts
+                        # Store warehouse distribution with amounts (amounts directly from user input)
                         if clean_distribution and instance.production_info:
                             warehouse_dist_with_amounts = {}
-                            planned_weight = instance.planned_weight_ton or Decimal('0')
-                            min_batch = instance.production_info.min_batch_production or Decimal('1')
                             
                             for bom in instance.production_info.bom_items.all():
                                 bom_id_str = str(bom.id)
                                 if bom_id_str in clean_distribution:
-                                    bom_quantity = bom.quantity or Decimal('0')
-                                    total_needed = (bom_quantity * planned_weight) / min_batch
-                                    
                                     warehouse_dist_with_amounts[bom_id_str] = []
                                     for dist in clean_distribution[bom_id_str]:
-                                        percent = Decimal(str(dist['percent']))
-                                        amount = (total_needed * percent) / Decimal('100')
+                                        amount = Decimal(str(dist['amount']))
                                         warehouse_dist_with_amounts[bom_id_str].append({
                                             'warehouse': dist['warehouse'],
-                                            'percent': str(percent),
                                             'amount': str(amount)
                                         })
                             
