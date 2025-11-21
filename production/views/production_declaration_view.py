@@ -11,6 +11,7 @@ from django.db import transaction
 from decimal import Decimal
 
 import logging
+import traceback
 from core.logging_levels import *
 
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
@@ -51,22 +52,22 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
         stock_entries = []
         
         with transaction.atomic():
-            # دریافت content types
+            # Get content types
             raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
             product_ct = ContentType.objects.get_for_model(Product)
             
             if not production_program.production_info:
-                bug_logger.error("برنامه تولید فاقد اطلاعات فرمول است")
+                bug_logger.warning("Production program lacks formula information")
                 return None
             
-            # پیدا کردن انبار تولید
+            # Find production warehouse
             production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
             if not production_warehouse:
-                bug_logger.error("انبار تولید یافت نشد")
+                bug_logger.warning("Production warehouse not found")
                 return None
             
-            # مرحله 1: تصحیح برداشت واقعی
-            # مقایسه warehouse_distribution (برنامه‌ریزی شده) با actual_consumption (واقعی)
+            # Step 1: Correct actual consumption
+            # Compare warehouse_distribution (planned) with actual_consumption (actual)
             warehouse_distribution = production_program.warehouse_distribution or {}
             
             for bom in production_program.production_info.bom_items.all():
@@ -78,7 +79,7 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                 planned_dist = warehouse_distribution[bom_id_str]
                 actual_dist = actual_consumption.get(bom_id_str, {})
                 
-                # برای هر انبار، تفاوت را محاسبه کن
+                # Calculate difference for each warehouse
                 for planned_item in planned_dist:
                     warehouse_id = planned_item['warehouse']
                     planned_amount = Decimal(str(planned_item.get('amount', 0)))
@@ -87,7 +88,7 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                     difference = actual_amount - planned_amount
                     
                     if difference != 0:
-                        # ایجاد ثبت انبار برای تصحیح
+                        # Create correction stock entry
                         correction_entry = StockEntry.objects.create(
                             transaction_date=timezone.now(),
                             notes=f'تصحیح برداشت واقعی برنامه {production_program.program_id or production_program.id} - {bom.raw_material.name if bom.raw_material else "ماده اولیه"} - انبار {warehouse_id}',
@@ -97,12 +98,12 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                         try:
                             source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_id)
                         except Warehouse.DoesNotExist:
-                            bug_logger.error(f"انبار {warehouse_id} یافت نشد")
+                            bug_logger.warning(f"Warehouse {warehouse_id} not found")
                             continue
                         
                         if difference > 0:
-                            # برداشت بیشتر از برنامه - کاهش از انبار اولیه و افزایش به انبار تولید
-                            bug_logger.info(f"تصحیح: {difference} تن بیشتر برداشت شده از {warehouse_id} برای {bom.raw_material.name if bom.raw_material else 'ماده اولیه'}")
+                            # More consumed than planned - decrease from source, increase to production
+                            bug_logger.debug(f"Correction: {difference} more consumed from {warehouse_id} for {bom.raw_material.name if bom.raw_material else 'raw material'}")
                             
                             SourceStock.objects.create(
                                 stock_entry=correction_entry,
@@ -120,9 +121,9 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                                 quantity=difference,
                             )
                         else:
-                            # برداشت کمتر از برنامه - برگشت به انبار اولیه
+                            # Less consumed than planned - return to source warehouse
                             return_amount = abs(difference)
-                            bug_logger.info(f"تصحیح: {return_amount} تن کمتر برداشت شده، برگشت به {warehouse_id} برای {bom.raw_material.name if bom.raw_material else 'ماده اولیه'}")
+                            bug_logger.debug(f"Correction: {return_amount} less consumed, returned to {warehouse_id} for {bom.raw_material.name if bom.raw_material else 'raw material'}")
                             
                             SourceStock.objects.create(
                                 stock_entry=correction_entry,
@@ -142,10 +143,10 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                         
                         correction_entry.commit()
                         stock_entries.append(correction_entry)
-                        bug_logger.info(f"ثبت انبار تصحیح {correction_entry.id} تأیید شد")
+                        bug_logger.info(f"Correction stock entry {correction_entry.id} confirmed")
             
-            # مرحله 2: تبدیل تمام مواد اولیه در انبار تولید به محصول نهایی
-            # و انتقال به انبار محصول
+            # Step 2: Convert all raw materials in production warehouse to final product
+            # and transfer to product warehouse
             produced_weight = production_program.produced_weight_ton or Decimal('0')
             
             if produced_weight > 0 and production_program.product:
@@ -155,12 +156,12 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                     is_committed=False
                 )
                 
-                # کاهش تمام مواد اولیه از انبار تولید (بر اساس مصرف واقعی کل)
+                # Decrease all raw materials from production warehouse (based on total actual consumption)
                 for bom in production_program.production_info.bom_items.all():
                     bom_id_str = str(bom.id)
                     actual_dist = actual_consumption.get(bom_id_str, {})
                     
-                    # جمع کل برداشت واقعی از تمام انبارها
+                    # Sum total actual consumption from all warehouses
                     total_actual = sum(Decimal(str(amount)) for amount in actual_dist.values())
                     
                     if total_actual > 0:
@@ -171,9 +172,9 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                             from_warehouse=production_warehouse,
                             quantity=total_actual,
                         )
-                        bug_logger.debug(f"کاهش {total_actual} تن {bom.raw_material.name if bom.raw_material else 'ماده اولیه'} از انبار تولید")
+                        bug_logger.debug(f"Decrease {total_actual} tons {bom.raw_material.name if bom.raw_material else 'raw material'} from production warehouse")
                 
-                # افزایش محصول نهایی به انبار محصول
+                # Increase final product to product warehouse
                 TargetStock.objects.create(
                     stock_entry=completion_entry,
                     to_content_type=product_ct,
@@ -181,18 +182,17 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                     to_warehouse=product_warehouse,
                     quantity=produced_weight,
                 )
-                bug_logger.info(f"افزایش {produced_weight} تن محصول {production_program.product.name} به انبار {product_warehouse.name}")
+                bug_logger.debug(f"Increase {produced_weight} tons of product {production_program.product.name} to warehouse {product_warehouse.name}")
                 
                 completion_entry.commit()
                 stock_entries.append(completion_entry)
-                bug_logger.info(f"ثبت انبار تکمیل {completion_entry.id} تأیید شد")
+                bug_logger.info(f"Completion stock entry {completion_entry.id} confirmed")
             
-            bug_logger.info(f"تکمیل موفقیت‌آمیز: {len(stock_entries)} ثبت انبار ایجاد شد")
+            bug_logger.info(f"Successful completion: {len(stock_entries)} stock entries created")
             return stock_entries
             
     except Exception as e:
-        bug_logger.error(f"خطا در ایجاد ثبت‌های انبار تکمیل: {str(e)}")
-        import traceback
+        bug_logger.error(f"Error creating completion stock entries: {str(e)}")
         bug_logger.error(traceback.format_exc())
         return None
 
@@ -219,69 +219,69 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                 is_committed=False
             )
             
-            bug_logger.info(f"ثبت انبار {stock_entry.id} برای شروع تولید ایجاد شد")
+            bug_logger.info(f"Stock entry {stock_entry.id} created for production start")
             
-            # دریافت content type برای ماده اولیه
+            # Get content type for raw material
             raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
             
-            # محاسبه مقدار مصرف کل برای هر ماده اولیه
+            # Calculate total consumption amount for each raw material
             if not production_program.production_info:
-                bug_logger.error("برنامه تولید فاقد اطلاعات فرمول است")
+                bug_logger.warning("Production program lacks formula information")
                 return None
             
-            # استفاده از انبار تولید از برنامه (اگر انتخاب شده باشد)
+            # Use production warehouse from program if selected
             production_warehouse = production_program.production_warehouse
             if not production_warehouse:
-                # در صورت نبودن، اولین انبار تولید را استفاده کن
+                # If not, use the first production warehouse
                 production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
                 if not production_warehouse:
-                    bug_logger.error("انبار تولید یافت نشد")
+                    bug_logger.warning("Production warehouse not found")
                     return None
             
-            # پردازش هر BOM item
+            # Process each BOM item
             for bom in production_program.production_info.bom_items.all():
                 bom_id_str = str(bom.id)
                 
-                # بررسی اینکه آیا توزیع برای این BOM موجود است
+                # Check if distribution for this BOM exists
                 if bom_id_str not in warehouse_distribution:
-                    bug_logger.warning(f"توزیع انبار برای BOM {bom.id} یافت نشد")
+                    bug_logger.warning(f"Warehouse distribution for BOM {bom.id} not found")
                     continue
                 
-                bug_logger.debug(f"پردازش BOM {bom.id}: {bom.raw_material.name if bom.raw_material else 'نامشخص'}")
+                bug_logger.debug(f"Processing BOM {bom.id}: {bom.raw_material.name if bom.raw_material else 'unknown'}")
                 
-                # ایجاد SourceStock و TargetStock برای هر انبار (انتقال یک به یک)
+                # Create SourceStock and TargetStock for each warehouse (one by one transfer)
                 for dist in warehouse_distribution[bom_id_str]:
                     warehouse_identifier = dist['warehouse']
                     amount = Decimal(str(dist['amount']))
                     
-                    bug_logger.debug(f"انتقال {amount} از انبار {warehouse_identifier} به انبار تولید")
+                    bug_logger.debug(f"Transfer {amount} from warehouse {warehouse_identifier} to production warehouse")
                     
-                    # پیدا کردن انبار اولیه - try warehouse_id, name, or id
+                    # Find source warehouse - try warehouse_id, name, or id
                     source_warehouse = None
                     try:
                         # First try as warehouse_id (numeric string like "33", "22", "11")
                         source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_identifier)
-                        bug_logger.debug(f"انبار پیدا شد با warehouse_id: {warehouse_identifier}")
+                        bug_logger.debug(f"Warehouse found by warehouse_id: {warehouse_identifier}")
                     except Warehouse.DoesNotExist:
                         try:
                             # Then try as name (display name like "سیلو 1", "انبار زمینی")
                             source_warehouse = Warehouse.objects.get(name=warehouse_identifier)
-                            bug_logger.debug(f"انبار پیدا شد با name: {warehouse_identifier}")
+                            bug_logger.debug(f"Warehouse found by name: {warehouse_identifier}")
                         except Warehouse.DoesNotExist:
                             try:
                                 # Finally try as primary key (integer id)
                                 source_warehouse = Warehouse.objects.get(id=int(warehouse_identifier))
-                                bug_logger.debug(f"انبار پیدا شد با id: {warehouse_identifier}")
+                                bug_logger.debug(f"Warehouse found by id: {warehouse_identifier}")
                             except (Warehouse.DoesNotExist, ValueError):
-                                bug_logger.error(f"انبار {warehouse_identifier} یافت نشد (warehouse_id، name یا id)")
+                                bug_logger.warning(f"Warehouse {warehouse_identifier} not found (warehouse_id, name or id)")
                                 continue
                     
                     if not source_warehouse:
-                        bug_logger.error(f"انبار {warehouse_identifier} یافت نشد")
+                        bug_logger.warning(f"Warehouse {warehouse_identifier} not found")
                         continue
                     
                     if amount > 0:
-                        # ایجاد SourceStock (کاهش از انبار اولیه)
+                        # Create SourceStock (decrease from source warehouse)
                         source_stock = SourceStock.objects.create(
                             stock_entry=stock_entry,
                             from_content_type=raw_material_ct,
@@ -289,9 +289,9 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                             from_warehouse=source_warehouse,
                             quantity=amount,
                         )
-                        bug_logger.debug(f"SourceStock ایجاد شد: {source_stock}")
+                        bug_logger.debug(f"SourceStock created: {source_stock}")
                         
-                        # ایجاد TargetStock (افزایش به انبار تولید - به عنوان ماده اولیه)
+                        # Create TargetStock (increase to production warehouse - as raw material)
                         target_stock = TargetStock.objects.create(
                             stock_entry=stock_entry,
                             to_content_type=raw_material_ct,
@@ -299,17 +299,16 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                             to_warehouse=production_warehouse,
                             quantity=amount,
                         )
-                        bug_logger.debug(f"TargetStock به انبار تولید ایجاد شد: {target_stock}")
+                        bug_logger.debug(f"TargetStock created to production warehouse: {target_stock}")
             
-            # تأیید تراکنش
+            # Commit transaction
             stock_entry.commit()
-            bug_logger.info(f"ثبت انبار {stock_entry.id} تأیید شد - مواد اولیه به انبار تولید منتقل شدند")
+            bug_logger.info(f"Stock entry {stock_entry.id} confirmed - raw materials transferred to production warehouse")
             
             return stock_entry
             
     except Exception as e:
-        bug_logger.error(f"خطا در ایجاد ثبت انبار شروع تولید: {str(e)}")
-        import traceback
+        bug_logger.error(f"Error creating stock entry for production start: {str(e)}")
         bug_logger.error(traceback.format_exc())
         return None
 
@@ -328,46 +327,46 @@ def revert_production_stock_entry(production_program, request):
     """
     try:
         with transaction.atomic():
-            # دریافت توزیع انبار از برنامه تولید
+            # Get warehouse distribution from production program
             warehouse_distribution = production_program.warehouse_distribution or {}
             
             if not warehouse_distribution:
-                bug_logger.warning(f"توزیع انبار برای برنامه {production_program.id} خالی است")
+                bug_logger.warning(f"Warehouse distribution for program {production_program.id} is empty")
                 return None
             
-            # ایجاد ثبت انبار معکوس
+            # Create reversal stock entry
             reversal_entry = StockEntry.objects.create(
                 transaction_date=timezone.now(),
                 notes=f'برگشت تولید برنامه {production_program.program_id or production_program.id} - برگشت مواد اولیه از انبار تولید به انبارهای اولیه',
                 is_committed=False
             )
             
-            bug_logger.info(f"ثبت انبار معکوس {reversal_entry.id} برای برگشت تولید ایجاد شد")
+            bug_logger.info(f"Reversal stock entry {reversal_entry.id} created for production revert")
             
-            # دریافت content type برای ماده اولیه
+            # Get content type for raw material
             raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
             
-            # دریافت انبار تولید
+            # Get production warehouse
             production_warehouse = production_program.production_warehouse
             if not production_warehouse:
                 production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
                 if not production_warehouse:
-                    bug_logger.error("انبار تولید یافت نشد")
+                    bug_logger.warning("Production warehouse not found")
                     return None
             
-            # پردازش هر BOM item - معکوس کردن عملیات
+            # Process each BOM item - reverse operations
             for bom in production_program.production_info.bom_items.all():
                 bom_id_str = str(bom.id)
                 
                 if bom_id_str not in warehouse_distribution:
                     continue
                 
-                # برای هر انبار، عملیات معکوس ایجاد کن
+                # For each warehouse, create reverse operation
                 for dist in warehouse_distribution[bom_id_str]:
                     warehouse_identifier = dist['warehouse']
                     amount = Decimal(str(dist['amount']))
                     
-                    # پیدا کردن انبار اولیه
+                    # Find source warehouse
                     source_warehouse = None
                     try:
                         source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_identifier)
@@ -378,14 +377,14 @@ def revert_production_stock_entry(production_program, request):
                             try:
                                 source_warehouse = Warehouse.objects.get(id=int(warehouse_identifier))
                             except (Warehouse.DoesNotExist, ValueError):
-                                bug_logger.error(f"انبار {warehouse_identifier} یافت نشد")
+                                bug_logger.warning(f"Warehouse {warehouse_identifier} not found")
                                 continue
                     
                     if not source_warehouse:
                         continue
                     
                     if amount > 0:
-                        # معکوس: کاهش از انبار تولید (SourceStock)
+                        # Reverse: decrease from production warehouse (SourceStock)
                         SourceStock.objects.create(
                             stock_entry=reversal_entry,
                             from_content_type=raw_material_ct,
@@ -394,7 +393,7 @@ def revert_production_stock_entry(production_program, request):
                             quantity=amount
                         )
                         
-                        # معکوس: افزایش به انبار اولیه (TargetStock)
+                        # Reverse: increase to source warehouse (TargetStock)
                         TargetStock.objects.create(
                             stock_entry=reversal_entry,
                             to_content_type=raw_material_ct,
@@ -403,28 +402,26 @@ def revert_production_stock_entry(production_program, request):
                             quantity=amount
                         )
                         
-                        bug_logger.debug(f"برگشت {amount} از انبار تولید به {warehouse_identifier} برای {bom.raw_material.name if bom.raw_material else 'ماده اولیه'}")
+                        bug_logger.debug(f"Returned {amount} from production warehouse to {warehouse_identifier} for {bom.raw_material.name if bom.raw_material else 'raw material'}")
             
-            # تأیید تراکنش
+            # Commit transaction
             reversal_entry.commit()
-            bug_logger.info(f"ثبت انبار معکوس {reversal_entry.id} تأیید شد - مواد اولیه به انبارهای اولیه برگردانده شدند")
+            bug_logger.info(f"Reversal stock entry {reversal_entry.id} confirmed - raw materials returned to source warehouses")
             
             return reversal_entry
             
     except Exception as e:
-        bug_logger.error(f"خطا در ایجاد ثبت انبار معکوس: {str(e)}")
-        import traceback
+        bug_logger.error(f"Error creating reversal stock entry: {str(e)}")
         bug_logger.error(traceback.format_exc())
         return None
 
 
 def production_declaration_view(request):
     """
-    صفحه اعلام تولید
-    نمایش برنامه‌های تولید بر اساس وضعیت و موجودی مواد اولیه
+    Production declaration page
+    Display production programs by status and raw material inventory
     """
-    audit_logger.info("دسترسی به صفحه اعلام تولید")
-    bug_logger.debug("شروع بارگذاری صفحه اعلام تولید")
+    audit_logger.info("Access to production declaration page")
     
     try:
         # Get consolidated search parameters for each table
@@ -474,9 +471,9 @@ def production_declaration_view(request):
             
             # Apply sorting for confirmed table
             confirmed_programs = confirmed_programs.order_by(order_by_confirmed, 'id')
-            bug_logger.debug(f"تعداد برنامه‌های تایید شده: {confirmed_programs.count()}")
+            bug_logger.debug(f"Number of confirmed programs: {confirmed_programs.count()}")
         except Exception as e:
-            bug_logger.warning(f"خطا در بارگذاری برنامه‌های تایید شده: {str(e)}")
+            bug_logger.warning(f"Error loading confirmed programs: {str(e)}")
             confirmed_programs = ProductionProgram.objects.none()
         
         try:
@@ -495,9 +492,9 @@ def production_declaration_view(request):
             
             # Apply sorting for in-progress table
             in_progress_programs = in_progress_programs.order_by(order_by_progress, 'id')
-            bug_logger.debug(f"تعداد برنامه‌های در حال اجرا: {in_progress_programs.count()}")
+            bug_logger.debug(f"Number of in-progress programs: {in_progress_programs.count()}")
         except Exception as e:
-            bug_logger.warning(f"خطا در بارگذاری برنامه‌های در حال اجرا: {str(e)}")
+            bug_logger.warning(f"Error loading in-progress programs: {str(e)}")
             in_progress_programs = ProductionProgram.objects.none()
         
         # Pagination for completed programs
@@ -518,7 +515,7 @@ def production_declaration_view(request):
             # Apply sorting for completed table
             completed_programs_qs = completed_programs_qs.order_by(order_by_completed, 'id')
             
-            bug_logger.debug(f"تعداد کل برنامه‌های تکمیل شده: {completed_programs_qs.count()}")
+            bug_logger.debug(f"Total number of completed programs: {completed_programs_qs.count()}")
             
             # Pagination
             page_number = request.GET.get('page', 1)
@@ -532,30 +529,30 @@ def production_declaration_view(request):
                 completed_page = paginator.page(paginator.num_pages)
                 
         except Exception as e:
-            bug_logger.warning(f"خطا در بارگذاری برنامه‌های تکمیل شده: {str(e)}")
+            bug_logger.warning(f"Error loading completed programs: {str(e)}")
             completed_page = Paginator(ProductionProgram.objects.none(), 10).page(1)
         
-        # دریافت موجودی مواد اولیه از انبارهای اولیه
+        # Get raw material inventory from primary warehouses
         raw_materials_inventory = []
         try:
-            # پیدا کردن انبارهای اولیه
+            # Find primary warehouses
             primary_warehouses = Warehouse.objects.filter(warehouse_type='primary')
-            bug_logger.debug(f"تعداد انبارهای اولیه: {primary_warehouses.count()}")
+            bug_logger.debug(f"Number of primary warehouses: {primary_warehouses.count()}")
             
             if primary_warehouses.exists():
-                # دریافت content type برای RawMaterial
+                # Get content type for RawMaterial
                 try:
                     raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
                     
-                    # دریافت آیتم‌های موجودی که ماده اولیه هستند
+                    # Get inventory items that are raw materials
                     inventory_items = InventoryItem.objects.filter(
                         warehouse__in=primary_warehouses,
                         content_type=raw_material_ct
                     ).select_related('warehouse', 'content_type')
                     
-                    bug_logger.debug(f"تعداد آیتم‌های موجودی مواد اولیه: {inventory_items.count()}")
+                    bug_logger.debug(f"Number of raw material inventory items: {inventory_items.count()}")
                     
-                    # گروه‌بندی مواد اولیه بر اساس ID و جمع موجودی از انبارها
+                    # Group raw materials by ID and sum inventory from warehouses
                     from collections import defaultdict
                     raw_materials_grouped = defaultdict(lambda: {
                         'raw_material_id': '',
@@ -569,30 +566,30 @@ def production_declaration_view(request):
                         try:
                             raw_material = item.item  # Generic relation
                             if raw_material is None:
-                                bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
+                                bug_logger.warning(f"Raw material with id {item.object_id} not found")
                                 continue
                             
                             if raw_material:
                                 rm_id = getattr(raw_material, 'raw_material_id', '-')
                                 quantity = item.quantity if item.quantity else Decimal('0')
                                 
-                                # جمع کردن موجودی کل
+                                # Sum total inventory
                                 raw_materials_grouped[rm_id]['raw_material_id'] = rm_id
                                 raw_materials_grouped[rm_id]['name'] = getattr(raw_material, 'name', '-')
                                 raw_materials_grouped[rm_id]['total_quantity'] += quantity
-                                raw_materials_grouped[rm_id]['unit'] = item.unit or 'تن'
+                                raw_materials_grouped[rm_id]['unit'] = item.unit or 'ton'
                                 
-                                # ذخیره جزئیات انبار
+                                # Store warehouse details
                                 raw_materials_grouped[rm_id]['warehouses'].append({
                                     'warehouse_id': item.warehouse.warehouse_id if item.warehouse else '-',
                                     'warehouse_name': item.warehouse.name if (item.warehouse and item.warehouse.name) else (str(item.warehouse) if item.warehouse else '-'),
                                     'quantity': str(quantity),
                                 })
                         except Exception as e:
-                            bug_logger.warning(f"خطا در بارگذاری ماده اولیه: {str(e)}")
+                            bug_logger.warning(f"Error loading raw material: {str(e)}")
                             continue
                     
-                    # تبدیل به لیست
+                    # Convert to list
                     for rm_id, data in raw_materials_grouped.items():
                         raw_materials_inventory.append({
                             'raw_material_id': data['raw_material_id'],
@@ -602,17 +599,17 @@ def production_declaration_view(request):
                             'warehouses': data['warehouses']
                         })
                     
-                    bug_logger.debug(f"تعداد مواد اولیه پردازش شده: {len(raw_materials_inventory)}")
+                    bug_logger.debug(f"Number of processed raw materials: {len(raw_materials_inventory)}")
                     
                 except ContentType.DoesNotExist:
-                    bug_logger.warning("ContentType برای RawMaterial یافت نشد")
+                    bug_logger.warning("ContentType for RawMaterial not found")
                 except Exception as e:
-                    bug_logger.warning(f"خطا در دریافت موجودی مواد اولیه: {str(e)}")
+                    bug_logger.warning(f"Error getting raw material inventory: {str(e)}")
             else:
-                bug_logger.info("هیچ انبار اولیه‌ای یافت نشد")
+                bug_logger.warning("No primary warehouses found")
         
         except Exception as e:
-            bug_logger.error(f"خطای کلی در دریافت موجودی مواد اولیه: {str(e)}")
+            bug_logger.error(f"General error in getting raw material inventory: {str(e)}")
         
         # آماده‌سازی context
         context = {
@@ -634,7 +631,7 @@ def production_declaration_view(request):
             'sort_dir_completed': sort_dir_completed,
         }
         
-        bug_logger.info("صفحه اعلام تولید با موفقیت بارگذاری شد")
+        bug_logger.info("Production declaration page loaded successfully")
         
         # Handle AJAX requests for pagination/filtering
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -680,10 +677,9 @@ def production_declaration_view(request):
         return render(request, 'production_declaration.html', context)
     
     except Exception as e:
-        bug_logger.error(f"خطای کلی در بارگذاری صفحه اعلام تولید: {str(e)}")
-        audit_logger.alert("خطای کلی در دسترسی به صفحه اعلام تولید")
+        bug_logger.error(f"General error in production declaration page load: {str(e)}")
         
-        # بازگشت صفحه خالی در صورت خطا
+        # Return empty page on error
         context = {
             'confirmed_programs': ProductionProgram.objects.none(),
             'in_progress_programs': ProductionProgram.objects.none(),
@@ -696,51 +692,48 @@ def production_declaration_view(request):
 
 def production_program_crud_view(request, program_id=None):
     """
-    صفحه ساخت/ویرایش برنامه تولید
-    نمایش و ویرایش تمام جزئیات یک برنامه تولید به همراه موجودی مواد اولیه
-    اگر program_id نباشد، حالت ساخت جدید
+    Production program create/edit page
+    Display and edit all details of a production program with raw material inventory
+    If program_id is None, it's in create mode
     """
     is_create = program_id is None
     
     if is_create:
-        audit_logger.info("دسترسی به صفحه ایجاد برنامه تولید جدید")
-        bug_logger.debug("شروع بارگذاری صفحه ایجاد برنامه تولید")
+        audit_logger.info("Access to new production program creation page")
         program = None
     else:
-        audit_logger.info(f"دسترسی به جزئیات برنامه تولید {program_id}")
-        bug_logger.debug(f"شروع بارگذاری جزئیات برنامه {program_id}")
+        audit_logger.info(f"Access to production program {program_id} details")
     
     try:
-        # دریافت برنامه تولید (اگر ویرایش)
+        # Get production program (if editing)
         if not is_create:
             try:
-                program = get_object_or_404(
-                    ProductionProgram.objects.select_related('product', 'production_info'),
-                    id=program_id
-                )
+                program_qs = ProductionProgram.objects.select_related('product', 'production_info')
+                if not program_qs.filter(id=program_id).exists():
+                    audit_logger.activity(f"Attempt to access missing production program {program_id}")
+                program = get_object_or_404(program_qs, id=program_id)
                 
                 # Block access to denied programs
                 if program.is_denied:
-                    bug_logger.warning(f"تلاش برای دسترسی به برنامه رد شده {program_id}")
+                    audit_logger.activity(f"Attempt to access denied production program {program_id}")
                     messages.error(request, 'این برنامه تولید رد شده و قابل دسترسی نیست')
                     return redirect(reverse('production:production_declaration'))
                 
-                bug_logger.debug(f"برنامه تولید {program_id} با موفقیت بارگذاری شد")
+                bug_logger.debug(f"Production program {program_id} loaded successfully")
             except Exception as e:
-                bug_logger.error(f"خطا در بارگذاری برنامه تولید {program_id}: {str(e)}")
-                audit_logger.activity(f"تلاش برای دسترسی به برنامه تولید نامعتبر {program_id}")
+                bug_logger.error(f"Error loading production program {program_id}: {str(e)}")
                 raise
         
-        # پردازش فرم
+        # Process form
         if request.method == 'POST':
             action = request.POST.get('action', 'save')
             
             if is_create:
                 form = ProductionForm(request.POST)
-                audit_logger.info("ارسال فرم ایجاد برنامه تولید جدید")
+                audit_logger.info("Submitting form to create new production program")
             else:
                 form = ProductionForm(request.POST, instance=program)
-                audit_logger.info(f"ارسال فرم ویرایش برنامه تولید {program_id}")
+                audit_logger.info(f"Submitting form to edit production program {program_id}")
             
             if form.is_valid():
                 try:
@@ -761,24 +754,24 @@ def production_program_crud_view(request, program_id=None):
                         # Set actual_start_date (Jalali date from form will be converted automatically)
                         if actual_start_date_str:
                             instance.actual_start_date = actual_start_date_str
-                            bug_logger.info(f"تاریخ شروع واقعی از popup دریافت شد: {instance.actual_start_date}")
+                            bug_logger.debug(f"Actual start date received from popup: {instance.actual_start_date}")
                         
                         # Set started_at (time only)
                         if started_at_str:
                             instance.started_at = started_at_str
-                            bug_logger.info(f"زمان شروع واقعی از popup دریافت شد: {instance.started_at}")
+                            bug_logger.debug(f"Actual start time received from popup: {instance.started_at}")
                         else:
                             from datetime import datetime
                             instance.started_at = timezone.now().time()
-                            bug_logger.info(f"زمان شروع واقعی به زمان فعلی تنظیم شد")
-                        
+                            bug_logger.debug(f"Actual start time set to current time")
+
                         # Set production warehouse
                         if production_warehouse_id:
                             try:
                                 instance.production_warehouse = Warehouse.objects.get(id=production_warehouse_id)
-                                bug_logger.info(f"انبار تولید: {instance.production_warehouse.name}")
+                                bug_logger.info(f"Production warehouse: {instance.production_warehouse.name}")
                             except Warehouse.DoesNotExist:
-                                bug_logger.error(f"انبار تولید با شناسه {production_warehouse_id} یافت نشد")
+                                bug_logger.warning(f"Production warehouse with id {production_warehouse_id} not found")
                                 messages.error(request, 'انبار تولید نامعتبر است')
                                 return redirect(reverse('production:program_crud', args=[program_id]))
                         
@@ -816,9 +809,9 @@ def production_program_crud_view(request, program_id=None):
                                                 'amount': amount_val
                                             })
                                     except (ValueError, TypeError) as e:
-                                        bug_logger.warning(f"خطا در تبدیل مقدار برای BOM {bom_id}: {str(e)}")
+                                        bug_logger.warning(f"Error converting amount for BOM {bom_id}: {str(e)}")
                         
-                        bug_logger.info(f"توزیع انبار دریافت شد: {len(clean_distribution)} BOM item")
+                        bug_logger.debug(f"Warehouse distribution received: {len(clean_distribution)} BOM items")
                         
                         # Store warehouse distribution with amounts (amounts directly from user input)
                         if clean_distribution and instance.production_info:
@@ -836,19 +829,19 @@ def production_program_crud_view(request, program_id=None):
                                         })
                             
                             instance.warehouse_distribution = warehouse_dist_with_amounts
-                            bug_logger.debug(f"توزیع انبار با مقادیر ذخیره شد: {warehouse_dist_with_amounts}")
+                            bug_logger.debug(f"Warehouse distribution with amounts stored: {warehouse_dist_with_amounts}")
                         
                         # Create stock entry if we have distribution data
                         if clean_distribution:
                             stock_entry = create_production_stock_entry(instance, clean_distribution, request)
                             if stock_entry:
-                                bug_logger.info(f"ثبت انبار {stock_entry.id} برای برنامه {instance.id} ایجاد و تأیید شد")
+                                bug_logger.info(f"Stock entry {stock_entry.id} created and confirmed for program {instance.id}")
                                 messages.success(request, f'ثبت انبار با موفقیت ایجاد شد (شناسه: {stock_entry.id})')
                             else:
-                                bug_logger.error(f"خطا در ایجاد ثبت انبار برای برنامه {instance.id}")
+                                bug_logger.warning(f"Error creating stock entry for program {instance.id}")
                                 messages.warning(request, 'خطا در ایجاد ثبت انبار')
                         else:
-                            bug_logger.warning("داده توزیع انبار دریافت نشد")
+                            bug_logger.warning("Warehouse distribution data not received")
                     elif action == 'complete':
                         instance.status = ProductionProgram.Status.COMPLETED
                         # Handle popup data for complete action
@@ -859,26 +852,26 @@ def production_program_crud_view(request, program_id=None):
                         if produced_weight_str:
                             try:
                                 instance.produced_weight_ton = Decimal(produced_weight_str)
-                                bug_logger.info(f"وزن تولید شده از popup دریافت شد: {instance.produced_weight_ton}")
+                                bug_logger.debug(f"Produced weight received from popup: {instance.produced_weight_ton}")
                             except (ValueError, TypeError) as e:
-                                bug_logger.warning(f"خطا در تبدیل وزن تولید شده: {str(e)}")
+                                bug_logger.warning(f"Error converting produced weight: {str(e)}")
                         
                         # Set completed_at (time only)
                         if completed_at_str:
                             instance.completed_at = completed_at_str
-                            bug_logger.info(f"زمان تکمیل از popup دریافت شد: {instance.completed_at}")
+                            bug_logger.debug(f"Completion time received from popup: {instance.completed_at}")
                         else:
                             from datetime import datetime
                             instance.completed_at = timezone.now().time()
-                            bug_logger.info(f"زمان تکمیل به زمان فعلی تنظیم شد")
+                            bug_logger.debug(f"Completion time set to current time")
                         
                         # Set product warehouse
                         if product_warehouse_id:
                             try:
                                 instance.product_warehouse = Warehouse.objects.get(id=product_warehouse_id)
-                                bug_logger.info(f"انبار محصول نهایی: {instance.product_warehouse.name}")
+                                bug_logger.debug(f"Final product warehouse: {instance.product_warehouse.name}")
                             except Warehouse.DoesNotExist:
-                                bug_logger.error(f"انبار با شناسه {product_warehouse_id} یافت نشد")
+                                bug_logger.warning(f"Warehouse with id {product_warehouse_id} not found")
                                 messages.error(request, 'انبار محصول نهایی نامعتبر است')
                                 return redirect(reverse('production:program_crud', args=[program_id]))
                     
@@ -899,9 +892,9 @@ def production_program_crud_view(request, program_id=None):
                                             if bom_id not in actual_consumption:
                                                 actual_consumption[bom_id] = {}
                                             actual_consumption[bom_id][warehouse] = amount
-                                            bug_logger.debug(f"مصرف واقعی BOM {bom_id} از انبار {warehouse}: {amount}")
+                                            bug_logger.debug(f"Actual consumption BOM {bom_id} from warehouse {warehouse}: {amount}")
                                         except (ValueError, TypeError) as e:
-                                            bug_logger.warning(f"خطا در تبدیل مصرف واقعی BOM {bom_id}, warehouse {warehouse}: {str(e)}")
+                                            bug_logger.warning(f"Error converting actual consumption BOM {bom_id}, warehouse {warehouse}: {str(e)}")
                         
                         # Validate that all BOM items with warehouse distribution have actual consumption
                         if instance.production_info and instance.warehouse_distribution:
@@ -917,7 +910,7 @@ def production_program_crud_view(request, program_id=None):
                                         missing_consumption.append(bom.raw_material.name if bom.raw_material else f"BOM #{bom.id}")
                             
                             if missing_consumption:
-                                bug_logger.warning(f"تکمیل رد شد: مصرف واقعی برای {len(missing_consumption)} ماده اولیه وارد نشده است")
+                                bug_logger.warning(f"Completion rejected: actual consumption not entered for {len(missing_consumption)} raw materials")
                                 messages.error(request, f'لطفاً مقدار مصرف واقعی را برای تمام مواد اولیه وارد کنید. موارد ناقص: {", ".join(missing_consumption)}')
                                 # Don't save and return to form
                                 warehouse_dist_data = program.warehouse_distribution if program and program.warehouse_distribution else {}
@@ -942,7 +935,7 @@ def production_program_crud_view(request, program_id=None):
                                 return render(request, 'production_declaration_crud.html', context)
                         
                         instance.actual_consumption = actual_consumption
-                        bug_logger.info(f"داده‌های مصرف واقعی (انبار-محور) ذخیره شد: {len(actual_consumption)} BOM آیتم")
+                        bug_logger.debug(f"Actual consumption data (warehouse-wise) stored: {len(actual_consumption)} BOM items")
                         
                         # Create completion stock entries (corrections + final product transfer)
                         if instance.product_warehouse and actual_consumption:
@@ -953,13 +946,13 @@ def production_program_crud_view(request, program_id=None):
                                 request
                             )
                             if stock_entries:
-                                bug_logger.info(f"{len(stock_entries)} ثبت انبار برای تکمیل تولید ایجاد شد")
+                                bug_logger.info(f"{len(stock_entries)} stock entries created for production completion")
                                 messages.success(request, f'تکمیل تولید با موفقیت انجام شد. {len(stock_entries)} ثبت انبار ایجاد شد.')
                             else:
-                                bug_logger.error("خطا در ایجاد ثبت‌های انبار تکمیل")
+                                bug_logger.error("Error creating completion stock entries")
                                 messages.warning(request, 'برنامه تکمیل شد اما خطا در ایجاد ثبت‌های انبار رخ داد')
                         else:
-                            bug_logger.warning("انبار محصول یا مصرف واقعی موجود نیست - ثبت انبار ایجاد نشد")
+                            bug_logger.warning("Product warehouse or actual consumption not present - stock entry not created")
                     elif action == 'deny':
                         # Deny a confirmed program
                         if instance.status != ProductionProgram.Status.CONFIRMED:
@@ -979,10 +972,11 @@ def production_program_crud_view(request, program_id=None):
                             production_program=instance,
                             action_type='denied',
                             reason=reason,
-                            created_by=request.user.username if request.user.is_authenticated else 'ناشناس'
+                            created_by=request.user.username if request.user.is_authenticated else 'anonymous'
                         )
                         
-                        bug_logger.info(f"برنامه تولید {program_id} رد شد. دلیل: {reason}")
+                        bug_logger.debug(f"Production program {program_id} denied.")
+                        audit_logger.activity(f"Production program {program_id} denied by user. reason: {reason}")
                         messages.success(request, 'برنامه تولید با موفقیت رد شد')
                         return redirect(reverse('production:production_declaration'))
                     elif action == 'revert':
@@ -1014,18 +1008,19 @@ def production_program_crud_view(request, program_id=None):
                                 production_program=instance,
                                 action_type='reverted',
                                 reason=reason,
-                                created_by=request.user.username if request.user.is_authenticated else 'ناشناس',
+                                created_by=request.user.username if request.user.is_authenticated else 'anonymous',
                                 reversal_stock_entry_id=reversal_entry.id
                             )
                             
-                            bug_logger.info(f"برنامه تولید {program_id} به وضعیت تایید شده برگردانده شد. دلیل: {reason}")
+                            bug_logger.info(f"Production program {program_id} reverted to confirmed status.")
+                            audit_logger.activity(f"Production program {program_id} reverted by user. Reason: {reason}")
                             messages.success(request, f'برنامه تولید با موفقیت برگردانده شد. ثبت انبار معکوس: {reversal_entry.id}')
                             # If request came from list view, redirect back to declaration list
                             if request.POST.get('origin') == 'list':
                                 return redirect(reverse('production:production_declaration'))
                             return redirect(reverse('production:program_crud', args=[program_id]))
                         else:
-                            bug_logger.error(f"خطا در ایجاد ثبت انبار معکوس برای برنامه {program_id}")
+                            bug_logger.error(f"Error creating reversal stock entry for program {program_id}")
                             messages.error(request, 'خطا در برگشت برنامه. ثبت انبار معکوس ایجاد نشد')
                             if request.POST.get('origin') == 'list':
                                 return redirect(reverse('production:production_declaration'))
@@ -1046,10 +1041,14 @@ def production_program_crud_view(request, program_id=None):
                             production_program=instance,
                             action_type='archived',
                             reason=reason if reason else None,
-                            created_by=request.user.username if request.user.is_authenticated else 'ناشناس'
+                            created_by=request.user.username if request.user.is_authenticated else 'anonymous'
                         )
                         
-                        bug_logger.info(f"برنامه تولید {program_id} آرشیو شد")
+                        bug_logger.info(f"Production program {program_id} archived")
+                        if reason:
+                            audit_logger.info(f"Production program {program_id} archived. Reason: {reason}")
+                        else:
+                            audit_logger.info(f"Production program {program_id} archived")
                         messages.success(request, 'برنامه تولید با موفقیت آرشیو شد')
                         return redirect(reverse('production:production_declaration'))
                     elif action == 'unarchive':
@@ -1065,30 +1064,33 @@ def production_program_crud_view(request, program_id=None):
                         ProductionRevertLog.objects.create(
                             production_program=instance,
                             action_type='unarchived',
-                            reason='خروج از آرشیو',
-                            created_by=request.user.username if request.user.is_authenticated else 'ناشناس'
+                            reason='Removed from archive',
+                            created_by=request.user.username if request.user.is_authenticated else 'anonymous'
                         )
                         
-                        bug_logger.info(f"برنامه تولید {program_id} از آرشیو خارج شد")
+                        bug_logger.info(f"Production program {program_id} removed from archive")
+                        audit_logger.info(f"Production program {program_id} removed from archive")
                         messages.success(request, 'برنامه تولید با موفقیت از آرشیو خارج شد')
                         return redirect(reverse('production:production_declaration'))
                     
                     instance.save()
                     
                     if is_create:
-                        bug_logger.info(f"برنامه تولید جدید با شناسه {instance.id} ایجاد شد")
+                        bug_logger.info(f"New production program created with id {instance.id}")
+                        audit_logger.info(f"New production program created with id {instance.id}")
                         messages.success(request, f'برنامه تولید با موفقیت ایجاد شد.')
                     else:
-                        bug_logger.info(f"برنامه تولید {program_id} با موفقیت ویرایش شد")
+                        bug_logger.info(f"Production program {program_id} successfully edited")
+                        audit_logger.info(f"Production program {program_id} edited")
                         messages.success(request, f'برنامه تولید با موفقیت ذخیره شد.')
                     
                     return redirect(reverse('production:program_crud', args=[instance.id]))
                     
                 except Exception as e:
-                    bug_logger.error(f"خطا در ذخیره برنامه تولید: {str(e)}")
+                    bug_logger.error(f"Error saving production program: {str(e)}")
                     messages.error(request, f'خطا در ذخیره برنامه تولید: {str(e)}')
             else:
-                bug_logger.warning(f"فرم برنامه تولید نامعتبر است: {form.errors}")
+                bug_logger.warning(f"Production program form is invalid: {form.errors}")
                 messages.error(request, 'لطفاً خطاهای فرم را بررسی کنید.')
         else:
             # GET request
@@ -1097,11 +1099,11 @@ def production_program_crud_view(request, program_id=None):
             else:
                 form = ProductionForm(instance=program)
         
-        # دریافت موجودی مواد اولیه از انبارهای اولیه
+        # Get raw material inventory from primary warehouses
         raw_materials_inventory = []
         try:
             primary_warehouses = Warehouse.objects.filter(warehouse_type='primary')
-            bug_logger.debug(f"تعداد انبارهای اولیه: {primary_warehouses.count()}")
+            bug_logger.debug(f"Number of primary warehouses: {primary_warehouses.count()}")
             
             if primary_warehouses.exists():
                 try:
@@ -1112,9 +1114,9 @@ def production_program_crud_view(request, program_id=None):
                         content_type=raw_material_ct
                     ).select_related('warehouse', 'content_type')
                     
-                    bug_logger.debug(f"تعداد آیتم‌های موجودی: {inventory_items.count()}")
+                    bug_logger.debug(f"Number of inventory items: {inventory_items.count()}")
                     
-                    # گروه‌بندی مواد اولیه بر اساس ID و جمع موجودی از انبارها
+                    # Group raw materials by ID and sum inventory from warehouses
                     from collections import defaultdict
                     raw_materials_grouped = defaultdict(lambda: {
                         'raw_material_id': '',
@@ -1128,30 +1130,30 @@ def production_program_crud_view(request, program_id=None):
                         try:
                             raw_material = item.item
                             if raw_material is None:
-                                bug_logger.warning(f"ماده اولیه با شناسه {item.object_id} یافت نشد")
+                                bug_logger.warning(f"Raw material with id {item.object_id} not found")
                                 continue
                             
                             if raw_material:
                                 rm_id = getattr(raw_material, 'raw_material_id', '-')
                                 quantity = item.quantity if item.quantity else Decimal('0')
                                 
-                                # جمع کردن موجودی کل
+                                # Sum total inventory
                                 raw_materials_grouped[rm_id]['raw_material_id'] = rm_id
                                 raw_materials_grouped[rm_id]['name'] = getattr(raw_material, 'name', '-')
                                 raw_materials_grouped[rm_id]['total_quantity'] += quantity
-                                raw_materials_grouped[rm_id]['unit'] = item.unit or 'تن'
+                                raw_materials_grouped[rm_id]['unit'] = item.unit or 'ton'
                                 
-                                # ذخیره جزئیات انبار
+                                # Store warehouse details
                                 raw_materials_grouped[rm_id]['warehouses'].append({
                                     'warehouse_id': item.warehouse.warehouse_id if item.warehouse else '-',
                                     'warehouse_name': item.warehouse.name if (item.warehouse and item.warehouse.name) else (str(item.warehouse) if item.warehouse else '-'),
                                     'quantity': str(quantity),
                                 })
                         except Exception as e:
-                            bug_logger.warning(f"خطا در بارگذاری ماده اولیه: {str(e)}")
+                            bug_logger.warning(f"Error loading raw material: {str(e)}")
                             continue
                     
-                    # تبدیل به لیست
+                    # Convert to list
                     for rm_id, data in raw_materials_grouped.items():
                         raw_materials_inventory.append({
                             'raw_material_id': data['raw_material_id'],
@@ -1162,14 +1164,14 @@ def production_program_crud_view(request, program_id=None):
                         })
                     
                 except ContentType.DoesNotExist:
-                    bug_logger.warning("ContentType برای RawMaterial یافت نشد")
+                    bug_logger.warning("ContentType for RawMaterial not found")
                 except Exception as e:
-                    bug_logger.warning(f"خطا در دریافت موجودی مواد اولیه: {str(e)}")
+                    bug_logger.warning(f"Error getting raw material inventory: {str(e)}")
             else:
-                bug_logger.info("هیچ انبار اولیه‌ای یافت نشد")
+                bug_logger.info("No primary warehouses found")
         
         except Exception as e:
-            bug_logger.error(f"خطای کلی در دریافت موجودی مواد اولیه: {str(e)}")
+            bug_logger.error(f"General error in getting raw material inventory: {str(e)}")
         
         # Prepare production info and BOM data for JavaScript
         production_infos_data = {}
@@ -1222,7 +1224,7 @@ def production_program_crud_view(request, program_id=None):
                         'bom_items': bom_items
                     }
         except Exception as e:
-            bug_logger.error(f"خطا در آماده‌سازی داده‌های BOM: {str(e)}")
+            bug_logger.error(f"Error preparing BOM data: {str(e)}")
         
         # Get warehouse distribution if exists
         warehouse_distribution_data = {}
@@ -1261,16 +1263,16 @@ def production_program_crud_view(request, program_id=None):
         }
         
         if is_create:
-            bug_logger.info("صفحه ایجاد برنامه تولید با موفقیت بارگذاری شد")
+            bug_logger.info("Production program creation page loaded successfully")
+            audit_logger.activity("Accessed production program creation page")
         else:
-            bug_logger.info(f"صفحه جزئیات برنامه {program_id} با موفقیت بارگذاری شد")
-        
+            bug_logger.info(f"Production program {program_id} details page loaded successfully")
+            audit_logger.activity(f"Accessed production program {program_id} details page")
+
         return render(request, 'production_declaration_crud.html', context)
     
     except Exception as e:
-        bug_logger.error(f"خطای کلی در بارگذاری صفحه: {str(e)}")
-        audit_logger.alert(f"خطای کلی در دسترسی به صفحه برنامه تولید")
-        
+        bug_logger.error(f"General error in page load: {str(e)}")        
         available_warehouses = Warehouse.objects.exclude(
             warehouse_type__in=['supplier', 'production']
         ).order_by('name')
@@ -1296,10 +1298,9 @@ def production_program_crud_view(request, program_id=None):
 
 def archived_programs_view(request):
     """
-    نمایش برنامه‌های آرشیو شده
+    Display archived production programs
     """
-    audit_logger.info("دسترسی به صفحه برنامه‌های آرشیو شده")
-    
+    audit_logger.info("Access to archived production programs page")    
     try:
         # Get archived programs
         programs = ProductionProgram.objects.filter(
@@ -1307,13 +1308,17 @@ def archived_programs_view(request):
             status='completed'
         ).select_related('product', 'production_info').order_by('-execution_date', '-id')
         
+        bug_logger.debug(f"Number of archived programs: {programs.count()}")
+        
         context = {
             'programs': programs,
         }
         
+        bug_logger.info("Archived production programs page loaded successfully")
         return render(request, 'production_archived.html', context)
     
     except Exception as e:
-        bug_logger.error(f"خطا در بارگذاری برنامه‌های آرشیو: {str(e)}")
-        messages.error(request, 'خطا در بارگذاری برنامه‌های آرشیو')
+        bug_logger.error(f"Error loading archived programs: {str(e)}")
+        bug_logger.error(traceback.format_exc())
+        messages.error(request, 'Error loading archived programs')
         return redirect(reverse('production:production_declaration'))
