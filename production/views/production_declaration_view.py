@@ -2,9 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required, permission_required
 from django.urls import reverse
 from django.utils import timezone
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.template.loader import render_to_string
 from django.db import transaction
@@ -13,6 +14,7 @@ from decimal import Decimal
 import logging
 import traceback
 from core.logging_levels import *
+from core.RBACModel import user_has_task, TaskChoices
 
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.ProductionFolder.ProductionRevertLogModel import ProductionRevertLog
@@ -399,11 +401,19 @@ def revert_production_stock_entry(production_program, request):
         return None
 
 
+
+@login_required
 def production_declaration_view(request):
     """
     Production declaration page
     Display production programs by status and raw material inventory
     """
+    # Check permission for submitting production reports
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_SUBMIT_REPORT.value):
+        audit_logger.activity("تلاش برای دسترسی به صفحه اظهار تولید بدون دسترسی")
+        messages.error(request, 'شما دسترسی به صفحه اظهار تولید ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
     audit_logger.info("Access to production declaration page")
     
     try:
@@ -674,6 +684,8 @@ def production_declaration_view(request):
         return render(request, 'production_declaration.html', context)
 
 
+
+@login_required
 def production_program_crud_view(request, program_id=None):
     """
     Production program create/edit page
@@ -681,6 +693,13 @@ def production_program_crud_view(request, program_id=None):
     If program_id is None, it's in create mode
     """
     is_create = program_id is None
+    
+    # Check permission for creating new production program
+    if is_create:
+        if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
+            audit_logger.activity("تلاش برای ایجاد برنامه تولید جدید بدون دسترسی")
+            messages.error(request, 'شما دسترسی به ایجاد برنامه تولید جدید ندارید.')
+            return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     if is_create:
         audit_logger.info("Access to new production program creation page")
@@ -1281,10 +1300,18 @@ def production_program_crud_view(request, program_id=None):
         return render(request, 'production_declaration_crud.html', context)
 
 
+
+@login_required
 def archived_programs_view(request):
     """
     Display archived production programs
     """
+    # Check permission for submitting production reports
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_SUBMIT_REPORT.value):
+        audit_logger.activity("تلاش برای دسترسی به صفحه برنامه‌های بایگانی‌شده بدون دسترسی")
+        messages.error(request, 'شما دسترسی به صفحه برنامه‌های بایگانی‌شده ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
     audit_logger.info("Access to archived production programs page")    
     try:
         # Get archived programs
