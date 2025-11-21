@@ -689,7 +689,11 @@ def production_declaration_view(request):
             if table_type == 'confirmed':
                 programs_html = render_to_string(
                     'production/_confirmed_programs_tbody.html',
-                    {'confirmed_programs': confirmed_programs},
+                    {
+                        'confirmed_programs': confirmed_programs,
+                        'accessible_production_program_fields': accessible_production_program_fields,
+                        'accessible_product_fields': accessible_product_fields,
+                    },
                     request=request
                 )
                 return JsonResponse({
@@ -699,7 +703,11 @@ def production_declaration_view(request):
             elif table_type == 'progress':
                 programs_html = render_to_string(
                     'production/_progress_programs_tbody.html',
-                    {'in_progress_programs': in_progress_programs},
+                    {
+                        'in_progress_programs': in_progress_programs,
+                        'accessible_production_program_fields': accessible_production_program_fields,
+                        'accessible_product_fields': accessible_product_fields,
+                    },
                     request=request
                 )
                 return JsonResponse({
@@ -709,7 +717,12 @@ def production_declaration_view(request):
             else:  # completed
                 programs_html = render_to_string(
                     'production/_completed_programs_tbody.html',
-                    {'completed_page': completed_page},
+                    {
+                        'completed_page': completed_page,
+                        'accessible_production_program_fields': accessible_production_program_fields,
+                        'accessible_product_fields': accessible_product_fields,
+                        'accessible_warehouse_fields': accessible_warehouse_fields,
+                    },
                     request=request
                 )
                 pagination_html = render_to_string(

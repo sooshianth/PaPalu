@@ -1,12 +1,42 @@
 {% for program in confirmed_programs %}
 <tr>
+    {% if accessible_production_program_fields.id %}
     <td>{{ program.id }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.product and accessible_product_fields.name %}
     <td>{{ program.product.name|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.program_id %}
     <td>{{ program.program_id|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.planned_weight_ton %}
     <td>{{ program.planned_weight_ton|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.execution_date %}
     <td>{{ program.execution_date|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.packaging_type %}
     <td>{{ program.get_packaging_type_display|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.status %}
     <td><span class="status-badge status-confirmed">{{ program.get_status_display }}</span></td>
-    <td><a href="{% url 'production:program_crud' program.id %}" class="btn-detail">جزئیات</a></td>
+    {% endif %}
+    <td>
+        <div class="action-buttons">
+            <a href="{% url 'production:program_crud' program.id %}" class="btn-action btn-view" title="مشاهده جزئیات">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                مشاهده
+            </a>
+            <button type="button" class="btn-action btn-reject" onclick="showDenyModal({{ program.id }})" title="رد کردن">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                رد
+            </button>
+        </div>
+    </td>
 </tr>
 {% endfor %}

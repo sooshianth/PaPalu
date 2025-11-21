@@ -1,10 +1,21 @@
 {% for program in completed_page.object_list %}
 <tr>
+    {% if accessible_production_program_fields.id %}
     <td>{{ program.id }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.program_id %}
     <td>{{ program.program_id|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.product and accessible_product_fields.name %}
     <td>{{ program.product.name|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.product and accessible_product_fields.packaging_type %}
     <td>{{ program.product.packaging_type|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.planned_weight_ton %}
     <td>{{ program.planned_weight_ton|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.planned_weight_ton and accessible_production_program_fields.produced_weight_ton %}
     <td>
         {% if program.planned_weight_ton and program.produced_weight_ton %}
             {% widthratio program.produced_weight_ton program.planned_weight_ton 100 %}%
@@ -12,10 +23,41 @@
             -
         {% endif %}
     </td>
-    <td>{{ program.product_warehouse.name|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.product_warehouse %}
+    <td>
+        {% if program.product_warehouse and accessible_warehouse_fields.warehouse_name %}
+            {{ program.product_warehouse.warehouse_name|default:"-" }}
+        {% else %}
+            -
+        {% endif %}
+    </td>
+    {% endif %}
+    {% if accessible_production_program_fields.started_at %}
     <td>{{ program.started_at|date:"Y/m/d H:i"|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.completed_at %}
     <td>{{ program.completed_at|date:"Y/m/d H:i"|default:"-" }}</td>
+    {% endif %}
+    {% if accessible_production_program_fields.status %}
     <td><span class="status-badge status-completed">{{ program.get_status_display }}</span></td>
-    <td><a href="{% url 'production:program_crud' program.id %}" class="btn-detail">جزئیات</a></td>
+    {% endif %}
+    <td>
+        <div class="action-buttons">
+            <a href="{% url 'production:program_crud' program.id %}" class="btn-action btn-view" title="مشاهده جزئیات">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
+                </svg>
+                مشاهده
+            </a>
+            <button type="button" class="btn-action btn-archive" onclick="showArchiveModal({{ program.id }})" title="آرشیو کردن">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                آرشیو
+            </button>
+        </div>
+    </td>
 </tr>
 {% endfor %}
