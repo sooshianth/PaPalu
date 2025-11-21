@@ -65,7 +65,10 @@ class TaskChoices(models.TextChoices):
     PRODUCTION_APPROVE_REPORT = 'production.approve_report', 'تایید اظهار تولید'
     PRODUCTION_REGISTER_NEW_SCHEDULE = 'production.register_new_schedule', 'ثبت برنامه تولید جدید'
     PRODUCTION_QUALITY_CONTROL_FORMS = 'production.quality_control_forms', 'فرم های کنترل کیفیت'
-    
+    PRODUCTION_REJECT_SCHEDULE = 'production.reject_schedule', 'رد برنامه تولید'
+    PRODUCTION_REVERT_SCHEDULE = 'production.revert_schedule', 'بازگشت از تولید'
+    PRODUCTION_ARCHIVE = 'production.archive', 'آرشیو تولید'
+
     # Distribution (توزیع)
     DISTRIBUTION_ALLOCATE_INVENTORY = 'distribution.allocate_inventory', 'اختصاص موجودی محصول به تخصیص'
     DISTRIBUTION_READY_FOR_SHIPMENT = 'distribution.ready_for_shipment', 'تخصیص آماده ارسال'

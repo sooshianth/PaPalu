@@ -655,6 +655,11 @@ def production_declaration_view(request):
         accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
         accessible_warehouse_fields = get_accessible_warehouse_fields(request.user)
         
+        # Check permissions for deny, revert, and archive actions
+        can_deny = user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value)
+        can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
+        can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
+        
         # آماده‌سازی context
         context = {
             'confirmed_programs': confirmed_programs,
@@ -678,6 +683,10 @@ def production_declaration_view(request):
             'accessible_product_fields': accessible_product_fields,
             'accessible_raw_material_fields': accessible_raw_material_fields,
             'accessible_warehouse_fields': accessible_warehouse_fields,
+            # Action permissions
+            'can_deny': can_deny,
+            'can_revert': can_revert,
+            'can_archive': can_archive,
         }
         
         bug_logger.info("Production declaration page loaded successfully")
@@ -693,6 +702,7 @@ def production_declaration_view(request):
                         'confirmed_programs': confirmed_programs,
                         'accessible_production_program_fields': accessible_production_program_fields,
                         'accessible_product_fields': accessible_product_fields,
+                        'can_deny': can_deny,
                     },
                     request=request
                 )
@@ -707,6 +717,7 @@ def production_declaration_view(request):
                         'in_progress_programs': in_progress_programs,
                         'accessible_production_program_fields': accessible_production_program_fields,
                         'accessible_product_fields': accessible_product_fields,
+                        'can_revert': can_revert,
                     },
                     request=request
                 )
@@ -722,6 +733,9 @@ def production_declaration_view(request):
                         'accessible_production_program_fields': accessible_production_program_fields,
                         'accessible_product_fields': accessible_product_fields,
                         'accessible_warehouse_fields': accessible_warehouse_fields,
+                        'can_deny': can_deny,
+                        'can_revert': can_revert,
+                        'can_archive': can_archive,
                     },
                     request=request
                 )
@@ -1026,6 +1040,11 @@ def production_program_crud_view(request, program_id=None):
                             bug_logger.warning("Product warehouse or actual consumption not present - stock entry not created")
                     elif action == 'deny':
                         # Deny a confirmed program
+                        if not user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value):
+                            audit_logger.activity("تلاش برای دسترسی به صفحه رد برنامه تولید بدون دسترسی")
+                            messages.error(request, 'شما دسترسی به صفحه رد برنامه تولید ندارید.')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+
                         if instance.status != ProductionProgram.Status.CONFIRMED:
                             messages.error(request, 'فقط برنامه‌های تایید شده قابل رد هستند')
                             return redirect(reverse('production:program_crud', args=[program_id]))
@@ -1052,13 +1071,19 @@ def production_program_crud_view(request, program_id=None):
                         return redirect(reverse('production:production_declaration'))
                     elif action == 'revert':
                         # Revert an in-progress program back to confirmed
+                        if not user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value):
+                            audit_logger.activity("تلاش برای دسترسی به صفحه برگشت برنامه تولید بدون دسترسی")
+                            messages.error(request, 'شما دسترسی به صفحه برگشت برنامه تولید ندارید.')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+
                         if instance.status != ProductionProgram.Status.IN_PROGRESS:
                             messages.error(request, 'فقط برنامه‌های در حال اجرا قابل برگشت هستند')
                             # If request came from list view, stay on declaration page
                             if request.POST.get('origin') == 'list':
                                 return redirect(reverse('production:production_declaration'))
                             return redirect(reverse('production:program_crud', args=[program_id]))
-                        
+
+
                         reason = request.POST.get('revert_reason', '').strip()
                         if not reason:
                             messages.error(request, 'لطفاً دلیل برگشت برنامه را وارد کنید')
@@ -1098,10 +1123,16 @@ def production_program_crud_view(request, program_id=None):
                             return redirect(reverse('production:program_crud', args=[program_id]))
                     elif action == 'archive':
                         # Archive a completed program
+                        if not user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value):
+                            audit_logger.activity("تلاش برای دسترسی به صفحه آرشیو برنامه تولید بدون دسترسی")
+                            messages.error(request, 'شما دسترسی به صفحه آرشیو برنامه تولید ندارید.')
+                            return redirect(reverse('production:program_crud', args=[program_id]))
+                        
                         if instance.status != ProductionProgram.Status.COMPLETED:
                             messages.error(request, 'فقط برنامه‌های تکمیل شده قابل آرشیو هستند')
                             return redirect(reverse('production:program_crud', args=[program_id]))
-                        
+
+
                         reason = request.POST.get('archive_reason', '').strip()
                         
                         instance.is_archived = True
@@ -1319,6 +1350,11 @@ def production_program_crud_view(request, program_id=None):
             warehouse_type='production'
         ).order_by('name')
         
+        # Check permissions for deny, revert, and archive actions
+        can_deny = user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value)
+        can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
+        can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
+        
         context = {
             'form': form,
             'program': program,
@@ -1332,6 +1368,9 @@ def production_program_crud_view(request, program_id=None):
             'program_status': program.status if program else 'draft',
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
+            'can_deny': can_deny,
+            'can_revert': can_revert,
+            'can_archive': can_archive,
         }
         
         if is_create:
@@ -1352,6 +1391,11 @@ def production_program_crud_view(request, program_id=None):
             warehouse_type='production'
         ).order_by('name')
         
+        # Check permissions for deny, revert, and archive actions
+        can_deny = user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value)
+        can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
+        can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
+        
         context = {
             'form': ProductionForm(),
             'program': None,
@@ -1364,6 +1408,9 @@ def production_program_crud_view(request, program_id=None):
             'program_status': 'draft',
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
+            'can_deny': can_deny,
+            'can_revert': can_revert,
+            'can_archive': can_archive,
         }
         return render(request, 'production_declaration_crud.html', context)
 

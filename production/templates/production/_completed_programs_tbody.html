@@ -51,12 +51,14 @@
                 </svg>
                 مشاهده
             </a>
+            {% if can_archive %}
             <button type="button" class="btn-action btn-archive" onclick="showArchiveModal({{ program.id }})" title="آرشیو کردن">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
                 آرشیو
             </button>
+            {% endif %}
         </div>
     </td>
 </tr>
