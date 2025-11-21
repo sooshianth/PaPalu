@@ -1,0 +1,51 @@
+I need to implement field-level access control and task permissions for [VIEW_NAME] view in [APP_NAME] app.
+
+## Requirements:
+
+1. **Task Permission Check**: 
+   - Users must have the appropriate task permission to access the view
+   - Use `user_has_task(request.user, TaskChoices.YOUR_TASK_CODE.value)` at the view entry point
+   - Return HttpResponseForbidden if user lacks permission
+
+2. **Field-Level Access Control**:
+   - Implement field access checks using `user_can_access_field(user, Model, 'field_name', 'view')` for read-only views
+   - NO automatic superuser bypass - all users must have explicit field permissions
+   - Check BOTH relationship fields AND target fields (e.g., for `program.product.name`, check both `ProductionProgram.product` AND `Product.name`)
+
+3. **Implementation Pattern** (follow the pattern from vehicle_recruitment_view.py):
+
+   **In Python View:**
+   - Import: `from core.RBACModel import user_has_task, TaskChoices, user_can_access_field`
+   - Create helper functions for each model used (e.g., `get_accessible_model_fields(user)`)
+   - In each helper function, check every field displayed using `user_can_access_field(user, Model, 'field_name', 'view')`
+   - Pass field access dictionaries to template context
+
+   **In HTML Template:**
+   - Wrap ALL table headers with: `{% if accessible_model_fields.field_name %}`
+   - Wrap ALL table cells with: `{% if accessible_model_fields.field_name %}`
+   - For related fields, check BOTH: `{% if accessible_parent_fields.relationship and accessible_child_fields.field %}`
+   - Example: `{% if accessible_production_program_fields.product and accessible_product_fields.name %}`
+
+4. **Models Used in This View**:
+   [List all models that are displayed, including related models]
+   - Model1: fields to check
+   - Model2: fields to check
+   - Related models accessed through ForeignKey/ManyToMany
+
+5. **Important Rules**:
+   - Never give automatic access to superusers
+   - Always use 'view' permission for read-only pages
+   - Use 'edit' permission only for form/edit pages
+   - Check every single field being displayed
+   - If a field is denied, hide the entire column (header + all cells)
+   - For ForeignKey relationships, check the relationship field itself first
+
+6. **Example from production_declaration_view.py**:
+   - See how `accessible_production_program_fields.product` is checked before showing product.name
+   - See how helper functions don't have superuser bypass
+   - See how all fields use `user_can_access_field(user, Model, 'field', 'view')`
+
+Please implement this following the exact pattern used in:
+- Python: production/views/production_declaration_view.py  
+- HTML: production/templates/production_declaration.html
+- Reference: distribution/views/vehicle_recruitment_view.py

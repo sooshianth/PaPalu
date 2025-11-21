@@ -14,7 +14,7 @@ from decimal import Decimal
 import logging
 import traceback
 from core.logging_levels import *
-from core.RBACModel import user_has_task, TaskChoices
+from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.ProductionFolder.ProductionRevertLogModel import ProductionRevertLog
@@ -33,6 +33,50 @@ import json
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_production_program_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای ProductionProgram - فقط مشاهده"""
+    accessible_fields = {}
+    accessible_fields['id'] = user_can_access_field(user, ProductionProgram, 'id', 'view')
+    accessible_fields['program_id'] = user_can_access_field(user, ProductionProgram, 'program_id', 'view')
+    accessible_fields['execution_date'] = user_can_access_field(user, ProductionProgram, 'execution_date', 'view')
+    accessible_fields['planned_weight_ton'] = user_can_access_field(user, ProductionProgram, 'planned_weight_ton', 'view')
+    accessible_fields['produced_weight_ton'] = user_can_access_field(user, ProductionProgram, 'produced_weight_ton', 'view')
+    accessible_fields['packaging_type'] = user_can_access_field(user, ProductionProgram, 'packaging_type', 'view')
+    accessible_fields['predicted_start_time'] = user_can_access_field(user, ProductionProgram, 'predicted_start_time', 'view')
+    accessible_fields['predicted_end_time'] = user_can_access_field(user, ProductionProgram, 'predicted_end_time', 'view')
+    accessible_fields['started_at'] = user_can_access_field(user, ProductionProgram, 'started_at', 'view')
+    accessible_fields['completed_at'] = user_can_access_field(user, ProductionProgram, 'completed_at', 'view')
+    accessible_fields['status'] = user_can_access_field(user, ProductionProgram, 'status', 'view')
+    accessible_fields['product'] = user_can_access_field(user, ProductionProgram, 'product', 'view')
+    accessible_fields['product_warehouse'] = user_can_access_field(user, ProductionProgram, 'product_warehouse', 'view')
+    accessible_fields['production_warehouse'] = user_can_access_field(user, ProductionProgram, 'production_warehouse', 'view')
+    return accessible_fields
+
+
+def get_accessible_product_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Product - فقط مشاهده"""
+    accessible_fields = {}
+    accessible_fields['name'] = user_can_access_field(user, Product, 'name', 'view')
+    accessible_fields['packaging_type'] = user_can_access_field(user, Product, 'packaging_type', 'view')
+    return accessible_fields
+
+
+def get_accessible_raw_material_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای RawMaterial - فقط مشاهده"""
+    accessible_fields = {}
+    accessible_fields['raw_material_id'] = user_can_access_field(user, RawMaterial, 'raw_material_id', 'view')
+    accessible_fields['name'] = user_can_access_field(user, RawMaterial, 'name', 'view')
+    return accessible_fields
+
+
+def get_accessible_warehouse_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای Warehouse - فقط مشاهده"""
+    accessible_fields = {}
+    accessible_fields['warehouse_id'] = user_can_access_field(user, Warehouse, 'warehouse_id', 'view')
+    accessible_fields['warehouse_name'] = user_can_access_field(user, Warehouse, 'warehouse_name', 'view')
+    return accessible_fields
 
 
 def create_completion_stock_entries(production_program, actual_consumption, product_warehouse, request):
@@ -605,6 +649,12 @@ def production_declaration_view(request):
         except Exception as e:
             bug_logger.error(f"General error in getting raw material inventory: {str(e)}")
         
+        # بررسی دسترسی فیلدها
+        accessible_production_program_fields = get_accessible_production_program_fields(request.user)
+        accessible_product_fields = get_accessible_product_fields(request.user)
+        accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
+        accessible_warehouse_fields = get_accessible_warehouse_fields(request.user)
+        
         # آماده‌سازی context
         context = {
             'confirmed_programs': confirmed_programs,
@@ -623,6 +673,11 @@ def production_declaration_view(request):
             'sort_dir_progress': sort_dir_progress,
             'sort_by_completed': sort_by_completed,
             'sort_dir_completed': sort_dir_completed,
+            # Field access permissions
+            'accessible_production_program_fields': accessible_production_program_fields,
+            'accessible_product_fields': accessible_product_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_warehouse_fields': accessible_warehouse_fields,
         }
         
         bug_logger.info("Production declaration page loaded successfully")

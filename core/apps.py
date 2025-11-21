@@ -69,7 +69,7 @@ class CoreConfig(AppConfig):
         
         # Production models
         from .ProductionFolder import (
-            ProductionProgram
+            ProductionProgram, ProductionRevertLog
         )
         
         # RBAC models

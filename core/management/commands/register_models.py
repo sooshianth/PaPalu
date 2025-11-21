@@ -55,7 +55,11 @@ class Command(BaseCommand):
         from core.RBACModel import (
             TaskPermission, FieldPermission, FieldChoice, Role, UserTaskPermission, UserFieldPermission
         )
-        
+
+        from core.ProductionFolder import (
+            ProductionProgram, ProductionRevertLog
+        )
+
         # List of all model classes
         models = [
             # Product
@@ -81,6 +85,8 @@ class Command(BaseCommand):
             Settlement, TransactionDocument,
             # RBAC
             TaskPermission, FieldPermission, FieldChoice, Role, UserTaskPermission, UserFieldPermission,
+            # Production
+            ProductionProgram, ProductionRevertLog
         ]
         
         registered_count = 0
