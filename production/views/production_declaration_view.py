@@ -96,8 +96,8 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                         )
                         
                         try:
-                            source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_id)
-                        except Warehouse.DoesNotExist:
+                            source_warehouse = Warehouse.objects.get(id=warehouse_id)
+                        except (Warehouse.DoesNotExist, ValueError):
                             bug_logger.warning(f"Warehouse {warehouse_id} not found")
                             continue
                         
@@ -251,33 +251,22 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                 
                 # Create SourceStock and TargetStock for each warehouse (one by one transfer)
                 for dist in warehouse_distribution[bom_id_str]:
-                    warehouse_identifier = dist['warehouse']
+                    warehouse_id = dist['warehouse']
                     amount = Decimal(str(dist['amount']))
                     
-                    bug_logger.debug(f"Transfer {amount} from warehouse {warehouse_identifier} to production warehouse")
+                    bug_logger.debug(f"Transfer {amount} from warehouse {warehouse_id} to production warehouse")
                     
-                    # Find source warehouse - try warehouse_id, name, or id
+                    # Find source warehouse using Django primary key (id)
                     source_warehouse = None
                     try:
-                        # First try as warehouse_id (numeric string like "33", "22", "11")
-                        source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_identifier)
-                        bug_logger.debug(f"Warehouse found by warehouse_id: {warehouse_identifier}")
-                    except Warehouse.DoesNotExist:
-                        try:
-                            # Then try as name (display name like "سیلو 1", "انبار زمینی")
-                            source_warehouse = Warehouse.objects.get(name=warehouse_identifier)
-                            bug_logger.debug(f"Warehouse found by name: {warehouse_identifier}")
-                        except Warehouse.DoesNotExist:
-                            try:
-                                # Finally try as primary key (integer id)
-                                source_warehouse = Warehouse.objects.get(id=int(warehouse_identifier))
-                                bug_logger.debug(f"Warehouse found by id: {warehouse_identifier}")
-                            except (Warehouse.DoesNotExist, ValueError):
-                                bug_logger.warning(f"Warehouse {warehouse_identifier} not found (warehouse_id, name or id)")
-                                continue
+                        source_warehouse = Warehouse.objects.get(id=warehouse_id)
+                        bug_logger.debug(f"Warehouse found by id: {warehouse_id}")
+                    except (Warehouse.DoesNotExist, ValueError):
+                        bug_logger.warning(f"Warehouse {warehouse_id} not found")
+                        continue
                     
                     if not source_warehouse:
-                        bug_logger.warning(f"Warehouse {warehouse_identifier} not found")
+                        bug_logger.warning(f"Warehouse {warehouse_id} not found")
                         continue
                     
                     if amount > 0:
@@ -363,22 +352,16 @@ def revert_production_stock_entry(production_program, request):
                 
                 # For each warehouse, create reverse operation
                 for dist in warehouse_distribution[bom_id_str]:
-                    warehouse_identifier = dist['warehouse']
+                    warehouse_id = dist['warehouse']
                     amount = Decimal(str(dist['amount']))
                     
-                    # Find source warehouse
+                    # Find source warehouse using Django primary key (id)
                     source_warehouse = None
                     try:
-                        source_warehouse = Warehouse.objects.get(warehouse_id=warehouse_identifier)
-                    except Warehouse.DoesNotExist:
-                        try:
-                            source_warehouse = Warehouse.objects.get(name=warehouse_identifier)
-                        except Warehouse.DoesNotExist:
-                            try:
-                                source_warehouse = Warehouse.objects.get(id=int(warehouse_identifier))
-                            except (Warehouse.DoesNotExist, ValueError):
-                                bug_logger.warning(f"Warehouse {warehouse_identifier} not found")
-                                continue
+                        source_warehouse = Warehouse.objects.get(id=warehouse_id)
+                    except (Warehouse.DoesNotExist, ValueError):
+                        bug_logger.warning(f"Warehouse {warehouse_id} not found")
+                        continue
                     
                     if not source_warehouse:
                         continue
@@ -579,8 +562,9 @@ def production_declaration_view(request):
                                 raw_materials_grouped[rm_id]['total_quantity'] += quantity
                                 raw_materials_grouped[rm_id]['unit'] = item.unit or 'ton'
                                 
-                                # Store warehouse details
+                                # Store warehouse details (include Django ID for proper lookups)
                                 raw_materials_grouped[rm_id]['warehouses'].append({
+                                    'id': item.warehouse.id,  # Django primary key
                                     'warehouse_id': item.warehouse.warehouse_id if item.warehouse else '-',
                                     'warehouse_name': item.warehouse.name if (item.warehouse and item.warehouse.name) else (str(item.warehouse) if item.warehouse else '-'),
                                     'quantity': str(quantity),
@@ -1143,8 +1127,9 @@ def production_program_crud_view(request, program_id=None):
                                 raw_materials_grouped[rm_id]['total_quantity'] += quantity
                                 raw_materials_grouped[rm_id]['unit'] = item.unit or 'ton'
                                 
-                                # Store warehouse details
+                                # Store warehouse details (include Django ID for proper lookups)
                                 raw_materials_grouped[rm_id]['warehouses'].append({
+                                    'id': item.warehouse.id,  # Django primary key
                                     'warehouse_id': item.warehouse.warehouse_id if item.warehouse else '-',
                                     'warehouse_name': item.warehouse.name if (item.warehouse and item.warehouse.name) else (str(item.warehouse) if item.warehouse else '-'),
                                     'quantity': str(quantity),
