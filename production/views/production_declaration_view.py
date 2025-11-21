@@ -385,7 +385,7 @@ def revert_production_stock_entry(production_program, request):
                             quantity=amount
                         )
                         
-                        bug_logger.debug(f"Returned {amount} from production warehouse to {warehouse_identifier} for {bom.raw_material.name if bom.raw_material else 'raw material'}")
+                        bug_logger.debug(f"Returned {amount} from production warehouse to {warehouse_id} for {bom.raw_material.name if bom.raw_material else 'raw material'}")
             
             # Commit transaction
             reversal_entry.commit()
