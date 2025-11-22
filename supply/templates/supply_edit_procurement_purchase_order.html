@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}ویرایش سفارش خرید{% endblock %}
+{% block extra_css %}
+<style>
+  .form-wrapper {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:22px;background:#fff;padding:20px;border:1px solid #e0e5e8;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.04)}
+  .form-wrapper h4 {grid-column:1/-1;font-size:.95rem;margin:-4px 0 10px;font-weight:600;color:#2d3e50}
+  .form-group {display:flex;flex-direction:column}
+  .form-group label {font-size:.75rem;margin-bottom:4px;font-weight:600;color:#37474f}
+  .form-group input, .form-group select, .form-group textarea {padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
+  .materials-block {grid-column:1/-1;border-top:2px dashed #e0e5e8;padding-top:14px;margin-top:10px}
+  table.inline-set {width:100%;border-collapse:collapse;font-size:.78rem}
+  table.inline-set th, table.inline-set td {border:1px solid #e0e5e8;padding:6px;text-align:center}
+  .btn-row {display:flex;gap:8px;margin-top:4px}
+  .del-row-btn {background:#dc3545;color:#fff;padding:4px 10px;border:none;border-radius:6px;font-size:.7rem;cursor:pointer}
+</style>
+{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="form-wrapper">
+  {% csrf_token %}
+  <h4>ویرایش سفارش {{ po.order_number }}</h4>
+  {% for field in form %}
+    <div class="form-group">
+      <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+      {{ field }}
+      {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+    </div>
+  {% endfor %}
+  {{ material_formset.management_form }}
+  <div class="materials-block">
+    <h4>مواد اولیه</h4>
+    <table class="inline-set">
+      <thead><tr><th>ماده اولیه</th><th>مقدار</th><th>واحد</th><th>حذف</th></tr></thead>
+      <tbody>
+        {% for form in material_formset %}
+        <tr>
+          <td>{{ form.raw_material }}</td>
+          <td>{{ form.quantity }}</td>
+          <td>{{ form.unit }}</td>
+          <td>{{ form.DELETE }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+    <a href="{% url 'supply:procurement_purchase_order_detail' po.order_number %}" class="btn btn-secondary btn-sm">لغو</a>
+    <button type="submit" class="btn btn-primary btn-sm">ذخیره تغییرات</button>
+  </div>
+</form>
+{% endblock %}

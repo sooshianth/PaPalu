@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% block title %}جزئیات سفارش خرید{% endblock %}
+{% block extra_css %}
+<style>
+  .detail-grid {display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;background:#fff;border:1px solid #e0e5e8;padding:20px;border-radius:16px;box-shadow:0 4px 18px rgba(0,0,0,0.04);margin-bottom:24px}
+  .detail-grid h3 {grid-column:1/-1;font-size:1rem;margin:0 0 12px}
+  .kv {display:flex;flex-direction:column;background:#f8f9fa;border:1px solid #e0e5e8;padding:10px;border-radius:10px}
+  .kv span:first-child {font-size:.7rem;color:#607d8b;font-weight:600;margin-bottom:4px}
+  .materials-list {grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+  .materials-list .mat {background:#e3f2fd;color:#0b74c7;padding:4px 8px;border-radius:6px;font-size:.7rem;font-weight:600}
+  .status-badge {display:inline-block;padding:4px 10px;border-radius:8px;font-size:.7rem;font-weight:600}
+  .log-table {width:100%;border-collapse:collapse;font-size:.7rem}
+  .log-table th, .log-table td {border:1px solid #e0e5e8;padding:6px;text-align:center}
+  .actions {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+</style>
+{% endblock %}
+{% block content %}
+<div class="actions">
+  <a href="{% url 'supply:purchase_order_management' %}" class="btn btn-secondary btn-sm">بازگشت</a>
+  <a href="{% url 'supply:edit_procurement_purchase_order' po.order_number %}" class="btn btn-primary btn-sm">ویرایش</a>
+  {% if po.can_delete %}<a href="{% url 'supply:delete_procurement_purchase_order' po.order_number %}" class="btn btn-danger btn-sm" onclick="return confirm('حذف سفارش؟')">حذف (پیش‌نویس)</a>{% endif %}
+  {% if not po.payment_confirmed %}<a href="{% url 'supply:confirm_procurement_purchase_order_payment' po.order_number %}" class="btn btn-success btn-sm" onclick="return confirm('تایید پرداخت؟ پس از تایید امکان ویرایش مالی وجود ندارد')">تایید پرداخت</a>{% endif %}
+</div>
+<div class="detail-grid">
+  <h3>سفارش {{ po.order_number }}</h3>
+  <div class="kv"><span>وضعیت</span><strong>{{ po.get_status_display }}</strong></div>
+  <div class="kv"><span>تأمین‌کننده</span>{{ po.supplier.name|default:'—' }}</div>
+  <div class="kv"><span>نوع پرداخت کرایه</span>{{ po.get_freight_payment_type_display }}</div>
+  <div class="kv"><span>جمع بدون کرایه</span>{{ po.subtotal_without_freight|default:'—' }}</div>
+  <div class="kv"><span>هزینه کرایه</span>{{ po.freight_cost|default:'—' }}</div>
+  <div class="kv"><span>مالیات %</span>{{ po.vat_percentage|default:'—' }}</div>
+  <div class="kv"><span>پیش‌فاکتور تایید شد؟</span>{{ po.pre_invoice_approved|yesno:'بله,خیر' }}</div>
+  <div class="kv"><span>تاریخ ایجاد</span>{{ po.created_at|date:'Y-m-d H:i' }}</div>
+  <div class="materials-list">
+    {% for m in materials %}<span class="mat">{{ m.raw_material.name }} ({{ m.quantity }} {{ m.unit }})</span>{% empty %}—{% endfor %}
+  </div>
+  {% if po.pre_invoice_file %}
+  <div class="kv" style="grid-column:1/-1"><span>فایل پیش‌فاکتور</span><a href="{{ po.pre_invoice_file.url }}" target="_blank">دانلود</a></div>
+  {% endif %}
+</div>
+
+<div class="detail-grid" style="margin-top:4px">
+  <h3>تاریخچه وضعیت</h3>
+  <table class="log-table">
+    <thead><tr><th>از وضعیت</th><th>به وضعیت</th><th>زمان</th><th>کاربر</th><th>یادداشت</th></tr></thead>
+    <tbody>
+      {% for log in logs %}
+      <tr>
+        <td>{{ log.old_status }}</td>
+        <td>{{ log.new_status }}</td>
+        <td>{{ log.changed_at|date:'Y-m-d H:i' }}</td>
+        <td>{{ log.changed_by|get_full_name|default:log.changed_by.username|default:'-' }}</td>
+        <td>{{ log.note|default:'-' }}</td>
+      </tr>
+      {% empty %}<tr><td colspan="5">لاگی وجود ندارد.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="detail-grid" style="margin-top:4px">
+  <h3>تغییر وضعیت</h3>
+  <div style="grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px">
+    {% for code,label in po.STATUS_CHOICES %}
+      {% if code != po.status and code in po.WORKFLOW_ALLOWED.get(po.status,[]) %}
+        <a href="{% url 'supply:transition_procurement_purchase_order_status' po.order_number code %}" class="btn btn-success btn-sm" onclick="return confirm('تغییر وضعیت به {{ label }} ؟')">{{ label }}</a>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

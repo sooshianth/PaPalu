@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}مدیریت سفارش‌های خرید{% endblock %}
+{% block extra_css %}
+<style>
+  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04);margin-bottom:26px}
+  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
+  .card-body {padding:20px}
+  .table-wrap {overflow-x:auto;background:#fff;border:1px solid #e3e7ea;border-radius:10px;padding:12px}
+  table.dataTable {width:100%;border-collapse:collapse;font-size:.85rem}
+  table.dataTable thead th {background:#f2f6f5;padding:9px 10px;text-align:center;border:1px solid #e3e7ea;font-weight:600;color:#37474f}
+  table.dataTable tbody td {padding:8px 10px;border:1px solid #e3e7ea;text-align:center;vertical-align:middle}
+  table.dataTable tbody tr:hover {background:#f8f9fa}
+  .status-badge {display:inline-block;padding:4px 8px;font-size:.7rem;border-radius:6px;font-weight:600}
+  .status-draft{background:#fff3cd;color:#b8860b}
+  .status-awaiting_transport_def{background:#e3f2fd;color:#0b74c7}
+  .status-awaiting_vehicle_entry{background:#e0f7fa;color:#007c91}
+  .status-awaiting_delivery{background:#ede7f6;color:#5e35b1}
+  .status-awaiting_wh_reconciliation{background:#fff8e1;color:#ff8f00}
+  .status-awaiting_final_settlement{background:#f3e5f5;color:#6a1b9a}
+  .status-completed{background:#d4edda;color:#155724}
+  .btn-sm{padding:4px 8px;font-size:.75rem}
+  .filters th {background:#fafafa}
+  .dual-table-grid {display:grid;grid-template-columns:1fr;gap:30px}
+  /* Force vertical stacking on all screen sizes */
+  @media(min-width:1200px){.dual-table-grid{grid-template-columns:1fr}}
+</style>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size:1.1rem">مدیریت سفارش‌های خرید</h3>
+    <div>
+      <a href="{% url 'supply:create_procurement_purchase_order' %}" class="btn btn-primary btn-sm">ایجاد سفارش</a>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="dual-table-grid">
+      <div>
+        <h4 style="font-size:.95rem;margin-bottom:10px">سفارشات باز</h4>
+        <div class="table-wrap">
+          <table id="openOrdersTable" class="dataTable">
+            <thead>
+              <tr>
+                <th>شماره سفارش</th>
+                <th>وضعیت فعلی</th>
+                <th>مواد اولیه</th>
+                <th>تأمین‌کننده</th>
+                <th>تاریخ ایجاد</th>
+                <th>عملیات</th>
+              </tr>
+              <tr class="filters">
+                <th></th><th></th><th></th><th></th><th></th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for po in open_orders %}
+              <tr>
+                <td>{{ po.order_number }}</td>
+                <td><span class="status-badge status-{{ po.status }}">{{ po.get_status_display }}</span></td>
+                <td>
+                  {% for m in po.materials.all %}
+                    <span style="display:inline-block;padding:2px 6px;background:#f1f3f4;border-radius:4px;margin:1px">{{ m.raw_material.name }}</span>
+                  {% empty %}—{% endfor %}
+                </td>
+                <td>{{ po.supplier.name|default:'—' }}</td>
+                <td>{{ po.created_at|date:'Y-m-d' }}</td>
+                <td><a href="{% url 'supply:procurement_purchase_order_detail' po.order_number %}" class="btn btn-secondary btn-sm">جزئیات</a></td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td>—</td><td>—</td><td>سفارشی موجود نیست.</td><td>—</td><td>—</td><td>—</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div>
+        <h4 style="font-size:.95rem;margin-bottom:10px">سفارشات تکمیل‌شده</h4>
+        <div class="table-wrap">
+          <table id="completedOrdersTable" class="dataTable">
+            <thead>
+              <tr>
+                <th>شماره سفارش</th>
+                <th>وضعیت</th>
+                <th>مواد اولیه</th>
+                <th>تأمین‌کننده</th>
+                <th>تاریخ ایجاد</th>
+                <th>عملیات</th>
+              </tr>
+              <tr class="filters">
+                <th></th><th></th><th></th><th></th><th></th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for po in completed_orders %}
+              <tr>
+                <td>{{ po.order_number }}</td>
+                <td><span class="status-badge status-{{ po.status }}">{{ po.get_status_display }}</span></td>
+                <td>
+                  {% for m in po.materials.all %}
+                    <span style="display:inline-block;padding:2px 6px;background:#f1f3f4;border-radius:4px;margin:1px">{{ m.raw_material.name }}</span>
+                  {% empty %}—{% endfor %}
+                </td>
+                <td>{{ po.supplier.name|default:'—' }}</td>
+                <td>{{ po.created_at|date:'Y-m-d' }}</td>
+                <td><a href="{% url 'supply:procurement_purchase_order_detail' po.order_number %}" class="btn btn-secondary btn-sm">جزئیات</a></td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td>—</td><td>—</td><td>سفارشی موجود نیست.</td><td>—</td><td>—</td><td>—</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script>
+function initTable(selector){
+  var table = $(selector).DataTable({
+    language:{url:'//cdn.datatables.net/plug-ins/1.13.8/i18n/fa.json'},
+    orderCellsTop:true, fixedHeader:true, pageLength:15,
+    order:[[0,'desc']],
+    initComplete:function(){
+      var api=this.api();
+      $(api.table().header()).find('tr.filters th').each(function(colIdx){
+        if(colIdx===5) return; // skip operations column
+        $(this).html('<input type="text" style="width:100%;padding:3px;font-size:.7rem;border:1px solid #ccc;border-radius:4px" />');
+        $('input', this).on('keyup change', function(){
+          if(api.column(colIdx).search() !== this.value){
+            api.column(colIdx).search(this.value).draw();
+          }
+        });
+      });
+    }
+  });
+}
+$(function(){ initTable('#openOrdersTable'); initTable('#completedOrdersTable'); });
+</script>
+{% endblock %}

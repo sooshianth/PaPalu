@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}ایجاد سفارش خرید{% endblock %}
+{% block extra_css %}
+<style>
+  .form-wrapper {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:22px;background:#fff;padding:20px;border:1px solid #e0e5e8;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.04)}
+  .form-wrapper h4 {grid-column:1/-1;font-size:.95rem;margin:-4px 0 10px;font-weight:600;color:#2d3e50}
+  .form-group {display:flex;flex-direction:column}
+  .form-group label {font-size:.75rem;margin-bottom:4px;font-weight:600;color:#37474f}
+  .form-group input, .form-group select, .form-group textarea {padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
+  .materials-block {grid-column:1/-1;border-top:2px dashed #e0e5e8;padding-top:14px;margin-top:10px}
+  table.inline-set {width:100%;border-collapse:collapse;font-size:.78rem}
+  table.inline-set th, table.inline-set td {border:1px solid #e0e5e8;padding:6px;text-align:center}
+  .btn-row {display:flex;gap:8px;margin-top:4px}
+  .add-row-btn {background:#28a745;color:#fff;padding:4px 10px;border:none;border-radius:6px;font-size:.7rem;cursor:pointer}
+  .del-row-btn {background:#dc3545;color:#fff;padding:4px 10px;border:none;border-radius:6px;font-size:.7rem;cursor:pointer}
+</style>
+{% endblock %}
+{% block content %}
+<form method="post" enctype="multipart/form-data" class="form-wrapper">
+  {% csrf_token %}
+  <h4>ایجاد سفارش خرید</h4>
+  {% for field in form %}
+    <div class="form-group">
+      <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+      {{ field }}
+      {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+    </div>
+  {% endfor %}
+  <div class="materials-block">
+    <h4>مواد اولیه</h4>
+    {{ material_formset.management_form }}
+    <table class="inline-set" id="materialsTable">
+      <thead>
+        <tr><th>ماده اولیه</th><th>مقدار</th><th>واحد</th><th>حذف</th></tr>
+      </thead>
+      <tbody>
+        {% for form in material_formset.forms %}
+        <tr class="material-row">
+          <td>{{ form.raw_material }}</td>
+          <td>{{ form.quantity }}</td>
+          <td>{{ form.unit }}</td>
+          <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <template id="material-empty-row">
+      <tr class="material-row">
+        <td>
+          <select name="mat-__prefix__-raw_material" class="form-control">
+            {% for rm in material_formset.forms.0.fields.raw_material.queryset %}
+              <option value="{{ rm.pk }}">{{ rm.name }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td><input type="number" step="0.001" name="mat-__prefix__-quantity" class="form-control"/></td>
+        <td><input type="text" name="mat-__prefix__-unit" class="form-control"/></td>
+        <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
+      </tr>
+    </template>
+    <div class="btn-row">
+      <button type="button" class="add-row-btn" onclick="addMaterialRow()">افزودن ماده</button>
+    </div>
+  </div>
+  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+    <a href="{% url 'supply:purchase_order_management' %}" class="btn btn-secondary btn-sm">بازگشت</a>
+    <button type="submit" class="btn btn-primary btn-sm">ثبت سفارش</button>
+  </div>
+</form>
+{% endblock %}
+{% block extra_js %}
+<script>
+function syncIndexes(){
+  const rows=document.querySelectorAll('#materialsTable tbody tr');
+  rows.forEach((row,idx)=>{
+    row.querySelectorAll('select,input').forEach(inp=>{
+      inp.name=inp.name.replace(/mat-(\d+|__prefix__)-/,'mat-'+idx+'-');
+      inp.id=inp.name;
+    });
+  });
+  document.getElementById('id_mat-TOTAL_FORMS').value=rows.length;
+}
+function addMaterialRow(){
+  const max=parseInt(document.getElementById('id_mat-MAX_NUM_FORMS').value||1000);
+  const tbody=document.querySelector('#materialsTable tbody');
+  if(tbody.children.length>=max)return;
+  const tpl=document.getElementById('material-empty-row').content.cloneNode(true);
+  tbody.appendChild(tpl);
+  syncIndexes();
+}
+function removeRow(btn){
+  const tbody=document.querySelector('#materialsTable tbody');
+  if(tbody.children.length<=1){return;} // keep at least one row
+  btn.closest('tr').remove();
+  syncIndexes();
+}
+document.addEventListener('DOMContentLoaded', syncIndexes);
+</script>
+{% endblock %}
