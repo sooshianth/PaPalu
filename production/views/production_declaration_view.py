@@ -151,6 +151,47 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
     try:
         stock_entries = []
         
+        # Preliminary validation - ensure warehouses exist and are correct
+        # Normalize keys 'global'/'none' to production warehouse id for checking
+        production_warehouse = production_program.production_warehouse
+        if not production_warehouse:
+            production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
+            if not production_warehouse:
+                bug_logger.warning("Production warehouse not found")
+                return None
+
+        # Validate product warehouse
+        try:
+            if isinstance(product_warehouse, int) or (isinstance(product_warehouse, str) and product_warehouse.isdigit()):
+                product_warehouse = Warehouse.objects.get(id=int(product_warehouse))
+        except (Warehouse.DoesNotExist, ValueError):
+            bug_logger.warning(f"Product warehouse {product_warehouse} not found")
+            return None
+
+        # Collect all warehouse ids referenced in actual_consumption
+        warehouse_ids_to_check = set()
+        for bom_map in actual_consumption.values():
+            for wh_key in bom_map.keys():
+                if wh_key in ['global', 'none']:
+                    warehouse_ids_to_check.add(str(production_warehouse.id))
+                else:
+                    warehouse_ids_to_check.add(str(wh_key))
+
+        # Check if all warehouses exist
+        # Filter out non-numeric values that are not 'global'/'none'
+        numeric_ids = set()
+        for wid in warehouse_ids_to_check:
+            try:
+                numeric_ids.add(int(wid))
+            except (ValueError, TypeError):
+                bug_logger.warning(f"Invalid warehouse id in actual_consumption: {wid}")
+                return None
+
+        existing_count = Warehouse.objects.filter(id__in=numeric_ids).count() if numeric_ids else 0
+        if numeric_ids and existing_count != len(numeric_ids):
+            bug_logger.warning("One or more warehouses referenced in actual consumption not found")
+            return None
+
         with transaction.atomic():
             # Get content types
             raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
@@ -205,10 +246,11 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                         )
                         
                         try:
-                            source_warehouse = Warehouse.objects.get(id=warehouse_id)
+                            source_warehouse = Warehouse.objects.get(id=int(warehouse_id))
                         except (Warehouse.DoesNotExist, ValueError):
                             bug_logger.warning(f"Warehouse {warehouse_id} not found")
-                            continue
+                            # If warehouse doesn't exist, abort whole operation
+                            raise
                         
                         if difference > 0:
                             # More consumed than planned - decrease from source, increase to production
@@ -320,8 +362,36 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
         StockEntry object or None if failed
     """
     try:
+        # Preliminary validation: ensure production warehouse and all source warehouses exist
+        production_warehouse = production_program.production_warehouse
+        if not production_warehouse:
+            production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
+            if not production_warehouse:
+                bug_logger.warning("Production warehouse not found")
+                return None
+
+        # Collect needed source warehouse IDs from warehouse_distribution
+        warehouse_ids = set()
+        for bom_id, dist_list in (warehouse_distribution or {}).items():
+            for dist in dist_list:
+                wh = dist.get('warehouse')
+                if wh in ['global', 'none', None]:
+                    # will use production warehouse in that case
+                    continue
+                try:
+                    warehouse_ids.add(int(wh))
+                except (ValueError, TypeError):
+                    bug_logger.warning(f"Invalid warehouse id in distribution: {wh}")
+                    return None
+
+        if warehouse_ids:
+            existing_count = Warehouse.objects.filter(id__in=warehouse_ids).count()
+            if existing_count != len(warehouse_ids):
+                bug_logger.warning("One or more warehouses referenced in distribution not found")
+                return None
+
         with transaction.atomic():
-            # ایجاد ثبت انبار
+            # ایجاد ثبت انبار (create after validation)
             stock_entry = StockEntry.objects.create(
                 transaction_date=timezone.now(),
                 notes=f'شروع تولید برنامه {production_program.program_id or production_program.id} - انتقال مواد اولیه به انبار تولید',
@@ -361,6 +431,12 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                 # Create SourceStock and TargetStock for each warehouse (one by one transfer)
                 for dist in warehouse_distribution[bom_id_str]:
                     warehouse_id = dist['warehouse']
+                    # Normalize 'global'/'none' to production warehouse id
+                    if warehouse_id in ['global', 'none']:
+                        warehouse_id = production_warehouse.id
+                    # Normalize 'global' or 'none' to production_warehouse id
+                    if warehouse_id in ['global', 'none']:
+                        warehouse_id = production_warehouse.id
                     amount = Decimal(str(dist['amount']))
                     
                     bug_logger.debug(f"Transfer {amount} from warehouse {warehouse_id} to production warehouse")
@@ -368,15 +444,18 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                     # Find source warehouse using Django primary key (id)
                     source_warehouse = None
                     try:
-                        source_warehouse = Warehouse.objects.get(id=warehouse_id)
+                        # Ensure we use an int id
+                        source_warehouse = Warehouse.objects.get(id=int(warehouse_id))
                         bug_logger.debug(f"Warehouse found by id: {warehouse_id}")
                     except (Warehouse.DoesNotExist, ValueError):
                         bug_logger.warning(f"Warehouse {warehouse_id} not found")
-                        continue
+                        # abort whole operation (will be caught by outer except and trigger rollback)
+                        raise
                     
                     if not source_warehouse:
                         bug_logger.warning(f"Warehouse {warehouse_id} not found")
-                        continue
+                        # abort whole operation if missing
+                        raise
                     
                     if amount > 0:
                         # Create SourceStock (decrease from source warehouse)
@@ -424,15 +503,43 @@ def revert_production_stock_entry(production_program, request):
         StockEntry object (reversal entry) or None if failed
     """
     try:
-        with transaction.atomic():
-            # Get warehouse distribution from production program
-            warehouse_distribution = production_program.warehouse_distribution or {}
-            
-            if not warehouse_distribution:
-                bug_logger.warning(f"Warehouse distribution for program {production_program.id} is empty")
+        # Preliminary validation: ensure distribution exists and warehouses exist
+        warehouse_distribution = production_program.warehouse_distribution or {}
+
+        if not warehouse_distribution:
+            bug_logger.warning(f"Warehouse distribution for program {production_program.id} is empty")
+            return None
+
+        # Get production warehouse
+        production_warehouse = production_program.production_warehouse
+        if not production_warehouse:
+            production_warehouse = Warehouse.objects.filter(warehouse_type='production').first()
+            if not production_warehouse:
+                bug_logger.warning("Production warehouse not found")
                 return None
-            
-            # Create reversal stock entry
+
+        # Collect all source warehouses referenced in distribution
+        warehouse_ids = set()
+        for bom_id, dist_list in warehouse_distribution.items():
+            for dist in dist_list:
+                wh = dist.get('warehouse')
+                if wh in ['global', 'none', None]:
+                    # these are normalized to production warehouse - ensure production warehouse exists, which we did above
+                    continue
+                try:
+                    warehouse_ids.add(int(wh))
+                except (ValueError, TypeError):
+                    bug_logger.warning(f"Invalid warehouse id in distribution: {wh}")
+                    return None
+
+        if warehouse_ids:
+            existing_count = Warehouse.objects.filter(id__in=warehouse_ids).count()
+            if existing_count != len(warehouse_ids):
+                bug_logger.warning("One or more warehouses referenced in distribution not found")
+                return None
+
+        with transaction.atomic():
+            # Create reversal stock entry AFTER successful validation
             reversal_entry = StockEntry.objects.create(
                 transaction_date=timezone.now(),
                 notes=f'برگشت تولید برنامه {production_program.program_id or production_program.id} - برگشت مواد اولیه از انبار تولید به انبارهای اولیه',
@@ -467,13 +574,15 @@ def revert_production_stock_entry(production_program, request):
                     # Find source warehouse using Django primary key (id)
                     source_warehouse = None
                     try:
-                        source_warehouse = Warehouse.objects.get(id=warehouse_id)
+                        source_warehouse = Warehouse.objects.get(id=int(warehouse_id))
                     except (Warehouse.DoesNotExist, ValueError):
                         bug_logger.warning(f"Warehouse {warehouse_id} not found")
-                        continue
+                        # abort whole operation if referenced warehouse missing
+                        raise
                     
                     if not source_warehouse:
-                        continue
+                        # abort if missing
+                        raise
                     
                     if amount > 0:
                         # Reverse: decrease from production warehouse (SourceStock)
