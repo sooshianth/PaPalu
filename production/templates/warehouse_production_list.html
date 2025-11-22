@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+{% block title %}اظهار تولید (انبار) | سیمرغ افزار{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e9ecef;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+    
+    .page-header h1 {
+        font-size: 1.75rem;
+        color: #343a40;
+        font-weight: 600;
+    }
+    
+    .page-header p {
+        color: #6c757d;
+        font-size: 0.95rem;
+        margin-top: 8px;
+    }
+    
+    .section {
+        margin-bottom: 32px;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .section-badge {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    
+    .badge-warning {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    }
+    
+    .badge-danger {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+    
+    .card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        overflow: hidden;
+    }
+    
+    .card-header {
+        padding: 14px 18px;
+        border-bottom: 1px solid #e9ecef;
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #343a40;
+    }
+    
+    .card-body {
+        padding: 18px;
+    }
+    
+    .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table.data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    
+    table.data-table th,
+    table.data-table td {
+        border: 1px solid #e9ecef;
+        padding: 10px 12px;
+        text-align: center;
+    }
+    
+    table.data-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+        color: #343a40;
+        white-space: nowrap;
+    }
+    
+    table.data-table tbody tr:hover {
+        background: #f8f9fa;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    
+    .status-completed {
+        background: #d1fadd;
+        color: #198754;
+    }
+    
+    .status-approved {
+        background: #d0f0fd;
+        color: #0a58ca;
+    }
+    
+    .status-disapproved {
+        background: #ffe0e0;
+        color: #dc3545;
+    }
+    
+    .btn-detail {
+        display: inline-block;
+        padding: 6px 14px;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+    }
+    
+    .btn-detail:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+    
+    .pagination-container {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    
+    .pagination-info {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .pagination-buttons {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .pagination-button {
+        padding: 8px 14px;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        color: #343a40;
+        text-decoration: none;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .pagination-button:hover {
+        background: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+    }
+    
+    .pagination-button.active {
+        background: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+    }
+    
+    .pagination-button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .table-wrap {
+            margin: 0 -18px;
+        }
+        
+        table.data-table {
+            font-size: 0.8rem;
+        }
+        
+        table.data-table th,
+        table.data-table td {
+            padding: 8px 6px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>اظهار تولید (انبار)</h1>
+        <p>بررسی و تایید برنامه‌های تولید تکمیل شده توسط انباردار</p>
+    </div>
+</div>
+
+<!-- Pending Programs Section -->
+<div class="section">
+    <div class="section-title">
+        <span>برنامه‌های در انتظار تایید</span>
+        <span class="section-badge badge-warning">{{ pending_programs.paginator.count }}</span>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if pending_programs %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            {% if accessible_production_program_fields.program_id %}
+                            <th>شناسه برنامه</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.product and accessible_product_fields.name %}
+                            <th>محصول</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.planned_weight_ton %}
+                            <th>تناژ برنامه‌ریزی شده</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.produced_weight_ton %}
+                            <th>تناژ تولید شده</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.fulfillment_percentage %}
+                            <th>درصد تحقق</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.completed_at %}
+                            <th>زمان تکمیل</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.status %}
+                            <th>وضعیت</th>
+                            {% endif %}
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for program in pending_programs %}
+                        <tr>
+                            {% if accessible_production_program_fields.program_id %}
+                            <td>{{ program.program_id|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.product and accessible_product_fields.name %}
+                            <td>{{ program.product.name|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.planned_weight_ton %}
+                            <td>{{ program.planned_weight_ton|default:"-"|floatformat:3 }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.produced_weight_ton %}
+                            <td>{{ program.produced_weight_ton|default:"-"|floatformat:3 }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.fulfillment_percentage %}
+                            <td>{{ program.fulfillment_percentage|default:"-"|floatformat:2 }}%</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.completed_at %}
+                            <td>{{ program.completed_at|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.status %}
+                            <td><span class="status-badge status-completed">{{ program.get_status_display }}</span></td>
+                            {% endif %}
+                            <td>
+                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-detail">مشاهده جزئیات</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if pending_programs.paginator.num_pages > 1 %}
+            <div class="pagination-container">
+                <span class="pagination-info">صفحه {{ pending_programs.number }} از {{ pending_programs.paginator.num_pages }}</span>
+                <div class="pagination-buttons">
+                    {% if pending_programs.has_previous %}
+                    <a href="?pending_page=1" class="pagination-button">اول</a>
+                    <a href="?pending_page={{ pending_programs.previous_page_number }}" class="pagination-button">قبلی</a>
+                    {% endif %}
+                    
+                    <span class="pagination-button active">{{ pending_programs.number }}</span>
+                    
+                    {% if pending_programs.has_next %}
+                    <a href="?pending_page={{ pending_programs.next_page_number }}" class="pagination-button">بعدی</a>
+                    <a href="?pending_page={{ pending_programs.paginator.num_pages }}" class="pagination-button">آخر</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <p style="text-align: center; color: #6c757d; padding: 20px;">هیچ برنامه تولیدی در انتظار تایید وجود ندارد</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Approved Programs Section -->
+<div class="section">
+    <div class="section-title">
+        <span>برنامه‌های تایید شده</span>
+        <span class="section-badge">{{ approved_programs.paginator.count }}</span>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if approved_programs %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            {% if accessible_production_program_fields.program_id %}
+                            <th>شناسه برنامه</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.product and accessible_product_fields.name %}
+                            <th>محصول</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.planned_weight_ton %}
+                            <th>تناژ برنامه‌ریزی شده</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.produced_weight_ton %}
+                            <th>تناژ تولید شده</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.fulfillment_percentage %}
+                            <th>درصد تحقق</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.completed_at %}
+                            <th>زمان تکمیل</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.confirmed_by_warehouseman %}
+                            <th>وضعیت تایید</th>
+                            {% endif %}
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for program in approved_programs %}
+                        <tr>
+                            {% if accessible_production_program_fields.program_id %}
+                            <td>{{ program.program_id|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.product and accessible_product_fields.name %}
+                            <td>{{ program.product.name|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.planned_weight_ton %}
+                            <td>{{ program.planned_weight_ton|default:"-"|floatformat:3 }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.produced_weight_ton %}
+                            <td>{{ program.produced_weight_ton|default:"-"|floatformat:3 }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.fulfillment_percentage %}
+                            <td>{{ program.fulfillment_percentage|default:"-"|floatformat:2 }}%</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.completed_at %}
+                            <td>{{ program.completed_at|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.confirmed_by_warehouseman %}
+                            <td><span class="status-badge status-approved">تایید شده</span></td>
+                            {% endif %}
+                            <td>
+                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-detail">مشاهده جزئیات</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if approved_programs.paginator.num_pages > 1 %}
+            <div class="pagination-container">
+                <span class="pagination-info">صفحه {{ approved_programs.number }} از {{ approved_programs.paginator.num_pages }}</span>
+                <div class="pagination-buttons">
+                    {% if approved_programs.has_previous %}
+                    <a href="?approved_page=1" class="pagination-button">اول</a>
+                    <a href="?approved_page={{ approved_programs.previous_page_number }}" class="pagination-button">قبلی</a>
+                    {% endif %}
+                    
+                    <span class="pagination-button active">{{ approved_programs.number }}</span>
+                    
+                    {% if approved_programs.has_next %}
+                    <a href="?approved_page={{ approved_programs.next_page_number }}" class="pagination-button">بعدی</a>
+                    <a href="?approved_page={{ approved_programs.paginator.num_pages }}" class="pagination-button">آخر</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <p style="text-align: center; color: #6c757d; padding: 20px;">هیچ برنامه تولید تایید شده‌ای وجود ندارد</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Disapproved Programs Section -->
+<div class="section">
+    <div class="section-title">
+        <span>برنامه‌های ارسال شده به مدیر</span>
+        <span class="section-badge badge-danger">{{ disapproved_programs.paginator.count }}</span>
+    </div>
+    
+    <div class="card">
+        <div class="card-body">
+            {% if disapproved_programs %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            {% if accessible_production_program_fields.program_id %}
+                            <th>شناسه برنامه</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.product and accessible_product_fields.name %}
+                            <th>محصول</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.planned_weight_ton %}
+                            <th>تناژ برنامه‌ریزی شده</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.produced_weight_ton %}
+                            <th>تناژ تولید شده</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.reason_for_warehouse_disapprove %}
+                            <th>دلیل عدم تایید</th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.sent_to_manager_for_revalidation %}
+                            <th>وضعیت</th>
+                            {% endif %}
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for program in disapproved_programs %}
+                        <tr>
+                            {% if accessible_production_program_fields.program_id %}
+                            <td>{{ program.program_id|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.product and accessible_product_fields.name %}
+                            <td>{{ program.product.name|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.planned_weight_ton %}
+                            <td>{{ program.planned_weight_ton|default:"-"|floatformat:3 }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.produced_weight_ton %}
+                            <td>{{ program.produced_weight_ton|default:"-"|floatformat:3 }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.reason_for_warehouse_disapprove %}
+                            <td>{{ program.reason_for_warehouse_disapprove|default:"-"|truncatewords:10 }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.sent_to_manager_for_revalidation %}
+                            <td><span class="status-badge status-disapproved">ارسال شده به مدیر</span></td>
+                            {% endif %}
+                            <td>
+                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-detail">مشاهده جزئیات</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if disapproved_programs.paginator.num_pages > 1 %}
+            <div class="pagination-container">
+                <span class="pagination-info">صفحه {{ disapproved_programs.number }} از {{ disapproved_programs.paginator.num_pages }}</span>
+                <div class="pagination-buttons">
+                    {% if disapproved_programs.has_previous %}
+                    <a href="?disapproved_page=1" class="pagination-button">اول</a>
+                    <a href="?disapproved_page={{ disapproved_programs.previous_page_number }}" class="pagination-button">قبلی</a>
+                    {% endif %}
+                    
+                    <span class="pagination-button active">{{ disapproved_programs.number }}</span>
+                    
+                    {% if disapproved_programs.has_next %}
+                    <a href="?disapproved_page={{ disapproved_programs.next_page_number }}" class="pagination-button">بعدی</a>
+                    <a href="?disapproved_page={{ disapproved_programs.paginator.num_pages }}" class="pagination-button">آخر</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <p style="text-align: center; color: #6c757d; padding: 20px;">هیچ برنامه‌ای به مدیر ارسال نشده است</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

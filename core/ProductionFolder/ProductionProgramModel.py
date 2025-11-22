@@ -168,6 +168,25 @@ class ProductionProgram(models.Model):
         verbose_name='آرشیو شده',
         help_text='برنامه آرشیو شده و در لیست اصلی نمایش داده نمی‌شود'
     )
+    
+    confirmed_by_warehouseman = models.BooleanField(
+        default=False,
+        verbose_name='تایید شده توسط انبار',
+        help_text='آیا این برنامه تولید توسط انباردار تایید شده است؟'
+    )
+    
+    sent_to_manager_for_revalidation = models.BooleanField(
+        default=False,
+        verbose_name='ارسال شده به مدیر برای بررسی مجدد',
+        help_text='آیا این برنامه برای بررسی مجدد به مدیر ارسال شده است؟'
+    )
+    
+    reason_for_warehouse_disapprove = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='دلیل عدم تایید توسط انبار',
+        help_text='دلیل رد کردن برنامه تولید توسط انباردار'
+    )
 
     created_at = jmodels.jDateTimeField(auto_now_add=True, verbose_name='ایجاد')
     updated_at = jmodels.jDateTimeField(auto_now=True, verbose_name='آخرین ویرایش')
