@@ -52,6 +52,40 @@ def get_accessible_production_program_fields(user):
     accessible_fields['product'] = user_can_access_field(user, ProductionProgram, 'product', 'view')
     accessible_fields['product_warehouse'] = user_can_access_field(user, ProductionProgram, 'product_warehouse', 'view')
     accessible_fields['production_warehouse'] = user_can_access_field(user, ProductionProgram, 'production_warehouse', 'view')
+    accessible_fields['production_info'] = user_can_access_field(user, ProductionProgram, 'production_info', 'view')
+    accessible_fields['inventory_snapshot'] = user_can_access_field(user, ProductionProgram, 'inventory_snapshot', 'view')
+    accessible_fields['net_unplanned_requirement'] = user_can_access_field(user, ProductionProgram, 'net_unplanned_requirement', 'view')
+    accessible_fields['extra_description'] = user_can_access_field(user, ProductionProgram, 'extra_description', 'view')
+    accessible_fields['priority_index'] = user_can_access_field(user, ProductionProgram, 'priority_index', 'view')
+    accessible_fields['fulfillment_percentage'] = user_can_access_field(user, ProductionProgram, 'fulfillment_percentage', 'view')
+    accessible_fields['actual_start_date'] = user_can_access_field(user, ProductionProgram, 'actual_start_date', 'view')
+    
+    # Edit permissions
+    accessible_fields['id_edit'] = user_can_access_field(user, ProductionProgram, 'id', 'edit')
+    accessible_fields['program_id_edit'] = user_can_access_field(user, ProductionProgram, 'program_id', 'edit')
+    accessible_fields['execution_date_edit'] = user_can_access_field(user, ProductionProgram, 'execution_date', 'edit')
+    accessible_fields['planned_weight_ton_edit'] = user_can_access_field(user, ProductionProgram, 'planned_weight_ton', 'edit')
+    accessible_fields['produced_weight_ton_edit'] = user_can_access_field(user, ProductionProgram, 'produced_weight_ton', 'edit')
+    accessible_fields['packaging_type_edit'] = user_can_access_field(user, ProductionProgram, 'packaging_type', 'edit')
+    accessible_fields['predicted_start_time_edit'] = user_can_access_field(user, ProductionProgram, 'predicted_start_time', 'edit')
+    accessible_fields['predicted_end_time_edit'] = user_can_access_field(user, ProductionProgram, 'predicted_end_time', 'edit')
+    accessible_fields['started_at_edit'] = user_can_access_field(user, ProductionProgram, 'started_at', 'edit')
+    accessible_fields['completed_at_edit'] = user_can_access_field(user, ProductionProgram, 'completed_at', 'edit')
+    accessible_fields['status_edit'] = user_can_access_field(user, ProductionProgram, 'status', 'edit')
+    accessible_fields['product_edit'] = user_can_access_field(user, ProductionProgram, 'product', 'edit')
+    accessible_fields['product_warehouse_edit'] = user_can_access_field(user, ProductionProgram, 'product_warehouse', 'edit')
+    accessible_fields['production_warehouse_edit'] = user_can_access_field(user, ProductionProgram, 'production_warehouse', 'edit')
+    accessible_fields['production_info_edit'] = user_can_access_field(user, ProductionProgram, 'production_info', 'edit')
+    accessible_fields['inventory_snapshot_edit'] = user_can_access_field(user, ProductionProgram, 'inventory_snapshot', 'edit')
+    accessible_fields['net_unplanned_requirement_edit'] = user_can_access_field(user, ProductionProgram, 'net_unplanned_requirement', 'edit')
+    accessible_fields['extra_description_edit'] = user_can_access_field(user, ProductionProgram, 'extra_description', 'edit')
+    accessible_fields['priority_index_edit'] = user_can_access_field(user, ProductionProgram, 'priority_index', 'edit')
+    accessible_fields['fulfillment_percentage_edit'] = user_can_access_field(user, ProductionProgram, 'fulfillment_percentage', 'edit')
+    accessible_fields['actual_start_date_edit'] = user_can_access_field(user, ProductionProgram, 'actual_start_date', 'edit')
+    # Actual consumption (JSON) on production program
+    accessible_fields['actual_consumption'] = user_can_access_field(user, ProductionProgram, 'actual_consumption', 'view')
+    accessible_fields['actual_consumption_edit'] = user_can_access_field(user, ProductionProgram, 'actual_consumption', 'edit')
+    
     return accessible_fields
 
 
@@ -76,6 +110,26 @@ def get_accessible_warehouse_fields(user):
     accessible_fields = {}
     accessible_fields['warehouse_id'] = user_can_access_field(user, Warehouse, 'warehouse_id', 'view')
     accessible_fields['warehouse_name'] = user_can_access_field(user, Warehouse, 'warehouse_name', 'view')
+    accessible_fields['name'] = user_can_access_field(user, Warehouse, 'name', 'view')
+    return accessible_fields
+
+
+def get_accessible_production_info_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای ProductionInfo - فقط مشاهده"""
+    accessible_fields = {}
+    accessible_fields['formula_id'] = user_can_access_field(user, ProductionInfo, 'formula_id', 'view')
+    accessible_fields['min_batch_production'] = user_can_access_field(user, ProductionInfo, 'min_batch_production', 'view')
+    accessible_fields['specific_production_instruction'] = user_can_access_field(user, ProductionInfo, 'specific_production_instruction', 'view')
+    accessible_fields['product'] = user_can_access_field(user, ProductionInfo, 'product', 'view')
+    return accessible_fields
+
+
+def get_accessible_bom_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای BOM - فقط مشاهده"""
+    accessible_fields = {}
+    accessible_fields['raw_material'] = user_can_access_field(user, BOM, 'raw_material', 'view')
+    accessible_fields['quantity'] = user_can_access_field(user, BOM, 'quantity', 'view')
+    accessible_fields['unit_used'] = user_can_access_field(user, BOM, 'unit_used', 'view')
     return accessible_fields
 
 
@@ -124,6 +178,15 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                 
                 planned_dist = warehouse_distribution[bom_id_str]
                 actual_dist = actual_consumption.get(bom_id_str, {})
+                # Normalize 'global' or 'none' keys to production_warehouse id so downstream logic works
+                if actual_dist and production_warehouse:
+                    normalized_actual_dist = {}
+                    for wh_key, wh_amount in actual_dist.items():
+                        if wh_key in ['global', 'none']:
+                            normalized_actual_dist[str(production_warehouse.id)] = wh_amount
+                        else:
+                            normalized_actual_dist[wh_key] = wh_amount
+                    actual_dist = normalized_actual_dist
                 
                 # Calculate difference for each warehouse
                 for planned_item in planned_dist:
@@ -981,6 +1044,20 @@ def production_program_crud_view(request, program_id=None):
                                         except (ValueError, TypeError) as e:
                                             bug_logger.warning(f"Error converting actual consumption BOM {bom_id}, warehouse {warehouse}: {str(e)}")
                         
+                        # Normalize 'global' or 'none' actual consumption keys to production_warehouse id
+                        # So subsequent validation and stock entry creation can find warehouses
+                        if instance.production_warehouse and actual_consumption:
+                            normalized_consumption = {}
+                            for bom_key, wh_map in actual_consumption.items():
+                                normalized_wh_map = {}
+                                for wh_key, amt in wh_map.items():
+                                    if wh_key in ['global', 'none']:
+                                        normalized_wh_map[str(instance.production_warehouse.id)] = amt
+                                    else:
+                                        normalized_wh_map[wh_key] = amt
+                                normalized_consumption[bom_key] = normalized_wh_map
+                            actual_consumption = normalized_consumption
+
                         # Validate that all BOM items with warehouse distribution have actual consumption
                         if instance.production_info and instance.warehouse_distribution:
                             bom_items = instance.production_info.bom_items.all()
@@ -1276,7 +1353,7 @@ def production_program_crud_view(request, program_id=None):
         except Exception as e:
             bug_logger.error(f"General error in getting raw material inventory: {str(e)}")
         
-        # Prepare production info and BOM data for JavaScript
+    # Prepare production info and BOM data for JavaScript
         production_infos_data = {}
         bom_data = {}
         
@@ -1286,6 +1363,13 @@ def production_program_crud_view(request, program_id=None):
             actual_consumption_data = program.actual_consumption or {}
         
         try:
+            # Ensure accessible flags are calculated before serialization to avoid leaking fields in JSON
+            accessible_production_program_fields = get_accessible_production_program_fields(request.user)
+            accessible_product_fields = get_accessible_product_fields(request.user)
+            accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
+            accessible_warehouse_fields = get_accessible_warehouse_fields(request.user)
+            accessible_production_info_fields = get_accessible_production_info_fields(request.user)
+            accessible_bom_fields = get_accessible_bom_fields(request.user)
             all_production_infos = ProductionInfo.objects.all().select_related('product').prefetch_related('bom_items')
             for prod_info in all_production_infos:
                 product_id = prod_info.product.id if prod_info.product else None
@@ -1293,12 +1377,14 @@ def production_program_crud_view(request, program_id=None):
                     if product_id not in production_infos_data:
                         production_infos_data[product_id] = []
                     
-                    production_infos_data[product_id].append({
-                        'id': prod_info.id,
-                        'program_id': prod_info.formula_id or '',
-                        'min_batch_production': str(prod_info.min_batch_production) if prod_info.min_batch_production else '',
-                        'specific_production_instruction': prod_info.specific_production_instruction or '',
-                    })
+                    prod_info_payload = {'id': prod_info.id}
+                    if accessible_production_info_fields.get('formula_id'):
+                        prod_info_payload['program_id'] = prod_info.formula_id or ''
+                    if accessible_production_info_fields.get('min_batch_production'):
+                        prod_info_payload['min_batch_production'] = str(prod_info.min_batch_production) if prod_info.min_batch_production else ''
+                    if accessible_production_info_fields.get('specific_production_instruction'):
+                        prod_info_payload['specific_production_instruction'] = prod_info.specific_production_instruction or ''
+                    production_infos_data[product_id].append(prod_info_payload)
                     
                     # Prepare BOM data
                     bom_items = []
@@ -1311,14 +1397,19 @@ def production_program_crud_view(request, program_id=None):
                         if actual_consumption and hasattr(actual_consumption, '__float__'):
                             actual_consumption = str(actual_consumption)
                         
-                        bom_items.append({
-                            'id': bom.id,
-                            'raw_material_id': bom.raw_material.raw_material_id if bom.raw_material else '-',
-                            'raw_material_name': bom.raw_material.name if bom.raw_material else '-',
-                            'quantity': str(bom.quantity) if bom.quantity else '0',
-                            'unit_used': bom.raw_material.primary_unit if (bom.raw_material and bom.raw_material.primary_unit) else '-',
-                            'actual_consumption': str(actual_consumption) if actual_consumption else '',
-                        })
+                        bom_item_payload = {'id': bom.id}
+                        # Include raw material related fields only if both relationship and target fields are viewable
+                        if accessible_bom_fields.get('raw_material') and accessible_raw_material_fields.get('raw_material_id'):
+                            bom_item_payload['raw_material_id'] = bom.raw_material.raw_material_id if bom.raw_material else '-'
+                        if accessible_bom_fields.get('raw_material') and accessible_raw_material_fields.get('name'):
+                            bom_item_payload['raw_material_name'] = bom.raw_material.name if bom.raw_material else '-'
+                        if accessible_bom_fields.get('quantity'):
+                            bom_item_payload['quantity'] = str(bom.quantity) if bom.quantity else '0'
+                        if accessible_bom_fields.get('unit_used'):
+                            bom_item_payload['unit_used'] = bom.raw_material.primary_unit if (bom.raw_material and bom.raw_material.primary_unit) else '-'
+                        if actual_consumption and (accessible_bom_fields.get('quantity') or accessible_bom_fields.get('raw_material')):
+                            bom_item_payload['actual_consumption'] = str(actual_consumption) if actual_consumption else ''
+                        bom_items.append(bom_item_payload)
                     
                     bom_data[prod_info.id] = {
                         'program_id': prod_info.formula_id or '',
@@ -1355,6 +1446,14 @@ def production_program_crud_view(request, program_id=None):
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
         can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
         
+        # بررسی دسترسی فیلدها
+        accessible_production_program_fields = get_accessible_production_program_fields(request.user)
+        accessible_product_fields = get_accessible_product_fields(request.user)
+        accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
+        accessible_warehouse_fields = get_accessible_warehouse_fields(request.user)
+        accessible_production_info_fields = get_accessible_production_info_fields(request.user)
+        accessible_bom_fields = get_accessible_bom_fields(request.user)
+        
         context = {
             'form': form,
             'program': program,
@@ -1371,6 +1470,18 @@ def production_program_crud_view(request, program_id=None):
             'can_deny': can_deny,
             'can_revert': can_revert,
             'can_archive': can_archive,
+            'accessible_production_program_fields': accessible_production_program_fields,
+            'accessible_product_fields': accessible_product_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_warehouse_fields': accessible_warehouse_fields,
+            'accessible_production_info_fields': accessible_production_info_fields,
+            'accessible_bom_fields': accessible_bom_fields,
+            'accessible_production_info_fields_json': json.dumps(accessible_production_info_fields),
+            'accessible_bom_fields_json': json.dumps(accessible_bom_fields),
+            'accessible_production_program_fields_json': json.dumps(accessible_production_program_fields),
+            'accessible_product_fields_json': json.dumps(accessible_product_fields),
+            'accessible_raw_material_fields_json': json.dumps(accessible_raw_material_fields),
+            'accessible_warehouse_fields_json': json.dumps(accessible_warehouse_fields),
         }
         
         if is_create:
@@ -1411,6 +1522,18 @@ def production_program_crud_view(request, program_id=None):
             'can_deny': can_deny,
             'can_revert': can_revert,
             'can_archive': can_archive,
+            'accessible_production_program_fields': {},
+            'accessible_product_fields': {},
+            'accessible_raw_material_fields': {},
+            'accessible_warehouse_fields': {},
+            'accessible_production_info_fields': {},
+            'accessible_bom_fields': {},
+            'accessible_production_program_fields_json': json.dumps({}),
+            'accessible_product_fields_json': json.dumps({}),
+            'accessible_raw_material_fields_json': json.dumps({}),
+            'accessible_warehouse_fields_json': json.dumps({}),
+            'accessible_production_info_fields_json': json.dumps({}),
+            'accessible_bom_fields_json': json.dumps({}),
         }
         return render(request, 'production_declaration_crud.html', context)
 

@@ -533,7 +533,9 @@
 
 {% block content %}
 <div class="page-header">
-    <h1>{% if is_create %}ایجاد برنامه تولید جدید{% else %}ویرایش برنامه تولید #{{ program.id }}{% endif %}</h1>
+    <h1>
+        {% if is_create %}ایجاد برنامه تولید جدید{% else %}ویرایش برنامه تولید{% if accessible_production_program_fields.id %} #{{ program.id }}{% endif %}{% endif %}
+    </h1>
     <a href="{% url 'production:production_declaration' %}" class="btn-back">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -615,8 +617,8 @@
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>کد</th>
-                                    <th>نام</th>
+                                    {% if accessible_raw_material_fields.raw_material_id %}<th>کد</th>{% endif %}
+                                    {% if accessible_raw_material_fields.name %}<th>نام</th>{% endif %}
                                     <th>موجودی کل</th>
                                     <th>واحد</th>
                                 </tr>
@@ -624,18 +626,24 @@
                             <tbody>
                                 {% for item in raw_materials_inventory %}
                                 <tr class="material-row" onclick="toggleWarehousesCrud('rm-crud-{{ forloop.counter }}', this)" data-rm-id="{{ item.raw_material_id }}">
+                                    {% if accessible_raw_material_fields.raw_material_id %}
                                     <td>
                                         <span class="expand-icon">▶</span>
                                         {{ item.raw_material_id }}
                                     </td>
+                                    {% endif %}
+                                    {% if accessible_raw_material_fields.name %}
                                     <td>{{ item.name }}</td>
+                                    {% endif %}
                                     <td><span class="total-badge">{{ item.total_quantity|floatformat:2 }}</span></td>
                                     <td>{{ item.unit }}</td>
                                 </tr>
                                 {% for warehouse in item.warehouses %}
                                 <tr class="warehouse-row" id="rm-crud-{{ forloop.parentloop.counter }}-wh-{{ forloop.counter }}" style="display: none;">
-                                    <td colspan="2">
-                                        <span class="warehouse-indent">📦 {{ warehouse.warehouse_name }} ({{ warehouse.warehouse_id }})</span>
+                                    <td {% if accessible_raw_material_fields.raw_material_id and accessible_raw_material_fields.name %}colspan="2"{% endif %}>
+                                        {% if accessible_warehouse_fields.warehouse_name %}
+                                        <span class="warehouse-indent">📦 {{ warehouse.warehouse_name }}{% if accessible_warehouse_fields.warehouse_id %} ({{ warehouse.warehouse_id }}){% endif %}</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ warehouse.quantity|floatformat:2 }}</td>
                                     <td>{{ item.unit }}</td>
@@ -696,10 +704,13 @@
         <div class="detail-card">
             <div class="detail-card-title">اطلاعات کلی</div>
             {% if not is_create %}
+            {% if accessible_production_program_fields.id %}
             <div class="detail-row">
                 <span class="detail-label">شناسه برنامه:</span>
                 <span class="detail-value">{{ program.id }}</span>
             </div>
+            {% endif %}
+            {% if accessible_production_program_fields.status %}
             <div class="detail-row">
                 <span class="detail-label">وضعیت:</span>
                 <span class="detail-value">
@@ -707,109 +718,231 @@
                 </span>
             </div>
             {% endif %}
+            {% endif %}
+            {% if accessible_production_program_fields.product %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.product.label }}:</span>
-                <span class="detail-value">{{ form.product }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.product_edit and is_create or accessible_production_program_fields.product_edit and program.status == 'draft' or accessible_production_program_fields.product_edit and program.status == 'confirmed' %}
+                        {{ form.product }}
+                    {% else %}
+                        {% if program and program.product and accessible_product_fields.name %}{{ program.product.name|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
+            {% if accessible_production_program_fields.production_info %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.production_info.label }}:</span>
-                <span class="detail-value">{{ form.production_info }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.production_info_edit and is_create or accessible_production_program_fields.production_info_edit and program.status == 'draft' or accessible_production_program_fields.production_info_edit and program.status == 'confirmed' %}
+                        {{ form.production_info }}
+                    {% else %}
+                        {% if program and program.production_info and accessible_production_info_fields.formula_id %}{{ program.production_info.formula_id|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
+            {% if accessible_production_program_fields.program_id %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.program_id.label }}:</span>
-                <span class="detail-value">{{ form.program_id }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.program_id_edit and is_create or accessible_production_program_fields.program_id_edit and program.status == 'draft' or accessible_production_program_fields.program_id_edit and program.status == 'confirmed' %}
+                        {{ form.program_id }}
+                    {% else %}
+                        {% if program and accessible_production_program_fields.program_id %}{{ program.program_id|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
         </div>
         
         <div class="detail-card">
             <div class="detail-card-title">اطلاعات تولید</div>
+            {% if accessible_production_program_fields.planned_weight_ton %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.planned_weight_ton.label }}:</span>
-                <span class="detail-value">{{ form.planned_weight_ton }}</span>
-            </div>
-            {% if not is_create and program and program.status == 'completed' %}
-            <div class="detail-row">
-                <span class="detail-label">{{ form.produced_weight_ton.label }}:</span>
-                <span class="detail-value">{{ form.produced_weight_ton }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.planned_weight_ton_edit and is_create or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'draft' or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'confirmed' %}
+                        {{ form.planned_weight_ton }}
+                    {% else %}
+                        {% if program %}{{ program.planned_weight_ton|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
             {% endif %}
             {% if not is_create and program and program.status == 'completed' %}
+            {% if accessible_production_program_fields.produced_weight_ton %}
+            <div class="detail-row">
+                <span class="detail-label">{{ form.produced_weight_ton.label }}:</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.produced_weight_ton_edit %}
+                        {{ form.produced_weight_ton }}
+                    {% else %}
+                        {{ program.produced_weight_ton|default:"-" }}
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% if not is_create and program and program.status == 'completed' %}
+            {% if accessible_production_program_fields.fulfillment_percentage %}
             <div class="detail-row">
                 <span class="detail-label">درصد تحقق:</span>
                 <span class="detail-value">{{ program.fulfillment_percentage|default:"-" }}%</span>
             </div>
             {% endif %}
+            {% endif %}
+            {% if accessible_production_program_fields.packaging_type %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.packaging_type.label }}:</span>
-                <span class="detail-value">{{ form.packaging_type }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.packaging_type_edit and is_create or accessible_production_program_fields.packaging_type_edit and program.status == 'draft' or accessible_production_program_fields.packaging_type_edit and program.status == 'confirmed' %}
+                        {{ form.packaging_type }}
+                    {% else %}
+                        {% if program %}{{ program.get_packaging_type_display|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
         </div>
         
         <div class="detail-card">
             <div class="detail-card-title">زمان‌بندی</div>
+            {% if accessible_production_program_fields.execution_date %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.execution_date.label }}:</span>
-                <span class="detail-value">{{ form.execution_date }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.execution_date_edit and is_create or accessible_production_program_fields.execution_date_edit and program.status == 'draft' or accessible_production_program_fields.execution_date_edit and program.status == 'confirmed' %}
+                        {{ form.execution_date }}
+                    {% else %}
+                        {% if program %}{{ program.execution_date|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
+            {% if accessible_production_program_fields.predicted_start_time %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.predicted_start_time.label }}:</span>
-                <span class="detail-value">{{ form.predicted_start_time }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' %}
+                        {{ form.predicted_start_time }}
+                    {% else %}
+                        {% if program %}{{ program.predicted_start_time|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
+            {% if accessible_production_program_fields.predicted_end_time %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.predicted_end_time.label }}:</span>
-                <span class="detail-value">{{ form.predicted_end_time }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_end_time_edit and program.status == 'confirmed' %}
+                        {{ form.predicted_end_time }}
+                    {% else %}
+                        {% if program %}{{ program.predicted_end_time|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
         </div>
         
         <div class="detail-card">
             <div class="detail-card-title">اطلاعات تکمیلی</div>
+            {% if accessible_production_program_fields.inventory_snapshot %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.inventory_snapshot.label }}:</span>
-                <span class="detail-value">{{ form.inventory_snapshot }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.inventory_snapshot_edit and is_create or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'draft' or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'confirmed' %}
+                        {{ form.inventory_snapshot }}
+                    {% else %}
+                        {% if program %}{{ program.inventory_snapshot|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
+            {% if accessible_production_program_fields.net_unplanned_requirement %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.net_unplanned_requirement.label }}:</span>
-                <span class="detail-value">{{ form.net_unplanned_requirement }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.net_unplanned_requirement_edit and is_create or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'draft' or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'confirmed' %}
+                        {{ form.net_unplanned_requirement }}
+                    {% else %}
+                        {% if program %}{{ program.net_unplanned_requirement|default:"-" }}{% else %}-{% endif %}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
             {% if not is_create and program %}
+            {% if accessible_production_program_fields.priority_index %}
             <div class="detail-row">
                 <span class="detail-label">شاخص اولویت:</span>
                 <span class="detail-value">{{ program.priority_index|default:"-" }}</span>
             </div>
             {% endif %}
+            {% endif %}
             <!-- زمان شروع واقعی (visible when in_progress or completed) -->
             {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
+            {% if accessible_production_program_fields.started_at %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.started_at.label }}:</span>
-                <span class="detail-value">{{ form.started_at }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.started_at_edit %}
+                        {{ form.started_at }}
+                    {% else %}
+                        {{ program.started_at|default:"-" }}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
             {% endif %}
             
             <!-- زمان تکمیل (visible only when completed) -->
             {% if not is_create and program and program.status == 'completed' %}
+            {% if accessible_production_program_fields.completed_at %}
             <div class="detail-row">
                 <span class="detail-label">{{ form.completed_at.label }}:</span>
-                <span class="detail-value">{{ form.completed_at }}</span>
+                <span class="detail-value">
+                    {% if accessible_production_program_fields.completed_at_edit %}
+                        {{ form.completed_at }}
+                    {% else %}
+                        {{ program.completed_at|default:"-" }}
+                    {% endif %}
+                </span>
             </div>
+            {% endif %}
             
             <!-- انبار محصول نهایی (visible only when completed) -->
+            {% if accessible_production_program_fields.product_warehouse %}
             <div class="detail-row">
                 <span class="detail-label">انبار محصول نهایی:</span>
-                <span class="detail-value">{{ program.product_warehouse.name|default:"-" }} ({{ program.product_warehouse.warehouse_id|default:"-" }})</span>
+                <span class="detail-value">
+                    {% if program.product_warehouse %}
+                        {% if accessible_warehouse_fields.name %}{{ program.product_warehouse.name|default:"-" }}{% endif %}
+                        {% if accessible_warehouse_fields.warehouse_id %}({{ program.product_warehouse.warehouse_id|default:"-" }}){% endif %}
+                    {% else %}-{% endif %}
+                </span>
             </div>
+            {% endif %}
             {% endif %}
         </div>
     </div>
 
     <!-- توضیحات اضافی -->
+    {% if accessible_production_program_fields.extra_description %}
     <div class="section">
         <div class="section-title">{{ form.extra_description.label }}</div>
         <div class="card">
             <div class="card-body">
-                {{ form.extra_description }}
+                {% if accessible_production_program_fields.extra_description_edit and is_create or accessible_production_program_fields.extra_description_edit and program.status == 'draft' or accessible_production_program_fields.extra_description_edit and program.status == 'confirmed' %}
+                    {{ form.extra_description }}
+                {% else %}
+                    <div style="white-space: pre-wrap; padding: 8px;">{% if program %}{{ program.extra_description|default:"-" }}{% else %}-{% endif %}</div>
+                {% endif %}
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- BOM Details Section (shown when production_info is selected) -->
     <div id="bom-details-section" class="section" style="display: none;">
@@ -1075,6 +1208,14 @@ const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
 const warehouseDistributionData = JSON.parse('{{ warehouse_distribution_json|escapejs }}');
 const actualConsumptionGlobal = JSON.parse('{{ actual_consumption_json|escapejs }}');
 
+// Accessible fields flags (for client-side rendering of dynamic content)
+const accessibleProductionProgramFields = JSON.parse('{{ accessible_production_program_fields_json|escapejs }}');
+const accessibleProductFields = JSON.parse('{{ accessible_product_fields_json|escapejs }}');
+const accessibleRawMaterialFields = JSON.parse('{{ accessible_raw_material_fields_json|escapejs }}');
+const accessibleWarehouseFields = JSON.parse('{{ accessible_warehouse_fields_json|escapejs }}');
+const accessibleProductionInfoFields = JSON.parse('{{ accessible_production_info_fields_json|escapejs }}');
+const accessibleBomFields = JSON.parse('{{ accessible_bom_fields_json|escapejs }}');
+
 // Modal functions
 function showModal(modalId) {
     document.getElementById(modalId).style.display = 'flex';
@@ -1182,7 +1323,7 @@ function showStartProductionModal() {
     const warehouseSection = document.getElementById('warehouseDistributionSection');
     const warehouseList = document.getElementById('warehouseDistributionList');
     
-    if (selectedProductionInfoId && bomData[selectedProductionInfoId] && plannedWeight > 0) {
+    if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
         const data = bomData[selectedProductionInfoId];
         const bomItems = data.bom_items || [];
         const minBatch = parseFloat(data.min_batch_production) || 1;
@@ -1315,7 +1456,11 @@ function showStartProductionModal() {
 function showCompleteProductionModal() {
     // Get current production info ID
     const productionInfoSelect = document.querySelector('#id_production_info');
-    const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+    // Fallback: If no select exists or is disabled, use program.production_info if available
+    let selectedProductionInfoId = productionInfoSelect && productionInfoSelect.value ? productionInfoSelect.value : '';
+    if (!selectedProductionInfoId) {
+        selectedProductionInfoId = '{{ program.production_info.id|default:"" }}';
+    }
     
     // Get planned weight for calculation
     const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
@@ -1325,7 +1470,8 @@ function showCompleteProductionModal() {
     const bomSection = document.getElementById('bomActualConsumptionSection');
     const bomList = document.getElementById('bomActualConsumptionList');
     
-    if (selectedProductionInfoId && bomData[selectedProductionInfoId] && plannedWeight > 0) {
+    // Show BOM inputs if we have BOM data; hide sensitive columns based on ACL flags
+    if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
         const data = bomData[selectedProductionInfoId];
         const bomItems = data.bom_items || [];
         const minBatch = parseFloat(data.min_batch_production) || 1;
@@ -1418,7 +1564,8 @@ function showCompleteProductionModal() {
             html += '</div>';
             bomList.innerHTML = html;
             bomSection.style.display = 'block';
-        } else {
+                } else {
+                    try { console.debug(`BOM ${item.id} has no distribution; totalConsumption=${totalConsumption}, existingGlobalActual=${existingGlobalActual}`); } catch(e) {}
             bomSection.style.display = 'none';
         }
     } else {
@@ -1660,10 +1807,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Add filtered options from context data
                 productionInfosData[selectedProductId].forEach(item => {
-                    const option = new Option(
-                        `${item.program_id} - ${item.specific_production_instruction || ''}`,
-                        item.id
-                    );
+                    const parts = [];
+                    if (accessibleProductionInfoFields.formula_id && item.program_id) parts.push(item.program_id);
+                    if (accessibleProductionInfoFields.specific_production_instruction && item.specific_production_instruction) parts.push(item.specific_production_instruction);
+                    const label = parts.length > 0 ? parts.join(' - ') : item.id;
+                    const option = new Option(label, item.id);
                     productionInfoSelect.add(option);
                 });
             } else {
@@ -1691,48 +1839,63 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function displayBOMDetails(data) {
+        // Debug: log when BOM render is attempted
+        try { console.debug('displayBOMDetails called', { dataPreview: data && { id: data.id }, bomItemsLength: data && data.bom_items ? data.bom_items.length : 0 }); } catch(e) {}
         if (!data || !data.bom_items || data.bom_items.length === 0) {
             bomDetailsContent.innerHTML = '<p style="text-align: center; color: #6c757d;">هیچ ماده اولیه‌ای برای این فرمول یافت نشد</p>';
             return;
         }
         
-        // Get planned_weight_ton from the form
+    // Get planned_weight_ton from the form
         const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
         const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
         const minBatch = parseFloat(data.min_batch_production) || 1;
         
-        // Get current status from the hidden status field or form context
-        const statusField = document.querySelector('#id_status');
-        const currentStatus = statusField ? statusField.value : '{{ program.status|default:"draft" }}';
+    // Get current status from the hidden status field or program context
+    let currentStatus = '{{ program.status|default:"draft" }}';
+    const statusField = document.querySelector('#id_status');
+    if (statusField && statusField.value) {
+        currentStatus = statusField.value;
+    }
         
-        // Show actual consumption column only for in_progress or completed status
-        const showActualConsumption = ['in_progress', 'completed'].includes(currentStatus);
+    // Show actual consumption column only for in_progress or completed status
+    // and only if user has view or edit permission for actual_consumption
+    const hasActualConsumptionPermission = (accessibleProductionProgramFields && (accessibleProductionProgramFields.actual_consumption || accessibleProductionProgramFields.actual_consumption_edit));
+    const showActualConsumption = ['in_progress', 'completed'].includes(currentStatus) && hasActualConsumptionPermission;
         const programId = '{{ program.id|default:"" }}';
         const existingWarehouseDist = programId ? (warehouseDistributionData || {}) : {};
         const existingActualConsumption = actualConsumptionGlobal || {};
         
-        let html = `
-            <div style="margin-bottom: 16px;">
-                <strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>
-                <strong>حداقل تناژ تولید:</strong> ${data.min_batch_production || '-'} تن<br>
-                <strong>دستورالعمل تولید:</strong> ${data.specific_production_instruction || '-'}
-            </div>
-            <table class="data-table" style="width: 100%; margin-top: 16px;">
-                <thead>
-                    <tr>
-                        <th>کد ماده اولیه</th>
-                        <th>نام ماده اولیه</th>
-                        <th>انبار</th>
-                        <th>مقدار (در فرمول)</th>
-                        <th>مقدار مصرف کل</th>
-                        ${showActualConsumption ? '<th style="background: #fff6db;">برداشت واقعی</th>' : ''}
-                        <th>واحد</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        // Determine which columns to show based on permissions
+        const showRawMaterialId = (accessibleBomFields && accessibleBomFields.raw_material) && (accessibleRawMaterialFields && accessibleRawMaterialFields.raw_material_id);
+        const showRawMaterialName = (accessibleBomFields && accessibleBomFields.raw_material) && (accessibleRawMaterialFields && accessibleRawMaterialFields.name);
+        const showWarehouseName = (accessibleWarehouseFields && accessibleWarehouseFields.warehouse_name);
+        const showUnit = (accessibleBomFields && accessibleBomFields.unit_used);
+        const showProgramId = (accessibleProductionInfoFields && accessibleProductionInfoFields.formula_id);
+        const showMinBatch = (accessibleProductionInfoFields && accessibleProductionInfoFields.min_batch_production);
+        const showSpecificInstruction = (accessibleProductionInfoFields && accessibleProductionInfoFields.specific_production_instruction);
+
+        let html = `\n            <div style="margin-bottom: 16px;">\n`;
+        if (showProgramId) {
+            html += `                <strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>\n`;
+        }
+        if (showMinBatch) {
+            html += `                <strong>حداقل تناژ تولید:</strong> ${data.min_batch_production || '-'} تن<br>\n`;
+        }
+        if (showSpecificInstruction) {
+            html += `                <strong>دستورالعمل تولید:</strong> ${data.specific_production_instruction || '-'}\n`;
+        }
+        html += `            </div>\n`;
+        html += `<table class="data-table" style="width: 100%; margin-top: 16px;">\n                <thead>\n                    <tr>\n`;
+        if (showRawMaterialId) html += `                        <th>کد ماده اولیه</th>\n`;
+        if (showRawMaterialName) html += `                        <th>نام ماده اولیه</th>\n`;
+    if (showWarehouseName) html += `                        <th>انبار</th>\n`;
+    html += `                        <th>مقدار (در فرمول)</th>\n                        <th>مقدار مصرف کل</th>\n`;
+        if (showActualConsumption) html += `                        <th style="background: #fff6db;">برداشت واقعی</th>\n`;
+        if (showUnit) html += `                        <th>واحد</th>\n`;
+        html += `                    </tr>\n                </thead>\n                <tbody>\n`;
         
-        data.bom_items.forEach(item => {
+    data.bom_items.forEach(item => {
             const quantity = parseFloat(item.quantity) || 0;
             const bomIdStr = String(item.id);
             
@@ -1740,7 +1903,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const warehousesForBom = existingWarehouseDist[bomIdStr] || [];
             const warehousesWithAmount = warehousesForBom.filter(wh => parseFloat(wh.amount || 0) > 0);
             
-            if (warehousesWithAmount.length > 0) {
+                if (warehousesWithAmount.length > 0) {
                 // Show one row per warehouse
                 warehousesWithAmount.forEach((wh, whIndex) => {
                     const plannedAmount = parseFloat(wh.amount || 0).toFixed(3);
@@ -1753,9 +1916,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     html += `
                         <tr>
-                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_id || '-'}</td>` : ''}
-                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_name || '-'}</td>` : ''}
-                            <td style="background: #f0f8ff; font-weight: 600;">${wh.warehouse}</td>
+                            ${whIndex === 0 && showRawMaterialId ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_id || '-'}</td>` : ''}
+                            ${whIndex === 0 && showRawMaterialName ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_name || '-'}</td>` : ''}
+                            ${showWarehouseName ? `<td style="background: #f0f8ff; font-weight: 600;">${wh.warehouse}</td>` : ''}
                             ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.quantity || 0}</td>` : ''}
                             <td style="font-weight: 600; color: var(--primary-green);">${plannedAmount}</td>
                     `;
@@ -1769,29 +1932,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     html += `
-                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.unit_used || '-'}</td>` : ''}
+                            ${whIndex === 0 && showUnit ? `<td rowspan="${warehousesWithAmount.length}">${item.unit_used || '-'}</td>` : ''}
                         </tr>
                     `;
                 });
             } else {
                 // No warehouse distribution - show single row
                 const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(3) : '-';
+                // Check for existing actual consumption (global) and prefill if available
+                let existingGlobalActual = '';
+                if (existingActualConsumption && existingActualConsumption[bomIdStr]) {
+                    existingGlobalActual = existingActualConsumption[bomIdStr]['global'] || existingActualConsumption[bomIdStr]['none'] || '';
+                }
                 
                 html += `
                     <tr>
-                        <td>${item.raw_material_id || '-'}</td>
-                        <td>${item.raw_material_name || '-'}</td>
-                        <td style="color: #6c757d; font-style: italic;">-</td>
+                        ${showRawMaterialId ? `<td>${item.raw_material_id || '-'}</td>` : ''}
+                        ${showRawMaterialName ? `<td>${item.raw_material_name || '-'}</td>` : ''}
+                        ${showWarehouseName ? `<td style="color: #6c757d; font-style: italic;">-</td>` : ''}
                         <td>${item.quantity || 0}</td>
                         <td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
                 `;
                 
                 if (showActualConsumption) {
-                    html += `<td style="background: #f8f9fa;">-</td>`;
+                    // For BOM items without warehouse distribution, present a single global actual consumption input so user can enter real use
+                    const defaultValue = existingGlobalActual || totalConsumption || '';
+                    html += `<td style="background: #f8f9fa; text-align: center;">
+                        <input type="number" 
+                               class="warehouse-actual-input form-control" 
+                               data-bom-id="${item.id}"
+                               data-warehouse="global"
+                               min="0" 
+                               step="0.001"
+                               value="${defaultValue}"
+                               placeholder="برداشت واقعی"
+                               style="width: 140px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
+                    </td>`;
                 }
                 
                 html += `
-                        <td>${item.unit_used || '-'}</td>
+                        ${showUnit ? `<td>${item.unit_used || '-'}</td>` : ''}
                     </tr>
                 `;
             }
@@ -1828,6 +2008,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Trigger change event on page load if there's already a selected value
     if (productionInfoSelect && productionInfoSelect.value) {
         productionInfoSelect.dispatchEvent(new Event('change'));
+    } else {
+        // If the select not available (hidden by permission) but the program has a production_info, try to show BOM directly
+        const programProductionInfoId = '{{ program.production_info.id|default:"" }}';
+        if (programProductionInfoId && bomData[programProductionInfoId]) {
+            displayBOMDetails(bomData[programProductionInfoId]);
+            if (bomDetailsSection) bomDetailsSection.style.display = 'block';
+        }
     }
     
     // Initialize Persian datepickers for all jalali date inputs

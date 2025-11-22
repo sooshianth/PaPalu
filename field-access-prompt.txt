@@ -47,5 +47,5 @@ I need to implement field-level access control and task permissions for [VIEW_NA
 
 Please implement this following the exact pattern used in:
 - Python: production/views/production_declaration_view.py  
-- HTML: production/templates/production_declaration.html
+- HTML: production/templates/production_declaration_crud.html
 - Reference: distribution/views/vehicle_recruitment_view.py
