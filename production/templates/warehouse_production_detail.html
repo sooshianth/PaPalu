@@ -449,22 +449,142 @@
         color: var(--primary-green);
     }
     
+    .stock-entry-row {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .stock-entry-row:hover {
+        background: #f8f9fa;
+        border-color: var(--primary-green);
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1);
+    }
+    
+    .stock-entry-id {
+        font-weight: 600;
+        color: #343a40;
+        min-width: 50px;
+    }
+    
+    .stock-entry-date {
+        color: #6c757d;
+        font-size: 0.9rem;
+        min-width: 120px;
+    }
+    
+    .stock-entry-notes {
+        flex: 1;
+        color: #495057;
+        font-size: 0.9rem;
+        padding: 0 16px;
+    }
+    
+    .stock-entry-status {
+        margin-left: auto;
+    }
+    
+    .stock-flow-container {
+        display: flex;
+        align-items: stretch;
+        gap: 24px;
+        margin-top: 24px;
+    }
+    
+    .stock-flow-side {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .stock-flow-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: #343a40;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+    
+    .stock-item {
+        padding: 12px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        font-size: 0.85rem;
+    }
+    
+    .stock-item-name {
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 6px;
+    }
+    
+    .stock-item-detail {
+        color: #6c757d;
+        font-size: 0.8rem;
+    }
+    
+    .stock-flow-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 16px;
+    }
+    
+    .stock-flow-arrow svg {
+        width: 48px;
+        height: 48px;
+        color: var(--primary-green);
+    }
+    
+    .warehouse-inventory-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    
+    .warehouse-inventory-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--primary-green);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .warehouse-type-badge {
+        display: inline-block;
+        background: #f0f5ff;
+        color: #0d6efd;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: auto;
+    }
+    
     @media (max-width: 768px) {
-        .detail-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .action-buttons {
+        .stock-flow-container {
             flex-direction: column;
+            gap: 12px;
         }
         
-        .btn-action {
-            width: 100%;
-            justify-content: center;
-        }
-        
-        .warehouse-comparison {
-            grid-template-columns: 1fr;
+        .stock-flow-arrow {
+            transform: rotate(90deg);
+            padding: 8px 0;
         }
     }
 </style>
@@ -580,55 +700,128 @@
     </div>
 </div>
 
+<!-- BOM Details Section -->
+{% if bom_items_data %}
+<div class="section">
+    <div class="section-title">جزئیات مواد اولیه (BOM)</div>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ماده اولیه</th>
+                            <th>مقدار در فرمول</th>
+                            <th>مقدار مورد نیاز</th>
+                            <th>برداشت واقعی</th>
+                            <th>اختلاف</th>
+                            <th>درصد انحراف</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bom in bom_items_data %}
+                        <tr>
+                            <td style="text-align: right; font-weight: 600; color: #343a40;">
+                                {{ bom.raw_material.name|default:"-" }}
+                            </td>
+                            <td>{{ bom.planned_quantity|floatformat:3 }} {{ bom.unit }}</td>
+                            <td style="color: #0d6efd; font-weight: 600;">{{ bom.total_consumption|floatformat:3 }} {{ bom.unit }}</td>
+                            <td style="color: #28a745; font-weight: 600;">{{ bom.actual_consumption|floatformat:3 }} {{ bom.unit }}</td>
+                            <td>
+                                <div class="bom-variance-badge" data-variance="{{ bom.variance }}">
+                                    {% if bom.variance > 0 %}+ {% endif %}{{ bom.variance|floatformat:3 }} {{ bom.unit }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="bom-variance-percent" data-variance="{{ bom.variance }}">
+                                    {{ bom.variance_percent|floatformat:1 }}%
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<style>
+.bom-variance-badge, .bom-variance-percent {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    display: inline-block;
+    font-size: 0.85rem;
+}
+</style>
+<script>
+// Style BOM variance elements
+document.querySelectorAll('.bom-variance-badge, .bom-variance-percent').forEach(el => {
+    const variance = parseFloat(el.dataset.variance);
+    if (variance > 0.05) {
+        el.style.background = '#fff3cd';
+        el.style.color = '#856404';
+        el.style.borderLeft = '3px solid #ffc107';
+    } else if (variance < -0.05) {
+        el.style.background = '#f8d7da';
+        el.style.color = '#721c24';
+        el.style.borderLeft = '3px solid #dc3545';
+    } else {
+        el.style.background = '#d4edda';
+        el.style.color = '#155724';
+        el.style.borderLeft = '3px solid #28a745';
+    }
+});
+</script>
+{% endif %}
+
 <!-- Stock Entries Section -->
 <div class="section">
     <div class="section-title">ثبت‌های انبار مرتبط</div>
     <div class="card">
         <div class="card-body">
             {% if stock_entries %}
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            {% if accessible_stock_entry_fields.id %}
-                            <th>شناسه ثبت</th>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {% for entry in stock_entries %}
+                <div class="stock-entry-row" onclick="showStockEntryDetail({{ entry.id }}, event)" style="background: #fff; border: 1px solid #e9ecef; border-radius: 12px; padding: 16px 18px; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 2px 8px rgba(0,0,0,0.02); display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <!-- ID Badge -->
+                    <div class="stock-entry-id" style="background: var(--primary-green); color: white; padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; white-space: nowrap;">
+                        #{{ entry.id }}
+                    </div>
+                    
+                    <!-- Date -->
+                    <div class="stock-entry-date" style="flex: 1; min-width: 140px;">
+                        <div style="font-size: 0.8rem; color: #6c757d; margin-bottom: 2px;">تاریخ:</div>
+                        <div style="font-weight: 600; color: #343a40;">
+                            {% if entry.transaction_date %}
+                                {{ entry.transaction_date|date:"Y/m/d H:i" }}
+                            {% else %}
+                                -
                             {% endif %}
-                            {% if accessible_stock_entry_fields.transaction_date %}
-                            <th>تاریخ تراکنش</th>
-                            {% endif %}
-                            {% if accessible_stock_entry_fields.notes %}
-                            <th>یادداشت</th>
-                            {% endif %}
-                            {% if accessible_stock_entry_fields.is_committed %}
-                            <th>وضعیت</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for entry in stock_entries %}
-                        <tr>
-                            {% if accessible_stock_entry_fields.id %}
-                            <td>{{ entry.id }}</td>
-                            {% endif %}
-                            {% if accessible_stock_entry_fields.transaction_date %}
-                            <td>{{ entry.transaction_date|default:"-" }}</td>
-                            {% endif %}
-                            {% if accessible_stock_entry_fields.notes %}
-                            <td>{{ entry.notes|default:"-"|truncatewords:15 }}</td>
-                            {% endif %}
-                            {% if accessible_stock_entry_fields.is_committed %}
-                            <td>
-                                {% if entry.is_committed %}
-                                <span class="status-badge status-committed">تایید شده</span>
-                                {% else %}
-                                <span class="status-badge status-pending">در انتظار تایید</span>
-                                {% endif %}
-                            </td>
-                            {% endif %}
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="stock-entry-notes" style="flex: 1.5; min-width: 200px;">
+                        <div style="font-size: 0.8rem; color: #6c757d; margin-bottom: 2px;">توضیح:</div>
+                        <div style="font-size: 0.95rem; color: #495057; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+                            {{ entry.notes|default:"-"|truncatewords:15 }}
+                        </div>
+                    </div>
+                    
+                    <!-- Status Badge -->
+                    <div class="stock-entry-status" style="white-space: nowrap;">
+                        {% if entry.is_committed %}
+                        <span class="status-badge" style="display: inline-block; background: #d4edda; color: #155724; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;">✓ تایید شده</span>
+                        {% else %}
+                        <span class="status-badge" style="display: inline-block; background: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;">⚡ در انتظار</span>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Hover Effect Arrow -->
+                    <div style="color: #6c757d; font-size: 1.2rem; transition: all 0.3s ease;">→</div>
+                </div>
+                {% endfor %}
             </div>
             {% else %}
             <p style="text-align: center; color: #6c757d; padding: 20px;">ثبت انباری برای این برنامه یافت نشد</p>
@@ -640,57 +833,57 @@
 <!-- Current Warehouse Inventories -->
 <div class="section">
     <div class="section-title">موجودی فعلی انبارها</div>
-    <div class="card">
-        <div class="card-body">
-            {% if warehouse_inventories %}
-            {% for warehouse_id, warehouse_data in warehouse_inventories.items %}
-            <div style="margin-bottom: 24px;">
-                {% if accessible_warehouse_fields.name %}
-                <h4 style="margin-bottom: 12px; color: #343a40;">
-                    انبار: {{ warehouse_data.warehouse.name|default:"-" }}
-                    {% if accessible_warehouse_fields.warehouse_type %}
-                    ({{ warehouse_data.warehouse.get_warehouse_type_display }})
-                    {% endif %}
-                </h4>
-                {% endif %}
-                
-                {% if warehouse_data.items %}
-                <div class="table-wrap">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>نوع</th>
-                                <th>نام آیتم</th>
-                                {% if accessible_inventory_item_fields.quantity %}
-                                <th>مقدار</th>
-                                {% endif %}
-                                <th>واحد</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for item_data in warehouse_data.items %}
-                            <tr>
-                                <td>{{ item_data.item_type|default:"-" }}</td>
-                                <td>{{ item_data.item|default:"-" }}</td>
-                                {% if accessible_inventory_item_fields.quantity %}
-                                <td>{{ item_data.quantity|default:"0"|floatformat:3 }}</td>
-                                {% endif %}
-                                <td>{{ item_data.unit|default:"-" }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p style="color: #6c757d; font-size: 0.9rem;">انبار خالی است</p>
-                {% endif %}
-            </div>
-            {% endfor %}
-            {% else %}
-            <p style="text-align: center; color: #6c757d; padding: 20px;">اطلاعات انبارها یافت نشد</p>
+    {% if warehouse_inventories %}
+    {% for warehouse_id, warehouse_data in warehouse_inventories.items %}
+    <div class="warehouse-inventory-card">
+        {% if accessible_warehouse_fields.name %}
+        <div class="warehouse-inventory-card-title">
+            {{ warehouse_data.warehouse.name|default:"-" }}
+            {% if accessible_warehouse_fields.warehouse_type %}
+            <span class="warehouse-type-badge">{{ warehouse_data.warehouse.get_warehouse_type_display }}</span>
             {% endif %}
         </div>
+        {% endif %}
+        
+        {% if warehouse_data.items %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>نوع</th>
+                        <th>نام آیتم</th>
+                        {% if accessible_inventory_item_fields.quantity %}
+                        <th>مقدار</th>
+                        {% endif %}
+                        <th>واحد</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_data in warehouse_data.items %}
+                    <tr>
+                        <td>{{ item_data.item_type|default:"-" }}</td>
+                        <td>{{ item_data.item|default:"-" }}</td>
+                        {% if accessible_inventory_item_fields.quantity %}
+                        <td>{{ item_data.quantity|default:"0"|floatformat:3 }}</td>
+                        {% endif %}
+                        <td>{{ item_data.unit|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: #6c757d; font-size: 0.9rem; text-align: center; padding: 20px;">انبار خالی است</p>
+        {% endif %}
     </div>
+    {% endfor %}
+    {% else %}
+    <div class="card">
+        <div class="card-body">
+            <p style="text-align: center; color: #6c757d; padding: 20px;">اطلاعات انبارها یافت نشد</p>
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <!-- Action Buttons -->
@@ -749,6 +942,7 @@
             {% if before_after_calculation %}
             <div class="warehouse-comparison">
                 {% for warehouse_id, data in before_after_calculation.items %}
+                {% if data.warehouse.warehouse_type != 'production' %}
                 <div class="warehouse-card">
                     <div class="warehouse-card-title">
                         {{ data.warehouse.name|default:"انبار" }} ({{ data.warehouse.get_warehouse_type_display }})
@@ -786,6 +980,7 @@
                     <p style="font-size: 0.85rem; color: #6c757d; margin: 8px 0;">تغییری در این انبار رخ نداده است</p>
                     {% endif %}
                 </div>
+                {% endif %}
                 {% endfor %}
             </div>
             {% else %}
@@ -794,6 +989,33 @@
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="hideComparisonModal()">بستن</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stock Entry Detail Modal -->
+<div id="stockEntryModal" class="modal-overlay">
+    <div class="modal-content modal-content-large">
+        <div class="modal-header">
+            <h3>جزئیات تراکنش انبار</h3>
+            <button class="modal-close" onclick="hideStockEntryModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div style="margin-bottom: 16px;">
+                <strong style="font-size: 0.9rem; color: #6c757d;">تاریخ تراکنش:</strong>
+                <p id="stockEntryDate" style="margin: 4px 0; color: #343a40;"></p>
+            </div>
+            <div style="margin-bottom: 24px;">
+                <strong style="font-size: 0.9rem; color: #6c757d;">یادداشت:</strong>
+                <p id="stockEntryNotes" style="margin: 4px 0; color: #495057;"></p>
+            </div>
+            
+            <div class="stock-flow-container" id="stockFlowContainer">
+                <!-- Will be populated by JavaScript -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideStockEntryModal()">بستن</button>
         </div>
     </div>
 </div>
@@ -831,6 +1053,140 @@ function showComparisonModal() {
 
 function hideComparisonModal() {
     document.getElementById('comparisonModal').classList.remove('active');
+}
+
+function showStockEntryDetail(entryId, event) {
+    event.preventDefault();
+    // Fetch stock entry details via AJAX
+    fetch(`{% url 'production:api_stock_entry_detail' entry_id=0 %}`.replace('0', entryId), {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            populateStockEntryModal(data);
+            document.getElementById('stockEntryModal').classList.add('active');
+        } else {
+            alert('خطا در بارگذاری جزئیات');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('خطا در ارتباط با سرور');
+    });
+}
+
+function hideStockEntryModal() {
+    document.getElementById('stockEntryModal').classList.remove('active');
+}
+
+function populateStockEntryModal(data) {
+    // Format date in Persian Jalali calendar
+    const dateObj = new Date(data.transaction_date);
+    
+    // Convert Gregorian to Jalali
+    function gregorianToJalali(gy, gm, gd) {
+        const g_d_n = 365 * gy + Math.floor((gy + 3) / 4) - Math.floor((gy + 99) / 100) + Math.floor((gy + 399) / 400);
+        let sum = 0;
+        for (let i = 0; i < gm - 1; i++) {
+            if (i === 1 || i === 3 || i === 5 || i === 8 || i === 10) {
+                sum += 30;
+            } else if (i === 3 || i === 5 || i === 8 || i === 10) {
+                sum += 31;
+            } else if (i === 1) {
+                sum += (gy % 4 === 0 && (gy % 100 !== 0 || gy % 400 === 0)) ? 29 : 28;
+            } else {
+                sum += 31;
+            }
+        }
+        const g_d_n2 = g_d_n + sum + gd;
+        const j_d_n = g_d_n2 - 79;
+        const j_np = Math.floor(j_d_n / 12053);
+        let jy = 979 + 33 * j_np + 4 * Math.floor((j_d_n % 12053) / 1461);
+        let j_d_n2 = j_d_n % 12053 % 1461;
+        if (j_d_n2 >= 365) {
+            jy += Math.floor((j_d_n2 - 1) / 365);
+            j_d_n2 = (j_d_n2 - 1) % 365;
+        }
+        const jm = j_d_n2 < 186 ? Math.floor(j_d_n2 / 31) + 1 : Math.floor((j_d_n2 - 186) / 30) + 7;
+        const jd = j_d_n2 < 186 ? (j_d_n2 % 31) + 1 : ((j_d_n2 - 186) % 30) + 1;
+        return [jy, jm, jd];
+    }
+    
+    const [jy, jm, jd] = gregorianToJalali(dateObj.getFullYear(), dateObj.getMonth() + 1, dateObj.getDate());
+    const hours = String(dateObj.getHours()).padStart(2, '0');
+    const minutes = String(dateObj.getMinutes()).padStart(2, '0');
+    
+    const persianDate = `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')} ${hours}:${minutes}`;
+    
+    document.getElementById('stockEntryDate').textContent = persianDate;
+    document.getElementById('stockEntryNotes').textContent = data.notes || '-';
+    
+    // Build stock flow
+    const container = document.getElementById('stockFlowContainer');
+    container.innerHTML = '';
+    
+    if (data.source_stocks.length > 0 || data.target_stocks.length > 0) {
+        // Source stocks (left side)
+        const sourceDiv = document.createElement('div');
+        sourceDiv.className = 'stock-flow-side';
+        
+        const sourceTitle = document.createElement('div');
+        sourceTitle.className = 'stock-flow-title';
+        sourceTitle.textContent = 'از انبار';
+        sourceDiv.appendChild(sourceTitle);
+        
+        data.source_stocks.forEach(stock => {
+            const item = document.createElement('div');
+            item.className = 'stock-item';
+            item.innerHTML = `
+                <div class="stock-item-name">${stock.from_item || '-'}</div>
+                <div class="stock-item-detail">انبار: ${stock.from_warehouse}</div>
+                <div class="stock-item-detail">مقدار: ${stock.quantity} ${stock.unit}</div>
+            `;
+            sourceDiv.appendChild(item);
+        });
+        
+        container.appendChild(sourceDiv);
+        
+        // Arrow
+        const arrow = document.createElement('div');
+        arrow.className = 'stock-flow-arrow';
+        arrow.innerHTML = `
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 12H5M12 5L5 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        `;
+        container.appendChild(arrow);
+        
+        // Target stocks (right side)
+        const targetDiv = document.createElement('div');
+        targetDiv.className = 'stock-flow-side';
+        
+        const targetTitle = document.createElement('div');
+        targetTitle.className = 'stock-flow-title';
+        targetTitle.textContent = 'به انبار';
+        targetDiv.appendChild(targetTitle);
+        
+        data.target_stocks.forEach(stock => {
+            const item = document.createElement('div');
+            item.className = 'stock-item';
+            item.innerHTML = `
+                <div class="stock-item-name">${stock.to_item || '-'}</div>
+                <div class="stock-item-detail">انبار: ${stock.to_warehouse}</div>
+                <div class="stock-item-detail">مقدار: ${stock.quantity} ${stock.unit}</div>
+            `;
+            targetDiv.appendChild(item);
+        });
+        
+        container.appendChild(targetDiv);
+    } else {
+        container.innerHTML = '<p style="text-align: center; color: #6c757d;">جزئیات در دسترس نیست</p>';
+    }
 }
 
 async function approveProgram() {
@@ -905,6 +1261,12 @@ document.getElementById('disapproveModal').addEventListener('click', function(e)
 document.getElementById('comparisonModal').addEventListener('click', function(e) {
     if (e.target === this) {
         hideComparisonModal();
+    }
+});
+
+document.getElementById('stockEntryModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        hideStockEntryModal();
     }
 });
 </script>

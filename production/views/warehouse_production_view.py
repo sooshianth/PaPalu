@@ -100,6 +100,14 @@ def get_accessible_raw_material_fields(user):
     return accessible_fields
 
 
+def get_accessible_bom_fields(user):
+    """بررسی دسترسی کاربر به فیلدهای BOM - فقط مشاهده"""
+    accessible_fields = {}
+    accessible_fields['raw_material'] = user_can_access_field(user, BOM, 'raw_material', 'view')
+    accessible_fields['quantity'] = user_can_access_field(user, BOM, 'quantity', 'view')
+    return accessible_fields
+
+
 @login_required
 def warehouse_production_list(request):
     """
@@ -240,6 +248,49 @@ def warehouse_production_detail(request, program_id):
         # محاسبه قبل و بعد (با استفاده از stock entries)
         before_after_calculation = calculate_warehouse_before_after(program, stock_entries)
         
+        # دریافت BOM items و actual consumption
+        bom_items_data = []
+        if program.production_info:
+            bom_items = program.production_info.bom_items.all().select_related('raw_material')
+            actual_consumption = program.actual_consumption or {}
+            
+            for bom in bom_items:
+                # Calculate total consumption needed based on planned weight
+                min_batch = float(program.production_info.min_batch_production) if program.production_info.min_batch_production else 1
+                planned_weight = float(program.planned_weight_ton) if program.planned_weight_ton else 0
+                quantity = float(bom.quantity) if bom.quantity else 0
+                
+                total_consumption = (quantity * planned_weight / min_batch) if planned_weight > 0 else 0
+                
+                # Get actual consumption for this BOM
+                bom_id_str = str(bom.id)
+                actual_used = actual_consumption.get(bom_id_str, {})
+                if isinstance(actual_used, str):
+                    try:
+                        actual_used_value = float(actual_used)
+                    except:
+                        actual_used_value = 0
+                elif isinstance(actual_used, dict):
+                    # Sum warehouse-specific actual consumption
+                    actual_used_value = sum(float(v) for v in actual_used.values() if isinstance(v, (int, float, str)))
+                else:
+                    actual_used_value = 0
+                
+                # Calculate variance
+                variance = actual_used_value - total_consumption if total_consumption > 0 else 0
+                variance_percent = (variance / total_consumption * 100) if total_consumption > 0 else 0
+                
+                bom_items_data.append({
+                    'id': bom.id,
+                    'raw_material': bom.raw_material,
+                    'planned_quantity': quantity,
+                    'total_consumption': round(total_consumption, 3),
+                    'actual_consumption': round(actual_used_value, 3),
+                    'variance': round(variance, 3),
+                    'variance_percent': round(variance_percent, 2),
+                    'unit': bom.raw_material.primary_unit if bom.raw_material else '-'
+                })
+        
         # بررسی دسترسی فیلدها
         accessible_production_program_fields = get_accessible_production_program_fields(request.user)
         accessible_product_fields = get_accessible_product_fields(request.user)
@@ -247,18 +298,21 @@ def warehouse_production_detail(request, program_id):
         accessible_stock_entry_fields = get_accessible_stock_entry_fields(request.user)
         accessible_inventory_item_fields = get_accessible_inventory_item_fields(request.user)
         accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
+        accessible_bom_fields = get_accessible_bom_fields(request.user)
         
         context = {
             'program': program,
             'stock_entries': stock_entries,
             'warehouse_inventories': warehouse_inventories,
             'before_after_calculation': before_after_calculation,
+            'bom_items_data': bom_items_data,
             'accessible_production_program_fields': accessible_production_program_fields,
             'accessible_product_fields': accessible_product_fields,
             'accessible_warehouse_fields': accessible_warehouse_fields,
             'accessible_stock_entry_fields': accessible_stock_entry_fields,
             'accessible_inventory_item_fields': accessible_inventory_item_fields,
             'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_bom_fields': accessible_bom_fields,
         }
         
         bug_logger.info(f"جزئیات اظهار تولید (انبار) برنامه {program_id} با موفقیت بارگذاری شد")
@@ -454,3 +508,45 @@ def calculate_warehouse_before_after(program, stock_entries):
     except Exception as e:
         bug_logger.error(f"خطا در محاسبه قبل و بعد انبار: {str(e)}\n{traceback.format_exc()}")
         return {}
+
+
+@login_required
+def get_stock_entry_detail(request, entry_id):
+    """
+    API endpoint to get stock entry details for modal popup
+    """
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_APPROVE_REPORT.value):
+        return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
+    
+    try:
+        entry = get_object_or_404(StockEntry, id=entry_id)
+        
+        source_stocks_data = []
+        for source in entry.source_stocks.all():
+            source_stocks_data.append({
+                'from_item': str(source.from_item) if source.from_item else '-',
+                'from_warehouse': source.from_warehouse.name if source.from_warehouse else '-',
+                'quantity': float(source.quantity) if source.quantity else 0,
+                'unit': source.from_item.primary_unit if source.from_item and hasattr(source.from_item, 'primary_unit') else 'عدد'
+            })
+        
+        target_stocks_data = []
+        for target in entry.target_stocks.all():
+            target_stocks_data.append({
+                'to_item': str(target.to_item) if target.to_item else '-',
+                'to_warehouse': target.to_warehouse.name if target.to_warehouse else '-',
+                'quantity': float(target.quantity) if target.quantity else 0,
+                'unit': target.to_item.primary_unit if target.to_item and hasattr(target.to_item, 'primary_unit') else 'عدد'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'transaction_date': entry.transaction_date.isoformat() if entry.transaction_date else None,
+            'notes': entry.notes,
+            'source_stocks': source_stocks_data,
+            'target_stocks': target_stocks_data
+        })
+        
+    except Exception as e:
+        bug_logger.error(f"خطا در دریافت جزئیات ثبت انبار {entry_id}: {str(e)}\n{traceback.format_exc()}")
+        return JsonResponse({'success': False, 'message': 'خطا در دریافت اطلاعات'}, status=500)

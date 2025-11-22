@@ -22,4 +22,5 @@ urlpatterns = [
     path('warehouse/declaration/<int:program_id>/', warehouse_production_view.warehouse_production_detail, name='warehouse_production_detail'),
     path('warehouse/declaration/<int:program_id>/approve/', warehouse_production_view.warehouse_approve_program, name='warehouse_approve_program'),
     path('warehouse/declaration/<int:program_id>/disapprove/', warehouse_production_view.warehouse_disapprove_program, name='warehouse_disapprove_program'),
+    path('api/stock-entry/<int:entry_id>/', warehouse_production_view.get_stock_entry_detail, name='api_stock_entry_detail'),
 ]

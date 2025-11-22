@@ -47,5 +47,5 @@ class ProductionRevertLogAdmin(admin.ModelAdmin):
         return False
     
     def has_delete_permission(self, request, obj=None):
-        # Prevent deletion
-        return False
+        # Allow deletion
+        return True
