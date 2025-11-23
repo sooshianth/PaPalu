@@ -110,6 +110,13 @@ class Person(models.Model):
         verbose_name='انبار',
         help_text='برای مشتریان، نوع انبار باید مصرف‌کننده باشد'
     )
+    
+    # فیلد وضعیت (فعال/غیرفعال)
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='وضعیت',
+        help_text='آیا مشتری فعال است؟'
+    )
 
     class Meta:
         verbose_name = 'شخص | اشخاص'

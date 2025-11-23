@@ -5,6 +5,8 @@ from django.http import HttpResponseForbidden
 from django.db import transaction
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 
@@ -27,6 +29,7 @@ from core.PersonFolder.RepresentativeModel import Representative
 from core.PersonFolder.BankAccountModel import BankAccount
 from django.contrib.contenttypes.models import ContentType
 from sales.forms.customer_create_form import clean_empty_to_none
+from sales.tables import CustomerTable
 
 
 @login_required
@@ -502,11 +505,60 @@ def get_accessible_customer_fields(user):
     return accessible_fields
 
 
+def get_accessible_customer_list_fields(user):
+    """
+    بررسی دسترسی کاربر به فیلدهای نمایش لیست مشتریان
+    برای استفاده در django-tables2
+    
+    Returns:
+        dict: دیکشنری از نام فیلد به دسترسی (True/False)
+    """
+    from core.PersonFolder import Person as PersonModel
+    from core.PersonFolder.PhoneNumberModel import PhoneNumber as PhoneNumberModel
+    
+    # superuser به همه فیلدها دسترسی دارد
+    if user.is_superuser:
+        return {
+            'national_id': True,
+            'name': True,
+            'nature': True,
+            'mobile_number': True,
+            'status': True,
+            'actions': True,
+        }
+    
+    # فیلدهایی که در لیست نمایش داده می‌شوند
+    field_mapping = {
+        'national_id': (PersonModel, 'national_id'),
+        'name': (PersonModel, 'name'),
+        'nature': (PersonModel, 'nature'),
+        'mobile_number': (PhoneNumberModel, 'number'),
+        'status': (PersonModel, 'is_active'),
+        'actions': None,  # عملیات همیشه نمایش داده می‌شود
+    }
+    
+    accessible_fields = {}
+    for display_name, mapping in field_mapping.items():
+        if mapping is None:
+            # فیلدهایی که نیازی به بررسی دسترسی ندارند
+            accessible_fields[display_name] = True
+        else:
+            model_class, model_field_name = mapping
+            accessible_fields[display_name] = check_field_access_prefer_edit(
+                user,
+                model_class,
+                model_field_name,
+            )
+    
+    return accessible_fields
+
+
 @login_required
 def customer_list_view(request):
     """
-    ویو برای نمایش لیست مشتریان
+    ویو برای نمایش لیست مشتریان با استفاده از django-tables2
     - فقط مشتریانی که کارشناس فروششان کاربر فعلی است نمایش داده می‌شوند
+    - کنترل دسترسی فیلدها با FieldPermission
     """
     audit_logger.info("درخواست مشاهده لیست مشتریان")
     
@@ -518,21 +570,26 @@ def customer_list_view(request):
     
     # اگر کاربر superuser است، همه مشتریان را نمایش بده
     if request.user.is_superuser:
-        customers = Person.objects.filter(type='customer').order_by('-name')
+        customers = Person.objects.filter(type='customer').select_related().prefetch_related()
     else:
         # فقط مشتریانی که کارشناس فروششان کاربر فعلی است
         customers = Person.objects.filter(
             type='customer',
             sales_expert=request.user.username
-        ).order_by('-name')
+        ).select_related().prefetch_related()
     
     bug_logger.debug(f"تعداد {customers.count()} مشتری برای نمایش لود شد")
     
-    # گرفتن فیلدهای قابل دسترسی برای کاربر
-    accessible_fields = get_accessible_customer_fields(request.user)
+    # محاسبه فیلدهای قابل دسترسی
+    accessible_fields = get_accessible_customer_list_fields(request.user)
+    
+    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
+    table = CustomerTable(customers, user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
     
     context = {
-        'customers': customers,
+        'table': table,
         'accessible_fields': accessible_fields,
         'page_title': 'لیست مشتریان'
     }
