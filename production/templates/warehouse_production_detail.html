@@ -700,6 +700,21 @@
     </div>
 </div>
 
+<!-- Manager Resolution Section - Show full reason when sent to manager -->
+{% if program.sent_to_manager_for_revalidation and accessible_production_program_fields.reason_for_warehouse_disapprove and program.reason_for_warehouse_disapprove %}
+<div class="section">
+    <div class="section-title">
+        <span>دلیل ارسال به مدیر</span>
+        <span class="section-badge badge-danger">نیاز به بررسی</span>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <p style="color: #343a40; line-height: 1.8; white-space: pre-wrap;">{{ program.reason_for_warehouse_disapprove }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <!-- BOM Details Section -->
 {% if bom_items_data %}
 <div class="section">

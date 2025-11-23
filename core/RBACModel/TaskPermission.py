@@ -63,6 +63,7 @@ class TaskChoices(models.TextChoices):
     # Production (تولید)
     PRODUCTION_SUBMIT_REPORT = 'production.submit_report', 'اظهار تولید'
     PRODUCTION_APPROVE_REPORT = 'production.approve_report', 'تایید اظهار تولید'
+    PRODUCTION_MANAGER_SOLVE_ISSUES = 'production.manager_solve_issues', 'مدیریت حل مشکلات تولید'
     PRODUCTION_REGISTER_NEW_SCHEDULE = 'production.register_new_schedule', 'ثبت برنامه تولید جدید'
     PRODUCTION_QUALITY_CONTROL_FORMS = 'production.quality_control_forms', 'فرم های کنترل کیفیت'
     PRODUCTION_REJECT_SCHEDULE = 'production.reject_schedule', 'رد برنامه تولید'

@@ -479,6 +479,9 @@
                             {% endif %}
                             <td>
                                 <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-detail">مشاهده جزئیات</a>
+                                {% if user_can_manage_issues %}
+                                <a href="{% url 'production:manager_resolve_program' program.id %}" class="btn-detail" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); margin-right: 8px;">حل مشکل</a>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}

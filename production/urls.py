@@ -3,6 +3,7 @@ from .views import program_views
 from .views import production_declaration_view
 from .views import cargo_announcement
 from .views import warehouse_production_view
+from .views import manager_resolution_view
 
 app_name = 'production'
 
@@ -23,4 +24,10 @@ urlpatterns = [
     path('warehouse/declaration/<int:program_id>/approve/', warehouse_production_view.warehouse_approve_program, name='warehouse_approve_program'),
     path('warehouse/declaration/<int:program_id>/disapprove/', warehouse_production_view.warehouse_disapprove_program, name='warehouse_disapprove_program'),
     path('api/stock-entry/<int:entry_id>/', warehouse_production_view.get_stock_entry_detail, name='api_stock_entry_detail'),
+    
+    # Manager resolution views
+    path('manager/resolve/<int:program_id>/', manager_resolution_view.manager_resolve_program, name='manager_resolve_program'),
+    path('manager/resolve/<int:program_id>/create-stock-entry/', manager_resolution_view.manager_create_stock_entry, name='manager_create_stock_entry'),
+    path('manager/stock-entry/<int:entry_id>/delete/', manager_resolution_view.manager_delete_stock_entry, name='manager_delete_stock_entry'),
+    path('manager/stock-entry/<int:entry_id>/commit/', manager_resolution_view.manager_commit_stock_entry, name='manager_commit_stock_entry'),
 ]

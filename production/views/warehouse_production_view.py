@@ -175,6 +175,9 @@ def warehouse_production_list(request):
         accessible_product_fields = get_accessible_product_fields(request.user)
         accessible_warehouse_fields = get_accessible_warehouse_fields(request.user)
         
+        # بررسی دسترسی مدیر برای حل مشکلات
+        user_can_manage_issues = user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value)
+        
         context = {
             'pending_programs': pending_programs_page,
             'approved_programs': approved_programs_page,
@@ -182,6 +185,7 @@ def warehouse_production_list(request):
             'accessible_production_program_fields': accessible_production_program_fields,
             'accessible_product_fields': accessible_product_fields,
             'accessible_warehouse_fields': accessible_warehouse_fields,
+            'user_can_manage_issues': user_can_manage_issues,
         }
         
         bug_logger.info(f"لیست اظهار تولید (انبار) با موفقیت بارگذاری شد - {pending_programs.count()} در انتظار، {approved_programs.count()} تایید شده")
