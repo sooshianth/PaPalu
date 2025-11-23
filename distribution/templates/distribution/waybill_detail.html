@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 30px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .form-section:last-child {
+        border-bottom: none;
+    }
+    
+    .form-section-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--primary-green);
+        margin-bottom: 20px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--gray-800);
+    }
+    
+    .form-group label.required::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.3s;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .form-control[readonly] {
+        background-color: var(--gray-100);
+        cursor: not-allowed;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 25px;
+    }
+    
+    .readonly-info {
+        background: var(--gray-100);
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+    
+    .readonly-info-item {
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .readonly-info-label {
+        font-weight: 600;
+        color: var(--gray-800);
+        display: inline-block;
+        min-width: 150px;
+    }
+    
+    .readonly-info-value {
+        color: var(--gray-600);
+    }
+    
+    .btn-success {
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: none;
+        color: white;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        transition: all 0.3s;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-secondary {
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        color: var(--gray-700);
+        background: white;
+        transition: all 0.3s;
+        cursor: pointer;
+        font-size: 1rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-secondary:hover {
+        background: var(--gray-100);
+    }
+    
+    .alert {
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 6px;
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .alert-success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .file-preview {
+        margin-top: 10px;
+        padding: 10px;
+        background: var(--gray-100);
+        border-radius: 6px;
+    }
+    
+    .file-preview img {
+        max-width: 100%;
+        max-height: 300px;
+        border-radius: 6px;
+    }
+    
+    .file-preview a {
+        display: inline-block;
+        margin-top: 10px;
+        color: var(--primary-green);
+        text-decoration: none;
+    }
+    
+    .file-preview a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- اطلاعات فقط خواندنی -->
+    <div class="readonly-info">
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره بارنامه:</span>
+            <span class="readonly-info-value">{{ transport.waybill_number }}</span>
+        </div>
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شناسه تخصیص:</span>
+            <span class="readonly-info-value">{{ transport.allocation_id|default:"-" }}</span>
+        </div>
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره سفارش:</span>
+            <span class="readonly-info-value">{{ order_number }}</span>
+        </div>
+        {% if vehicle_entry_time %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">تاریخ و ساعت ورود:</span>
+            <span class="readonly-info-value">{{ vehicle_entry_time|date:"Y/m/d H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if empty_weight %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">وزن خالی:</span>
+            <span class="readonly-info-value">{{ empty_weight|floatformat:3 }} کیلوگرم</span>
+        </div>
+        {% endif %}
+        {% if gross_weight %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">وزن پر:</span>
+            <span class="readonly-info-value">{{ gross_weight|floatformat:3 }} کیلوگرم</span>
+        </div>
+        {% endif %}
+        {% if accessible_person_fields.name and driver_name %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">نام راننده:</span>
+            <span class="readonly-info-value">{{ driver_name }}</span>
+        </div>
+        {% endif %}
+        {% if driver_mobile %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره همراه راننده:</span>
+            <span class="readonly-info-value">{{ driver_mobile }}</span>
+        </div>
+        {% endif %}
+        {% if plate_number %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">پلاک خودرو:</span>
+            <span class="readonly-info-value">{{ plate_number }}</span>
+        </div>
+        {% endif %}
+        {% if accessible_person_fields.national_id and driver_national_id %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">کد ملی راننده:</span>
+            <span class="readonly-info-value">{{ driver_national_id }}</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" id="waybillForm">
+        {% csrf_token %}
+        
+        <!-- بخش: فیلدهای اجباری بارنامه -->
+        <div class="form-section">
+            <h3 class="form-section-title">اطلاعات بارنامه (اجباری)</h3>
+            
+            <div class="form-group">
+                <label for="{{ form.waybill_number.id_for_label }}" class="required">شماره بارنامه</label>
+                {{ form.waybill_number }}
+                {% if form.waybill_number.errors %}
+                    <div class="alert alert-error">
+                        {{ form.waybill_number.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.waybill_serial.id_for_label }}" class="required">سریال بارنامه</label>
+                {{ form.waybill_serial }}
+                {% if form.waybill_serial.errors %}
+                    <div class="alert alert-error">
+                        {{ form.waybill_serial.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.waybill_date.id_for_label }}" class="required">تاریخ بارنامه</label>
+                {{ form.waybill_date }}
+                {% if form.waybill_date.errors %}
+                    <div class="alert alert-error">
+                        {{ form.waybill_date.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.cardex_code.id_for_label }}" class="required">کد کاردکس</label>
+                {{ form.cardex_code }}
+                {% if form.cardex_code.errors %}
+                    <div class="alert alert-error">
+                        {{ form.cardex_code.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.contract_code.id_for_label }}" class="required">کد قرارداد</label>
+                {{ form.contract_code }}
+                {% if form.contract_code.errors %}
+                    <div class="alert alert-error">
+                        {{ form.contract_code.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.waybill_file.id_for_label }}" class="required">پیوست بارنامه</label>
+                {{ form.waybill_file }}
+                {% if form.waybill_file.errors %}
+                    <div class="alert alert-error">
+                        {{ form.waybill_file.errors }}
+                    </div>
+                {% endif %}
+                {% if form.waybill_file.help_text %}
+                    <small style="color: var(--gray-600);">{{ form.waybill_file.help_text }}</small>
+                {% endif %}
+                
+                <!-- پیش‌نمایش فایل -->
+                <div id="filePreview" class="file-preview" style="display: none;">
+                    <img id="previewImage" src="" alt="پیش‌نمایش" style="display: none;">
+                    <a id="previewLink" href="" target="_blank" style="display: none;">مشاهده فایل</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <a href="{% url 'distribution:waybill_list' %}" class="btn-secondary">
+                لغو عملیات
+            </a>
+            <button type="submit" class="btn-success" id="submitBtn">
+                ثبت بارنامه
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // پیش‌نمایش فایل بارنامه
+    document.addEventListener('DOMContentLoaded', function() {
+        const fileInput = document.getElementById('{{ form.waybill_file.id_for_label }}');
+        const filePreview = document.getElementById('filePreview');
+        const previewImage = document.getElementById('previewImage');
+        const previewLink = document.getElementById('previewLink');
+        
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                filePreview.style.display = 'block';
+                
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImage.src = e.target.result;
+                        previewImage.style.display = 'block';
+                        previewLink.style.display = 'none';
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type === 'application/pdf') {
+                    previewImage.style.display = 'none';
+                    previewLink.href = URL.createObjectURL(file);
+                    previewLink.textContent = 'مشاهده فایل PDF';
+                    previewLink.style.display = 'block';
+                } else {
+                    previewImage.style.display = 'none';
+                    previewLink.style.display = 'none';
+                }
+            } else {
+                filePreview.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
+

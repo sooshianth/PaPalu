@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+    }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    
+    .data-table thead {
+        background: var(--gray-100);
+    }
+    
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+    
+    .btn-success {
+        padding: 8px 15px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid var(--dark-green);
+        color: white;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .btn-success:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if transports_with_info %}
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>شماره سفارش</th>
+                        <th>شناسه تخصیص</th>
+                        <th>تاریخ و ساعت ورود</th>
+                        <th>وزن خالی</th>
+                        <th>وزن پر</th>
+                        {% if accessible_person_fields.name %}
+                        <th>نام راننده</th>
+                        {% endif %}
+                        <th>شماره همراه راننده</th>
+                        {% if accessible_truck_info_fields.plate_number %}
+                        <th>پلاک راننده</th>
+                        {% endif %}
+                        {% if accessible_person_fields.national_id %}
+                        <th>کد ملی راننده</th>
+                        {% endif %}
+                        <th>اسم باربری</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in transports_with_info %}
+                    <tr>
+                        <td>
+                            <span class="code-badge">{{ item.order_number }}</span>
+                        </td>
+                        <td>
+                            <span class="code-badge">{{ item.allocation_id }}</span>
+                        </td>
+                        <td>
+                            {% if item.vehicle_entry_time %}
+                                {{ item.vehicle_entry_time|date:"Y/m/d H:i" }}
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.empty_weight %}
+                                {{ item.empty_weight|floatformat:3 }} کیلوگرم
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.gross_weight %}
+                                {{ item.gross_weight|floatformat:3 }} کیلوگرم
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        {% if accessible_person_fields.name %}
+                        <td>
+                            {{ item.driver_name }}
+                        </td>
+                        {% endif %}
+                        <td>
+                            {{ item.driver_mobile }}
+                        </td>
+                        {% if accessible_truck_info_fields.plate_number %}
+                        <td>
+                            {% if item.plate_number %}
+                                <span class="code-badge">{{ item.plate_number }}</span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        {% if accessible_person_fields.national_id %}
+                        <td>
+                            {% if item.driver_national_id %}
+                                <span class="code-badge">{{ item.driver_national_id }}</span>
+                            {% else %}
+                                <span style="color: var(--gray-400);">-</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>
+                            {{ item.carrier_name }}
+                        </td>
+                        <td>
+                            <a href="{% url 'distribution:register_waybill' item.transport.waybill_number %}" 
+                               class="btn-success">
+                                ثبت بارنامه
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <p>حملی در انتظار بارنامه وجود ندارد.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
