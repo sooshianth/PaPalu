@@ -445,22 +445,34 @@ def calculate_warehouse_before_after(program, stock_entries):
                 'changes': []
             }
             
-            # محاسبه وضعیت قبل (موجودی فعلی قبل از اعمال تراکنش‌ها)
+            # محاسبه وضعیت بعد (موجودی فعلی)
             current_inventory = InventoryItem.objects.filter(warehouse=warehouse)
             for item in current_inventory:
                 item_key = f"{item.content_type.model}_{item.object_id}"
                 before_after[warehouse.id]['after'][item_key] = {
                     'item': item.item,
-                    'quantity': item.quantity,
+                    'quantity': item.quantity or Decimal('0'),
                     'unit': item.unit,
                     'item_type': item.item_type
                 }
             
-            # محاسبه تغییرات از stock entries
-            for entry in stock_entries:
-                if not entry.is_committed:
-                    continue
-                
+            # برای محاسبه before، باید تمام تراکنش‌های committed را به ترتیب زمانی معکوس اعمال کنیم
+            # ابتدا موجودی فعلی را کپی می‌کنیم و سپس تراکنش‌ها را به صورت معکوس اعمال می‌کنیم
+            before_state = {}
+            for item_key, item_data in before_after[warehouse.id]['after'].items():
+                before_state[item_key] = item_data['quantity']
+            
+            # مرتب‌سازی stock entries بر اساس transaction_date (جدیدترین اول)
+            # سپس به صورت معکوس پردازش می‌کنیم (قدیمی‌ترین اول)
+            committed_entries = [e for e in stock_entries if e.is_committed]
+            sorted_entries = sorted(
+                committed_entries,
+                key=lambda x: x.transaction_date if x.transaction_date else x.created_at,
+                reverse=False  # قدیمی‌ترین اول
+            )
+            
+            # محاسبه تغییرات از stock entries (برای نمایش)
+            for entry in committed_entries:
                 # بررسی source stocks
                 for source in entry.source_stocks.filter(from_warehouse=warehouse):
                     item_key = f"{source.from_content_type.model}_{source.from_object_id}"
@@ -472,17 +484,6 @@ def calculate_warehouse_before_after(program, stock_entries):
                         'amount': change_amount,
                         'date': entry.transaction_date
                     })
-                    
-                    # Add to before (reverse the change)
-                    if item_key in before_after[warehouse.id]['after']:
-                        current_qty = before_after[warehouse.id]['after'][item_key]['quantity'] or Decimal('0')
-                        before_qty = current_qty + change_amount
-                        before_after[warehouse.id]['before'][item_key] = {
-                            'item': source.from_item,
-                            'quantity': before_qty,
-                            'unit': before_after[warehouse.id]['after'][item_key]['unit'],
-                            'item_type': before_after[warehouse.id]['after'][item_key]['item_type']
-                        }
                 
                 # بررسی target stocks
                 for target in entry.target_stocks.filter(to_warehouse=warehouse):
@@ -495,17 +496,73 @@ def calculate_warehouse_before_after(program, stock_entries):
                         'amount': change_amount,
                         'date': entry.transaction_date
                     })
+            
+            # اعمال معکوس تراکنش‌ها به ترتیب زمانی (از قدیمی‌ترین به جدیدترین)
+            # این کار موجودی قبل از اعمال تمام تراکنش‌ها را محاسبه می‌کند
+            for entry in sorted_entries:
+                # بررسی source stocks (کاهش موجودی) - معکوس = افزایش
+                for source in entry.source_stocks.filter(from_warehouse=warehouse):
+                    item_key = f"{source.from_content_type.model}_{source.from_object_id}"
+                    change_amount = source.quantity or Decimal('0')
                     
-                    # Add to before (reverse the change)
-                    if item_key in before_after[warehouse.id]['after']:
-                        current_qty = before_after[warehouse.id]['after'][item_key]['quantity'] or Decimal('0')
-                        before_qty = current_qty - change_amount
-                        before_after[warehouse.id]['before'][item_key] = {
-                            'item': target.to_item,
-                            'quantity': before_qty,
-                            'unit': before_after[warehouse.id]['after'][item_key]['unit'],
-                            'item_type': before_after[warehouse.id]['after'][item_key]['item_type']
-                        }
+                    if item_key not in before_state:
+                        before_state[item_key] = Decimal('0')
+                    
+                    # معکوس کردن: source یعنی کاهش، پس معکوس = افزایش
+                    before_state[item_key] = before_state[item_key] + change_amount
+                
+                # بررسی target stocks (افزایش موجودی) - معکوس = کاهش
+                for target in entry.target_stocks.filter(to_warehouse=warehouse):
+                    item_key = f"{target.to_content_type.model}_{target.to_object_id}"
+                    change_amount = target.quantity or Decimal('0')
+                    
+                    if item_key not in before_state:
+                        before_state[item_key] = Decimal('0')
+                    
+                    # معکوس کردن: target یعنی افزایش، پس معکوس = کاهش
+                    before_state[item_key] = before_state[item_key] - change_amount
+            
+            # ذخیره وضعیت before
+            for item_key, before_qty in before_state.items():
+                if item_key in before_after[warehouse.id]['after']:
+                    before_after[warehouse.id]['before'][item_key] = {
+                        'item': before_after[warehouse.id]['after'][item_key]['item'],
+                        'quantity': before_qty,
+                        'unit': before_after[warehouse.id]['after'][item_key]['unit'],
+                        'item_type': before_after[warehouse.id]['after'][item_key]['item_type']
+                    }
+                else:
+                    # اگر آیتمی در after نیست اما در before وجود دارد (یعنی تمام موجودی آن مصرف شده)
+                    # باید از stock entries اطلاعات آیتم را بگیریم
+                    item_found = False
+                    for entry in committed_entries:
+                        for source in entry.source_stocks.filter(from_warehouse=warehouse):
+                            source_key = f"{source.from_content_type.model}_{source.from_object_id}"
+                            if source_key == item_key and source.from_item:
+                                before_after[warehouse.id]['before'][item_key] = {
+                                    'item': source.from_item,
+                                    'quantity': before_qty,
+                                    'unit': getattr(source.from_item, 'primary_unit', 'عدد'),
+                                    'item_type': 'rawmaterial' if source.from_content_type.model == 'rawmaterial' else 'product'
+                                }
+                                item_found = True
+                                break
+                        if item_found:
+                            break
+                        
+                        for target in entry.target_stocks.filter(to_warehouse=warehouse):
+                            target_key = f"{target.to_content_type.model}_{target.to_object_id}"
+                            if target_key == item_key and target.to_item:
+                                before_after[warehouse.id]['before'][item_key] = {
+                                    'item': target.to_item,
+                                    'quantity': before_qty,
+                                    'unit': getattr(target.to_item, 'primary_unit', 'عدد'),
+                                    'item_type': 'rawmaterial' if target.to_content_type.model == 'rawmaterial' else 'product'
+                                }
+                                item_found = True
+                                break
+                        if item_found:
+                            break
         
         return before_after
         
