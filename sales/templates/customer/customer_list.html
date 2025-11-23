@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load render_table from django_tables2 %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -67,6 +68,42 @@
         color: var(--gray-600);
     }
     
+    /* استایل‌های django-tables2 - لینک‌های عادی */
+    .data-table a:not(.btn-outline-warning):not(.btn-outline-info) {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .data-table .pagination {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .data-table .pagination a,
+    .data-table .pagination span {
+        padding: 8px 12px;
+        border: 1px solid var(--gray-300);
+        border-radius: 6px;
+        color: var(--gray-700);
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .data-table .pagination a:hover {
+        background-color: var(--primary-green);
+        color: white;
+        border-color: var(--primary-green);
+    }
+    
+    .data-table .pagination .current {
+        background-color: var(--primary-green);
+        color: white;
+        border-color: var(--primary-green);
+    }
+    
     .badge {
         display: inline-block;
         padding: 6px 12px;
@@ -130,20 +167,48 @@
         gap: 5px;
     }
     
-    .btn-outline-warning {
+    /* استایل دکمه ویرایش - زرد */
+    .data-table .btn-outline-warning,
+    .table-container .btn-outline-warning {
         padding: 5px 10px;
         border-radius: 6px;
         text-decoration: none;
         font-size: 0.875rem;
-        border: 1px solid;
+        border: 1px solid #ffc107;
         transition: all 0.3s;
-        color: #ffc107;
-        border-color: #ffc107;
+        color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        background-color: transparent !important;
+        display: inline-block;
     }
     
-    .btn-outline-warning:hover {
-        background-color: #ffc107;
-        color: #212529;
+    .data-table .btn-outline-warning:hover,
+    .table-container .btn-outline-warning:hover {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+        border-color: #ffc107 !important;
+    }
+    
+    /* استایل دکمه جزئیات - آبی */
+    .data-table .btn-outline-info,
+    .table-container .btn-outline-info {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #17a2b8;
+        transition: all 0.3s;
+        color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        background-color: transparent !important;
+        display: inline-block;
+    }
+    
+    .data-table .btn-outline-info:hover,
+    .table-container .btn-outline-info:hover {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
     }
     
     @media (max-width: 768px) {
@@ -188,74 +253,9 @@
         {% endfor %}
     {% endif %}
     
-    {% if customers %}
+    {% if table %}
         <div class="table-container">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        {% if accessible_fields.national_id %}
-                        <th>کد ملی</th>
-                        {% endif %}
-                        {% if accessible_fields.name %}
-                        <th>نام</th>
-                        {% endif %}
-                        {% if accessible_fields.nature %}
-                        <th>نوع</th>
-                        {% endif %}
-                        {% if accessible_fields.accounting_code %}
-                        <th>کد حسابداری</th>
-                        {% endif %}
-                        {% if accessible_fields.sales_expert %}
-                        <th>کارشناس فروش</th>
-                        {% endif %}
-                        {% if accessible_fields.description %}
-                        <th>توضیحات</th>
-                        {% endif %}
-                        <th>عملیات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for customer in customers %}
-                        <tr>
-                            {% if accessible_fields.national_id %}
-                            <td>{{ customer.national_id }}</td>
-                            {% endif %}
-                            {% if accessible_fields.name %}
-                            <td>{{ customer.name|default:"-" }}</td>
-                            {% endif %}
-                            {% if accessible_fields.nature %}
-                            <td>
-                                {% if customer.nature == 'legal' %}
-                                    <span class="badge badge-primary">حقوقی</span>
-                                {% elif customer.nature == 'natural' %}
-                                    <span class="badge badge-success">حقیقی</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">-</span>
-                                {% endif %}
-                            </td>
-                            {% endif %}
-                            {% if accessible_fields.accounting_code %}
-                            <td>{{ customer.accounting_code|default:"-" }}</td>
-                            {% endif %}
-                            {% if accessible_fields.sales_expert %}
-                            <td>{{ customer.sales_expert|default:"-" }}</td>
-                            {% endif %}
-                            {% if accessible_fields.description %}
-                            <td>{{ customer.description|truncatewords:10|default:"-" }}</td>
-                            {% endif %}
-                            <td>
-                                <div class="btn-group">
-                                    <a href="{% url 'sales:edit_customer' customer.national_id %}" 
-                                       class="btn-outline-warning"
-                                       title="ویرایش">
-                                        ویرایش
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% render_table table %}
         </div>
     {% else %}
         <div class="empty-state">

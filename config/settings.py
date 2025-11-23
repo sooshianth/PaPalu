@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     
     # Third party apps
     'django_jalali',
+    'django_tables2',
     
     # Local apps
     'core.apps.CoreConfig',
