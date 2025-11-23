@@ -34,6 +34,7 @@ class Order(models.Model):
         ('pending_vehicle_entry', 'در انتظار ورود خودرو به کارخانه'),
         ('pending_loading', 'در انتظار بارگیری'),
         ('pending_waybill', 'در انتظار بارنامه'),
+        ('pending_exit', 'در انتظار خروج'),
         ('completed', 'تکمیل شده'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),

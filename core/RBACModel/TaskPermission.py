@@ -97,6 +97,11 @@ class TaskChoices(models.TextChoices):
     DISTRIBUTION_COMPLETE_VEHICLE_RECRUITMENT = 'distribution.complete_vehicle_recruitment', 'تکمیل جذب خودرو'
     DISTRIBUTION_VIEW_LOADING_EXIT_LIST = 'distribution.view_loading_exit_list', 'مشاهده لیست خروج کالا'
     DISTRIBUTION_REGISTER_LOADING_EXIT = 'distribution.register_loading_exit', 'ثبت خروج کالا'
+    DISTRIBUTION_VIEW_WAYBILL_LIST = 'distribution.view_waybill_list', 'مشاهده لیست حمل‌های در انتظار بارنامه'
+    DISTRIBUTION_REGISTER_WAYBILL = 'distribution.register_waybill', 'ثبت اطلاعات بارنامه'
+    DISTRIBUTION_VIEW_EXIT_LIST = 'distribution.view_exit_list', 'مشاهده لیست حمل‌های در انتظار خروج'
+    DISTRIBUTION_PRINT_WAYBILL_PDF = 'distribution.print_waybill_pdf', 'چاپ PDF بارنامه'
+    DISTRIBUTION_MARK_VEHICLE_EXITED = 'distribution.mark_vehicle_exited', 'ثبت خروج خودرو'
 
     # Access (دسترسی‌ها)
     ACCESS_FIELD_ACCESS_BULK_UPLOAD = 'access.field_access_bulk_upload', 'آپلود دسته‌ای دسترسی فیلدها'

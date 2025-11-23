@@ -17,6 +17,7 @@ class Transport(models.Model):
         ('loading', 'در انتظار بارگیری'),
         ('loaded', 'بارگیری شده'),
         ('pending_waybill', 'در انتظار بارنامه'),
+        ('pending_exit', 'در انتظار خروج'),
         ('in_transit', 'در حال حمل'),
         ('delivered', 'تحویل شده'),
         ('completed', 'تکمیل شده'),

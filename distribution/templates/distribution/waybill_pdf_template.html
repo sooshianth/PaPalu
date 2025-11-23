@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بارنامه {{ transport.waybill_number }}</title>
+    <style>
+        @font-face {
+            font-family: 'Vazir';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Vazir';
+            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Bold.ttf') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Vazir', Arial, sans-serif;
+            direction: rtl;
+            text-align: right;
+            color: #333;
+            padding: 20px;
+            background: #fff;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #28a745;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .header-left {
+            text-align: left;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+        .waybill-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .waybill-number {
+            font-size: 18px;
+            color: #666;
+        }
+        .info-section {
+            margin-bottom: 30px;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-right: 4px solid #28a745;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #495057;
+            min-width: 150px;
+        }
+        .info-value {
+            color: #212529;
+        }
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #dee2e6;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-right">
+            <div class="company-name">پاپالو</div>
+            <div class="waybill-title">بارنامه حمل</div>
+            <div class="waybill-number">شماره بارنامه: {{ transport.waybill_number }}</div>
+        </div>
+    </div>
+
+    <div class="info-section">
+        <div class="info-box">
+            <div class="info-row">
+                <span class="info-label">شماره بارنامه:</span>
+                <span class="info-value">{{ transport.waybill_number }}</span>
+            </div>
+            {% if transport.waybill_serial %}
+            <div class="info-row">
+                <span class="info-label">سریال بارنامه:</span>
+                <span class="info-value">{{ transport.waybill_serial }}</span>
+            </div>
+            {% endif %}
+            {% if transport.waybill_date %}
+            <div class="info-row">
+                <span class="info-label">تاریخ بارنامه:</span>
+                <span class="info-value">{{ transport.waybill_date|date:"Y/m/d" }}</span>
+            </div>
+            {% endif %}
+            {% if transport.cardex_code %}
+            <div class="info-row">
+                <span class="info-label">کد کاردکس:</span>
+                <span class="info-value">{{ transport.cardex_code }}</span>
+            </div>
+            {% endif %}
+            {% if transport.contract_code %}
+            <div class="info-row">
+                <span class="info-label">کد قرارداد:</span>
+                <span class="info-value">{{ transport.contract_code }}</span>
+            </div>
+            {% endif %}
+            {% if order %}
+            <div class="info-row">
+                <span class="info-label">شماره سفارش:</span>
+                <span class="info-value">{{ order.order_number }}</span>
+            </div>
+            {% endif %}
+            {% if allocation %}
+            <div class="info-row">
+                <span class="info-label">شناسه تخصیص:</span>
+                <span class="info-value">{{ allocation.allocation_number }}</span>
+            </div>
+            {% endif %}
+            {% if truck_info %}
+            <div class="info-row">
+                <span class="info-label">پلاک خودرو:</span>
+                <span class="info-value">{{ truck_info.plate_number }}</span>
+            </div>
+            {% if truck_info.vehicle_type %}
+            <div class="info-row">
+                <span class="info-label">نوع ماشین:</span>
+                <span class="info-value">{{ truck_info.get_vehicle_type_display }}</span>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% if transport.driver %}
+            <div class="info-row">
+                <span class="info-label">راننده:</span>
+                <span class="info-value">{{ transport.driver.name|default:"-" }}</span>
+            </div>
+            {% if transport.driver.national_id %}
+            <div class="info-row">
+                <span class="info-label">کد ملی راننده:</span>
+                <span class="info-value">{{ transport.driver.national_id }}</span>
+            </div>
+            {% endif %}
+            {% endif %}
+            {% if product_info %}
+            <div class="info-row">
+                <span class="info-label">محصول:</span>
+                <span class="info-value">
+                    {% if product_info.product %}
+                        {{ product_info.product.name }}
+                    {% elif product_info.raw_material %}
+                        {{ product_info.raw_material.name }}
+                    {% else %}
+                        نامشخص
+                    {% endif %}
+                </span>
+            </div>
+            {% endif %}
+            {% if transport.empty_weight %}
+            <div class="info-row">
+                <span class="info-label">وزن خالی:</span>
+                <span class="info-value">{{ transport.empty_weight|floatformat:3 }} کیلوگرم</span>
+            </div>
+            {% endif %}
+            {% if transport.gross_weight %}
+            <div class="info-row">
+                <span class="info-label">وزن پر:</span>
+                <span class="info-value">{{ transport.gross_weight|floatformat:3 }} کیلوگرم</span>
+            </div>
+            {% endif %}
+            {% if transport.net_weight %}
+            <div class="info-row">
+                <span class="info-label">وزن خالص:</span>
+                <span class="info-value">{{ transport.net_weight|floatformat:3 }} کیلوگرم</span>
+            </div>
+            {% endif %}
+            {% if product_info and product_info.packaging_type %}
+            <div class="info-row">
+                <span class="info-label">نوع بسته‌بندی:</span>
+                <span class="info-value">{{ product_info.get_packaging_type_display }}</span>
+            </div>
+            {% endif %}
+            {% if product_info and product_info.origin_warehouse %}
+            <div class="info-row">
+                <span class="info-label">انبار مبدأ:</span>
+                <span class="info-value">{{ product_info.origin_warehouse }}</span>
+            </div>
+            {% endif %}
+            {% if product_info and product_info.destination_warehouse %}
+            <div class="info-row">
+                <span class="info-label">انبار مقصد:</span>
+                <span class="info-value">{{ product_info.destination_warehouse }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>این سند به صورت خودکار توسط سیستم پاپالو تولید شده است.</p>
+    </div>
+</body>
+</html>
+
