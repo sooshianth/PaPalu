@@ -257,6 +257,11 @@ def warehouse_production_detail(request, program_id):
         if program.production_info:
             bom_items = program.production_info.bom_items.all().select_related('raw_material')
             actual_consumption = program.actual_consumption or {}
+            warehouse_distribution = program.warehouse_distribution or {}
+            
+            # دریافت اطلاعات انبارها برای نمایش
+            warehouses_list = list(warehouses)
+            warehouses_dict = {str(w.id): w for w in warehouses_list}
             
             for bom in bom_items:
                 # Calculate total consumption needed based on planned weight
@@ -269,30 +274,88 @@ def warehouse_production_detail(request, program_id):
                 # Get actual consumption for this BOM
                 bom_id_str = str(bom.id)
                 actual_used = actual_consumption.get(bom_id_str, {})
-                if isinstance(actual_used, str):
-                    try:
-                        actual_used_value = float(actual_used)
-                    except:
-                        actual_used_value = 0
-                elif isinstance(actual_used, dict):
-                    # Sum warehouse-specific actual consumption
-                    actual_used_value = sum(float(v) for v in actual_used.values() if isinstance(v, (int, float, str)))
-                else:
-                    actual_used_value = 0
                 
-                # Calculate variance
-                variance = actual_used_value - total_consumption if total_consumption > 0 else 0
-                variance_percent = (variance / total_consumption * 100) if total_consumption > 0 else 0
+                # Calculate total actual consumption
+                if isinstance(actual_used, dict):
+                    total_actual_consumption = sum(float(v) for v in actual_used.values() if isinstance(v, (int, float, str)))
+                elif isinstance(actual_used, str):
+                    try:
+                        total_actual_consumption = float(actual_used)
+                    except:
+                        total_actual_consumption = 0
+                else:
+                    total_actual_consumption = 0
+                
+                # Calculate total variance
+                total_variance = total_actual_consumption - total_consumption if total_consumption > 0 else 0
+                total_variance_percent = (total_variance / total_consumption * 100) if total_consumption > 0 else 0
+                
+                # Get warehouse distribution for this BOM
+                warehouse_dist = warehouse_distribution.get(bom_id_str, [])
+                
+                # Create rows for each warehouse (for expandable section)
+                warehouse_rows = []
+                
+                if warehouse_dist and isinstance(warehouse_dist, list) and len(warehouse_dist) > 0:
+                    # If we have warehouse distribution, create one row per warehouse
+                    for dist_item in warehouse_dist:
+                        if isinstance(dist_item, dict):
+                            warehouse_id = str(dist_item.get('warehouse', ''))
+                            planned_amount = float(dist_item.get('amount', 0)) if dist_item.get('amount') else 0
+                            
+                            # Get actual consumption for this warehouse
+                            actual_amount = 0
+                            if isinstance(actual_used, dict):
+                                actual_amount = float(actual_used.get(warehouse_id, 0)) if actual_used.get(warehouse_id) else 0
+                            
+                            # Calculate variance for this warehouse
+                            variance = actual_amount - planned_amount
+                            variance_percent = (variance / planned_amount * 100) if planned_amount > 0 else 0
+                            
+                            warehouse_obj = warehouses_dict.get(warehouse_id)
+                            if warehouse_obj:
+                                warehouse_rows.append({
+                                    'warehouse_id': warehouse_id,
+                                    'warehouse_name': warehouse_obj.name,
+                                    'planned_amount': round(planned_amount, 3),
+                                    'actual_amount': round(actual_amount, 3),
+                                    'variance': round(variance, 3),
+                                    'variance_percent': round(variance_percent, 2)
+                                })
+                elif isinstance(actual_used, dict) and len(actual_used) > 0:
+                    # No warehouse distribution but we have actual consumption per warehouse
+                    # Create rows from actual consumption
+                    for warehouse_id, actual_amount in actual_used.items():
+                        if warehouse_id in ['global', 'none', None]:
+                            continue
+                        try:
+                            actual_amount_float = float(actual_amount) if actual_amount else 0
+                            warehouse_obj = warehouses_dict.get(str(warehouse_id))
+                            if warehouse_obj:
+                                # We don't have per-warehouse planned amount, so we can't calculate variance
+                                # Just show actual consumption
+                                warehouse_rows.append({
+                                    'warehouse_id': str(warehouse_id),
+                                    'warehouse_name': warehouse_obj.name,
+                                    'planned_amount': None,  # Not available
+                                    'actual_amount': round(actual_amount_float, 3),
+                                    'variance': None,  # Can't calculate without planned
+                                    'variance_percent': None
+                                })
+                        except (ValueError, TypeError):
+                            pass
                 
                 bom_items_data.append({
                     'id': bom.id,
                     'raw_material': bom.raw_material,
                     'planned_quantity': quantity,
                     'total_consumption': round(total_consumption, 3),
-                    'actual_consumption': round(actual_used_value, 3),
-                    'variance': round(variance, 3),
-                    'variance_percent': round(variance_percent, 2),
-                    'unit': bom.raw_material.primary_unit if bom.raw_material else '-'
+                    'total_actual_consumption': round(total_actual_consumption, 3),
+                    'total_variance': round(total_variance, 3),
+                    'total_variance_percent': round(total_variance_percent, 2),
+                    'unit': bom.raw_material.primary_unit if bom.raw_material else '-',
+                    'warehouse_rows': warehouse_rows,
+                    'has_warehouse_details': len(warehouse_rows) > 0
                 })
         
         # بررسی دسترسی فیلدها
@@ -445,22 +508,34 @@ def calculate_warehouse_before_after(program, stock_entries):
                 'changes': []
             }
             
-            # محاسبه وضعیت قبل (موجودی فعلی قبل از اعمال تراکنش‌ها)
+            # محاسبه وضعیت بعد (موجودی فعلی)
             current_inventory = InventoryItem.objects.filter(warehouse=warehouse)
             for item in current_inventory:
                 item_key = f"{item.content_type.model}_{item.object_id}"
                 before_after[warehouse.id]['after'][item_key] = {
                     'item': item.item,
-                    'quantity': item.quantity,
+                    'quantity': item.quantity or Decimal('0'),
                     'unit': item.unit,
                     'item_type': item.item_type
                 }
             
-            # محاسبه تغییرات از stock entries
-            for entry in stock_entries:
-                if not entry.is_committed:
-                    continue
-                
+            # برای محاسبه before، باید تمام تراکنش‌های committed را به ترتیب زمانی معکوس اعمال کنیم
+            # ابتدا موجودی فعلی را کپی می‌کنیم و سپس تراکنش‌ها را به صورت معکوس اعمال می‌کنیم
+            before_state = {}
+            for item_key, item_data in before_after[warehouse.id]['after'].items():
+                before_state[item_key] = item_data['quantity']
+            
+            # مرتب‌سازی stock entries بر اساس transaction_date (جدیدترین اول)
+            # سپس به صورت معکوس پردازش می‌کنیم (قدیمی‌ترین اول)
+            committed_entries = [e for e in stock_entries if e.is_committed]
+            sorted_entries = sorted(
+                committed_entries,
+                key=lambda x: x.transaction_date if x.transaction_date else x.created_at,
+                reverse=False  # قدیمی‌ترین اول
+            )
+            
+            # محاسبه تغییرات از stock entries (برای نمایش)
+            for entry in committed_entries:
                 # بررسی source stocks
                 for source in entry.source_stocks.filter(from_warehouse=warehouse):
                     item_key = f"{source.from_content_type.model}_{source.from_object_id}"
@@ -472,17 +547,6 @@ def calculate_warehouse_before_after(program, stock_entries):
                         'amount': change_amount,
                         'date': entry.transaction_date
                     })
-                    
-                    # Add to before (reverse the change)
-                    if item_key in before_after[warehouse.id]['after']:
-                        current_qty = before_after[warehouse.id]['after'][item_key]['quantity'] or Decimal('0')
-                        before_qty = current_qty + change_amount
-                        before_after[warehouse.id]['before'][item_key] = {
-                            'item': source.from_item,
-                            'quantity': before_qty,
-                            'unit': before_after[warehouse.id]['after'][item_key]['unit'],
-                            'item_type': before_after[warehouse.id]['after'][item_key]['item_type']
-                        }
                 
                 # بررسی target stocks
                 for target in entry.target_stocks.filter(to_warehouse=warehouse):
@@ -495,17 +559,73 @@ def calculate_warehouse_before_after(program, stock_entries):
                         'amount': change_amount,
                         'date': entry.transaction_date
                     })
+            
+            # اعمال معکوس تراکنش‌ها به ترتیب زمانی (از قدیمی‌ترین به جدیدترین)
+            # این کار موجودی قبل از اعمال تمام تراکنش‌ها را محاسبه می‌کند
+            for entry in sorted_entries:
+                # بررسی source stocks (کاهش موجودی) - معکوس = افزایش
+                for source in entry.source_stocks.filter(from_warehouse=warehouse):
+                    item_key = f"{source.from_content_type.model}_{source.from_object_id}"
+                    change_amount = source.quantity or Decimal('0')
                     
-                    # Add to before (reverse the change)
-                    if item_key in before_after[warehouse.id]['after']:
-                        current_qty = before_after[warehouse.id]['after'][item_key]['quantity'] or Decimal('0')
-                        before_qty = current_qty - change_amount
-                        before_after[warehouse.id]['before'][item_key] = {
-                            'item': target.to_item,
-                            'quantity': before_qty,
-                            'unit': before_after[warehouse.id]['after'][item_key]['unit'],
-                            'item_type': before_after[warehouse.id]['after'][item_key]['item_type']
-                        }
+                    if item_key not in before_state:
+                        before_state[item_key] = Decimal('0')
+                    
+                    # معکوس کردن: source یعنی کاهش، پس معکوس = افزایش
+                    before_state[item_key] = before_state[item_key] + change_amount
+                
+                # بررسی target stocks (افزایش موجودی) - معکوس = کاهش
+                for target in entry.target_stocks.filter(to_warehouse=warehouse):
+                    item_key = f"{target.to_content_type.model}_{target.to_object_id}"
+                    change_amount = target.quantity or Decimal('0')
+                    
+                    if item_key not in before_state:
+                        before_state[item_key] = Decimal('0')
+                    
+                    # معکوس کردن: target یعنی افزایش، پس معکوس = کاهش
+                    before_state[item_key] = before_state[item_key] - change_amount
+            
+            # ذخیره وضعیت before
+            for item_key, before_qty in before_state.items():
+                if item_key in before_after[warehouse.id]['after']:
+                    before_after[warehouse.id]['before'][item_key] = {
+                        'item': before_after[warehouse.id]['after'][item_key]['item'],
+                        'quantity': before_qty,
+                        'unit': before_after[warehouse.id]['after'][item_key]['unit'],
+                        'item_type': before_after[warehouse.id]['after'][item_key]['item_type']
+                    }
+                else:
+                    # اگر آیتمی در after نیست اما در before وجود دارد (یعنی تمام موجودی آن مصرف شده)
+                    # باید از stock entries اطلاعات آیتم را بگیریم
+                    item_found = False
+                    for entry in committed_entries:
+                        for source in entry.source_stocks.filter(from_warehouse=warehouse):
+                            source_key = f"{source.from_content_type.model}_{source.from_object_id}"
+                            if source_key == item_key and source.from_item:
+                                before_after[warehouse.id]['before'][item_key] = {
+                                    'item': source.from_item,
+                                    'quantity': before_qty,
+                                    'unit': getattr(source.from_item, 'primary_unit', 'عدد'),
+                                    'item_type': 'rawmaterial' if source.from_content_type.model == 'rawmaterial' else 'product'
+                                }
+                                item_found = True
+                                break
+                        if item_found:
+                            break
+                        
+                        for target in entry.target_stocks.filter(to_warehouse=warehouse):
+                            target_key = f"{target.to_content_type.model}_{target.to_object_id}"
+                            if target_key == item_key and target.to_item:
+                                before_after[warehouse.id]['before'][item_key] = {
+                                    'item': target.to_item,
+                                    'quantity': before_qty,
+                                    'unit': getattr(target.to_item, 'primary_unit', 'عدد'),
+                                    'item_type': 'rawmaterial' if target.to_content_type.model == 'rawmaterial' else 'product'
+                                }
+                                item_found = True
+                                break
+                        if item_found:
+                            break
         
         return before_after
         
