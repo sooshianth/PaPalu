@@ -257,6 +257,11 @@ def warehouse_production_detail(request, program_id):
         if program.production_info:
             bom_items = program.production_info.bom_items.all().select_related('raw_material')
             actual_consumption = program.actual_consumption or {}
+            warehouse_distribution = program.warehouse_distribution or {}
+            
+            # دریافت اطلاعات انبارها برای نمایش
+            warehouses_list = list(warehouses)
+            warehouses_dict = {str(w.id): w for w in warehouses_list}
             
             for bom in bom_items:
                 # Calculate total consumption needed based on planned weight
@@ -269,30 +274,88 @@ def warehouse_production_detail(request, program_id):
                 # Get actual consumption for this BOM
                 bom_id_str = str(bom.id)
                 actual_used = actual_consumption.get(bom_id_str, {})
-                if isinstance(actual_used, str):
-                    try:
-                        actual_used_value = float(actual_used)
-                    except:
-                        actual_used_value = 0
-                elif isinstance(actual_used, dict):
-                    # Sum warehouse-specific actual consumption
-                    actual_used_value = sum(float(v) for v in actual_used.values() if isinstance(v, (int, float, str)))
-                else:
-                    actual_used_value = 0
                 
-                # Calculate variance
-                variance = actual_used_value - total_consumption if total_consumption > 0 else 0
-                variance_percent = (variance / total_consumption * 100) if total_consumption > 0 else 0
+                # Calculate total actual consumption
+                if isinstance(actual_used, dict):
+                    total_actual_consumption = sum(float(v) for v in actual_used.values() if isinstance(v, (int, float, str)))
+                elif isinstance(actual_used, str):
+                    try:
+                        total_actual_consumption = float(actual_used)
+                    except:
+                        total_actual_consumption = 0
+                else:
+                    total_actual_consumption = 0
+                
+                # Calculate total variance
+                total_variance = total_actual_consumption - total_consumption if total_consumption > 0 else 0
+                total_variance_percent = (total_variance / total_consumption * 100) if total_consumption > 0 else 0
+                
+                # Get warehouse distribution for this BOM
+                warehouse_dist = warehouse_distribution.get(bom_id_str, [])
+                
+                # Create rows for each warehouse (for expandable section)
+                warehouse_rows = []
+                
+                if warehouse_dist and isinstance(warehouse_dist, list) and len(warehouse_dist) > 0:
+                    # If we have warehouse distribution, create one row per warehouse
+                    for dist_item in warehouse_dist:
+                        if isinstance(dist_item, dict):
+                            warehouse_id = str(dist_item.get('warehouse', ''))
+                            planned_amount = float(dist_item.get('amount', 0)) if dist_item.get('amount') else 0
+                            
+                            # Get actual consumption for this warehouse
+                            actual_amount = 0
+                            if isinstance(actual_used, dict):
+                                actual_amount = float(actual_used.get(warehouse_id, 0)) if actual_used.get(warehouse_id) else 0
+                            
+                            # Calculate variance for this warehouse
+                            variance = actual_amount - planned_amount
+                            variance_percent = (variance / planned_amount * 100) if planned_amount > 0 else 0
+                            
+                            warehouse_obj = warehouses_dict.get(warehouse_id)
+                            if warehouse_obj:
+                                warehouse_rows.append({
+                                    'warehouse_id': warehouse_id,
+                                    'warehouse_name': warehouse_obj.name,
+                                    'planned_amount': round(planned_amount, 3),
+                                    'actual_amount': round(actual_amount, 3),
+                                    'variance': round(variance, 3),
+                                    'variance_percent': round(variance_percent, 2)
+                                })
+                elif isinstance(actual_used, dict) and len(actual_used) > 0:
+                    # No warehouse distribution but we have actual consumption per warehouse
+                    # Create rows from actual consumption
+                    for warehouse_id, actual_amount in actual_used.items():
+                        if warehouse_id in ['global', 'none', None]:
+                            continue
+                        try:
+                            actual_amount_float = float(actual_amount) if actual_amount else 0
+                            warehouse_obj = warehouses_dict.get(str(warehouse_id))
+                            if warehouse_obj:
+                                # We don't have per-warehouse planned amount, so we can't calculate variance
+                                # Just show actual consumption
+                                warehouse_rows.append({
+                                    'warehouse_id': str(warehouse_id),
+                                    'warehouse_name': warehouse_obj.name,
+                                    'planned_amount': None,  # Not available
+                                    'actual_amount': round(actual_amount_float, 3),
+                                    'variance': None,  # Can't calculate without planned
+                                    'variance_percent': None
+                                })
+                        except (ValueError, TypeError):
+                            pass
                 
                 bom_items_data.append({
                     'id': bom.id,
                     'raw_material': bom.raw_material,
                     'planned_quantity': quantity,
                     'total_consumption': round(total_consumption, 3),
-                    'actual_consumption': round(actual_used_value, 3),
-                    'variance': round(variance, 3),
-                    'variance_percent': round(variance_percent, 2),
-                    'unit': bom.raw_material.primary_unit if bom.raw_material else '-'
+                    'total_actual_consumption': round(total_actual_consumption, 3),
+                    'total_variance': round(total_variance, 3),
+                    'total_variance_percent': round(total_variance_percent, 2),
+                    'unit': bom.raw_material.primary_unit if bom.raw_material else '-',
+                    'warehouse_rows': warehouse_rows,
+                    'has_warehouse_details': len(warehouse_rows) > 0
                 })
         
         # بررسی دسترسی فیلدها
