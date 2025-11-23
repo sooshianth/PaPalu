@@ -74,34 +74,164 @@
         text-decoration: none;
     }
     
-    .data-table .pagination {
-        margin-top: 20px;
+    /* استایل صفحه‌بندی django-tables2 */
+    .pagination {
+        margin-top: 30px;
+        margin-bottom: 20px;
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 0;
+        direction: ltr; /* برای قرار دادن در سمت چپ در RTL */
     }
     
-    .data-table .pagination a,
-    .data-table .pagination span {
-        padding: 8px 12px;
+    .pagination li {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        order: 0; /* ترتیب پیش‌فرض برای اعداد */
+    }
+    
+    /* ترتیب دکمه‌ها: قبلی قبل از اعداد، بعدی بعد از اعداد */
+    /* در django-tables2 با RTL، معمولاً Next در اول و Previous در آخر است */
+    /* باید ترتیب را معکوس کنیم تا: Previous, اعداد, Next */
+    /* Previous (قبلی) - معمولاً در آخر است، باید در اول باشد */
+    .pagination li:last-child {
+        order: -1;
+    }
+    
+    /* Next (بعدی) - معمولاً در اول است، باید در آخر باشد */
+    .pagination li:first-child {
+        order: 999;
+    }
+    
+    .pagination a,
+    .pagination span {
+        display: inline-block;
+        padding: 10px 16px;
         border: 1px solid var(--gray-300);
-        border-radius: 6px;
+        border-radius: 8px;
         color: var(--gray-700);
         text-decoration: none;
-        transition: all 0.3s;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        font-weight: 500;
+        min-width: 40px;
+        text-align: center;
+        background-color: white;
+        margin: 0 2px;
     }
     
-    .data-table .pagination a:hover {
-        background-color: var(--primary-green);
-        color: white;
-        border-color: var(--primary-green);
+    /* دکمه‌های قبلی و بعدی هم اندازه با اعداد */
+    .pagination li:first-child a,
+    .pagination li:first-child span,
+    .pagination li:last-child a,
+    .pagination li:last-child span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
     }
     
-    .data-table .pagination .current {
+    .pagination a:hover {
         background-color: var(--primary-green);
-        color: white;
+        color: white !important;
         border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .current {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .pagination .disabled a,
+    .pagination .disabled span {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+    }
+    
+    .pagination .ellipsis {
+        padding: 10px 8px;
+        color: var(--gray-600);
+        border: none !important;
+        background: transparent !important;
+    }
+    
+    /* Override برای استایل‌های bootstrap که ممکن است اعمال شده باشند */
+    .pagination > li > a,
+    .pagination > li > span {
+        border: 1px solid var(--gray-300) !important;
+        border-radius: 8px !important;
+        color: var(--gray-700) !important;
+        background-color: white !important;
+        padding: 10px 16px !important;
+        margin: 0 2px !important;
+        min-width: 40px !important;
+    }
+    
+    /* اطمینان از قرارگیری در سمت چپ */
+    .table-container + .pagination,
+    .table-container .pagination,
+    div.pagination {
+        direction: ltr !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+    }
+    
+    /* دکمه‌های قبلی و بعدی هم اندازه با اعداد - override bootstrap */
+    .pagination > li:first-child > a,
+    .pagination > li:first-child > span,
+    .pagination > li:last-child > a,
+    .pagination > li:last-child > span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .pagination > li > a:hover,
+    .pagination > li > a:focus {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+    }
+    
+    .pagination > .active > a,
+    .pagination > .active > span,
+    .pagination > .active > a:hover,
+    .pagination > .active > span:hover,
+    .pagination > .active > a:focus,
+    .pagination > .active > span:focus {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+    }
+    
+    .pagination > .disabled > a,
+    .pagination > .disabled > span,
+    .pagination > .disabled > a:hover,
+    .pagination > .disabled > span:hover,
+    .pagination > .disabled > a:focus,
+    .pagination > .disabled > span:focus {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+        opacity: 0.5;
+        cursor: not-allowed;
     }
     
     .badge {
@@ -257,6 +387,41 @@
         <div class="table-container">
             {% render_table table %}
         </div>
+        <style>
+            /* استایل‌های اضافی برای اطمینان از اعمال صحیح */
+            .table-container .pagination,
+            .pagination {
+                margin-top: 30px !important;
+                margin-bottom: 20px !important;
+                justify-content: flex-start !important;
+                direction: ltr !important; /* برای قرار دادن در سمت چپ در RTL */
+            }
+            
+            /* ترتیب دکمه‌ها: قبلی قبل از اعداد، بعدی بعد از اعداد */
+            .table-container .pagination li:last-child,
+            .pagination li:last-child {
+                order: -1 !important; /* قبلی در اول */
+            }
+            
+            .table-container .pagination li:first-child,
+            .pagination li:first-child {
+                order: 999 !important; /* بعدی در آخر */
+            }
+            
+            /* دکمه‌های قبلی و بعدی هم اندازه با اعداد */
+            .table-container .pagination li:first-child a,
+            .table-container .pagination li:first-child span,
+            .table-container .pagination li:last-child a,
+            .table-container .pagination li:last-child span,
+            .pagination li:first-child a,
+            .pagination li:first-child span,
+            .pagination li:last-child a,
+            .pagination li:last-child span {
+                padding: 10px 16px !important;
+                min-width: 40px !important;
+                font-size: 0.9rem !important;
+            }
+        </style>
     {% else %}
         <div class="empty-state">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

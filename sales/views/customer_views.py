@@ -569,13 +569,34 @@ def customer_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     # اگر کاربر superuser است، همه مشتریان را نمایش بده
+    from django.db.models import OuterRef, Subquery, IntegerField
+    from django.contrib.contenttypes.models import ContentType
+    from django.db.models.functions import Cast
+    
+    person_content_type = ContentType.objects.get_for_model(Person)
+    
+    # ایجاد subquery برای دریافت شماره همراه
+    # تبدیل national_id به عدد برای مقایسه با object_id (PositiveIntegerField)
+    # استفاده از Cast برای تبدیل national_id به integer
+    # توجه: اگر national_id عدد نباشد، Cast خطا می‌دهد، اما در بیشتر موارد national_id عدد است
+    mobile_subquery = PhoneNumber.objects.filter(
+        content_type=person_content_type,
+        object_id=Cast(OuterRef('national_id'), IntegerField()),
+        phone_type='mobile',
+        is_primary=True
+    ).values('number')[:1]
+    
     if request.user.is_superuser:
-        customers = Person.objects.filter(type='customer').select_related().prefetch_related()
+        customers = Person.objects.filter(type='customer').annotate(
+            mobile_number_sort=Subquery(mobile_subquery)
+        ).select_related().prefetch_related()
     else:
         # فقط مشتریانی که کارشناس فروششان کاربر فعلی است
         customers = Person.objects.filter(
             type='customer',
             sales_expert=request.user.username
+        ).annotate(
+            mobile_number_sort=Subquery(mobile_subquery)
         ).select_related().prefetch_related()
     
     bug_logger.debug(f"تعداد {customers.count()} مشتری برای نمایش لود شد")
@@ -586,7 +607,7 @@ def customer_list_view(request):
     # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
     table = CustomerTable(customers, user=request.user, accessible_fields=accessible_fields)
     
-    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    RequestConfig(request, paginate={'per_page': 2}).configure(table)
     
     context = {
         'table': table,

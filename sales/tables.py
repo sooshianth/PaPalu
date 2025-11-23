@@ -146,7 +146,8 @@ class CustomerTable(tables.Table):
     mobile_number = tables.Column(
         verbose_name='شماره همراه',
         empty_values=(),
-        orderable=False,
+        orderable=True,
+        order_by='mobile_number_sort',  # استفاده از accessor سفارشی برای sort
         attrs={
             'td': {'class': 'text-right'},
             'th': {'class': 'text-right'}
@@ -183,12 +184,23 @@ class CustomerTable(tables.Table):
         }
         sequence = ('national_id', 'name', 'nature', 'mobile_number', 'status', 'actions')
     
-    def render_nature(self, value):
+    def render_nature(self, value, record):
         """نمایش نوع شخص به صورت badge"""
+        # اگر value None باشد یا خالی باشد، از record استفاده کن
+        if value is None or value == '':
+            value = getattr(record, 'nature', None)
+        
+        # اگر هنوز None است، از record.nature استفاده کن
+        if value is None:
+            value = record.nature if hasattr(record, 'nature') else None
+        
         if value == 'legal':
             return format_html('<span class="badge badge-primary">حقوقی</span>')
         elif value == 'natural':
             return format_html('<span class="badge badge-success">حقیقی</span>')
+        elif value:
+            # اگر مقدار دیگری دارد، آن را نمایش بده
+            return format_html('<span class="badge badge-secondary">{}</span>', value)
         else:
             return format_html('<span class="badge badge-secondary">-</span>')
     
