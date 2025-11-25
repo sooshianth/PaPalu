@@ -5,7 +5,10 @@ from django.http import HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.db.models import Q
 import logging
+import jdatetime
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
@@ -14,16 +17,72 @@ from sales.forms.product_financial_info_form import (
     ProductFinancialInfoForm,
     get_accessible_financial_info_fields
 )
+from sales.tables import ProductPriceTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 
+def get_accessible_product_price_list_fields(user):
+    """
+    بررسی دسترسی کاربر به فیلدهای نمایش لیست قیمت‌گذاری محصولات
+    برای استفاده در django-tables2
+    
+    Returns:
+        dict: دیکشنری از نام فیلد به دسترسی (True/False)
+    """
+    from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo as ProductFinancialInfoModel
+    from core.ProductFolder.ProductModel import Product as ProductModel
+    from access.helpers import check_field_access_prefer_edit
+    
+    # superuser به همه فیلدها دسترسی دارد
+    if user.is_superuser:
+        return {
+            'product_code': True,
+            'product_name': True,
+            'price': True,
+            'deadline': True,
+            'loading_date': True,
+            'condition': True,
+            'created_at': True,
+            'actions': True,
+        }
+    
+    # فیلدهایی که در لیست نمایش داده می‌شوند
+    field_mapping = {
+        'product_code': (ProductModel, 'code'),
+        'product_name': (ProductModel, 'name'),
+        'price': (ProductFinancialInfoModel, 'price'),
+        'deadline': (ProductFinancialInfoModel, 'deadline'),
+        'loading_date': (ProductFinancialInfoModel, 'loading_date'),
+        'condition': (ProductFinancialInfoModel, 'condition'),
+        'created_at': None,  # همیشه نمایش داده می‌شود
+        'actions': None,  # عملیات همیشه نمایش داده می‌شود
+    }
+    
+    accessible_fields = {}
+    for display_name, mapping in field_mapping.items():
+        if mapping is None:
+            # فیلدهایی که نیازی به بررسی دسترسی ندارند
+            accessible_fields[display_name] = True
+        else:
+            model_class, model_field_name = mapping
+            accessible_fields[display_name] = check_field_access_prefer_edit(
+                user,
+                model_class,
+                model_field_name,
+            )
+    
+    return accessible_fields
+
+
 @login_required
 def product_price_list_view(request):
     """
-    ویو لیست قیمت‌گذاری‌های محصولات
+    ویو لیست قیمت‌گذاری‌های محصولات با استفاده از django-tables2
     - بررسی دسترسی با TaskPermission
+    - کنترل دسترسی فیلدها با FieldPermission
+    - قابلیت جستجو و فیلتر
     """
     audit_logger.info("درخواست مشاهده لیست قیمت‌گذاری‌های محصولات")
     
@@ -36,6 +95,14 @@ def product_price_list_view(request):
     # دریافت پارامترهای جستجو و فیلتر
     search_query = request.GET.get('search', '')
     product_filter = request.GET.get('product', '')
+    
+    # حذف خودکار قیمت‌گذاری‌های منقضی شده
+    today = jdatetime.date.today()
+    expired_prices = ProductFinancialInfo.objects.filter(deadline__lt=today)
+    expired_count = expired_prices.count()
+    if expired_count > 0:
+        expired_prices.delete()
+        bug_logger.info(f"تعداد {expired_count} قیمت‌گذاری منقضی شده حذف شد")
     
     # شروع با تمام قیمت‌گذاری‌ها
     price_list = ProductFinancialInfo.objects.all().select_related('product').order_by('-created_at')
@@ -52,19 +119,22 @@ def product_price_list_view(request):
     if product_filter:
         price_list = price_list.filter(product_id=product_filter)
     
-    # صفحه‌بندی
-    paginator = Paginator(price_list, 20)  # 20 مورد در هر صفحه
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    bug_logger.debug(f"تعداد {price_list.count()} قیمت‌گذاری برای نمایش لود شد")
+    
+    # محاسبه فیلدهای قابل دسترسی
+    accessible_fields = get_accessible_product_price_list_fields(request.user)
+    
+    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
+    table = ProductPriceTable(price_list, user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
     
     # دریافت لیست محصولات برای فیلتر
     products = Product.objects.all().order_by('code')
     
-    bug_logger.debug(f"تعداد {page_obj.paginator.count} قیمت‌گذاری برای نمایش لود شد")
-    
     context = {
-        'page_obj': page_obj,
-        'price_list': page_obj,
+        'table': table,
+        'accessible_fields': accessible_fields,
         'search_query': search_query,
         'products': products,
         'product_filter': product_filter,

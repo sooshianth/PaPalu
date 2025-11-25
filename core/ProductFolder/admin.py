@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from . import Product, ProductionInfo, BOM, QualityControl, ProductSales
+from . import Product, ProductionInfo, BOM, QualityControl, ProductSales, ProductFinancialInfo
 
 
 class BOMInline(admin.TabularInline):
@@ -26,6 +26,11 @@ class ProductSalesInline(admin.StackedInline):
     model = ProductSales
     verbose_name = 'اطلاعات فروش'
     verbose_name_plural = 'اطلاعات فروش'
+
+class ProductFinancialInfoInline(admin.StackedInline):
+    model = ProductFinancialInfo
+    verbose_name = 'اطلاعات مالی محصول'
+    verbose_name_plural = 'اطلاعات مالی محصول'
 
 
 @admin.register(Product)
@@ -80,3 +85,10 @@ class ProductSalesAdmin(admin.ModelAdmin):
     list_display = ['product', 'min_sales_amount', 'price_with_tax', 'inventory_existence']
     search_fields = ['product__name', 'product__code']
     list_filter = ['inventory_existence']
+
+
+@admin.register(ProductFinancialInfo)
+class ProductFinancialInfoAdmin(admin.ModelAdmin):
+    list_display = ['product', 'price', 'deadline', 'condition', 'loading_date', 'condition_description', 'description']
+    search_fields = ['product__name', 'product__code']
+    list_filter = ['deadline', 'condition', 'loading_date']

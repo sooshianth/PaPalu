@@ -835,3 +835,281 @@ class ProductTable(tables.Table):
             # در صورت بروز خطا، یک پیام خطا برگردان
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
 
+
+class ProductPriceTable(tables.Table):
+    """جدول لیست قیمت‌گذاری محصولات با استفاده از django-tables2"""
+    
+    def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
+        user = kwargs.pop('user', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
+        if self.accessible_fields is None and user is not None:
+            self.accessible_fields = self._get_accessible_fields(user)
+        
+        # فیلتر کردن ستون‌ها بر اساس دسترسی
+        if self.accessible_fields:
+            self._filter_columns_by_access()
+    
+    def _get_accessible_fields(self, user):
+        """محاسبه فیلدهای قابل دسترسی برای کاربر"""
+        from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo as ProductFinancialInfoModel
+        from core.ProductFolder.ProductModel import Product as ProductModel
+        
+        # superuser به همه فیلدها دسترسی دارد
+        if user.is_superuser:
+            return {
+                'product_code': True,
+                'product_name': True,
+                'price': True,
+                'deadline': True,
+                'loading_date': True,
+                'condition': True,
+                'created_at': True,
+                'actions': True,
+            }
+        
+        # فیلدهایی که در لیست نمایش داده می‌شوند
+        field_mapping = {
+            'product_code': (ProductModel, 'code'),
+            'product_name': (ProductModel, 'name'),
+            'price': (ProductFinancialInfoModel, 'price'),
+            'deadline': (ProductFinancialInfoModel, 'deadline'),
+            'loading_date': (ProductFinancialInfoModel, 'loading_date'),
+            'condition': (ProductFinancialInfoModel, 'condition'),
+            'created_at': None,  # همیشه نمایش داده می‌شود
+            'actions': None,  # عملیات همیشه نمایش داده می‌شود
+        }
+        
+        accessible_fields = {}
+        for display_name, mapping in field_mapping.items():
+            if mapping is None:
+                # فیلدهایی که نیازی به بررسی دسترسی ندارند
+                accessible_fields[display_name] = True
+            else:
+                model_class, model_field_name = mapping
+                accessible_fields[display_name] = check_field_access_prefer_edit(
+                    user,
+                    model_class,
+                    model_field_name,
+                )
+        
+        return accessible_fields
+    
+    def _filter_columns_by_access(self):
+        """فیلتر کردن ستون‌ها بر اساس دسترسی کاربر"""
+        if not self.accessible_fields:
+            return
+        
+        # تعیین ستون‌هایی که باید حذف شوند
+        columns_to_exclude = []
+        for column_name in list(self.columns.columns.keys()):
+            if column_name in self.accessible_fields:
+                if not self.accessible_fields[column_name]:
+                    columns_to_exclude.append(column_name)
+        
+        # حذف ستون‌ها از columns
+        for column_name in columns_to_exclude:
+            if column_name in self.columns.columns:
+                del self.columns.columns[column_name]
+        
+        # به‌روزرسانی Meta برای exclude کردن ستون‌ها
+        if columns_to_exclude:
+            # استفاده از exclude در Meta
+            if not hasattr(self._meta, 'exclude') or self._meta.exclude is None:
+                self._meta.exclude = tuple(columns_to_exclude)
+            else:
+                # ترکیب exclude موجود با ستون‌های جدید
+                existing_exclude = set(self._meta.exclude) if self._meta.exclude else set()
+                existing_exclude.update(columns_to_exclude)
+                self._meta.exclude = tuple(existing_exclude)
+            
+            # به‌روزرسانی fields و sequence
+            if hasattr(self._meta, 'fields') and self._meta.fields:
+                self._meta.fields = tuple(
+                    field for field in self._meta.fields 
+                    if field not in columns_to_exclude
+                )
+            
+            if hasattr(self._meta, 'sequence') and self._meta.sequence:
+                self._meta.sequence = tuple(
+                    field for field in self._meta.sequence 
+                    if field not in columns_to_exclude
+                )
+    
+    product_code = tables.Column(
+        verbose_name='کد محصول',
+        accessor='product.code',
+        orderable=True,
+        order_by='product__code',
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    product_name = tables.Column(
+        verbose_name='نام محصول',
+        accessor='product.name',
+        orderable=True,
+        order_by='product__name',
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    price = tables.Column(
+        verbose_name='قیمت',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    deadline = tables.Column(
+        verbose_name='مهلت اعتبار',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    loading_date = tables.Column(
+        verbose_name='زمان بارگیری',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    condition = tables.Column(
+        verbose_name='شرط',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    created_at = tables.Column(
+        verbose_name='تاریخ ایجاد',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
+        model = ProductFinancialInfo
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('product_code', 'product_name', 'price', 'deadline', 'loading_date', 'condition', 'created_at', 'actions')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('product_code', 'product_name', 'price', 'deadline', 'loading_date', 'condition', 'created_at', 'actions')
+    
+    def render_product_code(self, value, record):
+        """نمایش کد محصول"""
+        return format_html('<code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{}</code>', value)
+    
+    def render_product_name(self, value, record):
+        """نمایش نام محصول با لینک به جزئیات"""
+        detail_url = reverse('sales:product_detail', args=[record.product.id])
+        return format_html(
+            '<a href="{}" style="color: var(--primary-green); text-decoration: none; font-weight: 500;">{}</a>',
+            detail_url,
+            value
+        )
+    
+    def render_price(self, value, record):
+        """نمایش قیمت"""
+        if value:
+            # تبدیل به float برای فرمت کردن
+            price_float = float(value)
+            return format_html(
+                '<strong style="color: var(--primary-green);">{}</strong>'
+                '<span style="color: var(--gray-600); font-size: 0.85rem;"> تومان</span>',
+                f"{price_float:,.0f}"
+            )
+        return '-'
+    
+    def render_deadline(self, value, record):
+        """نمایش مهلت اعتبار"""
+        if value:
+            try:
+                # برای jDateField از strftime استفاده می‌کنیم
+                return value.strftime('%Y/%m/%d')
+            except (AttributeError, TypeError):
+                # اگر strftime کار نکرد، از str استفاده می‌کنیم
+                return str(value)
+        return '-'
+    
+    def render_loading_date(self, value, record):
+        """نمایش زمان بارگیری"""
+        if value:
+            try:
+                # برای jDateTimeField از strftime استفاده می‌کنیم
+                return value.strftime('%Y/%m/%d %H:%M')
+            except (AttributeError, TypeError):
+                # اگر strftime کار نکرد، از str استفاده می‌کنیم
+                return str(value)
+        return '-'
+    
+    def render_condition(self, value, record):
+        """نمایش شرط"""
+        if value:
+            condition_text = str(value)
+            return format_html(
+                '<span style="max-width: 200px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{}">{}</span>',
+                condition_text,
+                condition_text[:50] + '...' if len(condition_text) > 50 else condition_text
+            )
+        return '-'
+    
+    def render_created_at(self, value, record):
+        """نمایش تاریخ ایجاد"""
+        if value:
+            try:
+                # برای jDateTimeField از strftime استفاده می‌کنیم
+                return value.strftime('%Y/%m/%d %H:%M')
+            except (AttributeError, TypeError):
+                # اگر strftime کار نکرد، از str استفاده می‌کنیم
+                return str(value)
+        return '-'
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        try:
+            detail_url = reverse('sales:product_detail', args=[record.product.id])
+            
+            html = format_html(
+                '<div class="btn-group">'
+                '<a href="{}" class="btn-outline-info" title="جزئیات محصول">جزئیات</a>'
+                '</div>',
+                detail_url
+            )
+            return html
+        except Exception as e:
+            # در صورت بروز خطا، یک پیام خطا برگردان
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+

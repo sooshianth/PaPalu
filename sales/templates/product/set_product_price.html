@@ -371,6 +371,13 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- Persian Datepicker CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+<!-- jQuery (needed for persian-datepicker) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Datepicker JS -->
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
 <script>
     // اعتبارسنجی فرم قبل از ارسال
     document.getElementById('price-form').addEventListener('submit', function(e) {
@@ -395,6 +402,42 @@
             alert('لطفاً تمام فیلدهای اجباری را پر کنید.');
         }
     });
+    
+    // Initialize Jalali date picker for deadline field
+    (function() {
+        function initJalali() {
+            var inputs = document.querySelectorAll('.jalali-date');
+            inputs.forEach(function(inp) {
+                try {
+                    if (!inp._pd_inited && typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
+                        jQuery(inp).persianDatepicker({
+                            format: 'YYYY/MM/DD',
+                            autoClose: true,
+                            calendarType: 'persian',
+                            observer: true,
+                            timePicker: false,
+                            initialValue: false
+                        });
+                        inp._pd_inited = true;
+                    }
+                } catch (e) {
+                    console.error('Error initializing Persian datepicker:', e);
+                }
+            });
+        }
+        
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initJalali);
+        } else {
+            initJalali();
+        }
+        
+        // Retry after a short delay if jQuery is not loaded yet
+        if (typeof jQuery === 'undefined' || !jQuery.fn || !jQuery.fn.persianDatepicker) {
+            setTimeout(initJalali, 500);
+        }
+    })();
 </script>
 {% endblock %}
 
