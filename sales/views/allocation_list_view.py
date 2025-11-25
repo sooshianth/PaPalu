@@ -1,12 +1,14 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Count, Case, When, DecimalField, F
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.forms import inlineformset_factory
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
@@ -17,6 +19,7 @@ from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
 from sales.forms.allocation_create_form import CreateAllocationForm, AllocationProductInfoFormSet
+from sales.tables_allocation import AllocationTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -114,34 +117,67 @@ def allocation_list_view(request):
         messages.error(request, 'شما دسترسی به تخصیص را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    orders_qs = Order.objects.filter(status='pending_allocation').order_by('-created_at')
+    orders_qs = Order.objects.filter(status='pending_allocation').select_related('customer', 'registered_by')
 
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
 
-    # محاسبه اطلاعات تخصیص برای هر سفارش
-    orders_with_allocation_info = []
-    for order in orders_qs.select_related('registered_by', 'customer'):
-        allocations = Allocation.objects.filter(order=order).select_related('order')
-        order_total = calculate_order_total_quantity(order)
-        allocation_total = calculate_allocation_total_quantity(order)
-        
-        orders_with_allocation_info.append({
-            'order': order,
-            'allocations': allocations,
-            'allocations_count': allocations.count(),
-            'order_total_quantity': order_total,
-            'allocation_total_quantity': allocation_total,
-            'is_complete': abs(order_total - allocation_total) < 0.001,  # مقایسه با خطای کوچک
-        })
-
-    bug_logger.debug(f"تعداد {len(orders_with_allocation_info)} سفارش در انتظار تخصیص لود شد")
+    # افزودن annotate برای فیلدهای محاسبه شده
     
-    if len(orders_with_allocation_info) > 0:
+    # تعداد تخصیص‌ها
+    orders_qs = orders_qs.annotate(
+        allocations_count=Count('allocations', distinct=True)
+    )
+    
+    # محاسبه مقدار سفارش (کیلوگرم) - استفاده از Sum با Case/When برای تبدیل واحدها
+    orders_qs = orders_qs.annotate(
+        order_total_quantity_kg=Sum(
+            Case(
+                When(order_items__weight_unit='kg', then=F('order_items__quantity')),
+                When(order_items__weight_unit='ton', then=F('order_items__quantity') * 1000),
+                When(
+                    Q(order_items__weight_unit='bag') & Q(order_items__bag_weight__isnull=False),
+                    then=F('order_items__quantity') * F('order_items__bag_weight')
+                ),
+                When(order_items__weight_unit='piece', then=F('order_items__quantity')),
+                default=0,
+                output_field=DecimalField(max_digits=15, decimal_places=3)
+            )
+        )
+    )
+    
+    # محاسبه مقدار تخصیص شده (کیلوگرم)
+    orders_qs = orders_qs.annotate(
+        allocation_total_quantity_kg=Sum(
+            Case(
+                When(allocations__product_infos__unit='kg', then=F('allocations__product_infos__quantity')),
+                When(allocations__product_infos__unit='ton', then=F('allocations__product_infos__quantity') * 1000),
+                When(allocations__product_infos__unit='gr', then=F('allocations__product_infos__quantity') / 1000),
+                default=0,
+                output_field=DecimalField(max_digits=15, decimal_places=3)
+            )
+        )
+    )
+    
+    # مرتب‌سازی پیش‌فرض
+    orders_qs = orders_qs.order_by('-created_at')
+
+    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار تخصیص لود شد")
+    
+    # محاسبه فیلدهای قابل دسترسی (در صورت نیاز)
+    # برای حال حاضر، همه فیلدها قابل دسترسی هستند
+    accessible_fields = None
+    
+    # ایجاد جدول با django-tables2
+    table = AllocationTable(orders_qs, user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
+    
+    if orders_qs.count() > 0:
         bug_logger.info("لیست سفارش‌های در انتظار تخصیص با موفقیت نمایش داده شد")
 
     context = {
-        'orders_with_info': orders_with_allocation_info,
+        'table': table,
         'page_title': 'سفارش‌های در انتظار تخصیص',
     }
     return render(request, 'allocation/allocation_list.html', context)
