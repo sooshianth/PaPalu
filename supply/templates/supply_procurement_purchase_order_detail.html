@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load render_table from django_tables2 %}
 {% block title %}جزئیات سفارش خرید{% endblock %}
 {% block extra_css %}
 <style>
@@ -41,20 +42,9 @@
 
 <div class="detail-grid" style="margin-top:4px">
   <h3>تاریخچه وضعیت</h3>
-  <table class="log-table">
-    <thead><tr><th>از وضعیت</th><th>به وضعیت</th><th>زمان</th><th>کاربر</th><th>یادداشت</th></tr></thead>
-    <tbody>
-      {% for log in logs %}
-      <tr>
-        <td>{{ log.old_status }}</td>
-        <td>{{ log.new_status }}</td>
-        <td>{{ log.changed_at|date:'Y-m-d H:i' }}</td>
-        <td>{{ log.changed_by|get_full_name|default:log.changed_by.username|default:'-' }}</td>
-        <td>{{ log.note|default:'-' }}</td>
-      </tr>
-      {% empty %}<tr><td colspan="5">لاگی وجود ندارد.</td></tr>{% endfor %}
-    </tbody>
-  </table>
+  <div style="grid-column:1/-1">
+    {% render_table log_table %}
+  </div>
 </div>
 
 <div class="detail-grid" style="margin-top:4px">

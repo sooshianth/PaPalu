@@ -10,6 +10,7 @@ from django.http import JsonResponse, HttpResponseBadRequest
 import logging
 from core.logging_levels import *
 from jdatetime import date as jdate
+from django_tables2 import RequestConfig
 
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
@@ -469,21 +470,30 @@ def supplier_list_view(request):
 	"""نمایش لیست تأمین‌کنندگان"""
 	audit_logger.info("مشاهده لیست تأمین‌کنندگان")
 	try:
+		from supply.tables import SupplierTable
 		suppliers = Person.objects.filter(type='supplier').order_by('-national_id')
+		table = SupplierTable(suppliers)
+		RequestConfig(request, paginate={'per_page': 25}).configure(table)
 		context = {
-			'suppliers': suppliers,
+			'table': table,
 		}
 		return render(request, 'supply_supplier_list.html', context)
 	except Exception as e:
 		bug_logger.error(f"Supplier list error: {e}")
 		messages.error(request, 'خطا در بارگذاری لیست تأمین‌کنندگان.')
-		return render(request, 'supply_supplier_list.html', {'suppliers': Person.objects.none()})
+		from supply.tables import SupplierTable
+		table = SupplierTable(Person.objects.none())
+		return render(request, 'supply_supplier_list.html', {'table': table})
 
 
 def supplier_detail_view(request, national_id):
 	"""نمایش جزئیات تأمین‌کننده"""
 	audit_logger.info(f"مشاهده جزئیات تأمین‌کننده با کد ملی {national_id}")
 	try:
+		from supply.tables import (
+			RepresentativeTable, BankAccountTable, PaymentPreferenceTable,
+			SocialNetworkTable, AttachmentTable
+		)
 		supplier = Person.objects.get(national_id=national_id, type='supplier')
 		financial_banking = FinancialBanking.objects.filter(person=supplier).first()
 		representatives = Representative.objects.filter(person=supplier)
@@ -491,6 +501,13 @@ def supplier_detail_view(request, national_id):
 		payment_preferences = PaymentPreference.objects.filter(person=supplier)
 		social_networks = SocialNetwork.objects.filter(person=supplier)
 		attachments = Attachment.objects.filter(person=supplier)
+		
+		# Create tables
+		rep_table = RepresentativeTable(representatives)
+		ba_table = BankAccountTable(bank_accounts)
+		pp_table = PaymentPreferenceTable(payment_preferences)
+		sn_table = SocialNetworkTable(social_networks)
+		att_table = AttachmentTable(attachments)
 		
 		context = {
 			'supplier': supplier,
@@ -500,6 +517,11 @@ def supplier_detail_view(request, national_id):
 			'payment_preferences': payment_preferences,
 			'social_networks': social_networks,
 			'attachments': attachments,
+			'rep_table': rep_table,
+			'ba_table': ba_table,
+			'pp_table': pp_table,
+			'sn_table': sn_table,
+			'att_table': att_table,
 		}
 		return render(request, 'supply_supplier_detail.html', context)
 	except Person.DoesNotExist:

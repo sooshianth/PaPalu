@@ -6,6 +6,7 @@ from django.forms import ModelForm, inlineformset_factory
 from django.db import transaction
 import logging
 from core.logging_levels import *
+from django_tables2 import RequestConfig
 
 from core.SupplyFolder.ProcurementPurchaseOrderModel import (
     ProcurementPurchaseOrder,
@@ -91,19 +92,32 @@ def purchase_order_management_view(request):
     """صفحه مدیریت سفارش‌های خرید شامل دو جدول سفارشات باز و تکمیل‌شده"""
     audit_logger.info("مشاهده مدیریت سفارش‌های خرید")
     try:
+        from supply.tables import ProcurementPurchaseOrderTable
         open_orders = ProcurementPurchaseOrder.objects.exclude(status=ProcurementPurchaseOrder.STATUS_COMPLETED).order_by('-created_at')
         completed_orders = ProcurementPurchaseOrder.objects.filter(status=ProcurementPurchaseOrder.STATUS_COMPLETED).order_by('-created_at')
+        
+        # Create tables
+        open_table = ProcurementPurchaseOrderTable(open_orders, prefix='open-')
+        completed_table = ProcurementPurchaseOrderTable(completed_orders, prefix='completed-')
+        
+        # Configure pagination
+        RequestConfig(request, paginate={'per_page': 15}).configure(open_table)
+        RequestConfig(request, paginate={'per_page': 15}).configure(completed_table)
+        
         context = {
-            'open_orders': open_orders,
-            'completed_orders': completed_orders,
+            'open_table': open_table,
+            'completed_table': completed_table,
         }
         return render(request, 'supply_purchase_order_management.html', context)
     except Exception as e:
         bug_logger.error(f"Purchase order management error: {e}")
         messages.error(request, 'خطا در بارگذاری سفارش‌های خرید.')
+        from supply.tables import ProcurementPurchaseOrderTable
+        open_table = ProcurementPurchaseOrderTable([], prefix='open-')
+        completed_table = ProcurementPurchaseOrderTable([], prefix='completed-')
         return render(request, 'supply_purchase_order_management.html', {
-            'open_orders': [],
-            'completed_orders': [],
+            'open_table': open_table,
+            'completed_table': completed_table,
         })
 
 
@@ -147,14 +161,17 @@ def create_procurement_purchase_order_view(request):
 def procurement_purchase_order_detail_view(request, order_number):
     """جزئیات سفارش خرید"""
     audit_logger.info(f"مشاهده جزئیات سفارش خرید {order_number}")
+    from supply.tables import ProcurementPurchaseOrderStatusLogTable
     po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
     materials = po.materials.select_related('raw_material').all()
     logs = po.status_logs.all()
+    log_table = ProcurementPurchaseOrderStatusLogTable(logs)
     can_edit_financial = not po.payment_confirmed
     return render(request, 'supply_procurement_purchase_order_detail.html', {
         'po': po,
         'materials': materials,
         'logs': logs,
+        'log_table': log_table,
         'can_edit_financial': can_edit_financial,
     })
 

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load render_table from django_tables2 %}
 {% block title %}جزئیات تأمین‌کننده{% endblock %}
 
 {% block extra_css %}
@@ -136,126 +137,35 @@
     {% if representatives %}
     <div class="section-title">نمایندگان</div>
     <div class="table-responsive">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>نام</th>
-            <th>سمت</th>
-            <th>موبایل</th>
-            <th>تلفن</th>
-            <th>نامه تایید</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for rep in representatives %}
-          <tr>
-            <td>{{ rep.name }}</td>
-            <td>{{ rep.position|default:"—" }}</td>
-            <td>{{ rep.mobile_number|default:"—" }}</td>
-            <td>{{ rep.phone_number|default:"—" }}</td>
-            <td>{% if rep.confirmation_letter %}<a href="{{ rep.confirmation_letter.url }}" target="_blank">مشاهده</a>{% else %}—{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% render_table rep_table %}
     </div>
     {% endif %}
 
     {% if bank_accounts %}
     <div class="section-title">حساب‌های بانکی</div>
     <div class="table-responsive">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>بانک</th>
-            <th>شماره حساب</th>
-            <th>شماره شبا</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for ba in bank_accounts %}
-          <tr>
-            <td>{{ ba.bank_name|default:"—" }}</td>
-            <td>{{ ba.account_number|default:"—" }}</td>
-            <td>{{ ba.shaba_number|default:"—" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% render_table ba_table %}
     </div>
     {% endif %}
 
     {% if payment_preferences %}
     <div class="section-title">ترجیحات پرداخت</div>
     <div class="table-responsive">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>روش</th>
-            <th>شرایط (روز)</th>
-            <th>سقف اعتبار</th>
-            <th>توضیحات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for pp in payment_preferences %}
-          <tr>
-            <td>{{ pp.get_payment_method_display|default:"—" }}</td>
-            <td>{{ pp.payment_term_days|default:"—" }}</td>
-            <td>{{ pp.credit_limit|default:"—" }}</td>
-            <td>{{ pp.notes|default:"—" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% render_table pp_table %}
     </div>
     {% endif %}
 
     {% if social_networks %}
     <div class="section-title">شبکه‌های اجتماعی</div>
     <div class="table-responsive">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>پلتفرم</th>
-            <th>شناسه</th>
-            <th>آدرس</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for sn in social_networks %}
-          <tr>
-            <td>{{ sn.get_platform_display|default:"—" }}</td>
-            <td>{{ sn.handle|default:"—" }}</td>
-            <td>{% if sn.url %}<a href="{{ sn.url }}" target="_blank">{{ sn.url }}</a>{% else %}—{% endif %}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% render_table sn_table %}
     </div>
     {% endif %}
 
     {% if attachments %}
     <div class="section-title">پیوست‌ها</div>
     <div class="table-responsive">
-      <table class="table">
-        <thead>
-          <tr>
-            <th>نوع</th>
-            <th>فایل</th>
-            <th>توضیح</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for att in attachments %}
-          <tr>
-            <td>{{ att.get_doc_type_display|default:"—" }}</td>
-            <td>{% if att.file %}<a href="{{ att.file.url }}" target="_blank">دانلود</a>{% else %}—{% endif %}</td>
-            <td>{{ att.description|default:"—" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% render_table att_table %}
     </div>
     {% endif %}
 
