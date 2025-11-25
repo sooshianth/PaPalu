@@ -6,12 +6,15 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render, redirect
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
 from sales.forms.transaction_document_form import TransactionDocumentForm
+from sales.tables_transaction_receipt import TransactionReceiptOrderTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -21,6 +24,7 @@ audit_logger = logging.getLogger("audit")
 def transaction_receipt_order_list_view(request):
     """
     لیست سفارش‌های در وضعیت «در انتظار بارگذاری رسید تراکنش»
+    با استفاده از django-tables2
     """
     audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار بارگذاری رسید تراکنش")
     
@@ -36,9 +40,23 @@ def transaction_receipt_order_list_view(request):
 
     bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار بارگذاری رسید تراکنش لود شد")
 
-    # برای هر سفارش اگر Settlement وجود نداشته باشد، به صورت lazy در ویو جزئیات ساخته می‌شود
+    # محاسبه فیلدهای قابل دسترسی (در حال حاضر همه فیلدها قابل دسترسی هستند)
+    accessible_fields = {
+        'order_number': True,
+        'order_type': True,
+        'status': True,
+        'registered_by': True,
+        'actions': True,
+    }
+    
+    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
+    table = TransactionReceiptOrderTable(orders_qs.select_related('registered_by'), user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
+    
     context = {
-        'orders': orders_qs.select_related('registered_by'),
+        'table': table,
+        'accessible_fields': accessible_fields,
         'page_title': 'سفارش‌های در انتظار بارگذاری رسید تراکنش',
     }
     return render(request, 'transaction/transaction_receipt_order_list.html', context)

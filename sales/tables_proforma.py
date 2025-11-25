@@ -4,6 +4,7 @@ from django.urls import reverse
 from core.OrderFolder.ProformaModel import Proforma
 from access.helpers import check_field_access_prefer_edit
 import json
+import html
 
 
 class ProformaTable(tables.Table):
@@ -451,43 +452,41 @@ class ApproveProformaTable(tables.Table):
                     except:
                         file_url = ''
             
-            # Escape کردن مقادیر برای JavaScript - استفاده از json.dumps برای escape صحیح
-            order_number_js = json.dumps(str(order_number))
-            proforma_number_js = json.dumps(str(proforma_number))
-            customer_name_js = json.dumps(str(customer_name))
-            has_file_js = 'true' if has_file else 'false'
-            file_url_js = json.dumps(str(file_url))
+            # Escape کردن مقادیر برای JavaScript - استفاده از HTML entity
+            order_number_str = html.escape(str(order_number))
+            proforma_number_str = html.escape(str(proforma_number))
+            customer_name_str = html.escape(str(customer_name))
+            has_file_str = 'true' if has_file else 'false'
+            file_url_str = html.escape(str(file_url))
             
-            # ایجاد HTML برای دکمه‌ها با استفاده از format_html و data attributes
-            buttons_html = format_html(
-                '<div class="btn-group" onclick="event.stopPropagation();">'
-                '<a href="#" class="btn-outline-success upload-proforma-btn" '
-                'data-order-number={} '
-                'data-proforma-number={} '
-                'data-customer-name={} '
-                'data-has-file={} '
-                'data-file-url={}>آپلود فایل</a>',
-                order_number_js,
-                proforma_number_js,
-                customer_name_js,
-                has_file_js,
-                file_url_js
+            # ایجاد HTML برای دکمه‌ها با data attributes
+            buttons_html = '<div class="btn-group">'
+            buttons_html += (
+                f'<a href="#" class="btn-outline-success" '
+                f'data-order-number="{order_number_str}" '
+                f'data-proforma-number="{proforma_number_str}" '
+                f'data-customer-name="{customer_name_str}" '
+                f'data-has-file="{has_file_str}" '
+                f'data-file-url="{file_url_str}" '
+                f'onclick="event.preventDefault(); event.stopPropagation(); '
+                f'openUploadModal(this.getAttribute(\'data-order-number\'), '
+                f'this.getAttribute(\'data-proforma-number\'), '
+                f'this.getAttribute(\'data-customer-name\'), '
+                f'this.getAttribute(\'data-has-file\') === \'true\', '
+                f'this.getAttribute(\'data-file-url\')); return false;">'
+                f'آپلود فایل</a>'
             )
             
             if has_file and order_document:
                 attachment = getattr(order_document, 'proforma_confirmation_attachment', None) if hasattr(order_document, 'proforma_confirmation_attachment') else None
                 if attachment:
                     try:
-                        download_link = format_html(
-                            '<a href="{}" class="btn-outline-info" target="_blank" style="margin-right: 5px;">دانلود</a>',
-                            attachment.url
-                        )
-                        buttons_html = format_html('{}{}', buttons_html, download_link)
+                        buttons_html += f'<a href="{attachment.url}" class="btn-outline-info" target="_blank" style="margin-right: 5px;">دانلود</a>'
                     except:
                         pass
             
-            buttons_html = format_html('{}</div>', buttons_html)
-            return buttons_html
+            buttons_html += '</div>'
+            return mark_safe(buttons_html)
         except Exception as e:
             # در صورت بروز خطا، یک پیام خطا برگردان
             import traceback

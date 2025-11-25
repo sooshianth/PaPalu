@@ -602,8 +602,15 @@
 
 <script>
 function openUploadModal(orderNumber, proformaNumber, customerName, hasFile, fileUrl) {
+    console.log('openUploadModal called with:', { orderNumber, proformaNumber, customerName, hasFile, fileUrl });
+    
     const modal = document.getElementById('uploadModal');
     const modalBody = document.getElementById('modalBody');
+    
+    if (!modal || !modalBody) {
+        console.error('Modal or modalBody not found!');
+        return;
+    }
     
     let existingFileHtml = '';
     if (hasFile && fileUrl) {
@@ -707,40 +714,5 @@ window.onclick = function(event) {
         closeUploadModal();
     }
 }
-
-// مدیریت کلیک روی دکمه‌های آپلود
-document.addEventListener('DOMContentLoaded', function() {
-    // استفاده از event delegation برای دکمه‌های آپلود
-    document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('upload-proforma-btn')) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const btn = e.target;
-            const orderNumber = btn.getAttribute('data-order-number');
-            const proformaNumber = btn.getAttribute('data-proforma-number');
-            const customerName = btn.getAttribute('data-customer-name');
-            const hasFile = btn.getAttribute('data-has-file') === 'true';
-            const fileUrl = btn.getAttribute('data-file-url');
-            
-            // Parse JSON strings
-            let orderNum, proformaNum, customerNam, fileUr;
-            try {
-                orderNum = JSON.parse(orderNumber);
-                proformaNum = JSON.parse(proformaNumber);
-                customerNam = JSON.parse(customerName);
-                fileUr = JSON.parse(fileUrl);
-            } catch (err) {
-                orderNum = orderNumber;
-                proformaNum = proformaNumber;
-                customerNam = customerName;
-                fileUr = fileUrl;
-            }
-            
-            openUploadModal(orderNum, proformaNum, customerNam, hasFile, fileUr);
-            return false;
-        }
-    });
-});
 </script>
 {% endblock %}

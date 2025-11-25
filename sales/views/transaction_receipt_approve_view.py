@@ -6,12 +6,15 @@ from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render, redirect
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
 from sales.forms.transaction_receipt_approve_form import TransactionApprovalForm
+from sales.tables_transaction_receipt import ApproveTransactionReceiptTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -21,6 +24,7 @@ audit_logger = logging.getLogger("audit")
 def approve_transaction_receipt_list_view(request):
     """
     لیست سفارش‌های در وضعیت «در انتظار تأیید حسابداری»
+    با استفاده از django-tables2
     """
     audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار تأیید حسابداری")
     
@@ -36,8 +40,22 @@ def approve_transaction_receipt_list_view(request):
 
     bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار تأیید حسابداری لود شد")
 
+    # محاسبه فیلدهای قابل دسترسی (در حال حاضر همه فیلدها قابل دسترسی هستند)
+    accessible_fields = {
+        'order_number': True,
+        'customer': True,
+        'created_at': True,
+        'actions': True,
+    }
+    
+    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
+    table = ApproveTransactionReceiptTable(orders_qs.select_related('registered_by', 'customer'), user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
+
     context = {
-        'orders': orders_qs.select_related('registered_by', 'customer'),
+        'table': table,
+        'accessible_fields': accessible_fields,
         'page_title': 'سفارش‌های در انتظار تأیید حسابداری',
     }
     return render(request, 'transaction/approve_transaction_receipt_list.html', context)
