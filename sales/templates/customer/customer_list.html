@@ -32,6 +32,21 @@
         margin-bottom: 30px;
     }
     
+    .search-filter-section {
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .search-filter-section h5 {
+        color: var(--primary-green);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    
     .table-container {
         overflow-x: auto;
     }
@@ -341,6 +356,72 @@
         border-color: #17a2b8 !important;
     }
     
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .col-md-4 {
+        flex: 0 0 33.333333%;
+        max-width: 33.333333%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
     @media (max-width: 768px) {
         .page-header {
             flex-direction: column;
@@ -358,6 +439,12 @@
         .data-table thead th,
         .data-table tbody td {
             padding: 10px;
+        }
+        
+        .col-md-6,
+        .col-md-4 {
+            flex: 0 0 100%;
+            max-width: 100%;
         }
     }
 </style>
@@ -382,6 +469,37 @@
             </div>
         {% endfor %}
     {% endif %}
+    
+    <!-- بخش جستجو و فیلتر -->
+    <div class="search-filter-section">
+        <form method="get" action="{% url 'sales:customer_list' %}" id="search-filter-form">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="search" class="form-label">جستجو</label>
+                    <input type="text" 
+                           class="form-control" 
+                           id="search" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="نام، کد ملی، یا شماره همراه...">
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="status" class="form-label">وضعیت</label>
+                    <select class="form-select" id="status" name="status">
+                        <option value="">همه</option>
+                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>فعال</option>
+                        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>غیرفعال</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button type="submit" class="btn btn-primary">جستجو</button>
+                <a href="{% url 'sales:customer_list' %}" class="btn btn-secondary" onclick="sessionStorage.removeItem('searchInputFocus'); sessionStorage.removeItem('searchInputCursorPos'); sessionStorage.removeItem('searchInputValue');">پاک کردن فیلترها</a>
+            </div>
+        </form>
+    </div>
     
     {% if table %}
         <div class="table-container">
@@ -429,9 +547,91 @@
                 <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <p>هیچ مشتری‌ای یافت نشد.</p>
-            <p style="font-size: 0.9rem; margin-top: 10px;">برای ایجاد مشتری جدید روی دکمه بالا کلیک کنید.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">
+                {% if search_query or status_filter %}
+                نتیجه‌ای برای جستجوی شما پیدا نشد. لطفاً فیلترها را تغییر دهید.
+                {% else %}
+                برای ایجاد مشتری جدید روی دکمه بالا کلیک کنید.
+                {% endif %}
+            </p>
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // جستجوی لایو با debounce و حفظ focus
+    (function() {
+        let searchTimeout;
+        const searchInput = document.getElementById('search');
+        const statusSelect = document.getElementById('status');
+        const form = document.getElementById('search-filter-form');
+        
+        // تابع debounce برای جستجوی لایو
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // تابع ارسال فرم با حفظ موقعیت cursor
+        function submitForm() {
+            if (searchInput) {
+                // ذخیره موقعیت cursor و مقدار فیلد
+                const cursorPosition = searchInput.selectionStart;
+                const inputValue = searchInput.value;
+                
+                // ذخیره در sessionStorage برای استفاده بعد از reload
+                sessionStorage.setItem('searchInputFocus', 'true');
+                sessionStorage.setItem('searchInputCursorPos', cursorPosition.toString());
+                sessionStorage.setItem('searchInputValue', inputValue);
+            }
+            form.submit();
+        }
+        
+        // بازگرداندن focus بعد از reload
+        if (searchInput) {
+            // بررسی اینکه آیا باید focus را برگردانیم
+            if (sessionStorage.getItem('searchInputFocus') === 'true') {
+                // حذف flag
+                sessionStorage.removeItem('searchInputFocus');
+                
+                // کمی تاخیر برای اطمینان از اینکه صفحه کاملاً لود شده
+                setTimeout(function() {
+                    searchInput.focus();
+                    
+                    // بازگرداندن موقعیت cursor
+                    const savedCursorPos = parseInt(sessionStorage.getItem('searchInputCursorPos') || '0');
+                    if (searchInput.setSelectionRange) {
+                        searchInput.setSelectionRange(savedCursorPos, savedCursorPos);
+                    }
+                    
+                    // پاک کردن sessionStorage
+                    sessionStorage.removeItem('searchInputCursorPos');
+                    sessionStorage.removeItem('searchInputValue');
+                }, 100);
+            }
+            
+            // جستجوی لایو برای فیلد جستجو (با تاخیر 500 میلی‌ثانیه)
+            searchInput.addEventListener('input', debounce(function() {
+                submitForm();
+            }, 500));
+        }
+        
+        // تغییر فوری برای فیلتر وضعیت
+        if (statusSelect) {
+            statusSelect.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+    })();
+</script>
 {% endblock %}
 

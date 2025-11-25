@@ -216,7 +216,7 @@ def order_list_view(request):
         )
     )
 
-    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش برای نمایش لود شد")
+    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش برای نمایش لود شد")  
 
     # محاسبه فیلدهای قابل دسترسی
     accessible_fields = get_accessible_order_list_fields(request.user)

@@ -521,3 +521,317 @@ class OrderTable(tables.Table):
             return value
         return '-'
 
+
+class ProductTable(tables.Table):
+    """جدول لیست محصولات با استفاده از django-tables2"""
+    
+    def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
+        user = kwargs.pop('user', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
+        if self.accessible_fields is None and user is not None:
+            self.accessible_fields = self._get_accessible_fields(user)
+        
+        # فیلتر کردن ستون‌ها بر اساس دسترسی
+        if self.accessible_fields:
+            self._filter_columns_by_access()
+    
+    def _get_accessible_fields(self, user):
+        """محاسبه فیلدهای قابل دسترسی برای کاربر"""
+        from core.ProductFolder.ProductModel import Product as ProductModel
+        
+        # superuser به همه فیلدها دسترسی دارد
+        if user.is_superuser:
+            return {
+                'image': True,
+                'code': True,
+                'name': True,
+                'category': True,
+                'grade': True,
+                'physical_shape': True,
+                'main_application': True,
+                'main_unit': True,
+                'is_custom': True,
+                'created_at': True,
+                'actions': True,
+            }
+        
+        # فیلدهایی که در لیست نمایش داده می‌شوند
+        field_mapping = {
+            'image': (ProductModel, 'image'),
+            'code': (ProductModel, 'code'),
+            'name': (ProductModel, 'name'),
+            'category': (ProductModel, 'category'),
+            'grade': (ProductModel, 'grade'),
+            'physical_shape': (ProductModel, 'physical_shape'),
+            'main_application': (ProductModel, 'main_application'),
+            'main_unit': (ProductModel, 'main_unit'),
+            'is_custom': (ProductModel, 'is_custom'),
+            'created_at': None,  # همیشه نمایش داده می‌شود
+            'actions': None,  # عملیات همیشه نمایش داده می‌شود
+        }
+        
+        accessible_fields = {}
+        for display_name, mapping in field_mapping.items():
+            if mapping is None:
+                # فیلدهایی که نیازی به بررسی دسترسی ندارند
+                accessible_fields[display_name] = True
+            else:
+                model_class, model_field_name = mapping
+                accessible_fields[display_name] = check_field_access_prefer_edit(
+                    user,
+                    model_class,
+                    model_field_name,
+                )
+        
+        return accessible_fields
+    
+    def _filter_columns_by_access(self):
+        """فیلتر کردن ستون‌ها بر اساس دسترسی کاربر"""
+        if not self.accessible_fields:
+            return
+        
+        # تعیین ستون‌هایی که باید حذف شوند
+        columns_to_exclude = []
+        for column_name in list(self.columns.columns.keys()):
+            if column_name in self.accessible_fields:
+                if not self.accessible_fields[column_name]:
+                    columns_to_exclude.append(column_name)
+        
+        # حذف ستون‌ها از columns
+        for column_name in columns_to_exclude:
+            if column_name in self.columns.columns:
+                del self.columns.columns[column_name]
+        
+        # به‌روزرسانی Meta برای exclude کردن ستون‌ها
+        if columns_to_exclude:
+            # استفاده از exclude در Meta
+            if not hasattr(self._meta, 'exclude') or self._meta.exclude is None:
+                self._meta.exclude = tuple(columns_to_exclude)
+            else:
+                # ترکیب exclude موجود با ستون‌های جدید
+                existing_exclude = set(self._meta.exclude) if self._meta.exclude else set()
+                existing_exclude.update(columns_to_exclude)
+                self._meta.exclude = tuple(existing_exclude)
+            
+            # به‌روزرسانی fields و sequence
+            if hasattr(self._meta, 'fields') and self._meta.fields:
+                self._meta.fields = tuple(
+                    field for field in self._meta.fields 
+                    if field not in columns_to_exclude
+                )
+            
+            if hasattr(self._meta, 'sequence') and self._meta.sequence:
+                self._meta.sequence = tuple(
+                    field for field in self._meta.sequence 
+                    if field not in columns_to_exclude
+                )
+    
+    image = tables.Column(
+        verbose_name='تصویر',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    code = tables.Column(
+        verbose_name='کد محصول',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    name = tables.Column(
+        verbose_name='نام محصول',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    category = tables.Column(
+        verbose_name='گروه',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    grade = tables.Column(
+        verbose_name='گرید',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    physical_shape = tables.Column(
+        verbose_name='شکل فیزیکی',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    main_application = tables.Column(
+        verbose_name='کاربرد',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    main_unit = tables.Column(
+        verbose_name='واحد اصلی',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    is_custom = tables.Column(
+        verbose_name='نوع',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    created_at = tables.Column(
+        verbose_name='تاریخ ایجاد',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        from core.ProductFolder.ProductModel import Product
+        model = Product
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('image', 'code', 'name', 'category', 'grade', 'physical_shape', 'main_application', 'main_unit', 'is_custom', 'created_at', 'actions')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('image', 'code', 'name', 'category', 'grade', 'physical_shape', 'main_application', 'main_unit', 'is_custom', 'created_at', 'actions')
+    
+    def render_image(self, record):
+        """نمایش تصویر محصول"""
+        if record.image:
+            return format_html(
+                '<img src="{}" alt="{}" class="product-image-thumb">',
+                record.image.url,
+                record.name
+            )
+        else:
+            return format_html(
+                '<div class="product-image-thumb" style="background-color: var(--gray-200); display: flex; align-items: center; justify-content: center; color: var(--gray-600);">-</div>'
+            )
+    
+    def render_code(self, value, record):
+        """نمایش کد محصول"""
+        return format_html('<code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{}</code>', value)
+    
+    def render_name(self, value, record):
+        """نمایش نام محصول با لینک به جزئیات"""
+        detail_url = reverse('sales:product_detail', args=[record.id])
+        return format_html(
+            '<a href="{}" style="color: var(--primary-green); text-decoration: none; font-weight: 500;">{}</a>',
+            detail_url,
+            value
+        )
+    
+    def render_category(self, value, record):
+        """نمایش گروه محصول"""
+        if value:
+            if record.subcategory:
+                return format_html('{}<br><small style="color: var(--gray-600);">{}</small>', value, record.subcategory)
+            return value
+        return '-'
+    
+    def render_grade(self, value, record):
+        """نمایش گرید"""
+        return value if value else '-'
+    
+    def render_physical_shape(self, value, record):
+        """نمایش شکل فیزیکی"""
+        return value if value else '-'
+    
+    def render_main_application(self, value, record):
+        """نمایش کاربرد اصلی"""
+        if value:
+            try:
+                display_value = record.get_main_application_display()
+                return format_html('<span class="badge badge-info">{}</span>', display_value)
+            except:
+                return format_html('<span class="badge badge-info">{}</span>', value)
+        else:
+            return format_html('<span class="badge badge-secondary">-</span>')
+    
+    def render_main_unit(self, value, record):
+        """نمایش واحد اصلی"""
+        return value if value else '-'
+    
+    def render_is_custom(self, value, record):
+        """نمایش نوع محصول"""
+        if value:
+            return format_html('<span class="badge badge-warning">سفارشی</span>')
+        else:
+            return format_html('<span class="badge badge-secondary">استاندارد</span>')
+    
+    def render_created_at(self, value, record):
+        """نمایش تاریخ ایجاد"""
+        if value:
+            return value.strftime('%Y/%m/%d')
+        return '-'
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        try:
+            detail_url = reverse('sales:product_detail', args=[record.id])
+            edit_url = reverse('sales:edit_product', args=[record.id])
+            delete_url = reverse('sales:delete_product', args=[record.id])
+            
+            html = format_html(
+                '<div class="btn-group">'
+                '<a href="{}" class="btn-outline-info" title="جزئیات">جزئیات</a>'
+                '<a href="{}" class="btn-outline-warning" title="ویرایش" style="margin-right: 5px;">ویرایش</a>'
+                '<a href="{}" class="btn-outline-danger" title="حذف" style="margin-right: 5px;" onclick="return confirm(\'آیا از حذف این محصول اطمینان دارید؟\')">حذف</a>'
+                '</div>',
+                detail_url,
+                edit_url,
+                delete_url
+            )
+            return html
+        except Exception as e:
+            # در صورت بروز خطا، یک پیام خطا برگردان
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+

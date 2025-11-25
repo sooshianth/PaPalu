@@ -3,6 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
+from django.db.models import Q, Exists, OuterRef, Subquery, IntegerField
+from django.db.models.functions import Cast
 import logging
 from core.logging_levels import *
 import django_tables2 as tables
@@ -559,6 +561,7 @@ def customer_list_view(request):
     ویو برای نمایش لیست مشتریان با استفاده از django-tables2
     - فقط مشتریانی که کارشناس فروششان کاربر فعلی است نمایش داده می‌شوند
     - کنترل دسترسی فیلدها با FieldPermission
+    - قابلیت جستجو و فیلتر
     """
     audit_logger.info("درخواست مشاهده لیست مشتریان")
     
@@ -568,8 +571,12 @@ def customer_list_view(request):
         messages.error(request, 'شما دسترسی به مشاهده لیست مشتریان ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
+    # دریافت پارامترهای جستجو و فیلتر
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
     # اگر کاربر superuser است، همه مشتریان را نمایش بده
-    from django.db.models import OuterRef, Subquery, IntegerField
+    from django.db.models import OuterRef, Subquery, IntegerField, Q, Exists
     from django.contrib.contenttypes.models import ContentType
     from django.db.models.functions import Cast
     
@@ -599,6 +606,31 @@ def customer_list_view(request):
             mobile_number_sort=Subquery(mobile_subquery)
         ).select_related().prefetch_related()
     
+    # اعمال جستجو
+    if search_query:
+        # جستجو در شماره همراه با استفاده از Exists
+        mobile_search_subquery = PhoneNumber.objects.filter(
+            content_type=person_content_type,
+            object_id=Cast(OuterRef('national_id'), IntegerField()),
+            phone_type='mobile',
+            is_primary=True,
+            number__icontains=search_query
+        )
+        
+        # ترکیب جستجو در نام، کد ملی و شماره همراه
+        customers = customers.filter(
+            Q(name__icontains=search_query) |
+            Q(national_id__icontains=search_query) |
+            Q(Exists(mobile_search_subquery))
+        )
+    
+    # اعمال فیلتر وضعیت
+    if status_filter:
+        if status_filter == 'active':
+            customers = customers.filter(is_active=True)
+        elif status_filter == 'inactive':
+            customers = customers.filter(is_active=False)
+    
     bug_logger.debug(f"تعداد {customers.count()} مشتری برای نمایش لود شد")
     
     # محاسبه فیلدهای قابل دسترسی
@@ -607,11 +639,13 @@ def customer_list_view(request):
     # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
     table = CustomerTable(customers, user=request.user, accessible_fields=accessible_fields)
     
-    RequestConfig(request, paginate={'per_page': 2}).configure(table)
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
     
     context = {
         'table': table,
         'accessible_fields': accessible_fields,
+        'search_query': search_query,
+        'status_filter': status_filter,
         'page_title': 'لیست مشتریان'
     }
     

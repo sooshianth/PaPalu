@@ -7,6 +7,8 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
@@ -21,6 +23,7 @@ from sales.forms.product_create_form import (
     get_accessible_product_fields,
 )
 from access.helpers import check_field_access_prefer_edit
+from sales.tables import ProductTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -188,6 +191,7 @@ def product_list_view(request):
     """
     ویو لیست محصولات با قابلیت جستجو و فیلتر
     - بررسی دسترسی با TaskPermission
+    - استفاده از django-tables2 برای نمایش جدول
     """
     audit_logger.info("درخواست مشاهده لیست محصولات")
     
@@ -232,11 +236,6 @@ def product_list_view(request):
     # مرتب‌سازی
     products = products.order_by('-created_at')
     
-    # صفحه‌بندی
-    paginator = Paginator(products, 20)  # 20 محصول در هر صفحه
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
     # دریافت لیست دسته‌بندی‌ها برای فیلتر
     categories = Product.objects.values_list(
         'category', flat=True
@@ -245,11 +244,16 @@ def product_list_view(request):
     # دریافت فیلدهای قابل دسترسی برای کاربر
     accessible_fields = get_accessible_product_fields_for_view(request.user)
     
-    bug_logger.debug(f"تعداد {page_obj.paginator.count} محصول برای نمایش لود شد")
+    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
+    table = ProductTable(products, user=request.user, accessible_fields=accessible_fields)
+    
+    # RequestConfig به صورت خودکار پارامترهای query string را حفظ می‌کند
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
+    
+    bug_logger.debug(f"تعداد {products.count()} محصول برای نمایش لود شد")
     
     context = {
-        'page_obj': page_obj,
-        'products': page_obj,
+        'table': table,
         'search_query': search_query,
         'categories': categories,
         'category_filter': category_filter,
