@@ -7,6 +7,8 @@ from django.db.models import Q, Sum
 from django.template.loader import render_to_string
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 
@@ -25,6 +27,7 @@ from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
 from access.helpers import check_field_access_prefer_edit
+from sales.tables_proforma import ProformaTable
 import json
 import jdatetime
 
@@ -134,7 +137,7 @@ def get_accessible_proforma_fields_for_view(user):
 @login_required
 def proforma_list_view(request):
     """
-    لیست پیش فاکتورها
+    لیست پیش فاکتورها با استفاده از django-tables2
     """
     audit_logger.info("درخواست مشاهده لیست پیش فاکتورها")
     
@@ -157,8 +160,13 @@ def proforma_list_view(request):
 
     bug_logger.debug(f"تعداد {proformas.count()} پیش فاکتور برای نمایش لود شد")
 
+    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
+    table = ProformaTable(proformas, user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
+
     context = {
-        'proformas': proformas,
+        'table': table,
         'accessible_fields': accessible_fields,
         'page_title': 'لیست پیش فاکتورها',
     }

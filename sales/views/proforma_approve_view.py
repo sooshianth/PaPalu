@@ -5,10 +5,13 @@ from django.http import HttpResponseForbidden
 from django.db import transaction
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.ProformaModel import Proforma
 from core.OrderFolder.OrderDocumentModel import OrderDocument
+from sales.tables_proforma import ApproveProformaTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -30,7 +33,7 @@ def approve_proforma_list_view(request):
     # دریافت سفارش‌های با وضعیت "در انتظار آپلود پیش فاکتور مشتری"
     orders = Order.objects.filter(
         status='pending_customer_proforma_upload'
-    ).select_related('registered_by').prefetch_related('proformas', 'order_documents').order_by('-created_at')
+    ).select_related('registered_by', 'customer').prefetch_related('proformas__customer', 'order_documents').order_by('-created_at')
 
     # اگر کاربر superuser نیست، فقط سفارش‌های خودش را ببیند
     if not request.user.is_superuser:
@@ -51,8 +54,12 @@ def approve_proforma_list_view(request):
 
     bug_logger.debug(f"تعداد {len(orders_with_proformas)} سفارش برای نمایش لود شد")
     
+    # ایجاد جدول با django-tables2
+    table = ApproveProformaTable(orders_with_proformas)
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
+    
     context = {
-        'orders_with_proformas': orders_with_proformas,
+        'table': table,
         'page_title': 'لیست سفارش‌های در انتظار آپلود پیش فاکتور مشتری',
     }
     return render(request, 'proforma/approve_proforma_list.html', context)
