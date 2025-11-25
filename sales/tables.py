@@ -6,6 +6,7 @@ from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
 from access.helpers import check_field_access_prefer_edit
 from typing import Optional, Dict
+from core.OrderFolder.OrderModel import Order
 
 
 class CustomerTable(tables.Table):
@@ -249,4 +250,274 @@ class CustomerTable(tables.Table):
         except Exception as e:
             # در صورت بروز خطا، یک پیام خطا برگردان
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+
+
+class OrderTable(tables.Table):
+    """جدول لیست سفارش‌ها با استفاده از django-tables2"""
+    
+    def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
+        user = kwargs.pop('user', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
+        if self.accessible_fields is None and user is not None:
+            self.accessible_fields = self._get_accessible_fields(user)
+        
+        # فیلتر کردن ستون‌ها بر اساس دسترسی
+        if self.accessible_fields:
+            self._filter_columns_by_access()
+    
+    def _get_accessible_fields(self, user):
+        """محاسبه فیلدهای قابل دسترسی برای کاربر"""
+        from core.OrderFolder.OrderModel import Order as OrderModel
+        from core.OrderFolder.OrderItemModel import OrderItem as OrderItemModel
+        
+        # superuser به همه فیلدها دسترسی دارد
+        if user.is_superuser:
+            return {
+                'order_number': True,
+                'status': True,
+                'total_purchase_cost': True,
+                'total_order_weight': True,
+                'registered_by': True,
+                'created_at': True,
+            }
+        
+        # فیلدهایی که در لیست نمایش داده می‌شوند
+        field_mapping = {
+            'order_number': None,  # همیشه نمایش داده می‌شود
+            'status': (OrderModel, 'status'),
+            'total_purchase_cost': (OrderItemModel, 'total_purchase_cost'),
+            'total_order_weight': None,  # محاسبه شده، همیشه نمایش داده می‌شود
+            'registered_by': None,  # همیشه نمایش داده می‌شود
+            'created_at': None,  # همیشه نمایش داده می‌شود
+        }
+        
+        accessible_fields = {}
+        for display_name, mapping in field_mapping.items():
+            if mapping is None:
+                # فیلدهایی که نیازی به بررسی دسترسی ندارند
+                accessible_fields[display_name] = True
+            else:
+                model_class, model_field_name = mapping
+                accessible_fields[display_name] = check_field_access_prefer_edit(
+                    user,
+                    model_class,
+                    model_field_name,
+                )
+        
+        return accessible_fields
+    
+    def _filter_columns_by_access(self):
+        """فیلتر کردن ستون‌ها بر اساس دسترسی کاربر"""
+        if not self.accessible_fields:
+            return
+        
+        # تعیین ستون‌هایی که باید حذف شوند
+        columns_to_exclude = []
+        for column_name in list(self.columns.columns.keys()):
+            if column_name in self.accessible_fields:
+                if not self.accessible_fields[column_name]:
+                    columns_to_exclude.append(column_name)
+        
+        # حذف ستون‌ها از columns
+        for column_name in columns_to_exclude:
+            if column_name in self.columns.columns:
+                del self.columns.columns[column_name]
+        
+        # به‌روزرسانی Meta برای exclude کردن ستون‌ها
+        if columns_to_exclude:
+            # استفاده از exclude در Meta
+            if not hasattr(self._meta, 'exclude') or self._meta.exclude is None:
+                self._meta.exclude = tuple(columns_to_exclude)
+            else:
+                # ترکیب exclude موجود با ستون‌های جدید
+                existing_exclude = set(self._meta.exclude) if self._meta.exclude else set()
+                existing_exclude.update(columns_to_exclude)
+                self._meta.exclude = tuple(existing_exclude)
+            
+            # به‌روزرسانی fields و sequence
+            if hasattr(self._meta, 'fields') and self._meta.fields:
+                self._meta.fields = tuple(
+                    field for field in self._meta.fields 
+                    if field not in columns_to_exclude
+                )
+            
+            if hasattr(self._meta, 'sequence') and self._meta.sequence:
+                self._meta.sequence = tuple(
+                    field for field in self._meta.sequence 
+                    if field not in columns_to_exclude
+                )
+    
+    order_number = tables.Column(
+        verbose_name='شماره سفارش',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    status = tables.Column(
+        verbose_name='وضعیت',
+        orderable=True,
+        empty_values=(),
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    total_purchase_cost = tables.Column(
+        verbose_name='بهای تمام شده خرید',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    total_order_weight = tables.Column(
+        verbose_name='وزن کل سفارش',
+        empty_values=(),
+        orderable=True,
+        order_by='total_order_weight',
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    registered_by = tables.Column(
+        verbose_name='ثبت‌کننده',
+        accessor='registered_by.username',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    created_at = tables.Column(
+        verbose_name='تاریخ ایجاد',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    class Meta:
+        model = Order
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at')
+    
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش به صورت badge"""
+        return format_html('<span class="code-badge">{}</span>', value)
+    
+    def render_status(self, value, record):
+        """نمایش وضعیت به صورت badge"""
+        # همیشه از record استفاده کن تا مطمئن شویم که وضعیت را می‌خوانیم
+        status_value = getattr(record, 'status', None)
+        if not status_value:
+            status_value = value
+        
+        # اگر هنوز None است، از record مستقیماً بخوان
+        if not status_value:
+            try:
+                status_value = record.status
+            except:
+                pass
+        
+        # استفاده از get_status_display برای دریافت نمایش فارسی
+        try:
+            status_display = record.get_status_display() if hasattr(record, 'get_status_display') else None
+        except:
+            status_display = None
+        
+        # تعریف رنگ‌ها و متن‌های فارسی برای هر وضعیت
+        status_badges = {
+            'pending': ('badge-pending', 'در انتظار'),
+            'confirmed': ('badge-confirmed', 'تایید شده'),
+            'processing': ('badge-processing', 'در حال پردازش'),
+            'pending_proforma_issue': ('badge-pending-proforma', 'در انتظار صدور پیش فاکتور'),
+            'pending_customer_proforma_upload': ('badge-pending-upload', 'در انتظار آپلود پیش فاکتور مشتری'),
+            'pending_transaction_receipt_upload': ('badge-pending-receipt', 'در انتظار بارگذاری رسید تراکنش'),
+            'pending_accounting_approval': ('badge-pending-accounting', 'در انتظار تایید حسابداری'),
+            'pending_payment_approval': ('badge-pending-payment', 'در انتظار تایید پرداخت'),
+            'pending_allocation': ('badge-pending-allocation', 'در انتظار تخصیص'),
+            'pending_allocation_approval': ('badge-pending-allocation-approval', 'در انتظار تأیید تخصیص'),
+            'pending_factory': ('badge-pending-factory', 'در انتظار کارخانه'),
+            'pending_vehicle_recruitment': ('badge-pending-vehicle', 'در انتظار جذب خودرو'),
+            'pending_vehicle_entry': ('badge-pending-vehicle-entry', 'در انتظار ورود خودرو به کارخانه'),
+            'pending_loading': ('badge-pending-loading', 'در انتظار بارگیری'),
+            'pending_waybill': ('badge-pending-waybill', 'در انتظار بارنامه'),
+            'pending_exit': ('badge-pending-exit', 'در انتظار خروج'),
+            'completed': ('badge-completed', 'تکمیل شده'),
+            'cancelled': ('badge-cancelled', 'لغو شده'),
+            'archived': ('badge-archived', 'بایگانی شده'),
+        }
+        
+        if status_value and status_value in status_badges:
+            badge_class, badge_text = status_badges[status_value]
+            return format_html('<span class="badge {}">{}</span>', badge_class, badge_text)
+        elif status_value:
+            # اگر وضعیت وجود دارد اما در status_badges نیست، از get_status_display استفاده کن
+            display_text = status_display or status_value.replace('_', ' ').title()
+            # برای وضعیت‌های ناشناخته از رنگ پیش‌فرض استفاده کن
+            return format_html('<span class="badge badge-unknown">{}</span>', display_text)
+        else:
+            return format_html('<span class="badge badge-archived">-</span>')
+    
+    def render_total_purchase_cost(self, value, record):
+        """نمایش بهای تمام شده خرید"""
+        if value is None:
+            return '0'
+        return str(value)
+    
+    def render_total_order_weight(self, value, record):
+        """نمایش وزن کل سفارش"""
+        # استفاده از مقدار annotate شده اگر موجود باشد
+        if value is not None:
+            total_weight = float(value)
+        else:
+            # fallback: محاسبه از اقلام
+            try:
+                total_weight = 0
+                for item in record.order_items.all():
+                    weight_kg = item.get_weight_in_kg()
+                    total_weight += weight_kg
+            except:
+                return '-'
+        
+        if total_weight > 0:
+            # نمایش به صورت عدد با دو رقم اعشار
+            if total_weight >= 1000:
+                # اگر بیشتر از 1000 کیلوگرم است، به تن تبدیل کن
+                return f"{total_weight / 1000:.2f} تن"
+            else:
+                return f"{total_weight:.2f} کیلوگرم"
+        else:
+            return '-'
+    
+    def render_registered_by(self, value, record):
+        """نمایش ثبت‌کننده"""
+        if value:
+            return value
+        return '-'
+    
+    def render_created_at(self, value, record):
+        """نمایش تاریخ ایجاد"""
+        if value:
+            return value
+        return '-'
 

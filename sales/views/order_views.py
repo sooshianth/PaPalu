@@ -3,9 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Case, When, F, DecimalField, Value, Q
+from django.db.models.functions import Coalesce
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 
@@ -19,6 +22,7 @@ from sales.forms.order_create_form import (
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 from access.helpers import check_field_access_prefer_edit
+from sales.tables import OrderTable
 
 
 @login_required
@@ -147,9 +151,9 @@ def get_accessible_order_list_fields(user):
     # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
         return {
-            'customer': True,
             'status': True,
             'total_purchase_cost': True,
+            'total_order_weight': True,
         }
 
     # مدل‌ها
@@ -157,18 +161,23 @@ def get_accessible_order_list_fields(user):
     from core.OrderFolder.OrderItemModel import OrderItem as OrderItemModel
 
     mapping = {
-        'customer': (OrderModel, 'customer'),
         'status': (OrderModel, 'status'),
         'total_purchase_cost': (OrderItemModel, 'total_purchase_cost'),
+        'total_order_weight': None,  # محاسبه شده، همیشه نمایش داده می‌شود
     }
 
     accessible = {}
-    for display_name, (model_class, model_field_name) in mapping.items():
-        accessible[display_name] = check_field_access_prefer_edit(
-            user,
-            model_class,
-            model_field_name,
-        )
+    for display_name, mapping_value in mapping.items():
+        if mapping_value is None:
+            # فیلدهایی که نیازی به بررسی دسترسی ندارند
+            accessible[display_name] = True
+        else:
+            model_class, model_field_name = mapping_value
+            accessible[display_name] = check_field_access_prefer_edit(
+                user,
+                model_class,
+                model_field_name,
+            )
 
     return accessible
 
@@ -177,6 +186,7 @@ def get_accessible_order_list_fields(user):
 def order_list_view(request):
     """
     لیست سفارش‌ها با کنترل دسترسی و نمایش فیلدهای قابل مشاهده
+    با استفاده از django-tables2
     """
     audit_logger.info("درخواست مشاهده لیست سفارش‌ها")
     
@@ -186,19 +196,38 @@ def order_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     if request.user.is_superuser:
-        orders_qs = Order.objects.all().select_related('customer').order_by('-created_at')
+        orders_qs = Order.objects.all().select_related('customer', 'registered_by').prefetch_related('order_items').order_by('-created_at')
     else:
-        orders_qs = Order.objects.filter(registered_by=request.user).select_related('customer').order_by('-created_at')
+        orders_qs = Order.objects.filter(registered_by=request.user).select_related('customer', 'registered_by').prefetch_related('order_items').order_by('-created_at')
 
-    # محاسبه مجموع بهای تمام شده خرید برای هر سفارش با annotate
-    orders_qs = orders_qs.annotate(total_purchase_cost=Sum('order_items__total_purchase_cost'))
+    # محاسبه مجموع بهای تمام شده خرید و وزن کل برای هر سفارش با annotate
+    # منطق تبدیل واحد: kg = quantity, ton = quantity * 1000, bag = quantity * bag_weight, piece = quantity
+    orders_qs = orders_qs.annotate(
+        total_purchase_cost=Sum('order_items__total_purchase_cost'),
+        total_order_weight=Sum(
+            Case(
+                When(order_items__weight_unit='kg', then=F('order_items__quantity')),
+                When(order_items__weight_unit='ton', then=F('order_items__quantity') * 1000),
+                When(order_items__weight_unit='bag', then=Coalesce(F('order_items__quantity') * F('order_items__bag_weight'), Value(0))),
+                When(order_items__weight_unit='piece', then=F('order_items__quantity')),
+                default=Value(0),
+                output_field=DecimalField(max_digits=15, decimal_places=2)
+            )
+        )
+    )
 
     bug_logger.debug(f"تعداد {orders_qs.count()} سفارش برای نمایش لود شد")
 
+    # محاسبه فیلدهای قابل دسترسی
     accessible_fields = get_accessible_order_list_fields(request.user)
+    
+    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
+    table = OrderTable(orders_qs, user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
 
     context = {
-        'orders': orders_qs,
+        'table': table,
         'accessible_fields': accessible_fields,
         'page_title': 'لیست سفارش‌ها',
     }
