@@ -6,11 +6,11 @@
   .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04);margin-bottom:26px}
   .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
   .card-body {padding:20px}
-  .table-wrap {overflow-x:auto;background:#fff;border:1px solid #e3e7ea;border-radius:10px;padding:12px}
-  table.dataTable {width:100%;border-collapse:collapse;font-size:.85rem}
-  table.dataTable thead th {background:#f2f6f5;padding:9px 10px;text-align:center;border:1px solid #e3e7ea;font-weight:600;color:#37474f}
-  table.dataTable tbody td {padding:8px 10px;border:1px solid #e3e7ea;text-align:center;vertical-align:middle}
-  table.dataTable tbody tr:hover {background:#f8f9fa}
+  .table-wrap {overflow-x:auto;background:#fff;border:1px solid #e3e7ea;border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+  .table {width:100%;margin-bottom:0}
+  .table thead th {background:#f2f6f5;padding:11px 12px;text-align:center;border:1px solid #e3e7ea;font-weight:600;color:#37474f;vertical-align:middle}
+  .table tbody td {padding:10px 12px;border:1px solid #e3e7ea;text-align:center;vertical-align:middle}
+  .table tbody tr:hover {background:#f8fdf9}
   .status-badge {display:inline-block;padding:4px 8px;font-size:.7rem;border-radius:6px;font-weight:600}
   .status-draft{background:#fff3cd;color:#b8860b}
   .status-awaiting_transport_def{background:#e3f2fd;color:#0b74c7}
@@ -20,8 +20,11 @@
   .status-awaiting_final_settlement{background:#f3e5f5;color:#6a1b9a}
   .status-completed{background:#d4edda;color:#155724}
   .btn-sm{padding:4px 8px;font-size:.75rem}
-  .filters th {background:#fafafa}
   .dual-table-grid {display:grid;grid-template-columns:1fr;gap:30px}
+  .pagination {margin-top:16px;display:flex;justify-content:center;gap:4px}
+  .pagination .page-link {padding:6px 12px;border:1px solid #e3e7ea;border-radius:6px;color:#37474f;background:#fff;transition:all .2s}
+  .pagination .page-link:hover {background:#f2f6f5;border-color:#28a745}
+  .pagination .page-item.active .page-link {background:#28a745;border-color:#28a745;color:#fff}
   /* Force vertical stacking on all screen sizes */
   @media(min-width:1200px){.dual-table-grid{grid-template-columns:1fr}}
 </style>

@@ -636,21 +636,27 @@ def define_basic_material_view(request):
 			rm_form = RawMaterialDefineForm()
 			pi_form = PurchaseInfoInlineForm()
 
+		from supply.tables import RawMaterialTable
 		materials = RawMaterial.objects.all().order_by('-created_at')
+		table = RawMaterialTable(materials)
+		RequestConfig(request, paginate={'per_page': 25}).configure(table)
+		
 		context = {
 			'rm_form': rm_form,
 			'pi_form': pi_form,
-			'materials': materials,
+			'table': table,
 		}
 		return render(request, 'supply_define_basic_material.html', context)
 	except Exception as e:
 		bug_logger.error(f"Define basic material error: {e}")
 		if request.method == 'POST':
 			messages.error(request, 'خطا در ثبت. لطفاً مجدداً تلاش کنید.')
+		from supply.tables import RawMaterialTable
+		table = RawMaterialTable(RawMaterial.objects.none())
 		return render(request, 'supply_define_basic_material.html', {
 			'rm_form': RawMaterialDefineForm(),
 			'pi_form': PurchaseInfoInlineForm(),
-			'materials': RawMaterial.objects.none(),
+			'table': table,
 		})
 
 

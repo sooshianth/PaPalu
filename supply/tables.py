@@ -73,8 +73,12 @@ class SupplierTable(tables.Table):
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('national_id', 'name', 'nature', 'registration_number', 'phone_number', 'actions')
         attrs = {
-            'class': 'table table-striped table-bordered dataTable',
-            'id': 'suppliersTable'
+            'class': 'table table-hover table-bordered',
+            'id': 'suppliersTable',
+            'style': 'border-collapse:collapse;font-size:.88rem'
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
         }
         sequence = ('national_id', 'name', 'nature', 'registration_number', 'phone_number', 'actions')
     
@@ -177,7 +181,11 @@ class ProcurementPurchaseOrderTable(tables.Table):
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_at', 'actions')
         attrs = {
-            'class': 'table table-striped table-bordered dataTable',
+            'class': 'table table-hover table-bordered',
+            'style': 'border-collapse:collapse;font-size:.85rem'
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
         }
         sequence = ('order_number', 'status', 'materials_list', 'supplier', 'created_at', 'actions')
     
@@ -229,7 +237,10 @@ class RepresentativeTable(tables.Table):
         model = Representative
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('name', 'position', 'mobile_number', 'phone_number', 'confirmation_letter')
-        attrs = {'class': 'table table-bordered'}
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'font-size:.88rem'
+        }
     
     def render_position(self, value):
         return value or '—'
@@ -257,7 +268,10 @@ class BankAccountTable(tables.Table):
         model = BankAccount
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('bank_name', 'account_number', 'shaba_number')
-        attrs = {'class': 'table table-bordered'}
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'font-size:.88rem'
+        }
     
     def render_bank_name(self, value):
         return value or '—'
@@ -281,7 +295,10 @@ class PaymentPreferenceTable(tables.Table):
         model = PaymentPreference
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('payment_method', 'payment_term_days', 'credit_limit', 'notes')
-        attrs = {'class': 'table table-bordered'}
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'font-size:.88rem'
+        }
     
     def render_payment_method(self, record):
         return record.get_payment_method_display() or '—'
@@ -307,7 +324,10 @@ class SocialNetworkTable(tables.Table):
         model = SocialNetwork
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('platform', 'handle', 'url')
-        attrs = {'class': 'table table-bordered'}
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'font-size:.88rem'
+        }
     
     def render_platform(self, record):
         return record.get_platform_display() or '—'
@@ -332,7 +352,10 @@ class AttachmentTable(tables.Table):
         model = Attachment
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('doc_type', 'file', 'description')
-        attrs = {'class': 'table table-bordered'}
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'font-size:.88rem'
+        }
     
     def render_doc_type(self, record):
         return record.get_doc_type_display() or '—'
@@ -360,7 +383,10 @@ class ProcurementPurchaseOrderStatusLogTable(tables.Table):
         model = ProcurementPurchaseOrderStatusLog
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('old_status', 'new_status', 'changed_at', 'changed_by_name', 'note')
-        attrs = {'class': 'table table-bordered log-table'}
+        attrs = {
+            'class': 'table table-hover table-bordered log-table',
+            'style': 'font-size:.8rem'
+        }
     
     def render_old_status(self, value):
         return value or '—'
@@ -375,3 +401,107 @@ class ProcurementPurchaseOrderStatusLogTable(tables.Table):
     
     def render_note(self, value):
         return value or '—'
+
+
+class RawMaterialTable(tables.Table):
+    """جدول فهرست مواد اولیه"""
+    
+    raw_material_id = tables.Column(
+        verbose_name='شناسه',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center muted'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    name = tables.Column(
+        verbose_name='نام',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    physical_form = tables.Column(
+        verbose_name='شکل فیزیکی',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    primary_unit = tables.Column(
+        verbose_name='واحد اصلی',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    secondary_unit = tables.Column(
+        verbose_name='واحد فرعی',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    conversion_factor = tables.Column(
+        verbose_name='ضریب تبدیل',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    status = tables.Column(
+        verbose_name='وضعیت',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    created_at = tables.DateTimeColumn(
+        verbose_name='تاریخ ایجاد',
+        format='Y-m-d H:i',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        from core.RawMaterialFolder.RawMaterialModel import RawMaterial
+        model = RawMaterial
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('raw_material_id', 'name', 'physical_form', 'primary_unit', 'secondary_unit', 'conversion_factor', 'status', 'created_at')
+        attrs = {
+            'class': 'table table-hover table-bordered datatable',
+            'id': 'materialsTable',
+            'style': 'border-collapse:collapse;font-size:.8rem'
+        }
+        row_attrs = {
+            'style': 'cursor:pointer;transition: background-color 0.2s ease;'
+        }
+        sequence = ('raw_material_id', 'name', 'physical_form', 'primary_unit', 'secondary_unit', 'conversion_factor', 'status', 'created_at')
+    
+    def render_physical_form(self, record):
+        return record.get_physical_form_display() or '—'
+    
+    def render_primary_unit(self, record):
+        return record.get_primary_unit_display() or '—'
+    
+    def render_secondary_unit(self, record):
+        return record.get_secondary_unit_display() or '—'
+    
+    def render_status(self, record):
+        return format_html('<span class="status-chip">{}</span>', record.get_status_display() or '—')

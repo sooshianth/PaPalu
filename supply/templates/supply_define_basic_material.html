@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load render_table from django_tables2 %}
 {% block title %}تعریف مواد اولیه{% endblock %}
 
 {% block extra_css %}
@@ -30,16 +31,12 @@
   @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
   .submit-row{margin-top:8px;display:flex;gap:10px}
   table.datatable{width:100%;border-collapse:collapse;font-size:.8rem}
-  table.datatable th,table.datatable td{border:1px solid #e3e7ea;padding:8px 10px;text-align:center;vertical-align:middle}
-  table.datatable th{background:#f2f6f5;font-weight:600;color:#37474f}
   .muted{color:#607d8b;font-size:.75rem}
   .status-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.7rem;font-weight:600;background:#e6ffed;border:1px solid #cdeed8;color:#1b5e20}
   .message{margin-bottom:10px;padding:10px 14px;border-radius:10px;font-size:.8rem}
   .message.success{background:#e6ffed;border:1px solid #cdeed8;color:#1b5e20}
   .message.error{background:#ffe6e6;border:1px solid #ffc2c2;color:#8a1f1f}
 </style>
-<!-- DataTables CSS (CDN) -->
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
 <!-- Persian Datepicker CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
 {% endblock %}
@@ -107,46 +104,7 @@
     </div>
     
     <div class="table-wrap" style="margin-bottom:12px">
-      <table id="materialsTable" class="datatable">
-        <thead>
-          <tr>
-            <th>شناسه</th>
-            <th>نام</th>
-            <th>شکل فیزیکی</th>
-            <th>واحد اصلی</th>
-            <th>واحد فرعی</th>
-            <th>ضریب تبدیل</th>
-            <th>وضعیت</th>
-            <th>تاریخ ایجاد</th>
-          </tr>
-          <tr class="filters">
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for r in materials %}
-          <tr>
-            <td class="muted">{{ r.raw_material_id }}</td>
-            <td>{{ r.name }}</td>
-            <td>{{ r.get_physical_form_display }}</td>
-            <td>{{ r.get_primary_unit_display }}</td>
-            <td>{{ r.get_secondary_unit_display }}</td>
-            <td>{{ r.conversion_factor }}</td>
-            <td><span class="status-chip">{{ r.get_status_display }}</span></td>
-            <td>{{ r.created_at }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="7">ماده‌ای برای نمایش موجود نیست.</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% render_table table %}
     </div>
     <div id="piModalHost"></div>
     <script>
@@ -272,7 +230,9 @@
           table.querySelector('tbody')?.addEventListener('click', function(e){
             const tr = e.target.closest('tr');
             if (!tr) return;
-            const rid = (tr.querySelector('td')?.textContent||'').trim();
+            const firstTd = tr.querySelector('td');
+            if (!firstTd) return;
+            const rid = (firstTd.textContent||'').trim();
             if (rid) loadPriceInquiryModal(rid);
           });
         }
@@ -283,59 +243,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- jQuery and DataTables (CDN) -->
+<!-- jQuery (needed for Persian Datepicker) -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <!-- Persian Date core + Datepicker JS -->
 <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function(){
-    if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
-      const table = jQuery('#materialsTable');
-      const dt = table.DataTable({
-        paging:true,
-        searching:true,
-        info:true,
-        orderCellsTop:true,
-        fixedHeader:true,
-        order:[[7,'desc']],
-        language:(function(){
-          // Try to load fa.json if exists; otherwise ignore
-          try { return { url: '/static/i18n/datatables/fa.json' }; } catch(e) { return {}; }
-        })()
-      });
-
-      // Build Excel-like dropdowns in header (filters row)
-      const filterRow = table.find('thead tr.filters th');
-      const targetCols = {2: 'همه', 3: 'همه', 6: 'همه'}; // physical_form, primary_unit, status
-      const textFromHTML = (html) => { const div = document.createElement('div'); div.innerHTML = html; return (div.textContent||'').trim(); };
-      Object.keys(targetCols).forEach((idxStr)=>{
-        const idx = parseInt(idxStr,10);
-        const th = filterRow.eq(idx);
-        const select = jQuery('<select/>', { class: 'col-filter', style: 'width:100%;padding:4px 6px;border:1px solid #cfd8dc;border-radius:6px;font-size:.75rem' });
-        select.append(jQuery('<option/>',{ value:'', text: targetCols[idx] }));
-        const uniques = new Set();
-        dt.column(idx).data().each(function(d){ uniques.add(textFromHTML(d)); });
-        Array.from(uniques).filter(Boolean).sort().forEach(v=>{
-          select.append(jQuery('<option/>',{ value: v, text: v }));
-        });
-        select.on('change', function(){
-          const val = this.value.trim();
-          const rex = val ? `^${val.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}$` : '';
-          dt.column(idx).search(rex, true, false).draw();
-        });
-        th.empty().append(select);
-      });
-
-      // Created_at text filter (substring)
-      const createdTh = filterRow.eq(7);
-      const createdInput = jQuery('<input/>', { type: 'text', placeholder: 'جستجو تاریخ', style: 'width:100%;padding:4px 6px;border:1px solid #cfd8dc;border-radius:6px;font-size:.75rem' });
-      createdInput.on('keyup change', function(){
-        dt.column(7).search(this.value.trim(), false, false).draw();
-      });
-      createdTh.empty().append(createdInput);
-    }
-  });
-</script>
 {% endblock %}

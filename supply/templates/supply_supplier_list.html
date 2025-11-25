@@ -7,15 +7,19 @@
   .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04);margin-bottom:20px}
   .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
   .card-body {padding:22px}
-  .table-wrap {overflow-x:auto;background:#fff;border:1px solid #e3e7ea;border-radius:10px;padding:12px}
-  table.dataTable {width:100%;border-collapse:collapse;font-size:.88rem}
-  table.dataTable thead th {background:#f2f6f5;padding:10px 12px;text-align:center;border:1px solid #e3e7ea;font-weight:600;color:#37474f}
-  table.dataTable tbody td {padding:10px 12px;border:1px solid #e3e7ea;text-align:center;vertical-align:middle}
-  table.dataTable tbody tr:hover {background:#f8f9fa}
+  .table-wrap {overflow-x:auto;background:#fff;border:1px solid #e3e7ea;border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+  .table {width:100%;margin-bottom:0}
+  .table thead th {background:#f2f6f5;padding:12px 14px;text-align:center;border:1px solid #e3e7ea;font-weight:600;color:#37474f;vertical-align:middle}
+  .table tbody td {padding:12px 14px;border:1px solid #e3e7ea;text-align:center;vertical-align:middle}
+  .table tbody tr:hover {background:#f8fdf9}
   .btn-group {display:flex;gap:6px;justify-content:center}
   .badge {padding:4px 10px;border-radius:6px;font-size:.8rem;font-weight:600}
   .badge-legal {background:#e3f2fd;color:#1976d2}
   .badge-natural {background:#f3e5f5;color:#7b1fa2}
+  .pagination {margin-top:16px;display:flex;justify-content:center;gap:4px}
+  .pagination .page-link {padding:6px 12px;border:1px solid #e3e7ea;border-radius:6px;color:#37474f;background:#fff;transition:all .2s}
+  .pagination .page-link:hover {background:#f2f6f5;border-color:#28a745}
+  .pagination .page-item.active .page-link {background:#28a745;border-color:#28a745;color:#fff}
 </style>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
 {% endblock %}
