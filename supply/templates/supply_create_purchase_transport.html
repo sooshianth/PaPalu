@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% block title %}ایجاد حمل خرید{% endblock %}
+{% block extra_css %}
+<style>
+  .form-wrapper {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:22px;background:#fff;padding:20px;border:1px solid #e0e5e8;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.04)}
+  .form-wrapper h4 {grid-column:1/-1;font-size:.95rem;margin:-4px 0 10px;font-weight:600;color:#2d3e50}
+  .form-group {display:flex;flex-direction:column}
+  .form-group label {font-size:.75rem;margin-bottom:4px;font-weight:600;color:#37474f}
+  .form-group input, .form-group select, .form-group textarea {padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
+  .form-group textarea {min-height:70px;resize:vertical}
+  .section-divider {grid-column:1/-1;border-top:2px dashed #e0e5e8;padding-top:14px;margin-top:10px}
+  .section-title {grid-column:1/-1;font-size:.85rem;margin:0 0 6px;font-weight:600;color:#455a64}
+</style>
+{% endblock %}
+{% block content %}
+<form method="post" class="form-wrapper">
+  {% csrf_token %}
+  <h4>ایجاد حمل خرید جدید</h4>
+  
+  <div class="section-title">اطلاعات اصلی حمل</div>
+  
+  <div class="form-group">
+    <label>{{ form.purchase_order.label }}{% if form.purchase_order.field.required %} *{% endif %}</label>
+    {{ form.purchase_order }}
+    {% if form.purchase_order.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.purchase_order.errors|join:'، ' }}</div>{% endif %}
+    <small style="font-size:.65rem;color:#666;margin-top:2px">انتخاب سفارش خرید که در وضعیت "در انتظار تعریف حمل" یا بعد از آن است</small>
+  </div>
+  
+  {% if initial_order %}
+  <div id="order-info-display" style="grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px">
+    <div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div>
+    <div style="font-size:.75rem;color:#546e7a">
+      <div><strong>تاریخ سفارش:</strong> {{ initial_order.created_at|date:"Y/m/d" }}</div>
+      <div><strong>تأمین‌کننده:</strong> {{ initial_order.supplier.name }}</div>
+      <div style="margin-top:6px"><strong>مواد اولیه:</strong></div>
+      <ul style="margin:4px 0 0 20px;padding:0">
+        {% for material in initial_order.materials.all %}
+          <li>{{ material.raw_material.name }} - {{ material.quantity }} {{ material.unit }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+  
+  <div class="form-group">
+    <label>{{ form.transport_type.label }}{% if form.transport_type.field.required %} *{% endif %}</label>
+    {{ form.transport_type }}
+    {% if form.transport_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.transport_type.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="section-divider"></div>
+  <div class="section-title">اطلاعات خودرو و راننده</div>
+  
+  <div class="form-group">
+    <label>{{ form.vehicle_type.label }}{% if form.vehicle_type.field.required %} *{% endif %}</label>
+    {{ form.vehicle_type }}
+    {% if form.vehicle_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.vehicle_type.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.plate_number.label }}</label>
+    {{ form.plate_number }}
+    {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.driver.label }}</label>
+    {{ form.driver }}
+    {% if form.driver.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver.errors|join:'، ' }}</div>{% endif %}
+    <small style="font-size:.65rem;color:#666;margin-top:2px">انتخاب راننده از لیست اشخاص</small>
+  </div>
+  
+  <div class="section-divider"></div>
+  <div class="section-title">اطلاعات کرایه</div>
+  
+  <div class="form-group">
+    <label>{{ form.freight_payment_type.label }}</label>
+    {{ form.freight_payment_type }}
+    {% if form.freight_payment_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment_type.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.initial_freight.label }}</label>
+    {{ form.initial_freight }}
+    {% if form.initial_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.initial_freight.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.total_freight.label }}</label>
+    {{ form.total_freight }}
+    {% if form.total_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.total_freight.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.discount.label }}</label>
+    {{ form.discount }}
+    {% if form.discount.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.discount.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.surplus.label }}</label>
+    {{ form.surplus }}
+    {% if form.surplus.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.surplus.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.freight_payment.label }}</label>
+    {{ form.freight_payment }}
+    {% if form.freight_payment.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.driver_account_number.label }}</label>
+    {{ form.driver_account_number }}
+    {% if form.driver_account_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver_account_number.errors|join:'، ' }}</div>{% endif %}
+    <small style="font-size:.65rem;color:#666;margin-top:2px">راننده با شماره حساب</small>
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.driver_sheba_number.label }}</label>
+    {{ form.driver_sheba_number }}
+    {% if form.driver_sheba_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver_sheba_number.errors|join:'، ' }}</div>{% endif %}
+    <small style="font-size:.65rem;color:#666;margin-top:2px">راننده با شماره شبا</small>
+  </div>
+  
+  <div class="section-divider"></div>
+  <div class="section-title">تاریخ‌های حمل</div>
+  
+  <div class="form-group">
+    <label>{{ form.expected_arrival_date.label }}</label>
+    {{ form.expected_arrival_date }}
+    {% if form.expected_arrival_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.expected_arrival_date.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.actual_arrival_date.label }}</label>
+    {{ form.actual_arrival_date }}
+    {% if form.actual_arrival_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.actual_arrival_date.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.loading_date.label }}</label>
+    {{ form.loading_date }}
+    {% if form.loading_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.loading_date.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.delivery_date.label }}</label>
+    {{ form.delivery_date }}
+    {% if form.delivery_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.delivery_date.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="section-divider"></div>
+  <div class="section-title">اطلاعات وزنی</div>
+  
+  <div class="form-group">
+    <label>{{ form.gross_weight.label }}</label>
+    {{ form.gross_weight }}
+    {% if form.gross_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.gross_weight.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.tare_weight.label }}</label>
+    {{ form.tare_weight }}
+    {% if form.tare_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.tare_weight.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.net_weight.label }}</label>
+    {{ form.net_weight }}
+    {% if form.net_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.net_weight.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="section-divider"></div>
+  <div class="section-title">سایر اطلاعات</div>
+  
+  <div class="form-group">
+    <label>{{ form.waybill_number.label }}</label>
+    {{ form.waybill_number }}
+    {% if form.waybill_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.waybill_number.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group" style="grid-column:1/-1">
+    <label>{{ form.notes.label }}</label>
+    {{ form.notes }}
+    {% if form.notes.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.notes.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+    <a href="{% url 'supply:purchase_transport_list' %}" class="btn btn-secondary btn-sm">بازگشت</a>
+    <button type="submit" class="btn btn-primary btn-sm">ثبت حمل</button>
+  </div>
+</form>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const orderSelect = document.getElementById('id_purchase_order');
+  
+  {% if not initial_order %}
+  // Only enable dynamic loading if not pre-filled
+  if (orderSelect) {
+    orderSelect.addEventListener('change', function() {
+      const orderNumber = this.options[this.selectedIndex].text.split(' ')[0]; // Extract order number from option text
+      
+      if (orderNumber && orderNumber !== '---------') {
+        // Fetch order info via AJAX
+        fetch(`/supply/api/purchase-order-info/${orderNumber}/`)
+          .then(response => response.json())
+          .then(data => {
+            // Remove existing order info display if any
+            const existingDisplay = document.getElementById('order-info-display');
+            if (existingDisplay) {
+              existingDisplay.remove();
+            }
+            
+            // Create new order info display
+            const orderInfoDiv = document.createElement('div');
+            orderInfoDiv.id = 'order-info-display';
+            orderInfoDiv.style.cssText = 'grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px';
+            
+            let materialsHtml = '<ul style="margin:4px 0 0 20px;padding:0">';
+            data.materials.forEach(mat => {
+              materialsHtml += `<li>${mat.name} - ${mat.quantity} ${mat.unit}</li>`;
+            });
+            materialsHtml += '</ul>';
+            
+            orderInfoDiv.innerHTML = `
+              <div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div>
+              <div style="font-size:.75rem;color:#546e7a">
+                <div><strong>تاریخ سفارش:</strong> ${data.order_date}</div>
+                <div><strong>تأمین‌کننده:</strong> ${data.supplier}</div>
+                <div style="margin-top:6px"><strong>مواد اولیه:</strong></div>
+                ${materialsHtml}
+              </div>
+            `;
+            
+            // Insert after transport_type field
+            const transportTypeGroup = orderSelect.closest('.form-group').nextElementSibling;
+            transportTypeGroup.parentNode.insertBefore(orderInfoDiv, transportTypeGroup.nextSibling);
+          })
+          .catch(error => {
+            console.error('Error fetching order info:', error);
+          });
+      }
+    });
+  }
+  {% endif %}
+});
+</script>
+{% endblock %}

@@ -203,11 +203,16 @@ def procurement_purchase_order_detail_view(request, order_number):
     """جزئیات سفارش خرید"""
     audit_logger.info(f"مشاهده جزئیات سفارش خرید {order_number}")
     from supply.tables import ProcurementPurchaseOrderStatusLogTable
+    from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+    
     po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
     materials = po.materials.select_related('raw_material').all()
     logs = po.status_logs.all()
     log_table = ProcurementPurchaseOrderStatusLogTable(logs)
     can_edit_financial = not po.payment_confirmed
+    
+    # Get transports for this purchase order
+    transports = PurchaseTransport.objects.filter(purchase_order=po).order_by('-created_at')
     
     # Get allowed next statuses for workflow transitions
     allowed_next_statuses = po.WORKFLOW_ALLOWED.get(po.status, set())
@@ -220,6 +225,7 @@ def procurement_purchase_order_detail_view(request, order_number):
         'log_table': log_table,
         'can_edit_financial': can_edit_financial,
         'next_status_choices': next_status_choices,
+        'transports': transports,
     })
 
 
