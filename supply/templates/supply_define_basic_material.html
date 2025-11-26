@@ -4,58 +4,334 @@
 
 {% block extra_css %}
 <style>
-  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04)}
-  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
-  .card-body {padding:22px}
-  .section-title {font-size:1rem;margin:0 0 14px 0;color:#2d3e3f;font-weight:600;display:flex;align-items:center;gap:8px}
-  .section-title svg{width:18px;height:18px;color:#28a745}
-  .rules{background:#f8f9fa;border:1px dashed #cfd8dc;padding:12px 14px;border-radius:10px;font-size:.9rem;color:#37474f;margin-bottom:18px;line-height:1.6}
-  .form-wrapper{background:#fafafa;border:1px solid #e3e7ea;border-radius:12px;padding:18px 20px;margin-bottom:26px}
-  .form-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px}
-  .field input[type=text],
-  .field input[type=number],
-  .field select,
-  .field textarea{width:100%;padding:8px 10px;border:1px solid #cfd8dc;background:#fff;border-radius:8px;font-size:.85rem;font-family:inherit;transition:.2s}
-  .field textarea{min-height:90px;resize:vertical}
-  .field input:focus,
-  .field select:focus,
-  .field textarea:focus{outline:none;border-color:#28a745;box-shadow:0 0 0 3px rgba(40,167,69,0.15)}
-  .required-marker{color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px}
-  .group-divider{grid-column:1/-1;height:1px;background:linear-gradient(90deg,#d8e0e3,#f0f3f4);margin:4px 0 10px}
-  .optional-toggle{display:inline-flex;align-items:center;gap:6px;font-size:.8rem;color:#0d6efd;background:#e9f2ff;padding:6px 10px;border-radius:20px;cursor:pointer;user-select:none;border:1px solid #b5d5ff;margin:4px 0 14px}
-  .optional-toggle:hover{background:#d4e9ff}
-  .optional-section{display:none;animation:fadeIn .25s ease}
-  .optional-section.active{display:grid}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-  .submit-row{margin-top:8px;display:flex;gap:10px}
-  table.datatable{width:100%;border-collapse:collapse;font-size:.8rem}
-  .muted{color:#607d8b;font-size:.75rem}
-  .status-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;font-size:.7rem;font-weight:600;background:#e6ffed;border:1px solid #cdeed8;color:#1b5e20}
-  .message{margin-bottom:10px;padding:10px 14px;border-radius:10px;font-size:.8rem}
-  .message.success{background:#e6ffed;border:1px solid #cdeed8;color:#1b5e20}
-  .message.error{background:#ffe6e6;border:1px solid #ffc2c2;color:#8a1f1f}
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        margin: 25px 0 15px 0;
+        color: var(--gray-800);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .section-title svg {
+        width: 20px;
+        height: 20px;
+        color: var(--primary-green);
+    }
+    
+    .rules {
+        background: var(--gray-100);
+        border: 1px dashed var(--gray-400);
+        padding: 15px 20px;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        color: var(--gray-700);
+        margin-bottom: 20px;
+        line-height: 1.7;
+    }
+    
+    .form-wrapper {
+        background: var(--gray-50);
+        border: 1px solid var(--gray-300);
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .form-groups {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+    }
+    
+    .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .field label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+    
+    .field input[type=text],
+    .field input[type=number],
+    .field select,
+    .field textarea {
+        width: 100%;
+        padding: 10px 15px;
+        border: 1px solid var(--gray-300);
+        background: white;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: all 0.3s;
+    }
+    
+    .field textarea {
+        min-height: 90px;
+        resize: vertical;
+    }
+    
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    
+    .required-marker {
+        color: #c62828;
+        font-weight: 700;
+        font-size: 1rem;
+        margin-right: 4px;
+    }
+    
+    .group-divider {
+        grid-column: 1/-1;
+        height: 1px;
+        background: linear-gradient(90deg, var(--gray-300), var(--gray-200));
+        margin: 10px 0 15px;
+    }
+    
+    .optional-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        color: #0d6efd;
+        background: #e9f2ff;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        user-select: none;
+        border: 1px solid #b5d5ff;
+        margin: 5px 0 15px;
+        transition: all 0.3s;
+    }
+    
+    .optional-toggle:hover {
+        background: #d4e9ff;
+    }
+    
+    .optional-section {
+        display: none;
+        animation: fadeIn 0.25s ease;
+    }
+    
+    .optional-section.active {
+        display: grid;
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .submit-row {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        margin-top: 15px;
+    }
+    
+    /* استایل جدول django-tables2 */
+    .table-container .table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        margin-bottom: 0;
+    }
+    
+    .table-container .table thead {
+        background: var(--gray-100);
+    }
+    
+    .table-container .table thead th {
+        padding: 12px 15px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--gray-800);
+        border: 1px solid var(--gray-300);
+        vertical-align: middle;
+    }
+    
+    .table-container .table tbody tr {
+        transition: background-color 0.2s;
+        cursor: pointer;
+    }
+    
+    .table-container .table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .table-container .table tbody td {
+        padding: 12px 15px;
+        color: var(--gray-600);
+        border: 1px solid var(--gray-300);
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .pagination {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 0;
+        direction: ltr;
+    }
+    
+    .pagination li {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        order: 0;
+    }
+    
+    .pagination li:last-child {
+        order: -1;
+    }
+    
+    .pagination li:first-child {
+        order: 999;
+    }
+    
+    .pagination a,
+    .pagination span {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        color: var(--gray-700);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        font-weight: 500;
+        min-width: 40px;
+        text-align: center;
+        background-color: white;
+        margin: 0 2px;
+    }
+    
+    .pagination a:hover {
+        background-color: var(--primary-green);
+        color: white !important;
+        border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .current {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .form-groups {
+            grid-template-columns: 1fr;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+    }
 </style>
 <!-- Persian Datepicker CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-header">
-    <h3 style="font-size:1.1rem">تعریف مواد اولیه</h3>
-    <div>
-      <a href="{% url 'supply:home' %}" class="btn btn-secondary btn-sm">دامنه تامین</a>
-    </div>
-  </div>
-  <div class="card-body">
+<div class="page-header">
+    <h2>تعریف مواد اولیه</h2>
+    <a href="{% url 'supply:home' %}" class="btn btn-secondary">دامنه تامین</a>
+</div>
+
+<div class="list-card">
     {% if messages %}
-      {% for m in messages %}<div class="message {{ m.tags }}">{{ m }}</div>{% endfor %}
+      {% for m in messages %}<div class="alert alert-{{ m.tags }}" role="alert">{{ m }}</div>{% endfor %}
     {% endif %}
 
     <div class="rules">
-      - ابتدا فیلدهای اجباری را تکمیل کنید. سپس می‌توانید سایر اطلاعات را در ویرایش تکمیل نمایید.
+      ابتدا فیلدهای اجباری را تکمیل کنید. سپس می‌توانید سایر اطلاعات را در ویرایش تکمیل نمایید.
     </div>
 
     <div class="form-wrapper">
@@ -98,12 +374,12 @@
       </form>
     </div>
 
-    <div class="section-title" style="margin-top:6px">
+    <div class="section-title" style="margin-top:10px">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       فهرست مواد اولیه
     </div>
     
-    <div class="table-wrap" style="margin-bottom:12px">
+    <div class="table-container">
       {% render_table table %}
     </div>
     <div id="piModalHost"></div>
@@ -238,7 +514,6 @@
         }
       })();
     </script>
-  </div>
 </div>
 {% endblock %}
 

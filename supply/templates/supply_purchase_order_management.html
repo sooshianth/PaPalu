@@ -3,57 +3,267 @@
 {% block title %}مدیریت سفارش‌های خرید{% endblock %}
 {% block extra_css %}
 <style>
-  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04);margin-bottom:26px}
-  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
-  .card-body {padding:20px}
-  .table-wrap {overflow-x:auto;background:#fff;border:1px solid #e3e7ea;border-radius:10px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
-  .table {width:100%;margin-bottom:0}
-  .table thead th {background:#f2f6f5;padding:11px 12px;text-align:center;border:1px solid #e3e7ea;font-weight:600;color:#37474f;vertical-align:middle}
-  .table tbody td {padding:10px 12px;border:1px solid #e3e7ea;text-align:center;vertical-align:middle}
-  .table tbody tr:hover {background:#f8fdf9}
-  .status-badge {display:inline-block;padding:4px 8px;font-size:.7rem;border-radius:6px;font-weight:600}
-  .status-draft{background:#fff3cd;color:#b8860b}
-  .status-awaiting_transport_def{background:#e3f2fd;color:#0b74c7}
-  .status-awaiting_vehicle_entry{background:#e0f7fa;color:#007c91}
-  .status-awaiting_delivery{background:#ede7f6;color:#5e35b1}
-  .status-awaiting_wh_reconciliation{background:#fff8e1;color:#ff8f00}
-  .status-awaiting_final_settlement{background:#f3e5f5;color:#6a1b9a}
-  .status-completed{background:#d4edda;color:#155724}
-  .btn-sm{padding:4px 8px;font-size:.75rem}
-  .dual-table-grid {display:grid;grid-template-columns:1fr;gap:30px}
-  .pagination {margin-top:16px;display:flex;justify-content:center;gap:4px}
-  .pagination .page-link {padding:6px 12px;border:1px solid #e3e7ea;border-radius:6px;color:#37474f;background:#fff;transition:all .2s}
-  .pagination .page-link:hover {background:#f2f6f5;border-color:#28a745}
-  .pagination .page-item.active .page-link {background:#28a745;border-color:#28a745;color:#fff}
-  /* Force vertical stacking on all screen sizes */
-  @media(min-width:1200px){.dual-table-grid{grid-template-columns:1fr}}
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 30px;
+    }
+    
+    /* استایل جدول django-tables2 */
+    .table-container .table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        margin-bottom: 0;
+    }
+    
+    .table-container .table thead {
+        background: var(--gray-100);
+    }
+    
+    .table-container .table thead th {
+        padding: 12px 15px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--gray-800);
+        border: 1px solid var(--gray-300);
+        vertical-align: middle;
+    }
+    
+    .table-container .table tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .table-container .table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .table-container .table tbody td {
+        padding: 12px 15px;
+        color: var(--gray-600);
+        border: 1px solid var(--gray-300);
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .table-container .table a:not(.btn) {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .pagination {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 0;
+        direction: ltr;
+    }
+    
+    .pagination li {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        order: 0;
+    }
+    
+    .pagination li:last-child {
+        order: -1;
+    }
+    
+    .pagination li:first-child {
+        order: 999;
+    }
+    
+    .pagination a,
+    .pagination span {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        color: var(--gray-700);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        font-weight: 500;
+        min-width: 40px;
+        text-align: center;
+        background-color: white;
+        margin: 0 2px;
+    }
+    
+    .pagination li:first-child a,
+    .pagination li:first-child span,
+    .pagination li:last-child a,
+    .pagination li:last-child span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .pagination a:hover {
+        background-color: var(--primary-green);
+        color: white !important;
+        border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .current {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination > li > a,
+    .pagination > li > span {
+        border: 1px solid var(--gray-300) !important;
+        border-radius: 8px !important;
+        color: var(--gray-700) !important;
+        background-color: white !important;
+        padding: 10px 16px !important;
+        margin: 0 2px !important;
+        min-width: 40px !important;
+    }
+    
+    .pagination > li > a:hover {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+    }
+    
+    .pagination > .active > a,
+    .pagination > .active > span {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+    }
+    
+    /* استایل دکمه‌ها */
+    .table-container .btn {
+        padding: 5px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.8rem;
+        transition: all 0.3s;
+        display: inline-block;
+        border: 1px solid;
+    }
+    
+    .table-container .btn-secondary {
+        color: var(--gray-600) !important;
+        border-color: var(--gray-400) !important;
+        background-color: transparent !important;
+    }
+    
+    .table-container .btn-secondary:hover {
+        background-color: var(--gray-600) !important;
+        color: white !important;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .status-draft{background:#fff3cd;color:#b8860b}
+    .status-awaiting_transport_def{background:#e3f2fd;color:#0b74c7}
+    .status-awaiting_vehicle_entry{background:#e0f7fa;color:#007c91}
+    .status-awaiting_delivery{background:#ede7f6;color:#5e35b1}
+    .status-awaiting_wh_reconciliation{background:#fff8e1;color:#ff8f00}
+    .status-awaiting_final_settlement{background:#f3e5f5;color:#6a1b9a}
+    .status-completed{background:#d4edda;color:#155724}
+    
+    .dual-table-section {
+        margin-bottom: 35px;
+    }
+    
+    .dual-table-section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--gray-300);
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-header">
-    <h3 style="font-size:1.1rem">مدیریت سفارش‌های خرید</h3>
-    <div>
-      <a href="{% url 'supply:create_procurement_purchase_order' %}" class="btn btn-primary btn-sm">ایجاد سفارش</a>
-    </div>
-  </div>
-  <div class="card-body">
-    <div class="dual-table-grid">
-      <div>
-        <h4 style="font-size:.95rem;margin-bottom:10px">سفارشات باز</h4>
-        <div class="table-wrap">
-          {% render_table open_table %}
-        </div>
-      </div>
-      <div>
-        <h4 style="font-size:.95rem;margin-bottom:10px">سفارشات تکمیل‌شده</h4>
-        <div class="table-wrap">
-          {% render_table completed_table %}
-        </div>
+<div class="page-header">
+    <h2>مدیریت سفارش‌های خرید</h2>
+    <a href="{% url 'supply:create_procurement_purchase_order' %}" class="btn btn-primary">ایجاد سفارش</a>
+</div>
+
+<div class="list-card">
+    <div class="dual-table-section">
+      <h3>سفارشات باز</h3>
+      <div class="table-container">
+        {% render_table open_table %}
       </div>
     </div>
-  </div>
+    
+    <div class="dual-table-section">
+      <h3>سفارشات تکمیل‌شده</h3>
+      <div class="table-container">
+        {% render_table completed_table %}
+      </div>
+    </div>
 </div>
 {% endblock %}
 
