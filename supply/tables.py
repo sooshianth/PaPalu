@@ -1,5 +1,5 @@
 import django_tables2 as tables
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.urls import reverse
 from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.RepresentativeModel import Representative
@@ -137,7 +137,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     )
     
     materials_list = tables.Column(
-        verbose_name='مواد اولیه',
+        verbose_name='نام مواد اولیه',
         empty_values=(),
         orderable=False,
         attrs={
@@ -147,9 +147,20 @@ class ProcurementPurchaseOrderTable(tables.Table):
     )
     
     supplier = tables.Column(
-        verbose_name='تأمین‌کننده',
+        verbose_name='نام تأمین‌کننده',
         accessor='supplier.name',
         orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    created_by = tables.Column(
+        verbose_name='کاربر ثبت کننده',
+        accessor='created_by',
+        orderable=True,
+        empty_values=(),
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -179,7 +190,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     class Meta:
         model = ProcurementPurchaseOrder
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_at', 'actions')
+        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.85rem'
@@ -187,7 +198,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('order_number', 'status', 'materials_list', 'supplier', 'created_at', 'actions')
+        sequence = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'actions')
     
     def render_status(self, value, record):
         """نمایش وضعیت به صورت badge"""
@@ -199,21 +210,35 @@ class ProcurementPurchaseOrderTable(tables.Table):
         )
     
     def render_materials_list(self, record):
-        """نمایش لیست مواد اولیه"""
-        materials = record.materials.all()
+        """نمایش لیست مواد اولیه با جزئیات FK از RawMaterial"""
+        materials = record.materials.select_related('raw_material').all()
         if materials:
-            html_parts = []
+            items = []
             for m in materials:
-                html_parts.append(format_html(
-                    '<span style="display:inline-block;padding:2px 6px;background:#f1f3f4;border-radius:4px;margin:1px">{}</span>',
-                    m.raw_material.name
-                ))
-            return format_html(''.join(str(part) for part in html_parts))
+                rm = m.raw_material
+                # نمایش: شناسه - نام (شکل فیزیکی)
+                display_text = f"{rm.raw_material_id or 'N/A'} - {rm.name or 'بدون نام'}"
+                if rm.physical_form:
+                    display_text += f" ({rm.get_physical_form_display()})"
+                items.append((display_text,))
+            
+            inner_html = format_html_join(
+                '',
+                '<div style="padding:4px 8px;background:#e3f2fd;border-radius:4px;margin:2px;font-size:0.75rem;border-right:3px solid #1976d2">{}</div>',
+                items
+            )
+            return format_html('<div style="display:flex;flex-direction:column;gap:2px">{}</div>', inner_html)
         return '—'
     
     def render_supplier(self, value):
         """نمایش نام تأمین‌کننده"""
         return value or '—'
+    
+    def render_created_by(self, record):
+        """نمایش نام کاربر ثبت کننده"""
+        if record.created_by:
+            return record.created_by.get_full_name() or record.created_by.username
+        return '—'
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""
@@ -366,6 +391,176 @@ class AttachmentTable(tables.Table):
         return '—'
     
     def render_description(self, value):
+        return value or '—'
+
+
+class PurchaseTransportTable(tables.Table):
+    """جدول حمل‌های خرید با استفاده از django-tables2"""
+    
+    transport_number = tables.Column(
+        verbose_name='شماره حمل',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    purchase_order = tables.Column(
+        verbose_name='شماره سفارش',
+        accessor='purchase_order.order_number',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    transport_type = tables.Column(
+        verbose_name='نوع حمل',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    vehicle_type = tables.Column(
+        verbose_name='نوع ماشین',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    status = tables.Column(
+        verbose_name='وضعیت',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    plate_number = tables.Column(
+        verbose_name='پلاک',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    expected_arrival_date = tables.DateColumn(
+        verbose_name='تاریخ پیش‌بینی ورود',
+        format='Y-m-d',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    created_at = tables.DateTimeColumn(
+        verbose_name='تاریخ ایجاد',
+        format='Y-m-d',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+        model = PurchaseTransport
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('transport_number', 'purchase_order', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'border-collapse:collapse;font-size:.85rem'
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
+        }
+        sequence = ('transport_number', 'purchase_order', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
+    
+    def render_transport_type(self, record):
+        """نمایش نوع حمل"""
+        return record.get_transport_type_display() or '—'
+    
+    def render_vehicle_type(self, record):
+        """نمایش نوع ماشین"""
+        return record.get_vehicle_type_display() or '—'
+    
+    def render_status(self, value, record):
+        """نمایش وضعیت به صورت badge"""
+        status_class = f'status-{record.status}'
+        return format_html(
+            '<span class="status-badge {}">{}</span>',
+            status_class,
+            record.get_status_display()
+        )
+    
+    def render_plate_number(self, value):
+        """نمایش پلاک"""
+        return value or '—'
+    
+    def render_expected_arrival_date(self, value):
+        """نمایش تاریخ پیش‌بینی"""
+        return value or '—'
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        detail_url = reverse('supply:purchase_transport_detail', args=[record.transport_number])
+        return format_html(
+            '<a href="{}" class="btn btn-secondary btn-sm">جزئیات</a>',
+            detail_url
+        )
+
+
+class PurchaseTransportStatusLogTable(tables.Table):
+    """جدول تاریخچه وضعیت حمل خرید"""
+    
+    old_status = tables.Column(verbose_name='از وضعیت', orderable=False)
+    new_status = tables.Column(verbose_name='به وضعیت', orderable=False)
+    changed_at = tables.DateTimeColumn(verbose_name='زمان', format='Y-m-d H:i', orderable=False)
+    changed_by_name = tables.Column(verbose_name='کاربر', empty_values=(), orderable=False)
+    note = tables.Column(verbose_name='یادداشت', orderable=False)
+    
+    class Meta:
+        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransportStatusLog
+        model = PurchaseTransportStatusLog
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('old_status', 'new_status', 'changed_at', 'changed_by_name', 'note')
+        attrs = {
+            'class': 'table table-hover table-bordered log-table',
+            'style': 'font-size:.8rem'
+        }
+    
+    def render_old_status(self, value):
+        return value or '—'
+    
+    def render_new_status(self, value):
+        return value or '—'
+    
+    def render_changed_by_name(self, record):
+        if record.changed_by:
+            return record.changed_by.get_full_name() or record.changed_by.username
+        return '—'
+    
+    def render_note(self, value):
         return value or '—'
 
 

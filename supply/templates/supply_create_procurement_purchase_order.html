@@ -27,34 +27,69 @@
     </div>
   {% endfor %}
   <div class="materials-block">
-    <h4>مواد اولیه</h4>
+    <h4>مواد اولیه (هر ماده با جزئیات خود)</h4>
     {{ material_formset.management_form }}
-    <table class="inline-set" id="materialsTable">
-      <thead>
-        <tr><th>ماده اولیه</th><th>مقدار</th><th>واحد</th><th>حذف</th></tr>
-      </thead>
-      <tbody>
-        {% for form in material_formset.forms %}
-        <tr class="material-row">
-          <td>{{ form.raw_material }}</td>
-          <td>{{ form.quantity }}</td>
-          <td>{{ form.unit }}</td>
-          <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div style="overflow-x: auto;">
+      <table class="inline-set" id="materialsTable" style="min-width: 1600px;">
+        <thead>
+          <tr>
+            <th rowspan="2">ماده اولیه</th>
+            <th rowspan="2">مقدار</th>
+            <th rowspan="2">واحد</th>
+            <th colspan="4">اطلاعات مالی</th>
+            <th colspan="3">اطلاعات لجستیک</th>
+            <th rowspan="2">شناسه تخصیص</th>
+            <th rowspan="2">توضیحات</th>
+            <th rowspan="2">حذف</th>
+          </tr>
+          <tr>
+            <th>قیمت واحد</th>
+            <th>قیمت کل</th>
+            <th>بدون کرایه؟</th>
+            <th>مالیات</th>
+            <th>کرایه تمام شده</th>
+            <th>بهای تمام شده</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for form in material_formset.forms %}
+          <tr class="material-row">
+            <td>{{ form.raw_material }}</td>
+            <td>{{ form.quantity }}</td>
+            <td>{{ form.unit }}</td>
+            <td>{{ form.unit_price }}</td>
+            <td>{{ form.total_price }}</td>
+            <td>{{ form.freight_included }}</td>
+            <td>{{ form.vat_on_material }}</td>
+            <td>{{ form.freight_cost_completed }}</td>
+            <td>{{ form.total_cost_completed }}</td>
+            <td>{{ form.external_allocation_id }}</td>
+            <td>{{ form.notes }}</td>
+            <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     <template id="material-empty-row">
       <tr class="material-row">
         <td>
           <select name="mat-__prefix__-raw_material" class="form-control">
             {% for rm in material_formset.forms.0.fields.raw_material.queryset %}
-              <option value="{{ rm.pk }}">{{ rm.name }}</option>
+              <option value="{{ rm.pk }}">{{ rm.raw_material_id }} - {{ rm.name }}</option>
             {% endfor %}
           </select>
         </td>
         <td><input type="number" step="0.001" name="mat-__prefix__-quantity" class="form-control"/></td>
         <td><input type="text" name="mat-__prefix__-unit" class="form-control"/></td>
+        <td><input type="number" step="0.01" name="mat-__prefix__-unit_price" class="form-control"/></td>
+        <td><input type="number" step="0.01" name="mat-__prefix__-total_price" class="form-control"/></td>
+        <td><input type="checkbox" name="mat-__prefix__-freight_included"/></td>
+        <td><input type="number" step="0.01" name="mat-__prefix__-vat_on_material" class="form-control"/></td>
+        <td><input type="number" step="0.01" name="mat-__prefix__-freight_cost_completed" class="form-control"/></td>
+        <td><input type="number" step="0.01" name="mat-__prefix__-total_cost_completed" class="form-control"/></td>
+        <td><input type="text" name="mat-__prefix__-external_allocation_id" class="form-control"/></td>
+        <td><textarea name="mat-__prefix__-notes" class="form-control" rows="2"></textarea></td>
         <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
       </tr>
     </template>

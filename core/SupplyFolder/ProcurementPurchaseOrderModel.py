@@ -102,6 +102,20 @@ class ProcurementPurchaseOrder(models.Model):
         default=False,
         verbose_name='پیش‌فاکتور تایید شد'
     )
+    external_system_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        verbose_name='شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت'
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_procurement_purchase_orders',
+        verbose_name='کاربر ثبت کننده'
+    )
 
     created_at = jmodels.jDateTimeField(auto_now_add=True, verbose_name='تاریخ ایجاد')
     updated_at = jmodels.jDateTimeField(auto_now=True, verbose_name='تاریخ بروزرسانی')
@@ -190,6 +204,63 @@ class ProcurementPurchaseOrderMaterial(models.Model):
     unit = models.CharField(
         max_length=10,
         verbose_name='واحد',
+        null=True,
+        blank=True
+    )
+    notes = models.TextField(
+        verbose_name='توضیحات',
+        null=True,
+        blank=True,
+        help_text='توضیحات خاص این ماده در این سفارش'
+    )
+    # Per-material financial and logistics fields
+    unit_price = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='قیمت واحد',
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)]
+    )
+    total_price = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='قیمت کل',
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)]
+    )
+    freight_included = models.BooleanField(
+        default=False,
+        verbose_name='بهای تمام شده بدون احتساب کرایه'
+    )
+    vat_on_material = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='مالیات بر ارزش افزوده (این ماده)',
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)]
+    )
+    freight_cost_completed = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='بهای تمام شده کرایه خرید',
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)]
+    )
+    total_cost_completed = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='بهای تمام شده خرید',
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)]
+    )
+    external_allocation_id = models.CharField(
+        max_length=100,
+        verbose_name='شناسه تخصیص (تخصیص دیفالت تأمین)',
         null=True,
         blank=True
     )

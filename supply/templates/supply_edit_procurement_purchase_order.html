@@ -27,20 +27,49 @@
   {% endfor %}
   {{ material_formset.management_form }}
   <div class="materials-block">
-    <h4>مواد اولیه</h4>
-    <table class="inline-set">
-      <thead><tr><th>ماده اولیه</th><th>مقدار</th><th>واحد</th><th>حذف</th></tr></thead>
-      <tbody>
-        {% for form in material_formset %}
-        <tr>
-          <td>{{ form.raw_material }}</td>
-          <td>{{ form.quantity }}</td>
-          <td>{{ form.unit }}</td>
-          <td>{{ form.DELETE }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <h4>مواد اولیه (هر ماده با جزئیات خود)</h4>
+    <div style="overflow-x: auto;">
+      <table class="inline-set" style="min-width: 1600px;">
+        <thead>
+          <tr>
+            <th rowspan="2">ماده اولیه</th>
+            <th rowspan="2">مقدار</th>
+            <th rowspan="2">واحد</th>
+            <th colspan="4">اطلاعات مالی</th>
+            <th colspan="3">اطلاعات لجستیک</th>
+            <th rowspan="2">شناسه تخصیص</th>
+            <th rowspan="2">توضیحات</th>
+            <th rowspan="2">حذف</th>
+          </tr>
+          <tr>
+            <th>قیمت واحد</th>
+            <th>قیمت کل</th>
+            <th>بدون کرایه؟</th>
+            <th>مالیات</th>
+            <th>کرایه تمام شده</th>
+            <th>بهای تمام شده</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for form in material_formset %}
+          <tr>
+            <td>{{ form.raw_material }}</td>
+            <td>{{ form.quantity }}</td>
+            <td>{{ form.unit }}</td>
+            <td>{{ form.unit_price }}</td>
+            <td>{{ form.total_price }}</td>
+            <td>{{ form.freight_included }}</td>
+            <td>{{ form.vat_on_material }}</td>
+            <td>{{ form.freight_cost_completed }}</td>
+            <td>{{ form.total_cost_completed }}</td>
+            <td>{{ form.external_allocation_id }}</td>
+            <td>{{ form.notes }}</td>
+            <td>{{ form.DELETE }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
   <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
     <a href="{% url 'supply:procurement_purchase_order_detail' po.order_number %}" class="btn btn-secondary btn-sm">لغو</a>

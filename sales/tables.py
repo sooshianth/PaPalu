@@ -462,6 +462,8 @@ class OrderTable(tables.Table):
             'pending_loading': ('badge-pending-loading', 'در انتظار بارگیری'),
             'pending_waybill': ('badge-pending-waybill', 'در انتظار بارنامه'),
             'pending_exit': ('badge-pending-exit', 'در انتظار خروج'),
+            'pending_unloading_approval': ('badge-pending-unloading', 'در انتظار تایید تخلیه'),
+            'pending_settlement': ('badge-pending-settlement', 'در انتظار تسویه'),
             'completed': ('badge-completed', 'تکمیل شده'),
             'cancelled': ('badge-cancelled', 'لغو شده'),
             'archived': ('badge-archived', 'بایگانی شده'),
@@ -1111,5 +1113,199 @@ class ProductPriceTable(tables.Table):
             return html
         except Exception as e:
             # در صورت بروز خطا، یک پیام خطا برگردان
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+
+
+class UnloadApprovalOrderTable(tables.Table):
+    """جدول لیست سفارش‌های در انتظار تایید تخلیه با استفاده از django-tables2"""
+    
+    def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
+        user = kwargs.pop('user', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
+        if self.accessible_fields is None and user is not None:
+            self.accessible_fields = self._get_accessible_fields(user)
+        
+        # فیلتر کردن ستون‌ها بر اساس دسترسی
+        if self.accessible_fields:
+            self._filter_columns_by_access()
+    
+    def _get_accessible_fields(self, user):
+        """محاسبه فیلدهای قابل دسترسی برای کاربر"""
+        from core.OrderFolder.OrderModel import Order as OrderModel
+        
+        # superuser به همه فیلدها دسترسی دارد
+        if user.is_superuser:
+            return {
+                'order_number': True,
+                'customer': True,
+                'created_at': True,
+                'actions': True,
+            }
+        
+        # فیلدهایی که در لیست نمایش داده می‌شوند
+        field_mapping = {
+            'order_number': None,  # همیشه نمایش داده می‌شود
+            'customer': (OrderModel, 'customer'),
+            'created_at': None,  # همیشه نمایش داده می‌شود
+            'actions': None,  # عملیات همیشه نمایش داده می‌شود
+        }
+        
+        accessible_fields = {}
+        for display_name, mapping in field_mapping.items():
+            if mapping is None:
+                accessible_fields[display_name] = True
+            else:
+                model_class, model_field_name = mapping
+                accessible_fields[display_name] = check_field_access_prefer_edit(
+                    user,
+                    model_class,
+                    model_field_name,
+                )
+        
+        return accessible_fields
+    
+    def _filter_columns_by_access(self):
+        """فیلتر کردن ستون‌ها بر اساس دسترسی کاربر"""
+        if not self.accessible_fields:
+            return
+        
+        columns_to_exclude = []
+        for column_name in list(self.columns.columns.keys()):
+            if column_name in self.accessible_fields:
+                if not self.accessible_fields[column_name]:
+                    columns_to_exclude.append(column_name)
+        
+        for column_name in columns_to_exclude:
+            if column_name in self.columns.columns:
+                del self.columns.columns[column_name]
+        
+        if columns_to_exclude:
+            if not hasattr(self._meta, 'exclude') or self._meta.exclude is None:
+                self._meta.exclude = tuple(columns_to_exclude)
+            else:
+                existing_exclude = set(self._meta.exclude) if self._meta.exclude else set()
+                existing_exclude.update(columns_to_exclude)
+                self._meta.exclude = tuple(existing_exclude)
+            
+            if hasattr(self._meta, 'fields') and self._meta.fields:
+                self._meta.fields = tuple(
+                    field for field in self._meta.fields 
+                    if field not in columns_to_exclude
+                )
+            
+            if hasattr(self._meta, 'sequence') and self._meta.sequence:
+                self._meta.sequence = tuple(
+                    field for field in self._meta.sequence 
+                    if field not in columns_to_exclude
+                )
+    
+    order_number = tables.Column(
+        verbose_name='شماره سفارش',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    customer = tables.Column(
+        verbose_name='مشتری',
+        accessor='customer.name',
+        orderable=True,
+        order_by='customer__name',
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    allocations = tables.Column(
+        verbose_name='تخصیص‌ها',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    transports = tables.Column(
+        verbose_name='حمل‌ها',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        model = Order
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('order_number', 'customer', 'allocations', 'transports', 'actions')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('order_number', 'customer', 'allocations', 'transports', 'actions')
+    
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش به صورت badge"""
+        return format_html('<span class="code-badge">{}</span>', value)
+    
+    def render_customer(self, value, record):
+        """نمایش نام مشتری"""
+        if value:
+            return value
+        return '-'
+    
+    def render_allocations(self, record):
+        """نمایش شماره تخصیص‌های مربوط به سفارش"""
+        from core.AllocationFolder.AllocationModel import Allocation
+        allocations = Allocation.objects.filter(order=record).values_list('allocation_number', flat=True)
+        if allocations:
+            badges = [f'<span class="code-badge" style="margin: 2px;">{alloc}</span>' for alloc in allocations]
+            return format_html('<div style="display: flex; flex-wrap: wrap; gap: 4px;">{}</div>', mark_safe(' '.join(badges)))
+        return '-'
+    
+    def render_transports(self, record):
+        """نمایش شماره حمل‌های مربوط به سفارش (از طریق تخصیص‌ها)"""
+        from core.AllocationFolder.AllocationModel import Allocation
+        from core.TransportFolder.TransportModel import Transport
+        allocations = Allocation.objects.filter(order=record).values_list('allocation_number', flat=True)
+        transports = Transport.objects.filter(allocation_id__in=allocations).values_list('waybill_number', flat=True)
+        if transports:
+            badges = [f'<span class="code-badge" style="margin: 2px;">{trans}</span>' for trans in transports]
+            return format_html('<div style="display: flex; flex-wrap: wrap; gap: 4px;">{}</div>', mark_safe(' '.join(badges)))
+        return '-'
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        try:
+            detail_url = reverse('sales:unload_approval_detail', args=[record.order_number])
+            
+            html = format_html(
+                '<div class="btn-group">'
+                '<a href="{}" class="btn-outline-info" title="تایید تخلیه">تایید تخلیه</a>'
+                '</div>',
+                detail_url
+            )
+            return html
+        except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
 
