@@ -11,6 +11,7 @@ class Settlement(models.Model):
         ('purchase', 'خرید'),
         ('sale', 'فروش'),
         ('rent', 'کرایه'),
+        ('weight_discrepancy', 'کسری و سرک'),
     ]
 
     SETTLEMENT_STATUS_CHOICES = [

@@ -37,6 +37,7 @@ class Order(models.Model):
         ('pending_exit', 'در انتظار خروج'),
         ('pending_unloading_approval', 'در انتظار تایید تخلیه'),
         ('pending_settlement', 'در انتظار تسویه'),
+        ('pending_settlement_approval', 'در انتظار تایید تسویه کامل'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),
     ]

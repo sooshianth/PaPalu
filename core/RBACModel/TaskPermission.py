@@ -19,6 +19,7 @@ class TaskChoices(models.TextChoices):
     SALES_TRANSACTION_RECEIPT = 'sales.transaction_receipt', 'رسید تراکنش فروش'
     SALES_ALLOCATION = 'sales.allocation', 'تخصیص فروش'
     SALES_APPROVE_UNLOAD = 'sales.approve_unload', 'تایید تخلیه سفارش'
+    SALES_SETTLEMENT = 'sales.settlement', 'تسویه سفارش فروش'
     SALES_TRACK_DISCREPANCY = 'sales.track_discrepancy', 'پیگیری اختلاف فروش'
     SALES_APPROVE_TRANSACTION = 'sales.approve_transaction', 'تایید تراکنش فروش'
     SALES_APPROVE_SETTLEMENT = 'sales.approve_settlement', 'تایید تسویه کامل فروش'

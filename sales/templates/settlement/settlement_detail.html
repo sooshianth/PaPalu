@@ -1,0 +1,901 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .info-card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid var(--gray-300);
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 1.1rem;
+    }
+    
+    .info-card-body {
+        padding: 1.5rem;
+    }
+    
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-item strong {
+        display: block;
+        color: var(--gray-600);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-item span {
+        color: var(--text-dark);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .info-item .positive {
+        color: var(--primary-green);
+        font-weight: 600;
+    }
+    
+    .info-item .negative {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 35px;
+        background-color: var(--gray-200);
+        border-radius: 18px;
+        overflow: hidden;
+        margin: 1.5rem 0;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-green), var(--dark-green));
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+    
+    .modern-table thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .modern-table th {
+        padding: 0.75rem;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--gray-300);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table td {
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--text-dark);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .modern-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        padding: 1rem 1.5rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .form-section-body {
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        font-family: inherit;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .form-group input[type="file"] {
+        padding: 0.5rem;
+    }
+    
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .errorlist li {
+        color: #dc3545;
+        font-size: 0.85rem;
+        padding: 0.25rem 0;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+    }
+    
+    .btn-secondary {
+        background: var(--gray-600);
+        color: white;
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+        background: var(--gray-800);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        border-right: 4px solid #ffc107;
+        font-weight: 500;
+        margin-top: 1rem;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .badge-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .total-amount {
+        background: var(--light-green);
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-green);
+    }
+    
+    .empty-message {
+        text-align: center;
+        color: var(--gray-600);
+        padding: 2rem;
+        font-size: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .info-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+    <a href="{% url 'sales:settlement_list' %}" class="btn-secondary">بازگشت به لیست</a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- اطلاعات سفارش -->
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات سفارش
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>شناسه سفارش:</strong>
+                <span>{{ order.order_number }}</span>
+            </div>
+            <div class="info-item">
+                <strong>وزن کل سفارش:</strong>
+                <span>{{ order_weight|floatformat:2 }} کیلوگرم</span>
+            </div>
+            <div class="info-item">
+                <strong>وزن تحویلی:</strong>
+                <span>{{ delivered_weight|floatformat:2 }} کیلوگرم</span>
+            </div>
+            <div class="info-item">
+                <strong>مبلغ اختلاف:</strong>
+                <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
+                    {{ difference_amount|floatformat:0 }} تومان
+                </span>
+            </div>
+        </div>
+        
+        <!-- نوار پیشرفت -->
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {% widthratio settled_amount difference_amount|add:'0.01' 100 %}%;">
+                {% if settlement_completed %}
+                    تسویه کامل شد
+                {% else %}
+                    {{ settled_amount|floatformat:0 }} از {{ difference_amount|floatformat:0 }} تومان
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <strong>مبلغ تسویه شده:</strong>
+                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|floatformat:0 }} تومان</span>
+            </div>
+            <div class="info-item">
+                <strong>مانده تسویه:</strong>
+                <span class="{% if remaining_amount > 0 %}negative{% else %}positive{% endif %}">
+                    {{ remaining_amount|floatformat:0 }} تومان
+                </span>
+            </div>
+        </div>
+        
+        {% if remaining_amount > 0 and not settlement_completed %}
+        <div class="alert-warning">
+            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} تومان باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
+        </div>
+        {% elif settlement_completed %}
+        <div class="alert-success">
+            ✓ تسویه کامل شده است!
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- اطلاعات مشتری -->
+{% if customer_info %}
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات مشتری (فقط نمایش)
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>نام شخص:</strong>
+                <span>{{ customer_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شناسه ملی/کد ملی شخص:</strong>
+                <span>{{ customer_info.national_id }}</span>
+            </div>
+            <div class="info-item">
+                <strong>نوع شخص:</strong>
+                <span>{{ customer_info.type }}</span>
+            </div>
+            <div class="info-item">
+                <strong>نوع (حقوقی/حقیقی):</strong>
+                <span>{{ customer_info.nature }}</span>
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <strong>کد شخص (حسابداری):</strong>
+                <span>{{ customer_info.accounting_code }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شماره ثبت شرکت:</strong>
+                <span>{{ customer_info.registration_number }}</span>
+            </div>
+        </div>
+        
+        {% if customer_info.bank_accounts %}
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--gray-200);">
+            <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-800);">حساب‌های بانکی</h4>
+            <div class="info-row">
+                {% for account in customer_info.bank_accounts %}
+                <div class="info-item">
+                    <strong>{{ account.bank_name|default:"بانک" }}:</strong>
+                    <span style="font-size: 0.9rem;">
+                        شماره حساب: {{ account.account_number|default:"-" }}<br>
+                        شماره شبا: IR{{ account.shaba_number|default:"-" }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- فرم ثبت تراکنش -->
+{% if not settlement_completed %}
+<div class="form-section">
+    <div class="form-section-header">
+        ثبت تراکنش جدید
+    </div>
+    <div class="form-section-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.discrepancy_type.id_for_label }}">{{ form.discrepancy_type.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.discrepancy_type }}
+                    {{ form.discrepancy_type.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.payment_type.id_for_label }}">{{ form.payment_type.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.payment_type }}
+                    {{ form.payment_type.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.document_amount.id_for_label }}">{{ form.document_amount.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.document_amount }}
+                    {{ form.document_amount.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.due_date.id_for_label }}">{{ form.due_date.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.due_date }}
+                    {{ form.due_date.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.source_account.id_for_label }}">{{ form.source_account.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.source_account }}
+                    {{ form.source_account.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.accounting_document_number.id_for_label }}">{{ form.accounting_document_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.accounting_document_number }}
+                    {{ form.accounting_document_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.tracking_number.id_for_label }}">{{ form.tracking_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.tracking_number }}
+                    {{ form.tracking_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.source_bank.id_for_label }}">{{ form.source_bank.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.source_bank }}
+                    {{ form.source_bank.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.approval_account_number.id_for_label }}">{{ form.approval_account_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.approval_account_number }}
+                    {{ form.approval_account_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.shaba_number.id_for_label }}">{{ form.shaba_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.shaba_number }}
+                    {{ form.shaba_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.inquiry_name.id_for_label }}">{{ form.inquiry_name.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.inquiry_name }}
+                    {{ form.inquiry_name.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.transfer_time.id_for_label }}">{{ form.transfer_time.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.transfer_time }}
+                    {{ form.transfer_time.errors }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.document_attachment.id_for_label }}">{{ form.document_attachment.label }} <span style="color: #dc3545;">*</span></label>
+                {{ form.document_attachment }}
+                {{ form.document_attachment.errors }}
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">ثبت تراکنش</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-success">
+    تسویه این سفارش به طور کامل انجام شده است.
+</div>
+{% endif %}
+
+<!-- لیست تراکنش‌های ثبت شده -->
+{% if transactions %}
+<div class="info-card">
+    <div class="info-card-header">
+        تراکنش‌های ثبت شده
+    </div>
+    <div class="info-card-body">
+        <div style="overflow-x: auto;">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>شماره سند</th>
+                        <th>نوع تسویه (کسری/سرک)</th>
+                        <th>نوع تسویه</th>
+                        <th>مبلغ</th>
+                        <th>تاریخ سررسید</th>
+                        <th>شماره پیگیری</th>
+                        <th>پیوست</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.accounting_document_number|default:"-" }}</td>
+                        <td>
+                            {% if transaction.discrepancy_type == 'shortage' %}
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 6px; background-color: #f8d7da; color: #721c24; font-weight: 600; font-size: 0.85rem;">کسری</span>
+                            {% elif transaction.discrepancy_type == 'surplus' %}
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 6px; background-color: var(--light-green); color: var(--dark-green); font-weight: 600; font-size: 0.85rem;">سرک</span>
+                            {% else %}
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 6px; background-color: var(--gray-200); color: var(--gray-600); font-weight: 600; font-size: 0.85rem;">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
+                        </td>
+                        <td><strong>{{ transaction.document_amount|floatformat:0 }}</strong> تومان</td>
+                        <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
+                        <td>{{ transaction.tracking_number|default:"-" }}</td>
+                        <td>
+                            {% if transaction.document_attachment %}
+                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="total-amount">
+            جمع مبالغ تراکنش‌ها: {{ settled_amount|floatformat:0 }} تومان
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="info-card">
+    <div class="info-card-header">
+        تراکنش‌های ثبت شده
+    </div>
+    <div class="info-card-body">
+        <p class="empty-message">هنوز تراکنشی ثبت نشده است.</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // تابع برای راه‌اندازی date picker برای یک فیلد
+    function setupDatePicker(inputId, hiddenInputName) {
+        var dateInput = $('#' + inputId);
+        
+        if (dateInput.length) {
+            // تبدیل type='date' به text برای استفاده از تقویم شمسی
+            dateInput.attr('type', 'text');
+            dateInput.attr('readonly', 'readonly');
+            dateInput.css('cursor', 'pointer');
+            
+            // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+            var initialValue = dateInput.val();
+            var persianDateValue = '';
+            
+            // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+            if (initialValue) {
+                var parts = initialValue.split('-');
+                if (parts.length === 3) {
+                    var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    var pDate = persianDate.fromGregorian(gregorianDate);
+                    persianDateValue = pDate.format('YYYY/MM/DD');
+                    dateInput.val(persianDateValue);
+                }
+            }
+            
+            // غیرفعال کردن name اصلی input برای جلوگیری از ارسال تاریخ شمسی
+            var originalName = dateInput.attr('name');
+            dateInput.removeAttr('name');
+            
+            // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+            var hiddenInput = $('<input>', {
+                type: 'hidden',
+                id: inputId + '_hidden',
+                name: hiddenInputName
+            });
+            if (initialValue) {
+                hiddenInput.val(initialValue);
+            }
+            dateInput.after(hiddenInput);
+            
+            // راه‌اندازی تقویم شمسی
+            dateInput.pDatepicker({
+                observer: true,
+                format: 'YYYY/MM/DD',
+                altField: '#' + inputId + '_hidden',
+                altFormat: 'YYYY-MM-DD',
+                calendarType: 'persian',
+                initialValue: persianDateValue || false,
+                timePicker: {
+                    enabled: false
+                },
+                onSelect: function() {
+                    // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                    var selectedDate = dateInput.val();
+                    if (selectedDate) {
+                        try {
+                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var formattedDate = gregorianDate.year + '-' + 
+                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                               String(gregorianDate.day).padStart(2, '0');
+                            
+                            hiddenInput.val(formattedDate);
+                        } catch (e) {
+                            console.error('خطا در تبدیل تاریخ:', e);
+                        }
+                    }
+                }
+            });
+            
+            // اضافه کردن آیکون تقویم
+            if (!dateInput.parent().find('.p-datepicker-trigger').length) {
+                var iconSpan = $('<span>', {
+                    class: 'p-datepicker-trigger',
+                    html: '📅',
+                    css: {
+                        'position': 'absolute',
+                        'right': '10px',
+                        'top': '50%',
+                        'transform': 'translateY(-50%)',
+                        'cursor': 'pointer',
+                        'font-size': '1.2rem',
+                        'z-index': '10',
+                        'pointer-events': 'none'
+                    }
+                });
+                dateInput.parent().css('position', 'relative');
+                dateInput.parent().append(iconSpan);
+            }
+            
+            // باز کردن تقویم با کلیک روی input
+            dateInput.on('click', function() {
+                dateInput.pDatepicker('show');
+            });
+        }
+    }
+    
+    // راه‌اندازی date picker برای تاریخ سررسید
+    setupDatePicker('id_due_date', 'due_date');
+    
+    // راه‌اندازی datetime picker برای ساعت واریز
+    var transferTimeInput = $('#id_transfer_time');
+    
+    if (transferTimeInput.length) {
+        // تبدیل type='datetime-local' به text برای استفاده از تقویم شمسی
+        transferTimeInput.attr('type', 'text');
+        transferTimeInput.attr('readonly', 'readonly');
+        transferTimeInput.css('cursor', 'pointer');
+        
+        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+        var initialValue = transferTimeInput.val();
+        var persianDateTimeValue = '';
+        
+        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+        if (initialValue) {
+            // فرمت Django-jalali: YYYY-MM-DD HH:MM:SS یا YYYY-MM-DDTHH:MM
+            var datePart, timePart;
+            if (initialValue.includes('T')) {
+                // فرمت ISO: YYYY-MM-DDTHH:MM
+                var parts = initialValue.split('T');
+                datePart = parts[0];
+                timePart = parts[1] || '00:00:00';
+            } else if (initialValue.includes(' ')) {
+                // فرمت Django-jalali: YYYY-MM-DD HH:MM:SS
+                var parts = initialValue.split(' ');
+                datePart = parts[0];
+                timePart = parts[1] || '00:00:00';
+            }
+            
+            if (datePart) {
+                var dateParts = datePart.split('-');
+                var timeParts = timePart.split(':');
+                if (dateParts.length === 3) {
+                    var hour = parseInt(timeParts[0]) || 0;
+                    var minute = parseInt(timeParts[1]) || 0;
+                    var gregorianDate = new Date(
+                        parseInt(dateParts[0]), 
+                        parseInt(dateParts[1]) - 1, 
+                        parseInt(dateParts[2]),
+                        hour,
+                        minute
+                    );
+                    var pDate = persianDate.fromGregorian(gregorianDate);
+                    persianDateTimeValue = pDate.format('YYYY/MM/DD HH:mm');
+                    transferTimeInput.val(persianDateTimeValue);
+                }
+            }
+        }
+        
+        // غیرفعال کردن name اصلی input برای جلوگیری از ارسال تاریخ شمسی
+        var originalName = transferTimeInput.attr('name');
+        transferTimeInput.removeAttr('name');
+        
+        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+        var hiddenInput = $('<input>', {
+            type: 'hidden',
+            id: 'id_transfer_time_hidden',
+            name: 'transfer_time'
+        });
+        if (initialValue) {
+            hiddenInput.val(initialValue);
+        }
+        transferTimeInput.after(hiddenInput);
+        
+        // راه‌اندازی تقویم شمسی با قابلیت انتخاب زمان
+        transferTimeInput.pDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD HH:mm',
+            altField: '#id_transfer_time_hidden',
+            altFormat: 'YYYY-MM-DD HH:mm:ss',
+            calendarType: 'persian',
+            initialValue: persianDateTimeValue || false,
+            timePicker: {
+                enabled: true
+            },
+            onSelect: function() {
+                // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                var selectedDateTime = transferTimeInput.val();
+                if (selectedDateTime) {
+                    try {
+                        var parts = selectedDateTime.split(' ');
+                        if (parts.length === 2) {
+                            var datePart = parts[0];
+                            var timePart = parts[1];
+                            var persianDateObj = persianDate.fromString(datePart, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var timeParts = timePart.split(':');
+                            var hour = parseInt(timeParts[0]) || 0;
+                            var minute = parseInt(timeParts[1]) || 0;
+                            
+                            // فرمت مورد انتظار Django-jalali: YYYY-MM-DD HH:MM:SS
+                            var formattedDateTime = gregorianDate.year + '-' + 
+                                                   String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                                   String(gregorianDate.day).padStart(2, '0') + ' ' +
+                                                   String(hour).padStart(2, '0') + ':' +
+                                                   String(minute).padStart(2, '0') + ':00';
+                            
+                            hiddenInput.val(formattedDateTime);
+                        }
+                    } catch (e) {
+                        console.error('خطا در تبدیل تاریخ:', e);
+                    }
+                }
+            }
+        });
+        
+        // اضافه کردن آیکون تقویم
+        if (!transferTimeInput.parent().find('.p-datepicker-trigger').length) {
+            var iconSpan = $('<span>', {
+                class: 'p-datepicker-trigger',
+                html: '📅',
+                css: {
+                    'position': 'absolute',
+                    'right': '10px',
+                    'top': '50%',
+                    'transform': 'translateY(-50%)',
+                    'cursor': 'pointer',
+                    'font-size': '1.2rem',
+                    'z-index': '10',
+                    'pointer-events': 'none'
+                }
+            });
+            transferTimeInput.parent().css('position', 'relative');
+            transferTimeInput.parent().append(iconSpan);
+        }
+        
+        // باز کردن تقویم با کلیک روی input
+        transferTimeInput.on('click', function() {
+            transferTimeInput.pDatepicker('show');
+        });
+    }
+});
+</script>
+{% endblock %}

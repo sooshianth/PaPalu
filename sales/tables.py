@@ -1309,3 +1309,298 @@ class UnloadApprovalOrderTable(tables.Table):
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
 
+
+class PendingSettlementOrderTable(tables.Table):
+    """جدول لیست سفارش‌های در انتظار تسویه با استفاده از django-tables2"""
+    
+    def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
+        user = kwargs.pop('user', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
+        if self.accessible_fields is None and user is not None:
+            self.accessible_fields = self._get_accessible_fields(user)
+        
+        # فیلتر کردن ستون‌ها بر اساس دسترسی
+        if self.accessible_fields:
+            self._filter_columns_by_access()
+    
+    def _get_accessible_fields(self, user):
+        """محاسبه فیلدهای قابل دسترسی برای کاربر"""
+        from core.OrderFolder.OrderModel import Order as OrderModel
+        
+        # superuser به همه فیلدها دسترسی دارد
+        if user.is_superuser:
+            return {
+                'order_number': True,
+                'customer_name': True,
+                'order_weight': True,
+                'delivered_weight': True,
+                'difference_amount': True,
+                'actions': True,
+            }
+        
+        # فیلدهایی که در لیست نمایش داده می‌شوند
+        field_mapping = {
+            'order_number': None,  # همیشه نمایش داده می‌شود
+            'customer_name': (OrderModel, 'customer'),
+            'order_weight': None,  # محاسبه شده
+            'delivered_weight': None,  # محاسبه شده
+            'difference_amount': None,  # محاسبه شده
+            'actions': None,  # عملیات همیشه نمایش داده می‌شود
+        }
+        
+        accessible_fields = {}
+        for display_name, mapping in field_mapping.items():
+            if mapping is None:
+                accessible_fields[display_name] = True
+            else:
+                model_class, model_field_name = mapping
+                accessible_fields[display_name] = check_field_access_prefer_edit(
+                    user,
+                    model_class,
+                    model_field_name,
+                )
+        
+        return accessible_fields
+    
+    def _filter_columns_by_access(self):
+        """فیلتر کردن ستون‌ها بر اساس دسترسی کاربر"""
+        if not self.accessible_fields:
+            return
+        
+        columns_to_exclude = []
+        for column_name in list(self.columns.columns.keys()):
+            if column_name in self.accessible_fields:
+                if not self.accessible_fields[column_name]:
+                    columns_to_exclude.append(column_name)
+        
+        for column_name in columns_to_exclude:
+            if column_name in self.columns.columns:
+                del self.columns.columns[column_name]
+        
+        if columns_to_exclude:
+            if not hasattr(self._meta, 'exclude') or self._meta.exclude is None:
+                self._meta.exclude = tuple(columns_to_exclude)
+            else:
+                existing_exclude = set(self._meta.exclude) if self._meta.exclude else set()
+                existing_exclude.update(columns_to_exclude)
+                self._meta.exclude = tuple(existing_exclude)
+            
+            if hasattr(self._meta, 'fields') and self._meta.fields:
+                self._meta.fields = tuple(
+                    field for field in self._meta.fields 
+                    if field not in columns_to_exclude
+                )
+            
+            if hasattr(self._meta, 'sequence') and self._meta.sequence:
+                self._meta.sequence = tuple(
+                    field for field in self._meta.sequence 
+                    if field not in columns_to_exclude
+                )
+    
+    order_number = tables.Column(
+        verbose_name='شماره سفارش',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    customer_name = tables.Column(
+        verbose_name='نام مشتری',
+        accessor='customer.name',
+        orderable=True,
+        order_by='customer__name',
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    order_weight = tables.Column(
+        verbose_name='وزن سفارش (کیلوگرم)',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    delivered_weight = tables.Column(
+        verbose_name='وزن تحویلی (کیلوگرم)',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    difference_amount = tables.Column(
+        verbose_name='مبلغ اختلاف (تومان)',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        model = Order
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('order_number', 'customer_name', 'order_weight', 'delivered_weight', 'difference_amount', 'actions')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('order_number', 'customer_name', 'order_weight', 'delivered_weight', 'difference_amount', 'actions')
+    
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش به صورت badge"""
+        return format_html('<span class="code-badge">{}</span>', value)
+    
+    def render_customer_name(self, value, record):
+        """نمایش نام مشتری"""
+        if value:
+            return value
+        return '-'
+    
+    def render_order_weight(self, record):
+        """محاسبه و نمایش وزن کل سفارش"""
+        try:
+            from decimal import Decimal
+            
+            # محاسبه مستقیم وزن سفارش
+            order_weight = Decimal('0')
+            for item in record.order_items.all():
+                weight_kg = item.get_weight_in_kg()
+                order_weight += Decimal(str(weight_kg))
+            
+            # تبدیل به float و فرمت کردن
+            weight_value = float(order_weight)
+            weight_formatted = f"{weight_value:,.2f}"
+            
+            # نمایش وزن (حتی اگر صفر باشد)
+            return format_html('<strong>{}</strong>', weight_formatted)
+        except Exception as e:
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+    
+    def render_delivered_weight(self, record):
+        """محاسبه و نمایش وزن تحویلی از مجموع وزن‌های خالص حمل‌ها"""
+        try:
+            from core.AllocationFolder.AllocationModel import Allocation
+            from core.TransportFolder.TransportModel import Transport
+            from decimal import Decimal
+            
+            # محاسبه مستقیم وزن تحویلی
+            allocations = Allocation.objects.filter(order=record)
+            allocation_numbers = allocations.values_list('allocation_number', flat=True)
+            transports = Transport.objects.filter(allocation_id__in=allocation_numbers)
+            delivered_weight = sum(
+                Decimal(str(t.net_weight or 0)) for t in transports
+            )
+            
+            # تبدیل به float و فرمت کردن
+            weight_value = float(delivered_weight)
+            weight_formatted = f"{weight_value:,.2f}"
+            
+            # نمایش وزن (حتی اگر صفر باشد)
+            return format_html('<strong>{}</strong>', weight_formatted)
+        except Exception as e:
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+    
+    def render_difference_amount(self, record):
+        """محاسبه و نمایش مبلغ اختلاف"""
+        try:
+            from core.AllocationFolder.AllocationModel import Allocation
+            from core.TransportFolder.TransportModel import Transport
+            from decimal import Decimal
+            
+            # محاسبه وزن سفارش
+            order_weight = Decimal('0')
+            for item in record.order_items.all():
+                weight_kg = item.get_weight_in_kg()
+                order_weight += Decimal(str(weight_kg))
+            
+            # محاسبه وزن تحویلی
+            allocations = Allocation.objects.filter(order=record)
+            allocation_numbers = allocations.values_list('allocation_number', flat=True)
+            transports = Transport.objects.filter(allocation_id__in=allocation_numbers)
+            delivered_weight = sum(
+                Decimal(str(t.net_weight or 0)) for t in transports
+            )
+            
+            # محاسبه اختلاف وزن
+            weight_difference = delivered_weight - order_weight
+            
+            # محاسبه میانگین وزن‌دار فی فروش
+            total_price = Decimal('0')
+            total_weight_for_avg = Decimal('0')
+            
+            for item in record.order_items.all():
+                if item.unit_price and item.quantity:
+                    item_weight = Decimal(str(item.get_weight_in_kg()))
+                    item_price = Decimal(str(item.unit_price))
+                    total_price += item_weight * item_price
+                    total_weight_for_avg += item_weight
+            
+            # محاسبه میانگین فی
+            if total_weight_for_avg > 0:
+                weighted_avg_price = total_price / total_weight_for_avg
+            else:
+                weighted_avg_price = Decimal('0')
+            
+            # محاسبه مبلغ اختلاف
+            difference_amount = weight_difference * weighted_avg_price
+            
+            # تبدیل به float و فرمت کردن
+            amount_value = float(difference_amount)
+            amount_formatted = f"{amount_value:,.0f}"
+            
+            # نمایش با رنگ مناسب (حتی اگر صفر باشد)
+            if difference_amount > 0:
+                return format_html(
+                    '<strong style="color: var(--primary-green);">+{}</strong>',
+                    amount_formatted
+                )
+            elif difference_amount < 0:
+                return format_html(
+                    '<strong style="color: #dc3545;">{}</strong>',
+                    amount_formatted
+                )
+            else:
+                return format_html('<strong>0</strong>')
+        except Exception as e:
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        try:
+            detail_url = reverse('sales:settlement_detail', args=[record.order_number])
+            
+            html = format_html(
+                '<div class="btn-group">'
+                '<a href="{}" class="btn-outline-info" title="تسویه حساب">تسویه حساب</a>'
+                '</div>',
+                detail_url
+            )
+            return html
+        except Exception as e:
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))

@@ -339,21 +339,9 @@ def register_loading_exit_view(request, waybill_number):
                     transport.net_weight = net_weight
                     transport.save(update_fields=['gross_weight', 'empty_weight', 'net_weight'])
                     
-                    # ایجاد یا به‌روزرسانی ProductInfo (بدون وزن‌ها)
-                    product_info, created = ProductInfo.objects.get_or_create(
-                        transport=transport,
-                        defaults={
-                            'packaging_type': packaging_type,
-                            'origin_warehouse': origin_warehouse,
-                            'destination_warehouse': destination_warehouse,
-                        }
-                    )
-                    
-                    if not created:
-                        product_info.packaging_type = packaging_type
-                        product_info.origin_warehouse = origin_warehouse
-                        product_info.destination_warehouse = destination_warehouse
-                        product_info.save()
+                    # توجه: اطلاعات ProductInfo فقط برای نمایش هستند و در این فرم به‌روزرسانی نمی‌شوند
+                    # اگر ProductInfo وجود دارد، اطلاعات آن‌ها از قبل ثبت شده‌اند
+                    # packaging_type و warehouse ها فقط برای عملیات بعدی استفاده می‌شوند
                     
                     # TODO: کاهش موجودی انبار مبدأ
                     # این بخش باید با سیستم موجودی انبار یکپارچه شود
@@ -473,13 +461,37 @@ def register_loading_exit_view(request, waybill_number):
                 plate_number = truck_info.plate_number
                 vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
             
-            product_info = transport.product_infos.first()
+            # دریافت اطلاعات محصول - همه ProductInfoها
+            product_infos = transport.product_infos.all()
+            product_info_list = []
             product_name = None
-            if product_info:
+            
+            for product_info in product_infos:
+                item_name = None
+                item_type_display = None
+                
                 if product_info.product:
-                    product_name = product_info.product.name
+                    item_name = product_info.product.name
+                    item_type_display = 'محصول'
                 elif product_info.raw_material:
-                    product_name = product_info.raw_material.name
+                    item_name = product_info.raw_material.name
+                    item_type_display = 'مواد اولیه'
+                
+                if item_name:
+                    packaging_type_display = product_info.get_packaging_type_display() if product_info.packaging_type else None
+                    product_info_list.append({
+                        'name': item_name,
+                        'weight': product_info.weight,
+                        'packaging_type': packaging_type_display,
+                        'item_type': item_type_display,
+                        'unit': 'کیلوگرم',
+                    })
+            
+            # برای سازگاری با کد قبلی، اولین محصول را به عنوان product_name نگه می‌داریم
+            if product_info_list:
+                product_name = product_info_list[0]['name']
+            elif product_infos.exists():
+                product_name = 'نامشخص'
             
             order_number = None
             if transport.allocation_id:
@@ -498,6 +510,7 @@ def register_loading_exit_view(request, waybill_number):
                 'plate_number': plate_number,
                 'vehicle_type': vehicle_type,
                 'product_name': product_name or 'نامشخص',
+                'product_info_list': product_info_list,
                 'order_number': order_number or 'نامشخص',
                 'accessible_person_fields': accessible_person_fields,
                 'page_title': f'ثبت خروج کالا - {transport.waybill_number}',
@@ -631,14 +644,38 @@ def register_loading_exit_view(request, waybill_number):
         plate_number = truck_info.plate_number
         vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
     
-    # دریافت اطلاعات محصول
-    product_info = transport.product_infos.first()
+    # دریافت اطلاعات محصول - همه ProductInfoها
+    product_infos = transport.product_infos.all()
+    product_info_list = []
     product_name = None
-    if product_info:
+    
+    for product_info in product_infos:
+        item_name = None
+        item_type_display = None
+        
         if product_info.product:
-            product_name = product_info.product.name
+            item_name = product_info.product.name
+            item_type_display = 'محصول'
         elif product_info.raw_material:
-            product_name = product_info.raw_material.name
+            item_name = product_info.raw_material.name
+            item_type_display = 'مواد اولیه'
+        
+        if item_name:
+            packaging_type_display = product_info.get_packaging_type_display() if product_info.packaging_type else None
+            product_info_list.append({
+                'name': item_name,
+                'weight': product_info.weight,
+                'packaging_type': packaging_type_display,
+                'item_type': item_type_display,
+                'unit': 'کیلوگرم',
+            })
+    
+    # برای سازگاری با کد قبلی، اولین محصول را به عنوان product_name نگه می‌داریم
+    if product_info_list:
+        product_name = product_info_list[0]['name']
+    elif product_infos.exists():
+        # اگر ProductInfo وجود دارد اما محصول مشخص نیست
+        product_name = 'نامشخص'
     
     # دریافت شماره سفارش
     order_number = None
@@ -659,6 +696,7 @@ def register_loading_exit_view(request, waybill_number):
         'plate_number': plate_number,
         'vehicle_type': vehicle_type,
         'product_name': product_name or 'نامشخص',
+        'product_info_list': product_info_list,
         'order_number': order_number or 'نامشخص',
         'accessible_person_fields': accessible_person_fields,
         'page_title': f'ثبت خروج کالا - {transport.waybill_number}',

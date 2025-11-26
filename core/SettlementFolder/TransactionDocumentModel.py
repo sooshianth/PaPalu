@@ -20,6 +20,11 @@ class TransactionDocument(models.Model):
         ('cheque', 'چک'),
     ]
 
+    DISCREPANCY_TYPE_CHOICES = [
+        ('shortage', 'کسری'),
+        ('surplus', 'سرک'),
+    ]
+
     # شناسه یکتا (Primary Key)
     id = models.AutoField(
         primary_key=True,
@@ -180,6 +185,16 @@ class TransactionDocument(models.Model):
         verbose_name='ساعت واریز',
         null=True,
         blank=True
+    )
+
+    # نوع اختلاف (کسری یا سرک)
+    discrepancy_type = models.CharField(
+        max_length=20,
+        choices=DISCREPANCY_TYPE_CHOICES,
+        verbose_name='نوع تسویه (کسری/سرک)',
+        null=True,
+        blank=True,
+        help_text='نوع تسویه: کسری (مبلغ منفی) یا سرک (مبلغ مثبت)'
     )
 
     class Meta:
