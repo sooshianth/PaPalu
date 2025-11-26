@@ -35,7 +35,8 @@ class Order(models.Model):
         ('pending_loading', 'در انتظار بارگیری'),
         ('pending_waybill', 'در انتظار بارنامه'),
         ('pending_exit', 'در انتظار خروج'),
-        ('completed', 'تکمیل شده'),
+        ('pending_unloading_approval', 'در انتظار تایید تخلیه'),
+        ('pending_settlement', 'در انتظار تسویه'),
         ('cancelled', 'لغو شده'),
         ('archived', 'بایگانی شده'),
     ]

@@ -178,7 +178,8 @@ def print_waybill_pdf_view(request, waybill_number):
 @login_required
 def mark_vehicle_exited_view(request, waybill_number):
     """
-    ثبت خروج خودرو - تغییر وضعیت به بارگیری شده
+    ثبت خروج خودرو - تغییر وضعیت حمل به تکمیل شده
+    و بررسی تغییر وضعیت تخصیص و سفارش
     """
     audit_logger.info(f"درخواست ثبت خروج خودرو برای حمل {waybill_number}")
     
@@ -195,9 +196,54 @@ def mark_vehicle_exited_view(request, waybill_number):
     
     try:
         with transaction.atomic():
-            # تغییر وضعیت حمل به loaded (بارگیری شده)
-            transport.status = 'loaded'
+            # تغییر وضعیت حمل به completed (تکمیل بارگیری)
+            transport.status = 'completed'
             transport.save(update_fields=['status'])
+            
+            # بررسی تغییر وضعیت تخصیص
+            if transport.allocation_id:
+                allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+                if allocation:
+                    # بررسی اینکه آیا همه حمل‌های تخصیص به completed رسیدند
+                    all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
+                    all_transports_count = all_transports.count()
+                    completed_transports_count = all_transports.filter(status='completed').count()
+                    
+                    # اگر همه حمل‌ها به completed رسیدند، تخصیص را به delivered ببر
+                    if all_transports_count > 0 and all_transports_count == completed_transports_count:
+                        allocation.allocation_status = 'delivered'
+                        allocation.save(update_fields=['allocation_status'])
+                        bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'تحویل شده' تغییر کرد")
+                        
+                        # بررسی تغییر وضعیت سفارش
+                        if allocation.order:
+                            order = allocation.order
+                            # دریافت همه تخصیص‌های سفارش
+                            relevant_allocations = Allocation.objects.filter(
+                                order=order
+                            ).exclude(
+                                allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
+                            )
+                            
+                            # فقط تخصیص‌هایی که حداقل یک حمل دارند را بررسی می‌کنیم
+                            allocations_with_transports = []
+                            for alloc in relevant_allocations:
+                                alloc_transports = Transport.objects.filter(allocation_id=alloc.allocation_number)
+                                if alloc_transports.exists():
+                                    allocations_with_transports.append(alloc)
+                            
+                            # بررسی اینکه آیا همه تخصیص‌های دارای حمل به delivered رسیدند
+                            if allocations_with_transports:
+                                all_delivered = all(
+                                    alloc.allocation_status == 'delivered' 
+                                    for alloc in allocations_with_transports
+                                )
+                                
+                                if all_delivered:
+                                    order.status = 'pending_unloading_approval'
+                                    order.save(update_fields=['status'])
+                                    bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تخلیه' تغییر کرد")
+                                    audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تخلیه' تغییر کرد")
             
             bug_logger.info(f"خروج خودرو برای حمل {waybill_number} ثبت شد")
             messages.success(request, f'خروج خودرو برای حمل {waybill_number} با موفقیت ثبت شد.')
