@@ -10,6 +10,7 @@ from sales.views import (
     transaction_receipt_approve_view,
     allocation_list_view,
     allocation_approve_view,
+    unload_approval_view,
 )
 
 app_name = 'sales'
@@ -54,6 +55,10 @@ urlpatterns = [
     path('approve-allocation/list/', allocation_approve_view.approve_allocation_list_view, name='approve_allocation_list'),
     path('approve-allocation/<str:order_number>/', allocation_approve_view.approve_allocation_detail_view, name='approve_allocation_detail'),
     path('approve-allocation/<str:order_number>/<str:allocation_number>/inquiry/', allocation_approve_view.approve_allocation_inquiry_view, name='approve_allocation_inquiry'),
+    
+    # مسیرهای تایید تخلیه
+    path('unload-approval/list/', unload_approval_view.unload_approval_list_view, name='unload_approval_list'),
+    path('unload-approval/<str:order_number>/', unload_approval_view.unload_approval_detail_view, name='unload_approval_detail'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     

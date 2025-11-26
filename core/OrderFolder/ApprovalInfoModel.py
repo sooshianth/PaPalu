@@ -78,6 +78,18 @@ class ApprovalInfo(models.Model):
         blank=True,
         verbose_name='زمان بایگانی'
     )
+
+    unload_approval_time = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان تایید تخلیه'
+    )
+    
+    customer_feedback = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name='توضیحات فیدبک مشتری'
+    )
     
     class Meta:
         verbose_name = 'سفارش | اطلاعات تأییدیه'

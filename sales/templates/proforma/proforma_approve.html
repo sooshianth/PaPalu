@@ -196,7 +196,7 @@
                     {% elif order.status == 'confirmed' %}تایید شده
                     {% elif order.status == 'processing' %}در حال پردازش
                     {% elif order.status == 'pending_customer_proforma_approval' %}در انتظار تأیید پیش فاکتور توسط مشتری
-                    {% elif order.status == 'completed' %}تکمیل شده
+                    {% elif order.status == 'pending_unloading_approval' %}در انتظار تایید تخلیه
                     {% elif order.status == 'cancelled' %}لغو شده
                     {% elif order.status == 'archived' %}بایگانی شده
                     {% else %}-{% endif %}
