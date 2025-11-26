@@ -248,6 +248,54 @@
       </table>
     </div>
 
+    <div class="section-title">حمل‌های خرید مرتبط</div>
+    <div class="btn-actions" style="margin-bottom: 1rem;">
+      <a href="{% url 'supply:create_purchase_transport' %}?order={{ po.order_number }}" class="btn btn-primary">
+        <svg style="width: 1.2rem; height: 1.2rem; margin-left: 0.3rem;" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+          <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+        </svg>
+        ثبت حمل جدید
+      </a>
+    </div>
+    
+    {% if transports %}
+      <div class="table-container">
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th>شماره حمل</th>
+              <th>نوع ماشین</th>
+              <th>وضعیت حمل</th>
+              <th>تاریخ ثبت</th>
+              <th>کرایه</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for transport in transports %}
+              <tr>
+                <td>{{ transport.transport_number }}</td>
+                <td>{{ transport.get_vehicle_type_display }}</td>
+                <td>
+                  <span class="badge badge-{{ transport.status }}">
+                    {{ transport.get_status_display }}
+                  </span>
+                </td>
+                <td>{{ transport.created_at|date:"Y/m/d H:i" }}</td>
+                <td>{{ transport.freight_cost|default:"—" }}</td>
+                <td>
+                  <a href="{% url 'supply:purchase_transport_detail' transport.transport_number %}" class="btn-link">مشاهده</a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem;">هیچ حمل خریدی برای این سفارش ثبت نشده است.</p>
+    {% endif %}
+
     <div class="section-title">تاریخچه وضعیت</div>
     <div class="table-container">
       {% render_table log_table %}

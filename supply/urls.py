@@ -17,6 +17,15 @@ from .views.purchase_order_views import (
     transition_procurement_purchase_order_status_view,
     confirm_procurement_purchase_order_payment_view,
 )
+from .views.purchase_transport_views import (
+    purchase_transport_list_view,
+    create_purchase_transport_view,
+    purchase_transport_detail_view,
+    edit_purchase_transport_view,
+    delete_purchase_transport_view,
+    transition_purchase_transport_status_view,
+    get_purchase_order_info_api,
+)
 
 app_name = 'supply'
 
@@ -36,4 +45,13 @@ urlpatterns = [
     path('purchaseorders/<str:order_number>/delete/', delete_procurement_purchase_order_view, name='delete_procurement_purchase_order'),
     path('purchaseorders/<str:order_number>/transition/<str:new_status>/', transition_procurement_purchase_order_status_view, name='transition_procurement_purchase_order_status'),
     path('purchaseorders/<str:order_number>/confirm-payment/', confirm_procurement_purchase_order_payment_view, name='confirm_procurement_purchase_order_payment'),
+    # Purchase Transport Management
+    path('purchasetransport/', purchase_transport_list_view, name='purchase_transport_list'),
+    path('purchasetransport/create/', create_purchase_transport_view, name='create_purchase_transport'),
+    path('purchasetransport/<str:transport_number>/', purchase_transport_detail_view, name='purchase_transport_detail'),
+    path('purchasetransport/<str:transport_number>/edit/', edit_purchase_transport_view, name='edit_purchase_transport'),
+    path('purchasetransport/<str:transport_number>/delete/', delete_purchase_transport_view, name='delete_purchase_transport'),
+    path('purchasetransport/<str:transport_number>/transition/<str:new_status>/', transition_purchase_transport_status_view, name='transition_purchase_transport_status'),
+    # API
+    path('api/purchase-order-info/<str:order_number>/', get_purchase_order_info_api, name='get_purchase_order_info_api'),
 ]
