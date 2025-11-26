@@ -183,8 +183,9 @@
       {% if not po.payment_confirmed %}<a href="{% url 'supply:confirm_procurement_purchase_order_payment' po.order_number %}" class="btn btn-success" onclick="return confirm('تایید پرداخت؟ پس از تایید امکان ویرایش مالی وجود ندارد')">تایید پرداخت</a>{% endif %}
     </div>
     
-    <div class="section-title">اطلاعات سفارش</div>
+    <div class="section-title">اطلاعات سفارش (Order-Level)</div>
     <div class="detail-grid">
+      <div class="kv"><span>شماره سفارش</span><strong>{{ po.order_number }}</strong></div>
       <div class="kv"><span>وضعیت</span><strong>{{ po.get_status_display }}</strong></div>
       <div class="kv"><span>تأمین‌کننده</span><strong>{{ po.supplier.name|default:'—' }}</strong></div>
       <div class="kv"><span>نوع پرداخت کرایه</span><strong>{{ po.get_freight_payment_type_display }}</strong></div>
@@ -192,13 +193,59 @@
       <div class="kv"><span>هزینه کرایه</span><strong>{{ po.freight_cost|default:'—' }}</strong></div>
       <div class="kv"><span>مالیات %</span><strong>{{ po.vat_percentage|default:'—' }}</strong></div>
       <div class="kv"><span>پیش‌فاکتور تایید شد؟</span><strong>{{ po.pre_invoice_approved|yesno:'بله,خیر' }}</strong></div>
+      <div class="kv"><span>پرداخت تایید شد؟</span><strong>{{ po.payment_confirmed|yesno:'بله,خیر' }}</strong></div>
+      <div class="kv"><span>شناسه در سیستم خارجی</span><strong>{{ po.external_system_id|default:'—' }}</strong></div>
+      <div class="kv"><span>کاربر ثبت کننده</span><strong>{{ po.created_by.get_full_name|default:po.created_by.username|default:'—' }}</strong></div>
       <div class="kv"><span>تاریخ ایجاد</span><strong>{{ po.created_at|date:'Y-m-d H:i' }}</strong></div>
-      <div class="materials-list">
-        {% for m in materials %}<span class="mat">{{ m.raw_material.name }} ({{ m.quantity }} {{ m.unit }})</span>{% empty %}<span style="color:var(--gray-500)">—</span>{% endfor %}
-      </div>
       {% if po.pre_invoice_file %}
       <div class="kv" style="grid-column:1/-1"><span>فایل پیش‌فاکتور</span><a href="{{ po.pre_invoice_file.url }}" target="_blank" style="color:var(--primary-green);font-weight:600">دانلود</a></div>
       {% endif %}
+    </div>
+    
+    <div class="section-title">مواد اولیه (Material-Level Details) - هر ماده با جزئیات خود</div>
+    <div class="table-container" style="overflow-x: auto;">
+      <table class="table table-bordered table-hover" style="min-width: 1800px;">
+        <thead>
+          <tr>
+            <th>شناسه ماده اولیه</th>
+            <th>نام ماده اولیه</th>
+            <th>شکل فیزیکی</th>
+            <th>توضیحات فنی</th>
+            <th>مقدار</th>
+            <th>واحد</th>
+            <th>قیمت واحد</th>
+            <th>قیمت کل</th>
+            <th>بدون احتساب کرایه؟</th>
+            <th>مالیات بر ارزش افزوده</th>
+            <th>بهای تمام شده کرایه</th>
+            <th>بهای تمام شده خرید</th>
+            <th>شناسه تخصیص</th>
+            <th>توضیحات</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in materials %}
+          <tr>
+            <td>{{ m.raw_material.raw_material_id|default:'—' }}</td>
+            <td><strong>{{ m.raw_material.name|default:'—' }}</strong></td>
+            <td>{{ m.raw_material.get_physical_form_display|default:'—' }}</td>
+            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.raw_material.technical_description }}">{{ m.raw_material.technical_description|default:'—'|truncatewords:5 }}</td>
+            <td>{{ m.quantity }}</td>
+            <td>{{ m.unit|default:'—' }}</td>
+            <td>{{ m.unit_price|default:'—' }}</td>
+            <td>{{ m.total_price|default:'—' }}</td>
+            <td>{{ m.freight_included|yesno:'بله,خیر' }}</td>
+            <td>{{ m.vat_on_material|default:'—' }}</td>
+            <td>{{ m.freight_cost_completed|default:'—' }}</td>
+            <td>{{ m.total_cost_completed|default:'—' }}</td>
+            <td>{{ m.external_allocation_id|default:'—' }}</td>
+            <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.notes }}">{{ m.notes|default:'—'|truncatewords:5 }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="14" style="text-align:center;color:var(--gray-500)">هیچ ماده اولیه‌ای ثبت نشده</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     <div class="section-title">تاریخچه وضعیت</div>
@@ -208,11 +255,13 @@
 
     <div class="section-title">تغییر وضعیت</div>
     <div class="btn-actions">
-      {% for code,label in po.STATUS_CHOICES %}
-        {% if code != po.status and code in po.WORKFLOW_ALLOWED.get(po.status,[]) %}
+      {% if next_status_choices %}
+        {% for code,label in next_status_choices %}
           <a href="{% url 'supply:transition_procurement_purchase_order_status' po.order_number code %}" class="btn btn-success" onclick="return confirm('تغییر وضعیت به {{ label }} ؟')">{{ label }}</a>
-        {% endif %}
-      {% endfor %}
+        {% endfor %}
+      {% else %}
+        <p style="color: var(--gray-600); font-size: 0.9rem;">هیچ وضعیت بعدی مجاز در گردش کار وجود ندارد.</p>
+      {% endif %}
     </div>
 </div>
 {% endblock %}

@@ -1,5 +1,5 @@
 import django_tables2 as tables
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
 from django.urls import reverse
 from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.RepresentativeModel import Representative
@@ -137,7 +137,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     )
     
     materials_list = tables.Column(
-        verbose_name='مواد اولیه',
+        verbose_name='نام مواد اولیه',
         empty_values=(),
         orderable=False,
         attrs={
@@ -147,9 +147,20 @@ class ProcurementPurchaseOrderTable(tables.Table):
     )
     
     supplier = tables.Column(
-        verbose_name='تأمین‌کننده',
+        verbose_name='نام تأمین‌کننده',
         accessor='supplier.name',
         orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    created_by = tables.Column(
+        verbose_name='کاربر ثبت کننده',
+        accessor='created_by',
+        orderable=True,
+        empty_values=(),
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -179,7 +190,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     class Meta:
         model = ProcurementPurchaseOrder
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_at', 'actions')
+        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.85rem'
@@ -187,7 +198,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('order_number', 'status', 'materials_list', 'supplier', 'created_at', 'actions')
+        sequence = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'actions')
     
     def render_status(self, value, record):
         """نمایش وضعیت به صورت badge"""
@@ -199,21 +210,35 @@ class ProcurementPurchaseOrderTable(tables.Table):
         )
     
     def render_materials_list(self, record):
-        """نمایش لیست مواد اولیه"""
-        materials = record.materials.all()
+        """نمایش لیست مواد اولیه با جزئیات FK از RawMaterial"""
+        materials = record.materials.select_related('raw_material').all()
         if materials:
-            html_parts = []
+            items = []
             for m in materials:
-                html_parts.append(format_html(
-                    '<span style="display:inline-block;padding:2px 6px;background:#f1f3f4;border-radius:4px;margin:1px">{}</span>',
-                    m.raw_material.name
-                ))
-            return format_html(''.join(str(part) for part in html_parts))
+                rm = m.raw_material
+                # نمایش: شناسه - نام (شکل فیزیکی)
+                display_text = f"{rm.raw_material_id or 'N/A'} - {rm.name or 'بدون نام'}"
+                if rm.physical_form:
+                    display_text += f" ({rm.get_physical_form_display()})"
+                items.append((display_text,))
+            
+            inner_html = format_html_join(
+                '',
+                '<div style="padding:4px 8px;background:#e3f2fd;border-radius:4px;margin:2px;font-size:0.75rem;border-right:3px solid #1976d2">{}</div>',
+                items
+            )
+            return format_html('<div style="display:flex;flex-direction:column;gap:2px">{}</div>', inner_html)
         return '—'
     
     def render_supplier(self, value):
         """نمایش نام تأمین‌کننده"""
         return value or '—'
+    
+    def render_created_by(self, record):
+        """نمایش نام کاربر ثبت کننده"""
+        if record.created_by:
+            return record.created_by.get_full_name() or record.created_by.username
+        return '—'
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""

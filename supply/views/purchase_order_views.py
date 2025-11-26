@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django import forms
 from django.forms import ModelForm, inlineformset_factory
 from django.db import transaction
@@ -26,16 +27,17 @@ class ProcurementPurchaseOrderForm(ModelForm):
         fields = [
             'supplier', 'freight_payment_type',
             'subtotal_without_freight', 'freight_cost', 'vat_percentage',
-            'pre_invoice_file', 'pre_invoice_approved'
+            'pre_invoice_file', 'pre_invoice_approved', 'external_system_id'
         ]
         labels = {
             'supplier': 'تأمین‌کننده',
             'freight_payment_type': 'نوع پرداخت کرایه',
             'subtotal_without_freight': 'جمع بدون کرایه',
             'freight_cost': 'هزینه کرایه',
-            'vat_percentage': 'درصد مالیات',
+            'vat_percentage': 'درصد مالیات بر ارزش افزوده',
             'pre_invoice_file': 'فایل پیش‌فاکتور',
             'pre_invoice_approved': 'پیش‌فاکتور تایید شد؟',
+            'external_system_id': 'شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت',
         }
         widgets = {
             'supplier': forms.Select(attrs={'class': 'form-control'}),
@@ -45,6 +47,7 @@ class ProcurementPurchaseOrderForm(ModelForm):
             'vat_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'pre_invoice_file': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'pre_invoice_approved': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'external_system_id': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -61,16 +64,37 @@ class ProcurementPurchaseOrderForm(ModelForm):
 class ProcurementPurchaseOrderMaterialForm(ModelForm):
     class Meta:
         model = ProcurementPurchaseOrderMaterial
-        fields = ['raw_material', 'quantity', 'unit']
+        fields = [
+            'raw_material', 'quantity', 'unit', 'notes',
+            'unit_price', 'total_price', 'freight_included',
+            'vat_on_material', 'freight_cost_completed',
+            'total_cost_completed', 'external_allocation_id'
+        ]
         labels = {
             'raw_material': 'ماده اولیه',
             'quantity': 'مقدار',
             'unit': 'واحد',
+            'notes': 'توضیحات',
+            'unit_price': 'قیمت واحد',
+            'total_price': 'قیمت کل',
+            'freight_included': 'بهای تمام شده بدون احتساب کرایه',
+            'vat_on_material': 'مالیات بر ارزش افزوده',
+            'freight_cost_completed': 'بهای تمام شده کرایه خرید',
+            'total_cost_completed': 'بهای تمام شده خرید',
+            'external_allocation_id': 'شناسه تخصیص',
         }
         widgets = {
             'raw_material': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'unit': forms.TextInput(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'total_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'freight_included': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'vat_on_material': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'freight_cost_completed': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'total_cost_completed': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'external_allocation_id': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -82,19 +106,33 @@ MaterialFormSet = inlineformset_factory(
     ProcurementPurchaseOrder,
     ProcurementPurchaseOrderMaterial,
     form=ProcurementPurchaseOrderMaterialForm,
-    fields=['raw_material', 'quantity', 'unit'],
+    fields=[
+        'raw_material', 'quantity', 'unit', 'notes',
+        'unit_price', 'total_price', 'freight_included',
+        'vat_on_material', 'freight_cost_completed',
+        'total_cost_completed', 'external_allocation_id'
+    ],
     extra=1,
     can_delete=True
 )
 
 
+@login_required
 def purchase_order_management_view(request):
     """صفحه مدیریت سفارش‌های خرید شامل دو جدول سفارشات باز و تکمیل‌شده"""
     audit_logger.info("مشاهده مدیریت سفارش‌های خرید")
     try:
         from supply.tables import ProcurementPurchaseOrderTable
-        open_orders = ProcurementPurchaseOrder.objects.exclude(status=ProcurementPurchaseOrder.STATUS_COMPLETED).order_by('-created_at')
-        completed_orders = ProcurementPurchaseOrder.objects.filter(status=ProcurementPurchaseOrder.STATUS_COMPLETED).order_by('-created_at')
+        open_orders = ProcurementPurchaseOrder.objects.exclude(
+            status=ProcurementPurchaseOrder.STATUS_COMPLETED
+        ).select_related('supplier', 'created_by').prefetch_related(
+            'materials__raw_material'
+        ).order_by('-created_at')
+        completed_orders = ProcurementPurchaseOrder.objects.filter(
+            status=ProcurementPurchaseOrder.STATUS_COMPLETED
+        ).select_related('supplier', 'created_by').prefetch_related(
+            'materials__raw_material'
+        ).order_by('-created_at')
         
         # Create tables
         open_table = ProcurementPurchaseOrderTable(open_orders, prefix='open-')
@@ -121,6 +159,7 @@ def purchase_order_management_view(request):
         })
 
 
+@login_required
 def create_procurement_purchase_order_view(request):
     """ایجاد سفارش خرید جدید"""
     audit_logger.info("ایجاد سفارش خرید جدید")
@@ -131,6 +170,7 @@ def create_procurement_purchase_order_view(request):
                 with transaction.atomic():
                     po = form.save(commit=False)
                     po.status = ProcurementPurchaseOrder.STATUS_DRAFT  # initial
+                    po.created_by = request.user
                     po.save()  # triggers order_number generation
                     material_formset = MaterialFormSet(request.POST, instance=po, prefix='mat')
                     if material_formset.is_valid():
@@ -158,6 +198,7 @@ def create_procurement_purchase_order_view(request):
         })
 
 
+@login_required
 def procurement_purchase_order_detail_view(request, order_number):
     """جزئیات سفارش خرید"""
     audit_logger.info(f"مشاهده جزئیات سفارش خرید {order_number}")
@@ -167,15 +208,22 @@ def procurement_purchase_order_detail_view(request, order_number):
     logs = po.status_logs.all()
     log_table = ProcurementPurchaseOrderStatusLogTable(logs)
     can_edit_financial = not po.payment_confirmed
+    
+    # Get allowed next statuses for workflow transitions
+    allowed_next_statuses = po.WORKFLOW_ALLOWED.get(po.status, set())
+    next_status_choices = [(code, label) for code, label in po.STATUS_CHOICES if code in allowed_next_statuses]
+    
     return render(request, 'supply_procurement_purchase_order_detail.html', {
         'po': po,
         'materials': materials,
         'logs': logs,
         'log_table': log_table,
         'can_edit_financial': can_edit_financial,
+        'next_status_choices': next_status_choices,
     })
 
 
+@login_required
 def edit_procurement_purchase_order_view(request, order_number):
     """ویرایش سفارش خرید (فقط قبل از تایید پرداخت برای داده مالی)"""
     audit_logger.info(f"ویرایش سفارش خرید {order_number}")
@@ -209,6 +257,7 @@ def edit_procurement_purchase_order_view(request, order_number):
         return redirect(reverse('supply:procurement_purchase_order_detail', kwargs={'order_number': order_number}))
 
 
+@login_required
 def delete_procurement_purchase_order_view(request, order_number):
     audit_logger.activity(f"حذف سفارش خرید {order_number}")
     po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
@@ -224,6 +273,7 @@ def delete_procurement_purchase_order_view(request, order_number):
     return redirect(reverse('supply:purchase_order_management'))
 
 
+@login_required
 def transition_procurement_purchase_order_status_view(request, order_number, new_status):
     audit_logger.activity(f"درخواست تغییر وضعیت سفارش خرید {order_number} -> {new_status}")
     po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
@@ -239,6 +289,7 @@ def transition_procurement_purchase_order_status_view(request, order_number, new
     return redirect(reverse('supply:procurement_purchase_order_detail', kwargs={'order_number': order_number}))
 
 
+@login_required
 def confirm_procurement_purchase_order_payment_view(request, order_number):
     """تایید پرداخت سفارش خرید و قفل شدن داده‌های مالی"""
     audit_logger.activity(f"تایید پرداخت سفارش خرید {order_number}")
