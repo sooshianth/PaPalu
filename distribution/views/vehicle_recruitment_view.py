@@ -455,37 +455,6 @@ def complete_vehicle_recruitment_view(request, allocation_number):
                 allocation.allocation_status = 'pending_vehicle_entry'
                 allocation.save(update_fields=['allocation_status'])
                 bug_logger.info(f"وضعیت تخصیص {allocation_number} به 'در انتظار ورود خودرو به کارخانه' تغییر کرد")
-                
-                # بررسی اینکه آیا همه تخصیص‌های سفارش به pending_vehicle_entry رسیدند
-                if allocation.order:
-                    order = allocation.order
-                    # دریافت همه تخصیص‌های سفارش که باید حمل داشته باشند
-                    # (تخصیص‌هایی که در وضعیت pending_vehicle_recruitment یا بعد از آن هستند)
-                    relevant_allocations = Allocation.objects.filter(
-                        order=order
-                    ).exclude(
-                        allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
-                    )
-                    
-                    # فقط تخصیص‌هایی که حداقل یک حمل دارند را بررسی می‌کنیم
-                    allocations_with_transports = []
-                    for alloc in relevant_allocations:
-                        alloc_transports = Transport.objects.filter(allocation_id=alloc.allocation_number)
-                        if alloc_transports.exists():
-                            allocations_with_transports.append(alloc)
-                    
-                    # بررسی اینکه آیا همه تخصیص‌های دارای حمل به pending_vehicle_entry رسیدند
-                    if allocations_with_transports:
-                        all_pending_entry = all(
-                            alloc.allocation_status == 'pending_vehicle_entry' 
-                            for alloc in allocations_with_transports
-                        )
-                        
-                        if all_pending_entry:
-                            order.status = 'pending_vehicle_entry'
-                            order.save(update_fields=['status'])
-                            bug_logger.info(f"وضعیت سفارش {order.order_number} به 'در انتظار ورود خودرو به کارخانه' تغییر کرد")
-                            audit_logger.activity(f"وضعیت سفارش {order.order_number} به 'در انتظار ورود خودرو به کارخانه' تغییر کرد")
             
             bug_logger.info(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد")
             messages.success(request, f'جذب خودرو برای تخصیص {allocation_number} با موفقیت تکمیل شد.')

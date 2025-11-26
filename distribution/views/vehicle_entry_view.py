@@ -318,37 +318,6 @@ def register_vehicle_entry_view(request, waybill_number):
                             allocation.allocation_status = 'pending_loading'
                             allocation.save(update_fields=['allocation_status'])
                             bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در انتظار بارگیری' تغییر کرد")
-                            
-                            # بررسی تغییر وضعیت سفارش
-                            if allocation.order:
-                                order = allocation.order
-                                if order.status == 'pending_vehicle_entry':
-                                    # دریافت همه تخصیص‌های سفارش که باید حمل داشته باشند
-                                    relevant_allocations = Allocation.objects.filter(
-                                        order=order
-                                    ).exclude(
-                                        allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
-                                    )
-                                    
-                                    # فقط تخصیص‌هایی که حداقل یک حمل دارند را بررسی می‌کنیم
-                                    allocations_with_transports = []
-                                    for alloc in relevant_allocations:
-                                        alloc_transports = Transport.objects.filter(allocation_id=alloc.allocation_number)
-                                        if alloc_transports.exists():
-                                            allocations_with_transports.append(alloc)
-                                    
-                                    # بررسی اینکه آیا همه تخصیص‌های دارای حمل به pending_loading رسیدند
-                                    if allocations_with_transports:
-                                        all_pending_loading = all(
-                                            alloc.allocation_status == 'pending_loading' 
-                                            for alloc in allocations_with_transports
-                                        )
-                                        
-                                        if all_pending_loading:
-                                            order.status = 'pending_loading'
-                                            order.save(update_fields=['status'])
-                                            bug_logger.info(f"وضعیت سفارش {order.order_number} به 'در انتظار بارگیری' تغییر کرد")
-                                            audit_logger.activity(f"وضعیت سفارش {order.order_number} به 'در انتظار بارگیری' تغییر کرد")
                 
                 bug_logger.info(f"ورود خودرو برای حمل {waybill_number} ثبت شد")
                 messages.success(request, f'ورود خودرو برای حمل {waybill_number} با موفقیت ثبت شد.')

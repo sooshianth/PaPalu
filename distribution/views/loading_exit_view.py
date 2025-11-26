@@ -373,37 +373,6 @@ def register_loading_exit_view(request, waybill_number):
                                 allocation.save(update_fields=['allocation_status'])
                                 bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در انتظار بارنامه' تغییر کرد")
                                 
-                                # بررسی تغییر وضعیت سفارش
-                                if allocation.order:
-                                    order = allocation.order
-                                    if hasattr(order, 'status') and order.status == 'pending_loading':
-                                        # دریافت همه تخصیص‌های سفارش
-                                        relevant_allocations = Allocation.objects.filter(
-                                            order=order
-                                        ).exclude(
-                                            allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
-                                        )
-                                        
-                                        # فقط تخصیص‌هایی که حداقل یک حمل دارند را بررسی می‌کنیم
-                                        allocations_with_transports = []
-                                        for alloc in relevant_allocations:
-                                            alloc_transports = Transport.objects.filter(allocation_id=alloc.allocation_number)
-                                            if alloc_transports.exists():
-                                                allocations_with_transports.append(alloc)
-                                        
-                                        # بررسی اینکه آیا همه تخصیص‌های دارای حمل به pending_waybill رسیدند
-                                        if allocations_with_transports:
-                                            all_pending_waybill = all(
-                                                alloc.allocation_status == 'pending_waybill' 
-                                                for alloc in allocations_with_transports
-                                            )
-                                            
-                                            if all_pending_waybill:
-                                                order.status = 'pending_waybill'
-                                                order.save(update_fields=['status'])
-                                                bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار بارنامه' تغییر کرد")
-                                                audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار بارنامه' تغییر کرد")
-                    
                     bug_logger.info(f"خروج کالا برای حمل {waybill_number} ثبت شد")
                     messages.success(request, f'خروج کالا برای حمل {waybill_number} با موفقیت ثبت شد.')
                     audit_logger.activity(f"خروج کالا برای حمل {waybill_number} ثبت شد توسط کاربر {request.user.username}")

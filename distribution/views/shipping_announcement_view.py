@@ -109,35 +109,6 @@ def get_production_programs_info():
     }
 
 
-def check_and_update_order_status(order):
-    """
-    بررسی اینکه آیا همه تخصیص‌های یک سفارش به وضعیت pending_vehicle_recruitment رسیده‌اند
-    و در صورت مثبت بودن، وضعیت سفارش را به pending_vehicle_recruitment تغییر می‌دهد
-    """
-    if not order:
-        return False
-    
-    # دریافت همه تخصیص‌های سفارش
-    allocations = Allocation.objects.filter(order=order)
-    
-    if not allocations.exists():
-        return False
-    
-    # بررسی اینکه آیا همه تخصیص‌ها به pending_vehicle_recruitment رسیده‌اند
-    all_in_vehicle_recruitment = all(
-        alloc.allocation_status == 'pending_vehicle_recruitment' 
-        for alloc in allocations
-    )
-    
-    if all_in_vehicle_recruitment and order.status == 'pending_factory':
-        order.status = 'pending_vehicle_recruitment'
-        order.save(update_fields=['status'])
-        bug_logger.info(f"وضعیت سفارش {order.order_number} به pending_vehicle_recruitment تغییر کرد")
-        return True
-    
-    return False
-
-
 @login_required
 def shipping_announcement_list_view(request):
     """
@@ -275,10 +246,6 @@ def shipping_announcement_process_view(request):
                         updated_count += 1
                         bug_logger.info(f"تخصیص {allocation_number} به وضعیت pending_vehicle_recruitment تغییر کرد")
                         
-                        # بررسی و به‌روزرسانی وضعیت سفارش
-                        if allocation.order:
-                            check_and_update_order_status(allocation.order)
-                        
                     except Allocation.DoesNotExist:
                         bug_logger.warning(f"تخصیص {allocation_number} یافت نشد یا در وضعیت مناسب نیست")
                         continue
@@ -350,10 +317,6 @@ def shipping_announcement_single_view(request):
                 )
                 scheduling_info.shipping_announcement_time = now
                 scheduling_info.save(update_fields=['shipping_announcement_time'])
-                
-                # بررسی و به‌روزرسانی وضعیت سفارش
-                if allocation.order:
-                    check_and_update_order_status(allocation.order)
                 
                 bug_logger.info(f"تخصیص {allocation_number} به صورت جداگانه اعلام بار شد و به وضعیت pending_vehicle_recruitment تغییر کرد")
                 messages.success(request, f'تخصیص {allocation_number} با موفقیت اعلام بار شد.')

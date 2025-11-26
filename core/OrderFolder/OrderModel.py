@@ -18,9 +18,6 @@ class Order(models.Model):
     ]
     
     STATUS_CHOICES = [
-        ('pending', 'در انتظار'),
-        ('confirmed', 'تایید شده'),
-        ('processing', 'در حال پردازش'),
         ('pending_proforma_issue', 'در انتظار صدور پیش فاکتور'),
         ('pending_customer_proforma_upload', 'در انتظار آپلود پیش فاکتور مشتری'),
         # بعد از آپلود تأیید پیش فاکتور، سفارش به این وضعیت می‌رود
@@ -30,11 +27,6 @@ class Order(models.Model):
         ('pending_allocation', 'در انتظار تخصیص'),
         ('pending_allocation_approval', 'در انتظار تأیید تخصیص'),
         ('pending_factory', 'در انتظار کارخانه'),
-        ('pending_vehicle_recruitment', 'در انتظار جذب خودرو'),
-        ('pending_vehicle_entry', 'در انتظار ورود خودرو به کارخانه'),
-        ('pending_loading', 'در انتظار بارگیری'),
-        ('pending_waybill', 'در انتظار بارنامه'),
-        ('pending_exit', 'در انتظار خروج'),
         ('pending_unloading_approval', 'در انتظار تایید تخلیه'),
         ('pending_settlement', 'در انتظار تسویه'),
         ('pending_settlement_approval', 'در انتظار تایید تسویه کامل'),
