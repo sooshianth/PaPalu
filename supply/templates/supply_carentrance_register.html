@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ثبت راننده - ورود خودرو{% endblock %}
+
+{% block extra_css %}
+<style>
+  .form-wrapper {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:22px;background:#fff;padding:20px;border:1px solid #e0e5e8;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.04)}
+  .form-wrapper h4 {grid-column:1/-1;font-size:.95rem;margin:-4px 0 10px;font-weight:600;color:#2d3e50}
+  .form-group {display:flex;flex-direction:column}
+  .form-group label {font-size:.75rem;margin-bottom:4px;font-weight:600;color:#37474f}
+  .form-group input, .form-group select, .form-group textarea {padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
+  .form-group textarea {min-height:70px;resize:vertical}
+  .section-divider {grid-column:1/-1;border-top:2px dashed #e0e5e8;padding-top:14px;margin-top:10px}
+  .section-title {grid-column:1/-1;font-size:.85rem;margin:0 0 6px;font-weight:600;color:#455a64}
+  .info-box {grid-column:1/-1;background:#f0f4f8;padding:12px 16px;border-radius:8px;border-right:4px solid var(--primary-green);margin-bottom:16px}
+  .info-box p {margin:0;color:#546e7a;font-size:.75rem;line-height:1.5}
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="form-wrapper">
+  {% csrf_token %}
+  <h4>ثبت راننده برای حمل: {{ pt.transport_number }}</h4>
+  
+  <div class="info-box">
+    <p>
+      با وارد کردن شماره تلفن راننده، سیستم به صورت خودکار اطلاعات راننده را پر خواهد کرد. 
+      در صورت عدم وجود راننده در سیستم، اطلاعات جدید ثبت خواهد شد.
+    </p>
+  </div>
+  
+  <div class="section-title">اطلاعات راننده</div>
+  
+  <div class="form-group">
+    <label>{{ form.phone.label }}{% if form.phone.field.required %} *{% endif %}</label>
+    {{ form.phone }}
+    {% if form.phone.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.phone.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.name.label }}</label>
+    {{ form.name }}
+    {% if form.name.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.name.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.national_id.label }}</label>
+    {{ form.national_id }}
+    {% if form.national_id.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.national_id.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="section-divider"></div>
+  <div class="section-title">اطلاعات خودرو</div>
+  
+  <div class="form-group">
+    <label>{{ form.plate_number.label }}</label>
+    {{ form.plate_number }}
+    {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="section-divider"></div>
+  <div class="section-title">اطلاعات بانکی</div>
+  
+  <div class="form-group">
+    <label>{{ form.account.label }}</label>
+    {{ form.account }}
+    {% if form.account.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.account.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div class="form-group">
+    <label>{{ form.sheba.label }}</label>
+    {{ form.sheba }}
+    {% if form.sheba.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.sheba.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  
+  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+    <a href="{% url 'supply:carentrance' %}" class="btn btn-secondary btn-sm">بازگشت</a>
+    <button type="submit" class="btn btn-primary btn-sm">ثبت و تایید ورود</button>
+  </div>
+</form>
+
+{% block extra_js %}
+<script>
+  // auto lookup driver by phone
+  document.addEventListener('DOMContentLoaded', function(){
+    const phoneInput = document.getElementById('id_phone');
+    if (!phoneInput) return;
+    phoneInput.addEventListener('blur', function(){
+      const phone = this.value && this.value.trim();
+      if (!phone) return;
+      fetch(`/supply/api/driver-lookup/?phone=${encodeURIComponent(phone)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.found) {
+            // fill fields if empty
+            const nameEl = document.getElementById('id_name');
+            const nidEl = document.getElementById('id_national_id');
+            if (nameEl && !nameEl.value) nameEl.value = data.name || '';
+            if (nidEl && !nidEl.value) nidEl.value = data.national_id || '';
+          }
+        }).catch(e => console.error('driver lookup error', e));
+    });
+  });
+</script>
+{% endblock %}
+
+{% endblock %}
