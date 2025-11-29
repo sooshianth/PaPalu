@@ -1,0 +1,346 @@
+{% extends 'base.html' %}
+{% load render_table from django_tables2 %}
+{% block title %}ورود خودرو (نگهبان){% endblock %}
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .info-section {
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .info-section p {
+        color: var(--gray-600);
+        font-size: 0.95rem;
+        margin: 0;
+        line-height: 1.6;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 30px;
+    }
+    
+    /* استایل جدول django-tables2 */
+    .table-container table,
+    .table-container .table {
+        width: 100%;
+        border-collapse: collapse !important;
+        background: white;
+        margin-bottom: 0;
+    }
+    
+    .table-container table thead,
+    .table-container .table thead {
+        background: var(--gray-100);
+    }
+    
+    .table-container table thead th,
+    .table-container .table thead th {
+        padding: 12px 15px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--gray-800);
+        border: 1px solid var(--gray-300) !important;
+        vertical-align: middle;
+    }
+    
+    .table-container table tbody tr,
+    .table-container .table tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .table-container table tbody tr:hover,
+    .table-container .table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .table-container table tbody td,
+    .table-container .table tbody td {
+        padding: 12px 15px;
+        color: var(--gray-600);
+        border: 1px solid var(--gray-300) !important;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .table-container table a:not(.btn),
+    .table-container .table a:not(.btn) {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .pagination {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 0;
+        direction: ltr;
+    }
+    
+    .pagination li {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        order: 0;
+    }
+    
+    .pagination li:last-child {
+        order: -1;
+    }
+    
+    .pagination li:first-child {
+        order: 999;
+    }
+    
+    .pagination a,
+    .pagination span {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        color: var(--gray-700);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        font-weight: 500;
+        min-width: 40px;
+        text-align: center;
+        background-color: white;
+        margin: 0 2px;
+    }
+    
+    .pagination li:first-child a,
+    .pagination li:first-child span,
+    .pagination li:last-child a,
+    .pagination li:last-child span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .pagination a:hover {
+        background-color: var(--primary-green);
+        color: white !important;
+        border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .current {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination > li > a,
+    .pagination > li > span {
+        border: 1px solid var(--gray-300) !important;
+        border-radius: 8px !important;
+        color: var(--gray-700) !important;
+        background-color: white !important;
+        padding: 10px 16px !important;
+        margin: 0 2px !important;
+        min-width: 40px !important;
+    }
+    
+    .pagination > li > a:hover {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+    }
+    
+    .pagination > .active > a,
+    .pagination > .active > span {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+    }
+    
+    /* استایل دکمه‌ها */
+    .table-container .btn {
+        padding: 5px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.8rem;
+        transition: all 0.3s;
+        display: inline-block;
+        border: 1px solid;
+    }
+    
+    .table-container .btn-primary {
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        background-color: var(--primary-green) !important;
+    }
+    
+    .table-container .btn-primary:hover {
+        background-color: var(--dark-green) !important;
+        border-color: var(--dark-green) !important;
+    }
+    
+    .table-container .btn-success {
+        color: white !important;
+        border-color: #28a745 !important;
+        background-color: #28a745 !important;
+    }
+    
+    .table-container .btn-success:hover {
+        background-color: #218838 !important;
+        border-color: #1e7e34 !important;
+    }
+    
+    .table-container .btn-secondary {
+        color: var(--gray-600) !important;
+        border-color: var(--gray-400) !important;
+        background-color: transparent !important;
+    }
+    
+    .table-container .btn-secondary:hover {
+        background-color: var(--gray-600) !important;
+        color: white !important;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .status-draft{background:#fff3cd;color:#b8860b}
+    .status-awaiting_vehicle_entry{background:#e0f7fa;color:#007c91}
+    .status-vehicle_entered{background:#e3f2fd;color:#0b74c7}
+    .status-awaiting_unloading{background:#fff8e1;color:#ff6f00}
+    .status-awaiting_delivery{background:#ede7f6;color:#5e35b1}
+    .status-awaiting_wh_reconciliation{background:#fff8e1;color:#ff8f00}
+    .status-completed{background:#d4edda;color:#155724}
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-500);
+    }
+    
+    .empty-state svg {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        color: var(--gray-400);
+    }
+    
+    .empty-state p {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .table-container .table {
+            font-size: 0.9rem;
+        }
+        
+        .table-container .table thead th,
+        .table-container .table tbody td {
+            padding: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>صفحه ورود خودرو (نگهبان)</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="info-section">
+        <p>
+            در این صفحه فهرست حمل‌هایی که در وضعیت "در انتظار ورود خودرو" هستند نمایش داده می‌شود. 
+            نگهبان می‌تواند با کلیک بر روی دکمه "ثبت راننده" اطلاعات کامل راننده را ثبت کند 
+            یا با دکمه "ثبت ورود" ورود خودرو را به صورت سریع ثبت نماید.
+        </p>
+    </div>
+    
+    {% if table.page.object_list %}
+        <div class="table-container">
+            {% render_table table %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M13 16V6C13 4.89543 13.8954 4 15 4H19C20.1046 4 21 4.89543 21 6V16M13 16H3M13 16H21M3 16V11C3 9.89543 3.89543 9 5 9H7C8.10457 9 9 9.89543 9 11V16M3 16H1M9 16H13M9 16V18C9 19.1046 8.10457 20 7 20H5C3.89543 20 3 19.1046 3 18V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="7" cy="18" r="2" stroke="currentColor" stroke-width="2"/>
+                <circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="2"/>
+            </svg>
+            <p>هیچ خودرویی در انتظار ورود نیست.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px; color: var(--gray-600);">
+                تمام حمل‌های تعریف شده وارد شده‌اند یا هنوز حملی در وضعیت "در انتظار ورود خودرو" ثبت نشده است.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every 2 minutes to show new transports
+    setTimeout(function() {
+        location.reload();
+    }, 120000);
+</script>
+{% endblock %}
