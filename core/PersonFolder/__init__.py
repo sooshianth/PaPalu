@@ -18,7 +18,6 @@ __all__ = [
     'SocialNetwork',
     'FinancialBanking',
     'BankAccount',
-    'ShabaNumber',
     'Representative',
     'DeliveryAddress',
 ]

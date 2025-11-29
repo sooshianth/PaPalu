@@ -1,0 +1,377 @@
+Date : 2025-11-29 19:25:31
+Directory : c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu
+Total : 279 files,  57847 codes, 1827 comments, 8868 blanks, all 68542 lines
+
+Languages
++------------------+------------+------------+------------+------------+------------+
+| language         | files      | code       | comment    | blank      | total      |
++------------------+------------+------------+------------+------------+------------+
+| Django HTML      |         78 |     34,416 |          0 |      4,314 |     38,730 |
+| Python           |        198 |     23,325 |      1,827 |      4,531 |     29,683 |
+| Django txt       |          2 |         72 |          0 |         22 |         94 |
+| pip requirements |          1 |         34 |          0 |          1 |         35 |
++------------------+------------+------------+------------+------------+------------+
+
+Directories
++----------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                                 | files      | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                    |        279 |     57,847 |      1,827 |      8,868 |     68,542 |
+| . (Files)                                                                                                            |          4 |        123 |          1 |         28 |        152 |
+| access                                                                                                               |          2 |        106 |          3 |         36 |        145 |
+| accounting                                                                                                           |          4 |          9 |          1 |          8 |         18 |
+| authentication                                                                                                       |         11 |      1,223 |         89 |        236 |      1,548 |
+| authentication (Files)                                                                                               |          4 |         89 |          1 |         22 |        112 |
+| authentication\forms                                                                                                 |          1 |        357 |         62 |         81 |        500 |
+| authentication\management                                                                                            |          3 |         39 |          0 |         10 |         49 |
+| authentication\management (Files)                                                                                    |          1 |          0 |          0 |          1 |          1 |
+| authentication\management\commands                                                                                   |          2 |         39 |          0 |          9 |         48 |
+| authentication\templates                                                                                             |          1 |        583 |          0 |         86 |        669 |
+| authentication\views                                                                                                 |          2 |        155 |         26 |         37 |        218 |
+| config                                                                                                               |          6 |        652 |         90 |        122 |        864 |
+| core                                                                                                                 |         88 |      5,910 |        277 |      1,149 |      7,336 |
+| core (Files)                                                                                                         |          5 |        245 |         33 |         55 |        333 |
+| core\AllocationFolder                                                                                                |          6 |        221 |          7 |         36 |        264 |
+| core\OrderFolder                                                                                                     |          8 |        614 |         66 |        115 |        795 |
+| core\PersonFolder                                                                                                    |         12 |        545 |          5 |        130 |        680 |
+| core\ProductFolder                                                                                                   |          9 |        590 |          2 |        133 |        725 |
+| core\ProductionFolder                                                                                                |          5 |        327 |         11 |         55 |        393 |
+| core\ProductionFolder (Files)                                                                                        |          4 |        327 |         11 |         54 |        392 |
+| core\ProductionFolder\migrations                                                                                     |          1 |          0 |          0 |          1 |          1 |
+| core\RBACModel                                                                                                       |          5 |        572 |         40 |        127 |        739 |
+| core\RawMaterialFolder                                                                                               |          7 |        466 |          4 |         44 |        514 |
+| core\SettlementFolder                                                                                                |          5 |        362 |         45 |         74 |        481 |
+| core\StockEntryFolder                                                                                                |          5 |        317 |         12 |         70 |        399 |
+| core\SupplyFolder                                                                                                    |          4 |        649 |         20 |         85 |        754 |
+| core\TransportFolder                                                                                                 |          8 |        525 |          4 |        115 |        644 |
+| core\WarehouseFolder                                                                                                 |          5 |        279 |          3 |         55 |        337 |
+| core\management                                                                                                      |          4 |        198 |         25 |         55 |        278 |
+| core\management (Files)                                                                                              |          1 |          0 |          1 |          2 |          3 |
+| core\management\commands                                                                                             |          3 |        198 |         24 |         53 |        275 |
+| custody                                                                                                              |          4 |          9 |          1 |          6 |         16 |
+| distribution                                                                                                         |         25 |      5,536 |        234 |        853 |      6,623 |
+| distribution (Files)                                                                                                 |          3 |         51 |          0 |          5 |         56 |
+| distribution\forms                                                                                                   |          6 |        515 |         22 |         83 |        620 |
+| distribution\templates                                                                                               |          9 |      3,123 |          0 |        366 |      3,489 |
+| distribution\templates\distribution                                                                                  |          9 |      3,123 |          0 |        366 |      3,489 |
+| distribution\views                                                                                                   |          7 |      1,847 |        212 |        399 |      2,458 |
+| perm_manager                                                                                                         |         16 |      2,979 |         61 |        523 |      3,563 |
+| perm_manager (Files)                                                                                                 |          3 |         26 |          3 |         10 |         39 |
+| perm_manager\templates                                                                                               |          6 |      2,308 |          0 |        361 |      2,669 |
+| perm_manager\templates\perm_manager                                                                                  |          6 |      2,308 |          0 |        361 |      2,669 |
+| perm_manager\views                                                                                                   |          7 |        645 |         58 |        152 |        855 |
+| production                                                                                                           |         27 |     12,250 |        285 |      1,613 |     14,148 |
+| production (Files)                                                                                                   |          4 |         36 |          2 |          8 |         46 |
+| production\forms                                                                                                     |          3 |        379 |         37 |         47 |        463 |
+| production\templates                                                                                                 |         15 |      9,222 |          0 |      1,052 |     10,274 |
+| production\templates (Files)                                                                                         |         10 |      8,940 |          0 |      1,028 |      9,968 |
+| production\templates\production                                                                                      |          5 |        282 |          0 |         24 |        306 |
+| production\views                                                                                                     |          5 |      2,613 |        246 |        506 |      3,365 |
+| sales                                                                                                                |         62 |     22,175 |        732 |      3,431 |     26,338 |
+| sales (Files)                                                                                                        |          8 |      2,775 |        241 |        500 |      3,516 |
+| sales\forms                                                                                                          |         10 |      1,935 |        135 |        347 |      2,417 |
+| sales\templates                                                                                                      |         31 |     14,095 |          0 |      1,875 |     15,970 |
+| sales\templates\allocation                                                                                           |          5 |      1,686 |          0 |        235 |      1,921 |
+| sales\templates\customer                                                                                             |          3 |      2,169 |          0 |        293 |      2,462 |
+| sales\templates\order                                                                                                |          2 |        875 |          0 |        115 |        990 |
+| sales\templates\product                                                                                              |          6 |      2,919 |          0 |        403 |      3,322 |
+| sales\templates\proforma                                                                                             |          7 |      2,775 |          0 |        323 |      3,098 |
+| sales\templates\settlement                                                                                           |          2 |      1,094 |          0 |        148 |      1,242 |
+| sales\templates\transaction                                                                                          |          4 |      1,805 |          0 |        239 |      2,044 |
+| sales\templates\unload_approval                                                                                      |          2 |        772 |          0 |        119 |        891 |
+| sales\views                                                                                                          |         13 |      3,370 |        356 |        709 |      4,435 |
+| supply                                                                                                               |         24 |      5,243 |         52 |        668 |      5,963 |
+| supply (Files)                                                                                                       |          7 |        644 |          7 |        130 |        781 |
+| supply\templates                                                                                                     |         14 |      3,462 |          0 |        385 |      3,847 |
+| supply\templates (Files)                                                                                             |         13 |      3,383 |          0 |        384 |      3,767 |
+| supply\templates\partials                                                                                            |          1 |         79 |          0 |          1 |         80 |
+| supply\views                                                                                                         |          3 |      1,137 |         45 |        153 |      1,335 |
+| templates                                                                                                            |          2 |      1,623 |          0 |        189 |      1,812 |
+| warehousing                                                                                                          |          4 |          9 |          1 |          6 |         16 |
++----------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++----------------------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| filename                                                                                                             | language         | code       | comment    | blank      | total      |
++----------------------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\access\__init__.py                                                  | Python           |          1 |          0 |          2 |          3 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\access\helpers.py                                                   | Python           |        105 |          3 |         34 |        142 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\__init__.py                                              | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\apps.py                                                  | Python           |          5 |          0 |          3 |          8 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\forms.py                                                 | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\urls.py                                                  | Python           |          4 |          1 |          3 |          8 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\admin.py                                             | Python           |         58 |          1 |          8 |         67 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\apps.py                                              | Python           |          9 |          0 |          5 |         14 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\forms\forms.py                                       | Python           |        357 |         62 |         81 |        500 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\management\__init__.py                               | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\management\commands\__init__.py                      | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\management\commands\update_admin_users.py            | Python           |         39 |          0 |          8 |         47 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\models.py                                            | Python           |         15 |          0 |          6 |         21 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\templates\unified_login.html                         | Django HTML      |        583 |          0 |         86 |        669 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\urls.py                                              | Python           |          7 |          0 |          3 |         10 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\views\login_view.py                                  | Python           |         95 |         18 |         19 |        132 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\views\logout_view.py                                 | Python           |         60 |          8 |         18 |         86 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\__init__.py                                                  | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\asgi.py                                                      | Python           |          4 |          0 |          4 |          8 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\middleware.py                                                | Python           |        358 |         66 |         74 |        498 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\settings.py                                                  | Python           |        252 |         21 |         36 |        309 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\urls.py                                                      | Python           |         34 |          3 |          4 |         41 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\wsgi.py                                                      | Python           |          4 |          0 |          3 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\AllocationModel.py                            | Python           |         88 |          5 |         10 |        103 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\AllocationProductInfoModel.py                 | Python           |         51 |          0 |          7 |         58 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\AllocationSchedulingInfoModel.py              | Python           |         45 |          0 |          6 |         51 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\__init__.py                                   | Python           |          8 |          0 |          2 |         10 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\admin.py                                      | Python           |         14 |          0 |          7 |         21 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\signals.py                                    | Python           |         15 |          2 |          4 |         21 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\ApprovalInfoModel.py                               | Python           |         74 |         10 |         17 |        101 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\DocumentRelationModel.py                           | Python           |         81 |         22 |         17 |        120 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\OrderDocumentModel.py                              | Python           |         30 |          3 |          8 |         41 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\OrderItemModel.py                                  | Python           |        158 |         17 |         26 |        201 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\OrderModel.py                                      | Python           |        137 |         14 |         24 |        175 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\ProformaModel.py                                   | Python           |         64 |          0 |         11 |         75 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\__init__.py                                        | Python           |         14 |          0 |          1 |         15 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\admin.py                                           | Python           |         56 |          0 |         11 |         67 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\AttachmentModel.py                                | Python           |         39 |          0 |         11 |         50 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\BankAccountModel.py                               | Python           |         34 |          0 |         11 |         45 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\DeliveryAddressModel.py                           | Python           |         67 |          0 |          8 |         75 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\FinancialBankingModel.py                          | Python           |         64 |          0 |          8 |         72 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PaymentPreferenceModel.py                         | Python           |         44 |          0 |         12 |         56 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PersonModel.py                                    | Python           |        102 |          4 |         21 |        127 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PhoneNumberModel.py                               | Python           |         27 |          1 |          9 |         37 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PurchasePreferenceModel.py                        | Python           |         14 |          0 |          7 |         21 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\RepresentativeModel.py                            | Python           |         26 |          0 |          7 |         33 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\SocialNetworkModel.py                             | Python           |         40 |          0 |         11 |         51 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\__init__.py                                       | Python           |         22 |          0 |          3 |         25 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\admin.py                                          | Python           |         66 |          0 |         22 |         88 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\BOMModel.py                                      | Python           |         43 |          0 |         10 |         53 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductFinancialInfoModel.py                     | Python           |         57 |          0 |         12 |         69 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductModel.py                                  | Python           |        144 |          2 |         31 |        177 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductSalesModel.py                             | Python           |         65 |          0 |         14 |         79 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductionInfoModel.py                           | Python           |         85 |          0 |         18 |        103 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\QualityControlModel.py                           | Python           |        109 |          0 |         21 |        130 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\__init__.py                                      | Python           |         15 |          0 |          3 |         18 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\admin.py                                         | Python           |         72 |          0 |         23 |         95 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\apps.py                                          | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\ProductionProgramModel.py                     | Python           |        228 |          8 |         30 |        266 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\ProductionRevertLogModel.py                   | Python           |         53 |          1 |         12 |         66 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\__init__.py                                   | Python           |          6 |          0 |          2 |          8 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\admin.py                                      | Python           |         40 |          2 |         10 |         52 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\migrations\__init__.py                        | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\FieldPermission.py                                   | Python           |        124 |          1 |         26 |        151 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\Roles.py                                             | Python           |        197 |         30 |         51 |        278 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\TaskPermission.py                                    | Python           |        104 |          9 |         16 |        129 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\__init__.py                                          | Python           |         17 |          0 |          2 |         19 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\admin.py                                             | Python           |        130 |          0 |         32 |        162 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\QualityParameterModel.py                     | Python           |         15 |          0 |          6 |         21 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\RawMaterialModel.py                          | Python           |        151 |          3 |         10 |        164 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\RawMaterialPurchaseInfoModel.py              | Python           |         93 |          0 |          6 |         99 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\RawMaterialQualityControlModel.py            | Python           |        148 |          0 |          6 |        154 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\__init__.py                                  | Python           |         12 |          0 |          2 |         14 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\admin.py                                     | Python           |         29 |          1 |         11 |         41 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\attachments.py                               | Python           |         18 |          0 |          3 |         21 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\SettlementModel.py                            | Python           |         89 |         12 |         15 |        116 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\TransactionApprovalModel.py                   | Python           |         79 |         11 |         18 |        108 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\TransactionDocumentModel.py                   | Python           |        177 |         22 |         33 |        232 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\__init__.py                                   | Python           |          8 |          0 |          3 |         11 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\admin.py                                      | Python           |          9 |          0 |          5 |         14 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\SourceStockModel.py                           | Python           |         84 |          1 |         15 |        100 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\StockEntryModel.py                            | Python           |        105 |          9 |         24 |        138 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\TargetStockModel.py                           | Python           |         84 |          1 |         15 |        100 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\__init__.py                                   | Python           |          4 |          0 |          2 |          6 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\admin.py                                      | Python           |         40 |          1 |         14 |         55 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\ProcurementPurchaseOrderModel.py                  | Python           |        275 |          5 |         24 |        304 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\PurchaseTransportModel.py                         | Python           |        325 |         15 |         52 |        392 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\RawMaterialPriceInquiryModel.py                   | Python           |         34 |          0 |          7 |         41 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\__init__.py                                       | Python           |         15 |          0 |          2 |         17 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\FareModel.py                                   | Python           |         90 |          1 |         18 |        109 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\LoadingScheduleInfoModel.py                    | Python           |         39 |          0 |         11 |         50 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\ProductInfoModel.py                            | Python           |         87 |          0 |         16 |        103 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\TransportAttachmentModel.py                    | Python           |         47 |          0 |         12 |         59 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\TransportModel.py                              | Python           |        161 |          3 |         30 |        194 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\TruckInfoModel.py                              | Python           |         64 |          0 |         14 |         78 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\__init__.py                                    | Python           |         14 |          0 |          3 |         17 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\admin.py                                       | Python           |         23 |          0 |         11 |         34 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\DefaultItemModel.py                            | Python           |         72 |          2 |         16 |         90 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\InventoryItemModel.py                          | Python           |         91 |          1 |         14 |        106 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\WarehouseModel.py                              | Python           |         86 |          0 |         15 |        101 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\__init__.py                                    | Python           |          8 |          0 |          1 |          9 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\admin.py                                       | Python           |         22 |          0 |          9 |         31 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\__init__.py                                                    | Python           |          1 |          1 |          1 |          3 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\admin.py                                                       | Python           |         11 |          3 |          2 |         16 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\apps.py                                                        | Python           |         52 |         14 |         14 |         80 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\logging_filters.py                                             | Python           |        162 |         13 |         31 |        206 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\logging_levels.py                                              | Python           |         19 |          2 |          7 |         28 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\__init__.py                                         | Python           |          0 |          1 |          2 |          3 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\commands\__init__.py                                | Python           |          0 |          1 |          2 |          3 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\commands\check_field_permissions.py                 | Python           |        109 |         10 |         32 |        151 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\commands\register_models.py                         | Python           |         89 |         13 |         19 |        121 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\__init__.py                                                 | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\apps.py                                                     | Python           |          5 |          0 |          2 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\forms.py                                                    | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\urls.py                                                     | Python           |          4 |          1 |          2 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\__init__.py                                            | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\apps.py                                                | Python           |          5 |          0 |          2 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\__init__.py                                      | Python           |          0 |          1 |          2 |          3 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\loading_exit_form.py                             | Python           |        188 |          8 |         26 |        222 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\shipping_announcement_form.py                    | Python           |         28 |          0 |          8 |         36 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\transport_create_form.py                         | Python           |         94 |          3 |         15 |        112 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\vehicle_entry_form.py                            | Python           |        140 |          9 |         22 |        171 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\waybill_registration_form.py                     | Python           |         65 |          1 |         10 |         76 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\exit_list.html                  | Django HTML      |        179 |          0 |         22 |        201 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\loading_exit_detail.html        | Django HTML      |        453 |          0 |         68 |        521 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\loading_exit_list.html          | Django HTML      |        160 |          0 |         20 |        180 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\shipping_announcement_list.html | Django HTML      |        472 |          0 |         50 |        522 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\vehicle_entry_list.html         | Django HTML      |        569 |          0 |         70 |        639 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\vehicle_recruitment_list.html   | Django HTML      |        522 |          0 |         65 |        587 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\waybill_detail.html             | Django HTML      |        339 |          0 |         47 |        386 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\waybill_list.html               | Django HTML      |        196 |          0 |         20 |        216 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\waybill_pdf_template.html       | Django HTML      |        233 |          0 |          4 |        237 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\urls.py                                                | Python           |         46 |          0 |          2 |         48 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\__init__.py                                      | Python           |          0 |          1 |          2 |          3 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\exit_list_view.py                                | Python           |        190 |         22 |         47 |        259 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\loading_exit_view.py                             | Python           |        515 |         67 |         93 |        675 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\shipping_announcement_view.py                    | Python           |        251 |         17 |         70 |        338 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\vehicle_entry_view.py                            | Python           |        297 |         38 |         63 |        398 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\vehicle_recruitment_view.py                      | Python           |        357 |         37 |         76 |        470 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\waybill_registration_view.py                     | Python           |        237 |         30 |         48 |        315 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\field-access-prompt.txt                                             | Django txt       |         41 |          0 |         10 |         51 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\manage.py                                                           | Python           |         17 |          1 |          5 |         23 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\__init__.py                                            | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\apps.py                                                | Python           |          4 |          0 |          3 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\base.html                       | Django HTML      |        160 |          0 |         26 |        186 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\field_permissions.html          | Django HTML      |        602 |          0 |         94 |        696 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\permissions_home.html           | Django HTML      |        210 |          0 |         30 |        240 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\roles.html                      | Django HTML      |        553 |          0 |         85 |        638 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\task_permissions.html           | Django HTML      |        454 |          0 |         78 |        532 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\users.html                      | Django HTML      |        329 |          0 |         48 |        377 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\urls.py                                                | Python           |         22 |          3 |          6 |         31 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\__init__.py                                      | Python           |         44 |          1 |          3 |         48 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\decorators.py                                    | Python           |          4 |          0 |          4 |          8 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\field_permissions.py                             | Python           |        251 |         31 |         52 |        334 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\home.py                                          | Python           |         18 |          0 |          6 |         24 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\roles.py                                         | Python           |        129 |          9 |         33 |        171 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\task_permissions.py                              | Python           |         99 |          9 |         30 |        138 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\users.py                                         | Python           |        100 |          8 |         24 |        132 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\pre-prompt.txt                                                      | Django txt       |         31 |          0 |         12 |         43 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\__init__.py                                              | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\admin.py                                                 | Python           |          4 |          0 |          1 |          5 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\apps.py                                                  | Python           |          5 |          0 |          2 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\forms\cargo_announcement_form.py                         | Python           |         46 |          1 |         12 |         59 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\forms\production_form.py                                 | Python           |        195 |         29 |         24 |        248 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\forms\program_form.py                                    | Python           |        138 |          7 |         11 |        156 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\cargo_announcement.html                        | Django HTML      |        296 |          0 |         23 |        319 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\manager_warehouse_resolve.html                 | Django HTML      |      1,902 |          0 |        215 |      2,117 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_completed_pagination.html          | Django HTML      |          1 |          0 |          1 |          2 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_completed_programs_tbody.html      | Django HTML      |         65 |          0 |          1 |         66 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_confirmed_programs_tbody.html      | Django HTML      |         42 |          0 |          1 |         43 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_progress_programs_tbody.html       | Django HTML      |         45 |          0 |          1 |         46 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_smart_pagination.html              | Django HTML      |        129 |          0 |         20 |        149 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production_archived.html                       | Django HTML      |        606 |          0 |         83 |        689 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production_declaration.html                    | Django HTML      |      1,564 |          0 |        180 |      1,744 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production_declaration_crud.html               | Django HTML      |      1,900 |          0 |        255 |      2,155 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\program_drafts.html                            | Django HTML      |         70 |          0 |          4 |         74 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\program_form.html                              | Django HTML      |        518 |          0 |         29 |        547 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\program_list.html                              | Django HTML      |         75 |          0 |          4 |         79 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\warehouse_production_detail.html               | Django HTML      |      1,541 |          0 |        185 |      1,726 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\warehouse_production_list.html                 | Django HTML      |        468 |          0 |         50 |        518 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\urls.py                                                  | Python           |         27 |          2 |          4 |         33 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\cargo_announcement.py                              | Python           |        108 |          5 |         14 |        127 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\manager_warehouse_resolve_view.py                  | Python           |        552 |         38 |        120 |        710 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\production_declaration_view.py                     | Python           |      1,287 |        152 |        244 |      1,683 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\program_views.py                                   | Python           |        146 |          3 |         19 |        168 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\warehouse_production_view.py                       | Python           |        520 |         48 |        109 |        677 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\requirements.txt                                                    | pip requirements |         34 |          0 |          1 |         35 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\__init__.py                                                   | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\apps.py                                                       | Python           |          5 |          0 |          2 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\allocation_create_form.py                               | Python           |         99 |          5 |         23 |        127 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\customer_create_form.py                                 | Python           |        511 |         30 |         82 |        623 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\order_create_form.py                                    | Python           |        248 |         13 |         33 |        294 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\product_create_form.py                                  | Python           |        428 |         25 |         88 |        541 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\product_financial_info_form.py                          | Python           |        154 |         17 |         34 |        205 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\proforma_create_form.py                                 | Python           |        224 |         33 |         47 |        304 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\settlement_transaction_form.py                          | Python           |        139 |          5 |         12 |        156 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\transaction_document_form.py                            | Python           |         44 |          2 |          9 |         55 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\transaction_receipt_approve_form.py                     | Python           |         64 |          5 |         13 |         82 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\unload_approval_form.py                                 | Python           |         24 |          0 |          6 |         30 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables.py                                                     | Python           |      1,285 |         96 |        220 |      1,601 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables_allocation.py                                          | Python           |        509 |         50 |         84 |        643 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables_proforma.py                                            | Python           |        400 |         31 |         65 |        496 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables_transaction_receipt.py                                 | Python           |        348 |         38 |         63 |        449 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\allocation_create.html                   | Django HTML      |        349 |          0 |         47 |        396 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\allocation_edit.html                     | Django HTML      |        352 |          0 |         47 |        399 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\allocation_list.html                     | Django HTML      |        327 |          0 |         51 |        378 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\approve_allocation_detail.html           | Django HTML      |        336 |          0 |         40 |        376 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\approve_allocation_list.html             | Django HTML      |        322 |          0 |         50 |        372 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\customer\create_customer.html                       | Django HTML      |        806 |          0 |        106 |        912 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\customer\customer_list.html                         | Django HTML      |        557 |          0 |         81 |        638 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\customer\edit_customer.html                         | Django HTML      |        806 |          0 |        106 |        912 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\order\create_order.html                             | Django HTML      |        447 |          0 |         58 |        505 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\order\order_list.html                               | Django HTML      |        428 |          0 |         57 |        485 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\create_product.html                         | Django HTML      |        515 |          0 |         64 |        579 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\edit_product.html                           | Django HTML      |        534 |          0 |         65 |        599 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\product_detail.html                         | Django HTML      |        375 |          0 |         61 |        436 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\product_list.html                           | Django HTML      |        538 |          0 |         76 |        614 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\product_price_list.html                     | Django HTML      |        569 |          0 |         81 |        650 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\set_product_price.html                      | Django HTML      |        388 |          0 |         56 |        444 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\approve_proforma_list.html                 | Django HTML      |        625 |          0 |         94 |        719 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\approve_proforma_upload.html               | Django HTML      |        244 |          0 |         40 |        284 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_approve.html                      | Django HTML      |        333 |          0 |         31 |        364 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_create.html                       | Django HTML      |        339 |          0 |         42 |        381 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_detail.html                       | Django HTML      |        564 |          0 |         55 |        619 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_list.html                         | Django HTML      |        375 |          0 |         54 |        429 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_pdf_template.html                 | Django HTML      |        295 |          0 |          7 |        302 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\settlement\settlement_detail.html                   | Django HTML      |        799 |          0 |        103 |        902 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\settlement\settlement_list.html                     | Django HTML      |        295 |          0 |         45 |        340 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\approve_transaction_receipt_detail.html | Django HTML      |        527 |          0 |         50 |        577 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\approve_transaction_receipt_list.html   | Django HTML      |        336 |          0 |         50 |        386 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\transaction_receipt_order_list.html     | Django HTML      |        447 |          0 |         76 |        523 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\transaction_receipt_upload.html         | Django HTML      |        495 |          0 |         63 |        558 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\unload_approval\unload_approval_detail.html         | Django HTML      |        462 |          0 |         72 |        534 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\unload_approval\unload_approval_list.html           | Django HTML      |        310 |          0 |         47 |        357 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\test_field_access.py                                          | Python           |        173 |          9 |         47 |        229 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\urls.py                                                       | Python           |         55 |         17 |         18 |         90 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\__init__.py                                             | Python           |          2 |          0 |          3 |          5 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\allocation_approve_view.py                              | Python           |        219 |         22 |         53 |        294 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\allocation_list_view.py                                 | Python           |        327 |         24 |         67 |        418 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\customer_views.py                                       | Python           |        837 |         79 |        148 |      1,064 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\order_views.py                                          | Python           |        189 |         15 |         33 |        237 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\product_price_view.py                                   | Python           |        182 |         19 |         40 |        241 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\product_view.py                                         | Python           |        490 |         63 |        100 |        653 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\proforma_approve_view.py                                | Python           |        106 |         14 |         29 |        149 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\proforma_list_view.py                                   | Python           |        346 |         36 |         74 |        456 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\settlement_view.py                                      | Python           |        233 |         34 |         55 |        322 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\transaction_receipt_approve_view.py                     | Python           |        179 |         23 |         40 |        242 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\transaction_receipt_view.py                             | Python           |        131 |         12 |         34 |        177 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\unload_approval_view.py                                 | Python           |        129 |         15 |         33 |        177 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\__init__.py                                                  | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\admin.py                                                     | Python           |          1 |          1 |          2 |          4 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\apps.py                                                      | Python           |          4 |          0 |          3 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\models.py                                                    | Python           |          1 |          1 |          2 |          4 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\tables.py                                                    | Python           |        585 |          1 |        117 |        703 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\partials\price_inquiry_modal.html                  | Django HTML      |         79 |          0 |          1 |         80 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_create_procurement_purchase_order.html      | Django HTML      |        134 |          0 |          1 |        135 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_create_purchase_transport.html              | Django HTML      |        215 |          0 |         37 |        252 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_create_supplier.html                        | Django HTML      |        354 |          0 |         13 |        367 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_define_basic_material.html                  | Django HTML      |        467 |          0 |         60 |        527 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_edit_procurement_purchase_order.html        | Django HTML      |         79 |          0 |          1 |         80 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_edit_purchase_transport.html                | Django HTML      |        147 |          0 |         30 |        177 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_procurement_purchase_order_detail.html      | Django HTML      |        284 |          0 |         32 |        316 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_purchase_order_management.html              | Django HTML      |        235 |          0 |         37 |        272 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_purchase_transport_detail.html              | Django HTML      |        304 |          0 |         36 |        340 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_purchase_transport_list.html                | Django HTML      |        234 |          0 |         37 |        271 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_supplier_detail.html                        | Django HTML      |        297 |          0 |         41 |        338 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_supplier_edit.html                          | Django HTML      |        360 |          0 |         13 |        373 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_supplier_list.html                          | Django HTML      |        273 |          0 |         46 |        319 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\tests.py                                                     | Python           |          1 |          1 |          2 |          4 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\urls.py                                                      | Python           |         52 |          3 |          3 |         58 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\views\purchase_order_views.py                                | Python           |        283 |          6 |         32 |        321 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\views\purchase_transport_views.py                            | Python           |        259 |         10 |         43 |        312 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\views\views.py                                               | Python           |        595 |         29 |         78 |        702 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\templates\base.html                                                 | Django HTML      |      1,598 |          0 |        185 |      1,783 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\templates\home.html                                                 | Django HTML      |         25 |          0 |          4 |         29 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\__init__.py                                             | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\apps.py                                                 | Python           |          5 |          0 |          2 |          7 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\forms.py                                                | Python           |          0 |          0 |          1 |          1 |
+| c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\urls.py                                                 | Python           |          4 |          1 |          2 |          7 |
+| Total                                                                                                                |                  |     57,847 |      1,827 |      8,868 |     68,542 |
++----------------------------------------------------------------------------------------------------------------------+------------------+------------+------------+------------+------------+

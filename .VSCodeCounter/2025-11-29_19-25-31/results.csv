@@ -1,0 +1,281 @@
+"filename", "language", "Python", "Django txt", "Django HTML", "pip requirements", "comment", "blank", "total"
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\access\__init__.py", "Python", 1, 0, 0, 0, 0, 2, 3
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\access\helpers.py", "Python", 105, 0, 0, 0, 3, 34, 142
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\apps.py", "Python", 5, 0, 0, 0, 0, 3, 8
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\forms.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\accounting\urls.py", "Python", 4, 0, 0, 0, 1, 3, 8
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\admin.py", "Python", 58, 0, 0, 0, 1, 8, 67
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\apps.py", "Python", 9, 0, 0, 0, 0, 5, 14
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\forms\forms.py", "Python", 357, 0, 0, 0, 62, 81, 500
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\management\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\management\commands\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\management\commands\update_admin_users.py", "Python", 39, 0, 0, 0, 0, 8, 47
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\models.py", "Python", 15, 0, 0, 0, 0, 6, 21
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\templates\unified_login.html", "Django HTML", 0, 0, 583, 0, 0, 86, 669
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\urls.py", "Python", 7, 0, 0, 0, 0, 3, 10
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\views\login_view.py", "Python", 95, 0, 0, 0, 18, 19, 132
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\authentication\views\logout_view.py", "Python", 60, 0, 0, 0, 8, 18, 86
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\asgi.py", "Python", 4, 0, 0, 0, 0, 4, 8
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\middleware.py", "Python", 358, 0, 0, 0, 66, 74, 498
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\settings.py", "Python", 252, 0, 0, 0, 21, 36, 309
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\urls.py", "Python", 34, 0, 0, 0, 3, 4, 41
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\config\wsgi.py", "Python", 4, 0, 0, 0, 0, 3, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\AllocationModel.py", "Python", 88, 0, 0, 0, 5, 10, 103
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\AllocationProductInfoModel.py", "Python", 51, 0, 0, 0, 0, 7, 58
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\AllocationSchedulingInfoModel.py", "Python", 45, 0, 0, 0, 0, 6, 51
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\__init__.py", "Python", 8, 0, 0, 0, 0, 2, 10
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\admin.py", "Python", 14, 0, 0, 0, 0, 7, 21
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\AllocationFolder\signals.py", "Python", 15, 0, 0, 0, 2, 4, 21
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\ApprovalInfoModel.py", "Python", 74, 0, 0, 0, 10, 17, 101
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\DocumentRelationModel.py", "Python", 81, 0, 0, 0, 22, 17, 120
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\OrderDocumentModel.py", "Python", 30, 0, 0, 0, 3, 8, 41
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\OrderItemModel.py", "Python", 158, 0, 0, 0, 17, 26, 201
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\OrderModel.py", "Python", 137, 0, 0, 0, 14, 24, 175
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\ProformaModel.py", "Python", 64, 0, 0, 0, 0, 11, 75
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\__init__.py", "Python", 14, 0, 0, 0, 0, 1, 15
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\OrderFolder\admin.py", "Python", 56, 0, 0, 0, 0, 11, 67
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\AttachmentModel.py", "Python", 39, 0, 0, 0, 0, 11, 50
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\BankAccountModel.py", "Python", 34, 0, 0, 0, 0, 11, 45
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\DeliveryAddressModel.py", "Python", 67, 0, 0, 0, 0, 8, 75
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\FinancialBankingModel.py", "Python", 64, 0, 0, 0, 0, 8, 72
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PaymentPreferenceModel.py", "Python", 44, 0, 0, 0, 0, 12, 56
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PersonModel.py", "Python", 102, 0, 0, 0, 4, 21, 127
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PhoneNumberModel.py", "Python", 27, 0, 0, 0, 1, 9, 37
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\PurchasePreferenceModel.py", "Python", 14, 0, 0, 0, 0, 7, 21
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\RepresentativeModel.py", "Python", 26, 0, 0, 0, 0, 7, 33
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\SocialNetworkModel.py", "Python", 40, 0, 0, 0, 0, 11, 51
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\__init__.py", "Python", 22, 0, 0, 0, 0, 3, 25
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\PersonFolder\admin.py", "Python", 66, 0, 0, 0, 0, 22, 88
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\BOMModel.py", "Python", 43, 0, 0, 0, 0, 10, 53
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductFinancialInfoModel.py", "Python", 57, 0, 0, 0, 0, 12, 69
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductModel.py", "Python", 144, 0, 0, 0, 2, 31, 177
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductSalesModel.py", "Python", 65, 0, 0, 0, 0, 14, 79
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\ProductionInfoModel.py", "Python", 85, 0, 0, 0, 0, 18, 103
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\QualityControlModel.py", "Python", 109, 0, 0, 0, 0, 21, 130
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\__init__.py", "Python", 15, 0, 0, 0, 0, 3, 18
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\admin.py", "Python", 72, 0, 0, 0, 0, 23, 95
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductFolder\apps.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\ProductionProgramModel.py", "Python", 228, 0, 0, 0, 8, 30, 266
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\ProductionRevertLogModel.py", "Python", 53, 0, 0, 0, 1, 12, 66
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\__init__.py", "Python", 6, 0, 0, 0, 0, 2, 8
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\admin.py", "Python", 40, 0, 0, 0, 2, 10, 52
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\ProductionFolder\migrations\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\FieldPermission.py", "Python", 124, 0, 0, 0, 1, 26, 151
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\Roles.py", "Python", 197, 0, 0, 0, 30, 51, 278
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\TaskPermission.py", "Python", 104, 0, 0, 0, 9, 16, 129
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\__init__.py", "Python", 17, 0, 0, 0, 0, 2, 19
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RBACModel\admin.py", "Python", 130, 0, 0, 0, 0, 32, 162
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\QualityParameterModel.py", "Python", 15, 0, 0, 0, 0, 6, 21
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\RawMaterialModel.py", "Python", 151, 0, 0, 0, 3, 10, 164
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\RawMaterialPurchaseInfoModel.py", "Python", 93, 0, 0, 0, 0, 6, 99
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\RawMaterialQualityControlModel.py", "Python", 148, 0, 0, 0, 0, 6, 154
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\__init__.py", "Python", 12, 0, 0, 0, 0, 2, 14
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\admin.py", "Python", 29, 0, 0, 0, 1, 11, 41
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\RawMaterialFolder\attachments.py", "Python", 18, 0, 0, 0, 0, 3, 21
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\SettlementModel.py", "Python", 89, 0, 0, 0, 12, 15, 116
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\TransactionApprovalModel.py", "Python", 79, 0, 0, 0, 11, 18, 108
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\TransactionDocumentModel.py", "Python", 177, 0, 0, 0, 22, 33, 232
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\__init__.py", "Python", 8, 0, 0, 0, 0, 3, 11
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SettlementFolder\admin.py", "Python", 9, 0, 0, 0, 0, 5, 14
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\SourceStockModel.py", "Python", 84, 0, 0, 0, 1, 15, 100
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\StockEntryModel.py", "Python", 105, 0, 0, 0, 9, 24, 138
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\TargetStockModel.py", "Python", 84, 0, 0, 0, 1, 15, 100
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\__init__.py", "Python", 4, 0, 0, 0, 0, 2, 6
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\StockEntryFolder\admin.py", "Python", 40, 0, 0, 0, 1, 14, 55
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\ProcurementPurchaseOrderModel.py", "Python", 275, 0, 0, 0, 5, 24, 304
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\PurchaseTransportModel.py", "Python", 325, 0, 0, 0, 15, 52, 392
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\RawMaterialPriceInquiryModel.py", "Python", 34, 0, 0, 0, 0, 7, 41
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\SupplyFolder\__init__.py", "Python", 15, 0, 0, 0, 0, 2, 17
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\FareModel.py", "Python", 90, 0, 0, 0, 1, 18, 109
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\LoadingScheduleInfoModel.py", "Python", 39, 0, 0, 0, 0, 11, 50
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\ProductInfoModel.py", "Python", 87, 0, 0, 0, 0, 16, 103
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\TransportAttachmentModel.py", "Python", 47, 0, 0, 0, 0, 12, 59
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\TransportModel.py", "Python", 161, 0, 0, 0, 3, 30, 194
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\TruckInfoModel.py", "Python", 64, 0, 0, 0, 0, 14, 78
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\__init__.py", "Python", 14, 0, 0, 0, 0, 3, 17
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\TransportFolder\admin.py", "Python", 23, 0, 0, 0, 0, 11, 34
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\DefaultItemModel.py", "Python", 72, 0, 0, 0, 2, 16, 90
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\InventoryItemModel.py", "Python", 91, 0, 0, 0, 1, 14, 106
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\WarehouseModel.py", "Python", 86, 0, 0, 0, 0, 15, 101
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\__init__.py", "Python", 8, 0, 0, 0, 0, 1, 9
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\WarehouseFolder\admin.py", "Python", 22, 0, 0, 0, 0, 9, 31
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\__init__.py", "Python", 1, 0, 0, 0, 1, 1, 3
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\admin.py", "Python", 11, 0, 0, 0, 3, 2, 16
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\apps.py", "Python", 52, 0, 0, 0, 14, 14, 80
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\logging_filters.py", "Python", 162, 0, 0, 0, 13, 31, 206
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\logging_levels.py", "Python", 19, 0, 0, 0, 2, 7, 28
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\__init__.py", "Python", 0, 0, 0, 0, 1, 2, 3
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\commands\__init__.py", "Python", 0, 0, 0, 0, 1, 2, 3
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\commands\check_field_permissions.py", "Python", 109, 0, 0, 0, 10, 32, 151
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\core\management\commands\register_models.py", "Python", 89, 0, 0, 0, 13, 19, 121
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\apps.py", "Python", 5, 0, 0, 0, 0, 2, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\forms.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\custody\urls.py", "Python", 4, 0, 0, 0, 1, 2, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\apps.py", "Python", 5, 0, 0, 0, 0, 2, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\__init__.py", "Python", 0, 0, 0, 0, 1, 2, 3
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\loading_exit_form.py", "Python", 188, 0, 0, 0, 8, 26, 222
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\shipping_announcement_form.py", "Python", 28, 0, 0, 0, 0, 8, 36
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\transport_create_form.py", "Python", 94, 0, 0, 0, 3, 15, 112
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\vehicle_entry_form.py", "Python", 140, 0, 0, 0, 9, 22, 171
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\forms\waybill_registration_form.py", "Python", 65, 0, 0, 0, 1, 10, 76
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\exit_list.html", "Django HTML", 0, 0, 179, 0, 0, 22, 201
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\loading_exit_detail.html", "Django HTML", 0, 0, 453, 0, 0, 68, 521
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\loading_exit_list.html", "Django HTML", 0, 0, 160, 0, 0, 20, 180
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\shipping_announcement_list.html", "Django HTML", 0, 0, 472, 0, 0, 50, 522
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\vehicle_entry_list.html", "Django HTML", 0, 0, 569, 0, 0, 70, 639
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\vehicle_recruitment_list.html", "Django HTML", 0, 0, 522, 0, 0, 65, 587
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\waybill_detail.html", "Django HTML", 0, 0, 339, 0, 0, 47, 386
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\waybill_list.html", "Django HTML", 0, 0, 196, 0, 0, 20, 216
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\templates\distribution\waybill_pdf_template.html", "Django HTML", 0, 0, 233, 0, 0, 4, 237
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\urls.py", "Python", 46, 0, 0, 0, 0, 2, 48
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\__init__.py", "Python", 0, 0, 0, 0, 1, 2, 3
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\exit_list_view.py", "Python", 190, 0, 0, 0, 22, 47, 259
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\loading_exit_view.py", "Python", 515, 0, 0, 0, 67, 93, 675
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\shipping_announcement_view.py", "Python", 251, 0, 0, 0, 17, 70, 338
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\vehicle_entry_view.py", "Python", 297, 0, 0, 0, 38, 63, 398
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\vehicle_recruitment_view.py", "Python", 357, 0, 0, 0, 37, 76, 470
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\distribution\views\waybill_registration_view.py", "Python", 237, 0, 0, 0, 30, 48, 315
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\field-access-prompt.txt", "Django txt", 0, 41, 0, 0, 0, 10, 51
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\manage.py", "Python", 17, 0, 0, 0, 1, 5, 23
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\apps.py", "Python", 4, 0, 0, 0, 0, 3, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\base.html", "Django HTML", 0, 0, 160, 0, 0, 26, 186
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\field_permissions.html", "Django HTML", 0, 0, 602, 0, 0, 94, 696
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\permissions_home.html", "Django HTML", 0, 0, 210, 0, 0, 30, 240
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\roles.html", "Django HTML", 0, 0, 553, 0, 0, 85, 638
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\task_permissions.html", "Django HTML", 0, 0, 454, 0, 0, 78, 532
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\templates\perm_manager\users.html", "Django HTML", 0, 0, 329, 0, 0, 48, 377
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\urls.py", "Python", 22, 0, 0, 0, 3, 6, 31
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\__init__.py", "Python", 44, 0, 0, 0, 1, 3, 48
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\decorators.py", "Python", 4, 0, 0, 0, 0, 4, 8
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\field_permissions.py", "Python", 251, 0, 0, 0, 31, 52, 334
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\home.py", "Python", 18, 0, 0, 0, 0, 6, 24
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\roles.py", "Python", 129, 0, 0, 0, 9, 33, 171
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\task_permissions.py", "Python", 99, 0, 0, 0, 9, 30, 138
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\perm_manager\views\users.py", "Python", 100, 0, 0, 0, 8, 24, 132
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\pre-prompt.txt", "Django txt", 0, 31, 0, 0, 0, 12, 43
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\admin.py", "Python", 4, 0, 0, 0, 0, 1, 5
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\apps.py", "Python", 5, 0, 0, 0, 0, 2, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\forms\cargo_announcement_form.py", "Python", 46, 0, 0, 0, 1, 12, 59
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\forms\production_form.py", "Python", 195, 0, 0, 0, 29, 24, 248
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\forms\program_form.py", "Python", 138, 0, 0, 0, 7, 11, 156
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\cargo_announcement.html", "Django HTML", 0, 0, 296, 0, 0, 23, 319
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\manager_warehouse_resolve.html", "Django HTML", 0, 0, 1902, 0, 0, 215, 2117
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_completed_pagination.html", "Django HTML", 0, 0, 1, 0, 0, 1, 2
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_completed_programs_tbody.html", "Django HTML", 0, 0, 65, 0, 0, 1, 66
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_confirmed_programs_tbody.html", "Django HTML", 0, 0, 42, 0, 0, 1, 43
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_progress_programs_tbody.html", "Django HTML", 0, 0, 45, 0, 0, 1, 46
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production\_smart_pagination.html", "Django HTML", 0, 0, 129, 0, 0, 20, 149
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production_archived.html", "Django HTML", 0, 0, 606, 0, 0, 83, 689
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production_declaration.html", "Django HTML", 0, 0, 1564, 0, 0, 180, 1744
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\production_declaration_crud.html", "Django HTML", 0, 0, 1900, 0, 0, 255, 2155
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\program_drafts.html", "Django HTML", 0, 0, 70, 0, 0, 4, 74
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\program_form.html", "Django HTML", 0, 0, 518, 0, 0, 29, 547
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\program_list.html", "Django HTML", 0, 0, 75, 0, 0, 4, 79
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\warehouse_production_detail.html", "Django HTML", 0, 0, 1541, 0, 0, 185, 1726
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\templates\warehouse_production_list.html", "Django HTML", 0, 0, 468, 0, 0, 50, 518
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\urls.py", "Python", 27, 0, 0, 0, 2, 4, 33
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\cargo_announcement.py", "Python", 108, 0, 0, 0, 5, 14, 127
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\manager_warehouse_resolve_view.py", "Python", 552, 0, 0, 0, 38, 120, 710
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\production_declaration_view.py", "Python", 1287, 0, 0, 0, 152, 244, 1683
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\program_views.py", "Python", 146, 0, 0, 0, 3, 19, 168
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\production\views\warehouse_production_view.py", "Python", 520, 0, 0, 0, 48, 109, 677
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\requirements.txt", "pip requirements", 0, 0, 0, 34, 0, 1, 35
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\apps.py", "Python", 5, 0, 0, 0, 0, 2, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\allocation_create_form.py", "Python", 99, 0, 0, 0, 5, 23, 127
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\customer_create_form.py", "Python", 511, 0, 0, 0, 30, 82, 623
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\order_create_form.py", "Python", 248, 0, 0, 0, 13, 33, 294
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\product_create_form.py", "Python", 428, 0, 0, 0, 25, 88, 541
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\product_financial_info_form.py", "Python", 154, 0, 0, 0, 17, 34, 205
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\proforma_create_form.py", "Python", 224, 0, 0, 0, 33, 47, 304
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\settlement_transaction_form.py", "Python", 139, 0, 0, 0, 5, 12, 156
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\transaction_document_form.py", "Python", 44, 0, 0, 0, 2, 9, 55
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\transaction_receipt_approve_form.py", "Python", 64, 0, 0, 0, 5, 13, 82
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\forms\unload_approval_form.py", "Python", 24, 0, 0, 0, 0, 6, 30
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables.py", "Python", 1285, 0, 0, 0, 96, 220, 1601
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables_allocation.py", "Python", 509, 0, 0, 0, 50, 84, 643
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables_proforma.py", "Python", 400, 0, 0, 0, 31, 65, 496
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\tables_transaction_receipt.py", "Python", 348, 0, 0, 0, 38, 63, 449
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\allocation_create.html", "Django HTML", 0, 0, 349, 0, 0, 47, 396
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\allocation_edit.html", "Django HTML", 0, 0, 352, 0, 0, 47, 399
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\allocation_list.html", "Django HTML", 0, 0, 327, 0, 0, 51, 378
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\approve_allocation_detail.html", "Django HTML", 0, 0, 336, 0, 0, 40, 376
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\allocation\approve_allocation_list.html", "Django HTML", 0, 0, 322, 0, 0, 50, 372
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\customer\create_customer.html", "Django HTML", 0, 0, 806, 0, 0, 106, 912
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\customer\customer_list.html", "Django HTML", 0, 0, 557, 0, 0, 81, 638
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\customer\edit_customer.html", "Django HTML", 0, 0, 806, 0, 0, 106, 912
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\order\create_order.html", "Django HTML", 0, 0, 447, 0, 0, 58, 505
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\order\order_list.html", "Django HTML", 0, 0, 428, 0, 0, 57, 485
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\create_product.html", "Django HTML", 0, 0, 515, 0, 0, 64, 579
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\edit_product.html", "Django HTML", 0, 0, 534, 0, 0, 65, 599
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\product_detail.html", "Django HTML", 0, 0, 375, 0, 0, 61, 436
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\product_list.html", "Django HTML", 0, 0, 538, 0, 0, 76, 614
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\product_price_list.html", "Django HTML", 0, 0, 569, 0, 0, 81, 650
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\product\set_product_price.html", "Django HTML", 0, 0, 388, 0, 0, 56, 444
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\approve_proforma_list.html", "Django HTML", 0, 0, 625, 0, 0, 94, 719
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\approve_proforma_upload.html", "Django HTML", 0, 0, 244, 0, 0, 40, 284
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_approve.html", "Django HTML", 0, 0, 333, 0, 0, 31, 364
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_create.html", "Django HTML", 0, 0, 339, 0, 0, 42, 381
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_detail.html", "Django HTML", 0, 0, 564, 0, 0, 55, 619
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_list.html", "Django HTML", 0, 0, 375, 0, 0, 54, 429
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\proforma\proforma_pdf_template.html", "Django HTML", 0, 0, 295, 0, 0, 7, 302
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\settlement\settlement_detail.html", "Django HTML", 0, 0, 799, 0, 0, 103, 902
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\settlement\settlement_list.html", "Django HTML", 0, 0, 295, 0, 0, 45, 340
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\approve_transaction_receipt_detail.html", "Django HTML", 0, 0, 527, 0, 0, 50, 577
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\approve_transaction_receipt_list.html", "Django HTML", 0, 0, 336, 0, 0, 50, 386
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\transaction_receipt_order_list.html", "Django HTML", 0, 0, 447, 0, 0, 76, 523
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\transaction\transaction_receipt_upload.html", "Django HTML", 0, 0, 495, 0, 0, 63, 558
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\unload_approval\unload_approval_detail.html", "Django HTML", 0, 0, 462, 0, 0, 72, 534
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\templates\unload_approval\unload_approval_list.html", "Django HTML", 0, 0, 310, 0, 0, 47, 357
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\test_field_access.py", "Python", 173, 0, 0, 0, 9, 47, 229
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\urls.py", "Python", 55, 0, 0, 0, 17, 18, 90
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\__init__.py", "Python", 2, 0, 0, 0, 0, 3, 5
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\allocation_approve_view.py", "Python", 219, 0, 0, 0, 22, 53, 294
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\allocation_list_view.py", "Python", 327, 0, 0, 0, 24, 67, 418
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\customer_views.py", "Python", 837, 0, 0, 0, 79, 148, 1064
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\order_views.py", "Python", 189, 0, 0, 0, 15, 33, 237
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\product_price_view.py", "Python", 182, 0, 0, 0, 19, 40, 241
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\product_view.py", "Python", 490, 0, 0, 0, 63, 100, 653
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\proforma_approve_view.py", "Python", 106, 0, 0, 0, 14, 29, 149
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\proforma_list_view.py", "Python", 346, 0, 0, 0, 36, 74, 456
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\settlement_view.py", "Python", 233, 0, 0, 0, 34, 55, 322
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\transaction_receipt_approve_view.py", "Python", 179, 0, 0, 0, 23, 40, 242
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\transaction_receipt_view.py", "Python", 131, 0, 0, 0, 12, 34, 177
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\sales\views\unload_approval_view.py", "Python", 129, 0, 0, 0, 15, 33, 177
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\admin.py", "Python", 1, 0, 0, 0, 1, 2, 4
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\apps.py", "Python", 4, 0, 0, 0, 0, 3, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\models.py", "Python", 1, 0, 0, 0, 1, 2, 4
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\tables.py", "Python", 585, 0, 0, 0, 1, 117, 703
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\partials\price_inquiry_modal.html", "Django HTML", 0, 0, 79, 0, 0, 1, 80
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_create_procurement_purchase_order.html", "Django HTML", 0, 0, 134, 0, 0, 1, 135
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_create_purchase_transport.html", "Django HTML", 0, 0, 215, 0, 0, 37, 252
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_create_supplier.html", "Django HTML", 0, 0, 354, 0, 0, 13, 367
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_define_basic_material.html", "Django HTML", 0, 0, 467, 0, 0, 60, 527
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_edit_procurement_purchase_order.html", "Django HTML", 0, 0, 79, 0, 0, 1, 80
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_edit_purchase_transport.html", "Django HTML", 0, 0, 147, 0, 0, 30, 177
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_procurement_purchase_order_detail.html", "Django HTML", 0, 0, 284, 0, 0, 32, 316
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_purchase_order_management.html", "Django HTML", 0, 0, 235, 0, 0, 37, 272
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_purchase_transport_detail.html", "Django HTML", 0, 0, 304, 0, 0, 36, 340
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_purchase_transport_list.html", "Django HTML", 0, 0, 234, 0, 0, 37, 271
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_supplier_detail.html", "Django HTML", 0, 0, 297, 0, 0, 41, 338
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_supplier_edit.html", "Django HTML", 0, 0, 360, 0, 0, 13, 373
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\templates\supply_supplier_list.html", "Django HTML", 0, 0, 273, 0, 0, 46, 319
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\tests.py", "Python", 1, 0, 0, 0, 1, 2, 4
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\urls.py", "Python", 52, 0, 0, 0, 3, 3, 58
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\views\purchase_order_views.py", "Python", 283, 0, 0, 0, 6, 32, 321
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\views\purchase_transport_views.py", "Python", 259, 0, 0, 0, 10, 43, 312
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\supply\views\views.py", "Python", 595, 0, 0, 0, 29, 78, 702
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\templates\base.html", "Django HTML", 0, 0, 1598, 0, 0, 185, 1783
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\templates\home.html", "Django HTML", 0, 0, 25, 0, 0, 4, 29
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\__init__.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\apps.py", "Python", 5, 0, 0, 0, 0, 2, 7
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\forms.py", "Python", 0, 0, 0, 0, 0, 1, 1
+"c:\Users\soosh\Desktop\Karam\SimurghAfzar\PaPalu\warehousing\urls.py", "Python", 4, 0, 0, 0, 1, 2, 7
+"Total", "-", 23325, 72, 34416, 34, 1827, 8868, 68542
