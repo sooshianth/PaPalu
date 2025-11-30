@@ -13,6 +13,7 @@ from core.RBACModel import user_has_task, TaskChoices
 from core.TransportFolder.TransportModel import Transport
 from core.TransportFolder.LoadingScheduleInfoModel import LoadingScheduleInfo
 from core.TransportFolder.TruckInfoModel import TruckInfo
+from core.TransportFolder.FareModel import Fare
 from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.AllocationFolder.AllocationModel import Allocation
@@ -195,14 +196,43 @@ def register_waybill_view(request, waybill_number):
         
         if form.is_valid():
             try:
+                # دریافت داده‌های فرم
+                waybill_number_new = form.cleaned_data['waybill_number'].strip()
+                
+                # بررسی تغییر شماره بارنامه و تکراری نبودن آن (قبل از transaction)
+                if waybill_number_new != transport.waybill_number:
+                    # بررسی تکراری نبودن شماره بارنامه جدید
+                    if Transport.objects.filter(waybill_number=waybill_number_new).exclude(pk=transport.pk).exists():
+                        messages.error(request, f'شماره بارنامه {waybill_number_new} قبلاً استفاده شده است.')
+                        form = WaybillRegistrationForm(request.POST, request.FILES)
+                        # ادامه پردازش را متوقف می‌کنیم
+                        context = {
+                            'form': form,
+                            'transport': transport,
+                            'driver_name': driver_name,
+                            'driver_national_id': driver_national_id,
+                            'driver_mobile': driver_mobile,
+                            'plate_number': plate_number,
+                            'order_number': order_number or 'نامشخص',
+                            'vehicle_entry_time': vehicle_entry_time,
+                            'empty_weight': transport.empty_weight,
+                            'gross_weight': transport.gross_weight,
+                            'accessible_person_fields': get_accessible_person_fields(request.user),
+                            'page_title': f'ثبت اطلاعات بارنامه - {transport.waybill_number}',
+                        }
+                        return render(request, 'distribution/waybill_detail.html', context)
+                
                 with transaction.atomic():
-                    # دریافت داده‌های فرم
-                    waybill_number_new = form.cleaned_data['waybill_number']
+                    # دریافت سایر داده‌های فرم
                     waybill_serial = form.cleaned_data['waybill_serial']
                     waybill_date = form.cleaned_data['waybill_date']
                     cardex_code = form.cleaned_data['cardex_code']
                     contract_code = form.cleaned_data['contract_code']
                     waybill_file = form.cleaned_data['waybill_file']
+                    
+                    # به‌روزرسانی شماره بارنامه (اگر تغییر کرده باشد)
+                    if waybill_number_new != transport.waybill_number:
+                        transport.waybill_number = waybill_number_new
                     
                     # به‌روزرسانی اطلاعات Transport
                     transport.waybill_serial = waybill_serial
@@ -241,15 +271,46 @@ def register_waybill_view(request, waybill_number):
                         description='بارنامه حمل'
                     )
                     
+                    # ذخیره اطلاعات کرایه (اگر ارسال شده باشد)
+                    fare_data = {
+                        'fare_type': form.cleaned_data.get('fare_type'),
+                        'per_transport_fee': form.cleaned_data.get('per_transport_fee'),
+                        'initial_fare': form.cleaned_data.get('initial_fare'),
+                        'terminal_fee': form.cleaned_data.get('terminal_fee'),
+                        'company_fee': form.cleaned_data.get('company_fee'),
+                        'other_costs': form.cleaned_data.get('other_costs'),
+                        'total_fare': form.cleaned_data.get('total_fare'),
+                        'discount': form.cleaned_data.get('discount'),
+                        'excess': form.cleaned_data.get('excess'),
+                        'paid_fare': form.cleaned_data.get('paid_fare'),
+                    }
+                    
+                    # بررسی اینکه آیا حداقل یک فیلد کرایه پر شده است
+                    has_fare_data = any(
+                        value is not None and value != '' 
+                        for value in fare_data.values()
+                    )
+                    
+                    if has_fare_data:
+                        # اگر قبلاً کرایه وجود دارد، به‌روزرسانی می‌کنیم، در غیر این صورت ایجاد می‌کنیم
+                        fare, created = Fare.objects.get_or_create(transport=transport)
+                        for key, value in fare_data.items():
+                            if value is not None and value != '':
+                                setattr(fare, key, value)
+                        fare.save()
+                    
                     # توجه: وضعیت تخصیص در این مرحله تغییر نمی‌کند
                     # وضعیت تخصیص فقط در مراحل خاص تغییر می‌کند:
                     # 1. هنگام اعلام بار: pending_shipping -> pending_vehicle_recruitment
                     # 2. وقتی همه حمل‌ها به pending_waybill رفتند: pending_vehicle_recruitment -> pending_loading_completion
                     # 3. وقتی همه حمل‌ها به completed یا loaded رفتند: pending_loading_completion -> delivered
                     
-                    bug_logger.info(f"اطلاعات بارنامه برای حمل {waybill_number} ثبت شد")
-                    messages.success(request, f'اطلاعات بارنامه برای حمل {waybill_number} با موفقیت ثبت شد.')
-                    audit_logger.activity(f"اطلاعات بارنامه برای حمل {waybill_number} ثبت شد توسط کاربر {request.user.username}")
+                    # استفاده از شماره بارنامه جدید (یا قدیمی اگر تغییر نکرده)
+                    final_waybill_number = transport.waybill_number
+                    
+                    bug_logger.info(f"اطلاعات بارنامه برای حمل {final_waybill_number} ثبت شد")
+                    messages.success(request, f'اطلاعات بارنامه برای حمل {final_waybill_number} با موفقیت ثبت شد.')
+                    audit_logger.activity(f"اطلاعات بارنامه برای حمل {final_waybill_number} ثبت شد توسط کاربر {request.user.username}")
                     
                     return redirect('distribution:waybill_list')
                     
@@ -280,6 +341,20 @@ def register_waybill_view(request, waybill_number):
         
         # شماره بارنامه همیشه همان waybill_number فعلی است
         initial_data['waybill_number'] = transport.waybill_number
+        
+        # بارگذاری اطلاعات کرایه (اگر وجود دارد)
+        fare = transport.fares.first()
+        if fare:
+            initial_data['fare_type'] = fare.fare_type
+            initial_data['per_transport_fee'] = fare.per_transport_fee
+            initial_data['initial_fare'] = fare.initial_fare
+            initial_data['terminal_fee'] = fare.terminal_fee
+            initial_data['company_fee'] = fare.company_fee
+            initial_data['other_costs'] = fare.other_costs
+            initial_data['total_fare'] = fare.total_fare
+            initial_data['discount'] = fare.discount
+            initial_data['excess'] = fare.excess
+            initial_data['paid_fare'] = fare.paid_fare
         
         # ایجاد فرم با مقداردهی اولیه
         form = WaybillRegistrationForm(initial=initial_data)

@@ -15,8 +15,7 @@ class WaybillRegistrationForm(forms.Form):
         widget=forms.TextInput(attrs={
             'class': 'form-control',
             'placeholder': 'شماره بارنامه',
-            'required': True,
-            'readonly': True
+            'required': True
         })
     )
     
@@ -71,5 +70,124 @@ class WaybillRegistrationForm(forms.Form):
             'required': True
         }),
         help_text='فایل بارنامه (تصویر یا PDF)'
+    )
+    
+    # فیلدهای کرایه (اختیاری)
+    fare_type = forms.CharField(
+        required=False,
+        label='نوع کرایه',
+        max_length=20,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'نوع کرایه'
+        })
+    )
+    
+    per_transport_fee = forms.DecimalField(
+        required=False,
+        label='فی حمل',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'فی حمل',
+            'step': '0.01'
+        })
+    )
+    
+    initial_fare = forms.DecimalField(
+        required=False,
+        label='کرایه اولیه',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کرایه اولیه',
+            'step': '0.01'
+        })
+    )
+    
+    terminal_fee = forms.DecimalField(
+        required=False,
+        label='کارمزد پایانه',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کارمزد پایانه',
+            'step': '0.01'
+        })
+    )
+    
+    company_fee = forms.DecimalField(
+        required=False,
+        label='کارمزد شرکت',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کارمزد شرکت',
+            'step': '0.01'
+        })
+    )
+    
+    other_costs = forms.DecimalField(
+        required=False,
+        label='سایر هزینه‌ها',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'سایر هزینه‌ها',
+            'step': '0.01'
+        })
+    )
+    
+    total_fare = forms.DecimalField(
+        required=False,
+        label='کرایه کل',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کرایه کل',
+            'step': '0.01'
+        })
+    )
+    
+    discount = forms.DecimalField(
+        required=False,
+        label='تخفیف',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'تخفیف',
+            'step': '0.01'
+        })
+    )
+    
+    excess = forms.DecimalField(
+        required=False,
+        label='مازاد',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'مازاد',
+            'step': '0.01'
+        })
+    )
+    
+    paid_fare = forms.DecimalField(
+        required=False,
+        label='کرایه پرداختی',
+        max_digits=15,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کرایه پرداختی',
+            'step': '0.01'
+        })
     )
 

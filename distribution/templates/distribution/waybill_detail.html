@@ -334,6 +334,111 @@
             </div>
         </div>
         
+        <!-- بخش: اطلاعات کرایه (اختیاری) -->
+        <div class="form-section">
+            <h3 class="form-section-title">اطلاعات کرایه (اختیاری)</h3>
+            
+            <div class="form-group">
+                <label for="{{ form.fare_type.id_for_label }}">نوع کرایه</label>
+                {{ form.fare_type }}
+                {% if form.fare_type.errors %}
+                    <div class="alert alert-error">
+                        {{ form.fare_type.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.per_transport_fee.id_for_label }}">فی حمل</label>
+                {{ form.per_transport_fee }}
+                {% if form.per_transport_fee.errors %}
+                    <div class="alert alert-error">
+                        {{ form.per_transport_fee.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.initial_fare.id_for_label }}">کرایه اولیه</label>
+                {{ form.initial_fare }}
+                {% if form.initial_fare.errors %}
+                    <div class="alert alert-error">
+                        {{ form.initial_fare.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.terminal_fee.id_for_label }}">کارمزد پایانه</label>
+                {{ form.terminal_fee }}
+                {% if form.terminal_fee.errors %}
+                    <div class="alert alert-error">
+                        {{ form.terminal_fee.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.company_fee.id_for_label }}">کارمزد شرکت</label>
+                {{ form.company_fee }}
+                {% if form.company_fee.errors %}
+                    <div class="alert alert-error">
+                        {{ form.company_fee.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.other_costs.id_for_label }}">سایر هزینه‌ها</label>
+                {{ form.other_costs }}
+                {% if form.other_costs.errors %}
+                    <div class="alert alert-error">
+                        {{ form.other_costs.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.total_fare.id_for_label }}">کرایه کل</label>
+                {{ form.total_fare }}
+                {% if form.total_fare.errors %}
+                    <div class="alert alert-error">
+                        {{ form.total_fare.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.discount.id_for_label }}">تخفیف</label>
+                {{ form.discount }}
+                {% if form.discount.errors %}
+                    <div class="alert alert-error">
+                        {{ form.discount.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.excess.id_for_label }}">مازاد</label>
+                {{ form.excess }}
+                {% if form.excess.errors %}
+                    <div class="alert alert-error">
+                        {{ form.excess.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.paid_fare.id_for_label }}">کرایه پرداختی</label>
+                {{ form.paid_fare }}
+                {% if form.paid_fare.errors %}
+                    <div class="alert alert-error">
+                        {{ form.paid_fare.errors }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
         <div class="form-actions">
             <a href="{% url 'distribution:waybill_list' %}" class="btn-secondary">
                 لغو عملیات
