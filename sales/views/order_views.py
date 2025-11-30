@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.db import transaction
 from django.db.models import Sum, Case, When, F, DecimalField, Value, Q
 from django.db.models.functions import Coalesce
+from django.views.decorators.http import require_http_methods
 import logging
 from core.logging_levels import *
 import django_tables2 as tables
@@ -21,6 +22,7 @@ from sales.forms.order_create_form import (
 )
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
+from core.PersonFolder.PersonModel import Person
 from access.helpers import check_field_access_prefer_edit
 from sales.tables import OrderTable
 
@@ -112,6 +114,10 @@ def create_order_view(request):
                 messages.error(request, f'خطا در ایجاد سفارش: {str(e)}')
         else:
             bug_logger.warning("فرم ایجاد سفارش معتبر نیست")
+            if order_form.errors:
+                bug_logger.warning(f"خطاهای فرم: {order_form.errors}")
+            if item_formset.errors:
+                bug_logger.warning(f"خطاهای فرمست: {item_formset.errors}")
             messages.error(request, 'اطلاعات وارد شده معتبر نیست. لطفاً خطاهای فرم را بررسی کنید.')
     else:
         temp_order_form = CreateOrderForm()
@@ -120,7 +126,6 @@ def create_order_view(request):
         order_form = CreateOrderForm(user=request.user, accessible_fields=access_main, initial={
             'order_type': 'sale',
             'registration_source': 'expert',
-            'status': 'pending_proforma_issue',
         })
         item_formset = build_order_item_formset(accessible_fields=access_item)
 
@@ -251,5 +256,40 @@ def order_list_view(request):
         'status_filter': status_filter,
     }
     return render(request, 'order/order_list.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def customer_search_api(request):
+    """
+    API endpoint برای جستجوی مشتری‌ها
+    فقط مشتری‌های کارشناس فروش فعلی (یا همه برای superuser)
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # فیلتر کردن مشتری‌ها
+    if request.user.is_superuser:
+        customers = Person.objects.filter(
+            type='customer',
+            name__icontains=query
+        ).order_by('name')[:20]
+    else:
+        customers = Person.objects.filter(
+            type='customer',
+            sales_expert=request.user,
+            name__icontains=query
+        ).order_by('name')[:20]
+    
+    results = []
+    for customer in customers:
+        results.append({
+            'id': customer.national_id,
+            'text': f"{customer.name} ({customer.national_id})"
+        })
+    
+    return JsonResponse({'results': results})
 
 

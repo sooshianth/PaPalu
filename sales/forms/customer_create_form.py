@@ -505,7 +505,7 @@ class CreateCustomerForm(forms.Form):
                 birth_date=clean_empty_to_none(self.cleaned_data.get('birth_date')),
                 introducer=clean_empty_to_none(self.cleaned_data.get('introducer')),
                 description=clean_empty_to_none(self.cleaned_data.get('description')),
-                sales_expert=user.username  # کارشناس فروش فعلی
+                sales_expert=user  # کارشناس فروش فعلی
             )
         
         # مدیریت حیطه‌های فعالیت

@@ -601,7 +601,7 @@ def customer_list_view(request):
         # فقط مشتریانی که کارشناس فروششان کاربر فعلی است
         customers = Person.objects.filter(
             type='customer',
-            sales_expert=request.user.username
+            sales_expert=request.user
         ).annotate(
             mobile_number_sort=Subquery(mobile_subquery)
         ).select_related().prefetch_related()
@@ -671,7 +671,7 @@ def edit_customer_view(request, national_id):
     person = get_object_or_404(Person, national_id=national_id, type='customer')
     
     # بررسی دسترسی: فقط superuser یا کارشناس فروش خود مشتری می‌تواند ویرایش کند
-    if not request.user.is_superuser and person.sales_expert != request.user.username:
+    if not request.user.is_superuser and person.sales_expert != request.user:
         audit_logger.activity(f"تلاش برای ویرایش مشتری {national_id} متعلق به کاربر دیگر")
         messages.error(request, 'شما دسترسی به ویرایش این مشتری ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
