@@ -54,6 +54,10 @@ def user_has_task(user, task_code):
     # Handle None or anonymous user
     if not user or not user.is_authenticated:
         return False
+
+    # Superuser has access to everything
+    if user.is_superuser:
+        return True
     
     # Check roles
     for role in user.roles.all():

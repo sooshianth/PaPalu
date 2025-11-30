@@ -1185,8 +1185,8 @@ def production_program_crud_view(request, program_id=None):
                                 messages.error(request, f'لطفاً مقدار مصرف واقعی را برای تمام مواد اولیه وارد کنید. موارد ناقص: {", ".join(missing_consumption)}')
                                 # Don't save and return to form
                                 warehouse_dist_data = program.warehouse_distribution if program and program.warehouse_distribution else {}
-                                available_warehouses = Warehouse.objects.exclude(
-                                    warehouse_type__in=['supplier', 'production']
+                                available_warehouses = Warehouse.objects.filter(
+                                    warehouse_type='secondary'
                                 ).order_by('name')
                                 production_warehouses = Warehouse.objects.filter(
                                     warehouse_type='production'
@@ -1540,9 +1540,9 @@ def production_program_crud_view(request, program_id=None):
             actual_consumption_data = program.actual_consumption
         
         # Get available warehouses for product warehouse selection
-        # Filter to non-supplier, non-production warehouses (secondary, primary, consumer)
-        available_warehouses = Warehouse.objects.exclude(
-            warehouse_type__in=['supplier', 'production']
+        # Filter to only secondary warehouses (ثانویه)
+        available_warehouses = Warehouse.objects.filter(
+            warehouse_type='secondary'
         ).order_by('name')
         
         # Get production warehouses
@@ -1604,8 +1604,8 @@ def production_program_crud_view(request, program_id=None):
     
     except Exception as e:
         bug_logger.error(f"General error in page load: {str(e)}")        
-        available_warehouses = Warehouse.objects.exclude(
-            warehouse_type__in=['supplier', 'production']
+        available_warehouses = Warehouse.objects.filter(
+            warehouse_type='secondary'
         ).order_by('name')
         production_warehouses = Warehouse.objects.filter(
             warehouse_type='production'
