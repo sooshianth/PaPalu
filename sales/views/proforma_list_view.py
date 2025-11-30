@@ -325,6 +325,41 @@ def proforma_detail_view(request, proforma_id):
 
 
 @login_required
+def order_search_api(request):
+    """
+    API endpoint برای جستجوی سفارش‌ها
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # فیلتر کردن سفارش‌ها - فقط سفارش‌های فروش و مربوط به کاربر
+    if request.user.is_superuser:
+        orders = Order.objects.filter(
+            order_type='sale',
+            order_number__icontains=query
+        ).select_related('customer').order_by('-created_at')[:20]
+    else:
+        orders = Order.objects.filter(
+            order_type='sale',
+            order_number__icontains=query,
+            registered_by=request.user
+        ).select_related('customer').order_by('-created_at')[:20]
+    
+    results = []
+    for order in orders:
+        results.append({
+            'id': order.order_number,
+            'text': f"{order.order_number} - {order.customer.name if order.customer else 'بدون مشتری'}",
+            'customer_id': order.customer.national_id if order.customer else None,
+            'customer_name': order.customer.name if order.customer else None,
+        })
+    
+    return JsonResponse({'results': results})
+
+
+@login_required
 def get_order_customer_api(request, order_number):
     """
     API endpoint برای دریافت اطلاعات مشتری یک سفارش
@@ -394,8 +429,16 @@ def proforma_download_pdf(request, proforma_id):
         # دریافت اطلاعات سفارش و اقلام
         order = proforma.order
         order_items = []
+        total_amount = 0
         if order:
             order_items = OrderItem.objects.filter(order=order).select_related('product')
+            # محاسبه مجموع کل
+            for item in order_items:
+                if item.total_purchase_cost:
+                    total_amount += float(item.total_purchase_cost)
+                elif item.quantity and item.unit_price:
+                    subtotal = float(item.quantity) * float(item.unit_price)
+                    total_amount += subtotal
         
         # دریافت اطلاعات کامل مشتری و شرکت
         customer_info = get_person_complete_info(proforma.customer) if proforma.customer else None
@@ -409,6 +452,7 @@ def proforma_download_pdf(request, proforma_id):
             'order_items': order_items,
             'customer_info': customer_info,
             'company_info': company_info,
+            'total_amount': total_amount,
         })
         
         # تبدیل به PDF
@@ -417,8 +461,12 @@ def proforma_download_pdf(request, proforma_id):
         # کانفیگ فونت برای فارسی
         font_config = FontConfiguration()
         
-        # CSS برای فونت وزیر
+        # CSS برای فونت وزیر و تنظیمات landscape
         css = CSS(string='''
+            @page {
+                size: A4 landscape;
+                margin: 15mm;
+            }
             @font-face {
                 font-family: 'Vazir';
                 src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Regular.ttf') format('truetype');

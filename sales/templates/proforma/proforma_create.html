@@ -155,6 +155,7 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.order.label }}</label>
                     {{ form.order }}
+                    {{ form.order_id }}
                     {% if form.order.errors %}
                         <div class="text-danger">{{ form.order.errors.0 }}</div>
                     {% endif %}
@@ -185,9 +186,13 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.customer.label }}</label>
                     {{ form.customer }}
+                    {{ form.customer_id }}
                     {% if form.customer.errors %}
                         <div class="text-danger">{{ form.customer.errors.0 }}</div>
                     {% endif %}
+                    <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">
+                        بعد از انتخاب سفارش، مشتری به صورت خودکار پر می‌شود
+                    </small>
                 </div>
                 {% endif %}
 
@@ -241,31 +246,150 @@
 <script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 <script>
-// تابع برای انتخاب خودکار مشتری بر اساس سفارش
-function updateCustomerFromOrder(orderNumber) {
-    if (!orderNumber) {
+// مدیریت autocomplete برای انتخاب سفارش
+document.addEventListener('DOMContentLoaded', function() {
+    const orderInput = document.querySelector('input[name="order"]');
+    const orderIdInput = document.querySelector('input[name="order_id"]');
+    const customerInput = document.querySelector('input[name="customer"]');
+    const customerIdInput = document.querySelector('input[name="customer_id"]');
+    const proformaNumberInput = document.querySelector('input[name="proforma_number"]');
+    let orderSuggestions = [];
+    let selectedOrderId = null;
+    
+    console.log('Order input found:', !!orderInput);
+    console.log('Order ID input found:', !!orderIdInput);
+    console.log('Customer input found:', !!customerInput);
+    console.log('Customer ID input found:', !!customerIdInput);
+    
+    if (orderInput) {
+        // ایجاد container برای پیشنهادات
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'order-suggestions';
+        suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+        orderInput.parentElement.style.position = 'relative';
+        orderInput.parentElement.appendChild(suggestionsContainer);
+        
+        let searchTimeout;
+        
+        orderInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 1) {
+                suggestionsContainer.style.display = 'none';
+                orderSuggestions = [];
+                selectedOrderId = null;
+                if (orderIdInput) orderIdInput.value = '';
+                if (customerInput) customerInput.value = '';
+                if (customerIdInput) customerIdInput.value = '';
         return;
     }
     
-    // دریافت اطلاعات مشتری از API
-    fetch(`/sales/api/order/${orderNumber}/customer/`)
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "sales:order_search_api" %}?q=' + encodeURIComponent(query))
         .then(response => response.json())
         .then(data => {
-            if (data.customer_id) {
-                // انتخاب مشتری در dropdown
-                const customerSelect = document.getElementById('id_customer');
-                if (customerSelect) {
-                    customerSelect.value = data.customer_id;
-                    
-                    // نمایش پیام موفقیت
-                    console.log(`مشتری "${data.customer_name}" به صورت خودکار انتخاب شد`);
-                }
-            }
-        })
-        .catch(error => {
-            console.error('خطا در دریافت اطلاعات مشتری:', error);
+                        orderSuggestions = data.results || [];
+                        displaySuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی سفارش:', error);
+                    });
+            }, 300);
         });
-}
+        
+        function displaySuggestions() {
+            suggestionsContainer.innerHTML = '';
+            
+            if (orderSuggestions.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            orderSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f0f0f0';
+                });
+                suggestionItem.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+                suggestionItem.addEventListener('click', function() {
+                    orderInput.value = item.text;
+                    selectedOrderId = item.id;
+                    if (orderIdInput) {
+                        orderIdInput.value = item.id;
+                        console.log('Order ID set to:', item.id);
+                    }
+                    
+                    // انتخاب خودکار مشتری
+                    if (item.customer_id && customerInput && customerIdInput) {
+                        customerInput.value = item.customer_name || '';
+                        customerIdInput.value = item.customer_id;
+                        console.log('Customer automatically set:', item.customer_name);
+                    }
+                    
+                    // تولید خودکار شماره پیش فاکتور (همیشه پر می‌شود)
+                    if (proformaNumberInput) {
+                        generateProformaNumber(item.id);
+                    }
+                    
+                    suggestionsContainer.style.display = 'none';
+                });
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            
+            suggestionsContainer.style.display = 'block';
+        }
+        
+        // تولید خودکار شماره پیش فاکتور
+        function generateProformaNumber(orderNumber) {
+            // تبدیل به رشته
+            const orderStr = orderNumber.toString();
+            
+            // استخراج 4 رقم آخر از شماره سفارش
+            // اگر طول کمتر از 4 است، با صفر پر می‌کنیم
+            let lastFour;
+            if (orderStr.length >= 4) {
+                lastFour = orderStr.slice(-4);
+            } else {
+                lastFour = orderStr.padStart(4, '0');
+            }
+            
+            // تولید 2 رقم رندوم (10 تا 99)
+            const randomTwo = Math.floor(Math.random() * 90) + 10;
+            
+            // فرمت: PF + 4 رقم آخر سفارش + 2 رقم رندوم
+            // مثال: سفارش 1000123 → PF012373
+            const proformaNumber = `PF${lastFour}${randomTwo}`;
+            
+            if (proformaNumberInput) {
+                proformaNumberInput.value = proformaNumber;
+                console.log('Order number:', orderNumber);
+                console.log('Last 4 digits:', lastFour);
+                console.log('Random 2 digits:', randomTwo);
+                console.log('Proforma number generated:', proformaNumber);
+            }
+        }
+        
+        // بستن پیشنهادات با کلیک خارج
+        document.addEventListener('click', function(e) {
+            if (!orderInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+        
+        // مدیریت کلیدهای کیبورد
+        orderInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+    }
+});
 
 $(document).ready(function() {
     // تبدیل فیلد تاریخ اعتبار به تقویم شمسی

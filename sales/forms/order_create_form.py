@@ -58,7 +58,7 @@ class CreateOrderForm(forms.ModelForm):
         # Set defaults for creation context
         self.fields['order_type'].required = False
         self.fields['registration_source'].required = False
-        
+
         # حذف فیلد status چون باید توسط backend تنظیم شود
         if 'status' in self.fields:
             del self.fields['status']
@@ -115,7 +115,7 @@ class CreateOrderForm(forms.ModelForm):
                 self.add_error('customer', 'چندین مشتری با این کد ملی یافت شد. لطفاً با پشتیبانی تماس بگیرید.')
         
         return cleaned_data
-    
+
     def save(self, commit=True) -> Order:
         order: Order = super().save(commit=False)
         # تنظیم customer از clean
@@ -344,7 +344,7 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
             access_main[form_field] = True
         else:
             model_name, model_field = mapping_value
-            access_main[form_field] = can_edit_field(OrderModel, model_field)
+        access_main[form_field] = can_edit_field(OrderModel, model_field)
 
     access_item = {}
     for form_field, (model_name, model_field) in item_field_mapping.items():

@@ -13,12 +13,8 @@ class CreateProformaForm(forms.ModelForm):
     
     class Meta:
         model = Proforma
-        fields = ['order', 'proforma_number', 'validity_date', 'customer', 'company', 'description']
+        fields = ['proforma_number', 'validity_date', 'company', 'description']
         widgets = {
-            'order': forms.Select(attrs={
-                'class': 'form-control',
-                'placeholder': 'انتخاب سفارش'
-            }),
             'proforma_number': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'شماره سریال پیش فاکتور'
@@ -27,10 +23,6 @@ class CreateProformaForm(forms.ModelForm):
                 'class': 'form-control',
                 'type': 'date',
                 'placeholder': 'تاریخ اعتبار سریال'
-            }),
-            'customer': forms.Select(attrs={
-                'class': 'form-control',
-                'placeholder': 'انتخاب مشتری'
             }),
             'company': forms.Select(attrs={
                 'class': 'form-control',
@@ -62,31 +54,39 @@ class CreateProformaForm(forms.ModelForm):
             for field_name in fields_to_remove:
                 del self.fields[field_name]
         
-        # تنظیم فیلد order به صورت SelectField - فقط سفارش‌های نوع فروش
-        if 'order' in self.fields:
-            self.fields['order'] = forms.ModelChoiceField(
-                queryset=Order.objects.filter(order_type='sale').select_related('customer').order_by('-created_at'),
+        # تنظیم فیلد order به صورت TextInput برای autocomplete
+        self.fields['order'] = forms.CharField(
                 required=True,
                 label='سفارش',
-                widget=forms.Select(attrs={
-                    'class': 'form-control',
-                    'placeholder': 'انتخاب سفارش',
-                    'onchange': 'updateCustomerFromOrder(this.value)'  # JavaScript برای انتخاب خودکار مشتری
-                }),
-                empty_label='-- انتخاب سفارش --'
+            widget=forms.TextInput(attrs={
+                'class': 'form-control order-autocomplete',
+                'placeholder': 'جستجوی سفارش با شماره...',
+                'autocomplete': 'off'
+            })
+        )
+        
+        # اضافه کردن فیلد مخفی برای ذخیره شماره سفارش
+        self.fields['order_id'] = forms.CharField(
+            required=False,
+            widget=forms.HiddenInput()
             )
         
-        # تنظیم فیلد customer به صورت SelectField - فقط مشتریان
-        if 'customer' in self.fields:
-            self.fields['customer'] = forms.ModelChoiceField(
-                queryset=Person.objects.filter(type='customer').order_by('name'),
+        # تنظیم فیلد customer به صورت readonly (پر می‌شود بعد از انتخاب سفارش)
+        self.fields['customer'] = forms.CharField(
                 required=True,
                 label='مشتری',
-                widget=forms.Select(attrs={
+            widget=forms.TextInput(attrs={
                     'class': 'form-control',
-                    'placeholder': 'انتخاب مشتری'
-                }),
-                empty_label='-- انتخاب مشتری --'
+                'placeholder': 'بعد از انتخاب سفارش تکمیل می‌شود',
+                'readonly': True,
+                'style': 'background-color: #e9ecef;'
+            })
+        )
+        
+        # اضافه کردن فیلد مخفی برای ذخیره ID مشتری
+        self.fields['customer_id'] = forms.CharField(
+            required=False,
+            widget=forms.HiddenInput()
             )
         
         # تنظیم فیلد company - شرکت خودمان (تامین نهاده سیمرغ)
@@ -107,6 +107,9 @@ class CreateProformaForm(forms.ModelForm):
                 # ذخیره company برای استفاده در تمپلیت
                 self.company_display = company
         
+        # شماره پیش فاکتور باید خالی باشد تا بعد از انتخاب سفارش پر شود
+        # تولید خودکار در JavaScript انجام می‌شود
+        
         # تنظیم فیلدهای اجباری
         required_fields = ['order', 'proforma_number', 'validity_date', 'customer', 'company']
         for field_name in required_fields:
@@ -114,7 +117,7 @@ class CreateProformaForm(forms.ModelForm):
                 self.fields[field_name].required = True
         
         # تنظیم فیلدهای اختیاری
-        optional_fields = ['description']
+        optional_fields = ['description', 'order_id', 'customer_id']
         for field_name in optional_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = False
@@ -150,6 +153,35 @@ class CreateProformaForm(forms.ModelForm):
         
         return company
     
+    def _generate_proforma_number(self, order_number=None):
+        """
+        تولید خودکار شماره پیش فاکتور
+        فرمت: PF + 4 رقم آخر سفارش + 2 رقم رندوم
+        مثال: سفارش 1000123 → PF012373
+        """
+        import random
+        
+        if order_number:
+            # تبدیل به رشته
+            order_str = str(order_number)
+            
+            # استخراج 4 رقم آخر از شماره سفارش
+            if len(order_str) >= 4:
+                last_four = order_str[-4:]
+            else:
+                last_four = order_str.zfill(4)
+        else:
+            # اگر شماره سفارش نداریم، از تاریخ استفاده می‌کنیم
+            import jdatetime
+            now = jdatetime.datetime.now()
+            last_four = now.strftime('%m%d')
+        
+        # تولید 2 رقم رندوم (10 تا 99)
+        random_two = random.randint(10, 99)
+        
+        # فرمت نهایی: PF + 4 رقم آخر + 2 رقم رندوم
+        return f"PF{last_four}{random_two}"
+    
     def clean_validity_date(self):
         """اعتبارسنجی تاریخ اعتبار"""
         validity_date = self.cleaned_data.get('validity_date')
@@ -163,10 +195,65 @@ class CreateProformaForm(forms.ModelForm):
         return validity_date
     
     def clean_customer(self):
-        """بررسی کامل بودن اطلاعات مشتری"""
+        """
+        بررسی کامل بودن اطلاعات مشتری
+        توجه: customer در اینجا یک رشته است، نه شیء Person
+        بررسی واقعی در clean() انجام می‌شود
+        """
         customer = self.cleaned_data.get('customer')
+        # این فیلد فقط برای نمایش است، validation واقعی در clean() انجام می‌شود
+        return customer
+    
+    def clean(self):
+        """اعتبارسنجی کلی فرم"""
+        cleaned_data = super().clean()
         
-        if customer:
+        # پردازش order_id و تبدیل به order
+        order_id = cleaned_data.get('order_id', '').strip()
+        order_text = cleaned_data.get('order', '').strip()
+        
+        if not order_id and order_text:
+            # اگر order_id وجود ندارد اما متن وارد شده، سعی کن شماره سفارش را استخراج کن
+            import re
+            match = re.search(r'(\d+)', order_text)
+            if match:
+                order_id = match.group(1)
+                cleaned_data['order_id'] = order_id
+        
+        if not order_id:
+            self.add_error('order', 'لطفاً یک سفارش را از لیست انتخاب کنید.')
+            return cleaned_data
+        
+        # پیدا کردن سفارش
+        try:
+            order = Order.objects.get(order_number=order_id, order_type='sale')
+            self._order = order
+            
+            # تولید خودکار شماره پیش فاکتور اگر خالی باشد
+            if not cleaned_data.get('proforma_number'):
+                cleaned_data['proforma_number'] = self._generate_proforma_number(order_id)
+        except Order.DoesNotExist:
+            self.add_error('order', 'سفارش انتخاب شده یافت نشد یا نوع آن فروش نیست.')
+            return cleaned_data
+        
+        # پردازش customer_id
+        customer_id = cleaned_data.get('customer_id', '').strip()
+        
+        if not customer_id:
+            # اگر customer_id وجود ندارد، از مشتری سفارش استفاده کن
+            if order.customer:
+                customer_id = order.customer.national_id
+                cleaned_data['customer_id'] = customer_id
+            else:
+                self.add_error('customer', 'سفارش انتخاب شده مشتری ندارد.')
+                return cleaned_data
+        
+        # پیدا کردن مشتری
+        try:
+            customer = Person.objects.get(national_id=customer_id, type='customer')
+            self._customer = customer
+            
+            # بررسی کامل بودن اطلاعات مشتری
             missing_fields = []
             
             # بررسی نام
@@ -231,26 +318,26 @@ class CreateProformaForm(forms.ModelForm):
             # اگر فیلدی ناقص است، خطا نمایش می‌دهیم
             if missing_fields:
                 error_message = f'اطلاعات مشتری ناقص است. لطفاً فیلدهای زیر را تکمیل کنید: {", ".join(missing_fields)}'
-                raise forms.ValidationError(error_message)
-        
-        return customer
-    
-    def clean(self):
-        """اعتبارسنجی کلی فرم"""
-        cleaned_data = super().clean()
-        
-        # بررسی اینکه همه فیلدهای اجباری پر شده‌اند
-        required_fields = ['order', 'proforma_number', 'validity_date', 'customer', 'company']
-        for field_name in required_fields:
-            if field_name not in cleaned_data or not cleaned_data.get(field_name):
-                if field_name in self.fields:
-                    self.add_error(field_name, f'فیلد {self.fields[field_name].label} الزامی است.')
+                self.add_error('customer', error_message)
+                return cleaned_data
+            
+        except Person.DoesNotExist:
+            self.add_error('customer', 'مشتری یافت نشد.')
+            return cleaned_data
         
         return cleaned_data
     
     def save(self, commit=True):
         """ذخیره فرم"""
         instance = super().save(commit=False)
+        
+        # تنظیم order از clean
+        if hasattr(self, '_order'):
+            instance.order = self._order
+        
+        # تنظیم customer از clean
+        if hasattr(self, '_customer'):
+            instance.customer = self._customer
         
         # اگر company در cleaned_data نباشد اما در initial باشد
         if not instance.company and 'company' in self.initial:
@@ -277,22 +364,29 @@ def get_accessible_proforma_fields(user, proforma_form: CreateProformaForm = Non
     """
     
     # فیلدهایی که در فرم نمایش داده می‌شوند
-    display_fields = {
-        'order': 'order',
-        'proforma_number': 'proforma_number',
-        'validity_date': 'validity_date',
-        'customer': 'customer',
-        'company': 'company',
-        'description': 'description',
+    proforma_field_mapping = {
+        'order': ('Proforma', 'order'),
+        'order_id': None,  # فیلد مخفی، همیشه دسترسی دارد
+        'proforma_number': ('Proforma', 'proforma_number'),
+        'validity_date': ('Proforma', 'validity_date'),
+        'customer': ('Proforma', 'customer'),
+        'customer_id': None,  # فیلد مخفی، همیشه دسترسی دارد
+        'company': ('Proforma', 'company'),
+        'description': ('Proforma', 'description'),
     }
     
     # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
-        return {field: True for field in display_fields.keys()}
+        return {field: True for field in proforma_field_mapping.keys()}
 
     # استفاده از سیستم جدید FieldPermission
     accessible_fields = {}
-    for display_name, model_field_name in display_fields.items():
+    for display_name, mapping_value in proforma_field_mapping.items():
+        if mapping_value is None:
+            # فیلدهایی که نیازی به بررسی دسترسی ندارند (مثل order_id, customer_id)
+            accessible_fields[display_name] = True
+        else:
+            model_name, model_field_name = mapping_value
         accessible_fields[display_name] = check_field_access_prefer_edit(
             user,
             Proforma,
