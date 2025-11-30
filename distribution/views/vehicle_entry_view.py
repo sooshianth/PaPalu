@@ -317,8 +317,10 @@ def register_vehicle_entry_view(request, waybill_number):
                 return redirect('distribution:vehicle_entry_list')
                 
         except Exception as e:
-            bug_logger.error(f"خطا در ثبت ورود خودرو: {str(e)}")
-            messages.error(request, f'خطا در ثبت ورود خودرو: {str(e)}')
+            import traceback
+            messages.error(request, f'خطا در ثبت ورود خودرو: {traceback.format_exc()}')
+            bug_logger.error(f"خطا در ثبت ورود خودرو: {traceback.format_exc()}")
+
             return redirect('distribution:vehicle_entry_list')
     
     # برای GET request، اطلاعات حمل را برمی‌گردانیم (برای AJAX)

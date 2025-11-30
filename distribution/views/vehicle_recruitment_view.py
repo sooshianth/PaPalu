@@ -122,6 +122,7 @@ def vehicle_recruitment_list_view(request):
             'order_number': allocation.order.order_number if allocation.order else '-',
             'delivery_info': delivery_info,
             'transports_count': transports_count,
+            'shipping_method': allocation.get_shipping_announcement_method_display() if allocation.shipping_announcement_method else '-',
         })
     
     # بررسی دسترسی فیلدها
@@ -285,7 +286,7 @@ def create_transport_view(request, allocation_number):
                             phone_number.number = driver_mobile
                             phone_number.save()
                 
-                # ایجاد حمل
+                # ایجاد حمل (شماره بارنامه در مراحل بعدی پر می‌شود)
                 transport = Transport.objects.create(
                     waybill_number=waybill_number,
                     allocation=allocation,
@@ -329,9 +330,9 @@ def create_transport_view(request, allocation_number):
                         file=official_gazette_file
                     )
                 
-                bug_logger.info(f"حمل {waybill_number} برای تخصیص {allocation_number} ایجاد شد")
-                messages.success(request, f'حمل {waybill_number} با موفقیت ایجاد شد.')
-                audit_logger.activity(f"حمل {waybill_number} برای تخصیص {allocation_number} ایجاد شد توسط کاربر {request.user.username}")
+                bug_logger.info(f"حمل {transport.pk} برای تخصیص {allocation_number} ایجاد شد")
+                messages.success(request, f'حمل با موفقیت ایجاد شد.')
+                audit_logger.activity(f"حمل {transport.pk} برای تخصیص {allocation_number} ایجاد شد توسط کاربر {request.user.username}")
                 
                 return redirect('distribution:vehicle_recruitment_list')
                 

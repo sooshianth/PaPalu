@@ -255,6 +255,7 @@
                             {% if accessible_order_fields.order_number %}
                             <th>شماره سفارش</th>
                             {% endif %}
+                            <th>شیوه اعلام بار</th>
                             {% if accessible_delivery_fields.recipient_name or accessible_delivery_fields.recipient_national_id or accessible_delivery_fields.address %}
                             <th>اطلاعات آدرس تحویل</th>
                             {% endif %}
@@ -275,6 +276,9 @@
                                 <span class="code-badge">{{ item.order_number }}</span>
                             </td>
                             {% endif %}
+                            <td>
+                                <span style="color: var(--gray-700);">{{ item.shipping_method }}</span>
+                            </td>
                             {% if accessible_delivery_fields.recipient_name or accessible_delivery_fields.recipient_national_id or accessible_delivery_fields.address %}
                             <td>
                                 {% if item.delivery_info %}

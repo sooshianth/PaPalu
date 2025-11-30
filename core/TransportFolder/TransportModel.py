@@ -32,7 +32,8 @@ class Transport(models.Model):
     # شماره بارنامه به عنوان Primary Key
     waybill_number = models.CharField(
         max_length=50,
-        primary_key=True,
+        null=True,
+        blank=True,
         verbose_name='شماره بارنامه'
     )
     
