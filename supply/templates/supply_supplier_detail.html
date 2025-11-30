@@ -240,7 +240,13 @@
       </div>
       <div class="info-item">
         <span class="info-label">نوع کاربری</span>
-        <span class="info-value {% if not supplier.user_type %}empty{% endif %}">{{ supplier.get_user_type_display|default:"—" }}</span>
+        <span class="info-value {% if not supplier.activity_fields.exists %}empty{% endif %}">
+            {% if supplier.activity_fields.exists %}
+                {% for activity in supplier.activity_fields.all %}{{ activity }}{% if not forloop.last %}، {% endif %}{% endfor %}
+            {% else %}
+                —
+            {% endif %}
+        </span>
       </div>
       <div class="info-item">
         <span class="info-label">کارشناس فروش</span>

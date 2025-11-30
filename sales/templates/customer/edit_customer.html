@@ -172,6 +172,42 @@
         opacity: 0.5;
         background-color: #f8f9fa;
     }
+    
+    /* استایل برای چک‌باکس‌های حیطه فعالیت */
+    .activity-fields-container ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 10px;
+    }
+    
+    .activity-fields-container li {
+        margin: 0;
+        padding: 8px 12px;
+        border-radius: 6px;
+        transition: background-color 0.2s;
+    }
+    
+    .activity-fields-container li:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .activity-fields-container label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        margin: 0;
+        font-weight: normal;
+    }
+    
+    .activity-fields-container input[type="checkbox"] {
+        margin-left: 8px;
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
@@ -524,13 +560,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </div>
                                     {% endif %}
                                     
-                                    {% if accessible_fields.user_type %}
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">{{ form.user_type.label }}</label>
-                                        {{ form.user_type }}
-                                        {% if form.user_type.errors %}
-                                            <div class="text-danger">{{ form.user_type.errors.0 }}</div>
+                                    {% if accessible_fields.activity_fields %}
+                                    <div class="col-12 mb-3">
+                                        <label class="form-label">{{ form.activity_fields.label }}</label>
+                                        <div class="activity-fields-container" style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; background: white;">
+                                            {{ form.activity_fields }}
+                                        </div>
+                                        {% if form.activity_fields.errors %}
+                                            <div class="text-danger">{{ form.activity_fields.errors.0 }}</div>
                                         {% endif %}
+                                        <small class="form-text text-muted" style="display: block; margin-top: 5px; color: #6c757d;">
+                                            می‌توانید یک یا چند مورد را انتخاب کنید
+                                        </small>
                                     </div>
                                     {% endif %}
                                     

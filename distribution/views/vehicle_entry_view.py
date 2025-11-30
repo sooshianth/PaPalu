@@ -362,7 +362,7 @@ def register_vehicle_entry_view(request, waybill_number):
         
         response_data = {
             'waybill_number': transport.waybill_number,
-            'allocation_id': transport.allocation_id,
+            'allocation_id': transport.allocation.allocation_number if transport.allocation else None,
             'plate_part1': plate_part1,
             'plate_part2': plate_part2,
             'plate_part3': plate_part3,

@@ -21,6 +21,11 @@ from core.WarehouseFolder.WarehouseModel import Warehouse
 from django.contrib.contenttypes.models import ContentType
 from access.helpers import check_field_access_prefer_edit
 from distribution.forms.loading_exit_form import LoadingExitForm
+from core.StockEntryFolder.StockEntryModel import StockEntry
+from core.StockEntryFolder.SourceStockModel import SourceStock
+from core.StockEntryFolder.TargetStockModel import TargetStock
+from core.ProductFolder.ProductModel import Product
+from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 import re
 
 bug_logger = logging.getLogger("bugs")
@@ -102,8 +107,8 @@ def loading_exit_list_view(request):
                 product_name = product_info.raw_material.name
         
         # اگر از ProductInfo پیدا نشد، از Allocation بررسی می‌کنیم
-        if not product_name and transport.allocation_id:
-            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if not product_name and transport.allocation:
+            allocation = transport.allocation
             if allocation and allocation.order:
                 # TODO: اگر AllocationItem وجود دارد، از آن استفاده کنیم
                 # برای حالا از order استفاده می‌کنیم
@@ -111,8 +116,8 @@ def loading_exit_list_view(request):
         
         # دریافت شماره سفارش
         order_number = None
-        if transport.allocation_id:
-            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if transport.allocation:
+            allocation = transport.allocation
             if allocation and allocation.order:
                 order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
         
@@ -163,8 +168,8 @@ def register_loading_exit_view(request, waybill_number):
     
     # دریافت انبار مشتری از طریق Allocation -> Order -> Customer
     customer_warehouse = None
-    if transport.allocation_id:
-        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+    if transport.allocation:
+        allocation = transport.allocation
         if allocation and allocation.order and allocation.order.customer:
             customer = allocation.order.customer
             if customer.warehouse:
@@ -343,8 +348,69 @@ def register_loading_exit_view(request, waybill_number):
                     # اگر ProductInfo وجود دارد، اطلاعات آن‌ها از قبل ثبت شده‌اند
                     # packaging_type و warehouse ها فقط برای عملیات بعدی استفاده می‌شوند
                     
-                    # TODO: کاهش موجودی انبار مبدأ
-                    # این بخش باید با سیستم موجودی انبار یکپارچه شود
+                    # ایجاد StockEntry برای commit موجودی انبار
+                    # برای هر ProductInfo، از انبار مبدا کم می‌کنیم و به انبار مقصد اضافه می‌کنیم
+                    product_infos = transport.product_infos.all()
+                    if product_infos.exists() and origin_warehouse_obj and destination_warehouse_obj:
+                        # ایجاد یک StockEntry برای تمام محصولات این حمل
+                        stock_entry = StockEntry.objects.create(
+                            transaction_date=timezone.now(),
+                            notes=f'خروج کالا برای حمل {waybill_number} - انتقال از انبار {origin_warehouse_obj.name} به انبار {destination_warehouse_obj.name}',
+                            is_committed=False
+                        )
+                        
+                        # دریافت ContentType برای Product و RawMaterial
+                        product_ct = ContentType.objects.get_for_model(Product)
+                        raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
+                        
+                        # پردازش هر ProductInfo
+                        for product_info in product_infos:
+                            if not product_info.weight or product_info.weight <= 0:
+                                continue
+                            
+                            # تعیین نوع آیتم (محصول یا مواد اولیه)
+                            item = None
+                            is_product = False
+                            content_type = None
+                            
+                            if product_info.product:
+                                item = product_info.product
+                                is_product = True
+                                content_type = product_ct
+                            elif product_info.raw_material:
+                                item = product_info.raw_material
+                                is_product = False
+                                content_type = raw_material_ct
+                            
+                            if not item or not content_type:
+                                bug_logger.warning(f"ProductInfo {product_info.id} برای حمل {waybill_number} فاقد محصول یا مواد اولیه است")
+                                continue
+                            
+                            # ایجاد SourceStock (کاهش از انبار مبدا)
+                            SourceStock.objects.create(
+                                stock_entry=stock_entry,
+                                from_content_type=content_type,
+                                from_object_id=item.id,
+                                from_warehouse=origin_warehouse_obj,
+                                quantity=product_info.weight
+                            )
+                            
+                            # ایجاد TargetStock (افزایش به انبار مقصد)
+                            TargetStock.objects.create(
+                                stock_entry=stock_entry,
+                                to_content_type=content_type,
+                                to_object_id=item.id,
+                                to_warehouse=destination_warehouse_obj,
+                                quantity=product_info.weight
+                            )
+                        
+                        # Commit کردن StockEntry برای اعمال تغییرات در موجودی انبار
+                        try:
+                            stock_entry.commit()
+                            bug_logger.info(f"StockEntry {stock_entry.id} برای حمل {waybill_number} با موفقیت commit شد")
+                        except Exception as e:
+                            bug_logger.error(f"خطا در commit کردن StockEntry {stock_entry.id} برای حمل {waybill_number}: {str(e)}")
+                            raise
                     
                     # ثبت زمان خروج خودرو
                     schedule_info, created = LoadingScheduleInfo.objects.get_or_create(
@@ -359,11 +425,11 @@ def register_loading_exit_view(request, waybill_number):
                     transport.save()
                     
                     # بررسی تغییر وضعیت تخصیص
-                    if transport.allocation_id:
-                        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+                    if transport.allocation:
+                        allocation = transport.allocation
                         if allocation and allocation.allocation_status == 'pending_vehicle_recruitment':
                             # بررسی اینکه آیا همه حمل‌های تخصیص به pending_waybill رسیدند
-                            all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
+                            all_transports = Transport.objects.filter(allocation=allocation)
                             all_transports_count = all_transports.count()
                             pending_waybill_transports_count = all_transports.filter(status='pending_waybill').count()
                             
@@ -463,8 +529,8 @@ def register_loading_exit_view(request, waybill_number):
                 product_name = 'نامشخص'
             
             order_number = None
-            if transport.allocation_id:
-                allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+            if transport.allocation:
+                allocation = transport.allocation
                 if allocation and allocation.order:
                     order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
             
@@ -491,8 +557,8 @@ def register_loading_exit_view(request, waybill_number):
         
         # دریافت انبار مشتری از طریق Allocation -> Order -> Customer
         customer_warehouse = None
-        if transport.allocation_id:
-            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if transport.allocation:
+            allocation = transport.allocation
             if allocation and allocation.order and allocation.order.customer:
                 customer = allocation.order.customer
                 if customer.warehouse:
@@ -648,8 +714,8 @@ def register_loading_exit_view(request, waybill_number):
     
     # دریافت شماره سفارش
     order_number = None
-    if transport.allocation_id:
-        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+    if transport.allocation:
+        allocation = transport.allocation
         if allocation and allocation.order:
             order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
     

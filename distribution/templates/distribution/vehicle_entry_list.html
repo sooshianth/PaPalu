@@ -310,7 +310,7 @@
                             {% endif %}
                         </td>
                         <td>
-                            <span class="code-badge">{{ item.transport.allocation_id|default:"-" }}</span>
+                            <span class="code-badge">{{ item.transport.allocation.allocation_number|default:"-" }}</span>
                         </td>
                         {% if accessible_truck_info_fields.vehicle_type %}
                         <td>
@@ -532,7 +532,7 @@
         .then(response => response.json())
         .then(data => {
             document.getElementById('readonly_waybill_number').textContent = data.waybill_number || '-';
-            document.getElementById('readonly_allocation_id').textContent = data.allocation_id || '-';
+            document.getElementById('readonly_allocation_id').textContent = (data.allocation_id || '-');
             
             if (data.driver_national_id) {
                 document.getElementById('driver_national_id').value = data.driver_national_id;

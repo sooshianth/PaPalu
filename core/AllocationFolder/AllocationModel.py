@@ -31,7 +31,7 @@ class Allocation(models.Model):
     )
     order = models.ForeignKey(
         Order,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         related_name='allocations',
         verbose_name="سفارش",
         blank=True,

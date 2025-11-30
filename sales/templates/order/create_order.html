@@ -348,25 +348,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
 
-        <!-- بخش اطلاعات دیدنی -->
-        <div class="form-section">
-            <h5>اطلاعات نمایشی</h5>
-            <div class="row">
-                {% if accessible_fields_main.status %}
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">{{ form.status.label }}</label>
-                    {{ form.status }}
-                    {% if form.status.errors %}
-                        <div class="text-danger">{{ form.status.errors.0 }}</div>
-                    {% endif %}
-                    <small style="color: var(--gray-600); font-size: 0.85rem; display: block; margin-top: 3px;">
-                        وضعیت پس از ثبت: "در انتظار صدور پیش فاکتور"
-                    </small>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
         <!-- بخش اقلام سفارش -->
         <div class="form-section">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">

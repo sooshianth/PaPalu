@@ -272,7 +272,7 @@ def get_accessible_form_fields(user, form):
         'nature': ('Person', 'nature'),
         'registration_number': ('Person', 'registration_number'),
         'birth_date': ('Person', 'birth_date'),
-        'user_type': ('Person', 'user_type'),
+        'activity_fields': ('Person', 'activity_fields'),
         'introducer': ('Person', 'introducer'),
         'description': ('Person', 'description'),
         
@@ -946,7 +946,7 @@ def edit_customer_view(request, national_id):
             'nature': person.nature,
             'registration_number': person.registration_number,
             'birth_date': person.birth_date.strftime('%Y/%m/%d') if person.birth_date else '',
-            'user_type': person.user_type,
+            'activity_fields': list(person.activity_fields.all()),
             'introducer': person.introducer,
             'description': person.description,
         }

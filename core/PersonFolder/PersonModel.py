@@ -1,6 +1,39 @@
 from django.db import models
 from django_jalali.db import models as jmodels
+from django.utils.translation import gettext_lazy as _
 from core.WarehouseFolder.WarehouseModel import Warehouse
+
+
+FIELD_OF_ACTIVITY = [
+    ('chicken', 'مرغدار'),
+    ('livestock', 'دامدار'),
+    ('factory', 'کارخانه خوراک'),
+    ('fish', 'پرورش آبزیان'),
+    ('corporation', 'تعاونی'),
+    ('association', 'اتحادیه'),
+    ('dealer', 'دلال'),
+    ('aggressive', 'مزاحم'),
+    ('other', 'سایر')
+]
+
+
+class ActivityField(models.Model):
+    """مدل حیطه فعالیت"""
+    
+    code = models.CharField(
+        max_length=50,
+        choices=FIELD_OF_ACTIVITY,
+        unique=True,
+        verbose_name='کد'
+    )
+    
+    class Meta:
+        verbose_name = _("حیطه فعالیت")
+        verbose_name_plural = _("حیطه های فعالیت")
+        ordering = ['code']
+    
+    def __str__(self):
+        return dict(FIELD_OF_ACTIVITY).get(self.code, self.code)
 
 
 class Person(models.Model):
@@ -19,11 +52,6 @@ class Person(models.Model):
         ('natural', 'حقیقی'),
     ]
 
-    USER_TYPE_CHOICES = [
-        ('admin', 'مدیر'),
-        ('user', 'کاربر'),
-        ('guest', 'میهمان'),
-    ]
 
     # فیلدهای پایه
     national_id = models.CharField(
@@ -67,12 +95,12 @@ class Person(models.Model):
         verbose_name='تاریخ تولد شخص', 
         null=True, blank=True)
 
-    user_type = models.CharField(
-        max_length=20, 
-        choices=USER_TYPE_CHOICES, 
-        verbose_name='نوع کاربری شخص', 
-        null=True, 
-        blank=True)
+    activity_fields = models.ManyToManyField(
+        ActivityField,
+        blank=True,
+        related_name='persons',
+        verbose_name='حیطه‌های فعالیت'
+    )
 
     sales_expert = models.CharField(
         max_length=100, 

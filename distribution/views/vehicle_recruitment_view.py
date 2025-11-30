@@ -114,7 +114,7 @@ def vehicle_recruitment_list_view(request):
         
         # شمارش تعداد حمل‌های ایجاد شده برای این تخصیص
         transports_count = Transport.objects.filter(
-            allocation_id=allocation.allocation_number
+            allocation=allocation
         ).count()
         
         allocations_with_info.append({
@@ -236,7 +236,7 @@ def create_transport_view(request, allocation_number):
                 
                 # بررسی جمع وزن‌های حمل‌های قبلی این تخصیص
                 existing_transports = Transport.objects.filter(
-                    allocation_id=allocation.allocation_number
+                    allocation=allocation
                 )
                 total_existing_weight = Decimal('0')
                 for transport in existing_transports:
@@ -288,7 +288,7 @@ def create_transport_view(request, allocation_number):
                 # ایجاد حمل
                 transport = Transport.objects.create(
                     waybill_number=waybill_number,
-                    allocation_id=allocation.allocation_number,
+                    allocation=allocation,
                     delivery_postal_code=allocation.delivery_postal_code,
                     direction='outbound',
                     carrier_recruitment=carrier_recruitment,
@@ -391,7 +391,7 @@ def complete_vehicle_recruitment_view(request, allocation_number):
         return redirect('distribution:vehicle_recruitment_list')
     
     # بررسی اینکه حداقل یک حمل وجود دارد
-    transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
+    transports = Transport.objects.filter(allocation=allocation)
     if not transports.exists():
         messages.error(request, 'برای تکمیل جذب خودرو، حداقل باید یک حمل ایجاد شده باشد.')
         return redirect('distribution:vehicle_recruitment_list')

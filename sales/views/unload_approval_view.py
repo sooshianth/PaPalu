@@ -85,13 +85,12 @@ def unload_approval_detail_view(request, order_number):
     allocations = Allocation.objects.filter(order=order).order_by('allocation_number')
     
     # دریافت حمل‌های مرتبط با تخصیص‌ها
-    allocation_numbers = allocations.values_list('allocation_number', flat=True)
-    transports = Transport.objects.filter(allocation_id__in=allocation_numbers).select_related('driver').prefetch_related('truck_infos', 'product_infos').order_by('waybill_number')
+    transports = Transport.objects.filter(allocation__in=allocations).select_related('driver', 'allocation').prefetch_related('truck_infos', 'product_infos').order_by('waybill_number')
     
     # آماده‌سازی اطلاعات برای نمایش
     allocations_with_transports = []
     for allocation in allocations:
-        alloc_transports = transports.filter(allocation_id=allocation.allocation_number)
+        alloc_transports = transports.filter(allocation=allocation)
         allocations_with_transports.append({
             'allocation': allocation,
             'transports': alloc_transports,

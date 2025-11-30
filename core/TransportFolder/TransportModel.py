@@ -1,6 +1,7 @@
 from django.db import models
 from django_jalali.db import models as jmodels
 from core.PersonFolder import Person, DeliveryAddress
+from core.AllocationFolder.AllocationModel import Allocation
 
 
 class Transport(models.Model):
@@ -35,9 +36,11 @@ class Transport(models.Model):
         verbose_name='شماره بارنامه'
     )
     
-    allocation_id = models.CharField(
-        max_length=50,
-        verbose_name='شناسه تخصیص',
+    allocation = models.ForeignKey(
+        Allocation,
+        on_delete=models.CASCADE,
+        related_name='transports',
+        verbose_name='تخصیص',
         null=True,
         blank=True
     )

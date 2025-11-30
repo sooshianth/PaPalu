@@ -57,15 +57,17 @@ def settlement_list_view(request):
             allocation_dict[alloc.order_id] = []
         allocation_dict[alloc.order_id].append(alloc.allocation_number)
     
-    all_allocation_numbers = [num for nums in allocation_dict.values() for num in nums]
-    all_transports = Transport.objects.filter(allocation_id__in=all_allocation_numbers)
+    all_allocations = Allocation.objects.filter(allocation_number__in=[num for nums in allocation_dict.values() for num in nums])
+    all_transports = Transport.objects.filter(allocation__in=all_allocations).select_related('allocation')
     
-    # ایجاد دیکشنری برای حمل‌ها بر اساس allocation_id
+    # ایجاد دیکشنری برای حمل‌ها بر اساس allocation
     transport_dict = {}
     for transport in all_transports:
-        if transport.allocation_id not in transport_dict:
-            transport_dict[transport.allocation_id] = []
-        transport_dict[transport.allocation_id].append(transport)
+        if transport.allocation:
+            allocation_number = transport.allocation.allocation_number
+            if allocation_number not in transport_dict:
+                transport_dict[allocation_number] = []
+            transport_dict[allocation_number].append(transport)
 
     # Annotate کردن وزن سفارش، وزن تحویلی و مبلغ اختلاف
     for order in orders_qs:
@@ -160,8 +162,7 @@ def settlement_detail_view(request, order_number):
     
     # محاسبه وزن تحویلی
     allocations = Allocation.objects.filter(order=order)
-    allocation_numbers = allocations.values_list('allocation_number', flat=True)
-    transports = Transport.objects.filter(allocation_id__in=allocation_numbers)
+    transports = Transport.objects.filter(allocation__in=allocations)
     delivered_weight = sum(
         Decimal(str(t.net_weight or 0)) for t in transports
     )

@@ -149,7 +149,7 @@ class SupplierPersonForm(ModelForm):
 		model = Person
 		fields = [
 			'national_id', 'accounting_code', 'name', 'nature', 'registration_number',
-			'birth_date', 'user_type', 'sales_expert', 'description', 'phone_number', 'introducer'
+			'birth_date', 'activity_fields', 'sales_expert', 'description', 'phone_number', 'introducer'
 		]
 		labels = {
 			'national_id': 'کد ملی',
@@ -158,7 +158,7 @@ class SupplierPersonForm(ModelForm):
 			'nature': 'ماهیت (حقوقی/حقیقی)',
 			'registration_number': 'شماره ثبت شرکت',
 			'birth_date': 'تاریخ تولد',
-			'user_type': 'نوع کاربری',
+			'activity_fields': 'حیطه‌های فعالیت',
 			'sales_expert': 'کارشناس فروش',
 			'description': 'توضیحات',
 			'phone_number': 'تلفن',
@@ -171,7 +171,7 @@ class SupplierPersonForm(ModelForm):
 			'nature': forms.Select(attrs={'class': 'form-control'}),
 			'registration_number': TextInput(attrs={'class': 'form-control'}),
 			'birth_date': TextInput(attrs={'class': 'form-control jalali-date', 'dir': 'ltr', 'placeholder': 'YYYY-MM-DD'}),
-			'user_type': forms.Select(attrs={'class': 'form-control'}),
+			'activity_fields': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '5'}),
 			'sales_expert': TextInput(attrs={'class': 'form-control'}),
 			'description': Textarea(attrs={'class': 'form-control', 'rows': 3}),
 			'phone_number': TextInput(attrs={'class': 'form-control'}),

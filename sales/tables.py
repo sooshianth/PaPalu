@@ -1282,8 +1282,8 @@ class UnloadApprovalOrderTable(tables.Table):
         """نمایش شماره حمل‌های مربوط به سفارش (از طریق تخصیص‌ها)"""
         from core.AllocationFolder.AllocationModel import Allocation
         from core.TransportFolder.TransportModel import Transport
-        allocations = Allocation.objects.filter(order=record).values_list('allocation_number', flat=True)
-        transports = Transport.objects.filter(allocation_id__in=allocations).values_list('waybill_number', flat=True)
+        allocations = Allocation.objects.filter(order=record)
+        transports = Transport.objects.filter(allocation__in=allocations).values_list('waybill_number', flat=True)
         if transports:
             badges = [f'<span class="code-badge" style="margin: 2px;">{trans}</span>' for trans in transports]
             return format_html('<div style="display: flex; flex-wrap: wrap; gap: 4px;">{}</div>', mark_safe(' '.join(badges)))
@@ -1506,8 +1506,7 @@ class PendingSettlementOrderTable(tables.Table):
             
             # محاسبه مستقیم وزن تحویلی
             allocations = Allocation.objects.filter(order=record)
-            allocation_numbers = allocations.values_list('allocation_number', flat=True)
-            transports = Transport.objects.filter(allocation_id__in=allocation_numbers)
+            transports = Transport.objects.filter(allocation__in=allocations)
             delivered_weight = sum(
                 Decimal(str(t.net_weight or 0)) for t in transports
             )
@@ -1536,8 +1535,7 @@ class PendingSettlementOrderTable(tables.Table):
             
             # محاسبه وزن تحویلی
             allocations = Allocation.objects.filter(order=record)
-            allocation_numbers = allocations.values_list('allocation_number', flat=True)
-            transports = Transport.objects.filter(allocation_id__in=allocation_numbers)
+            transports = Transport.objects.filter(allocation__in=allocations)
             delivered_weight = sum(
                 Decimal(str(t.net_weight or 0)) for t in transports
             )

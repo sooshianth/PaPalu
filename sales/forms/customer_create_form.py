@@ -1,6 +1,7 @@
 from django import forms
 from django.forms import BaseFormSet, formset_factory
 from core.PersonFolder import Person
+from core.PersonFolder.PersonModel import ActivityField
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
@@ -320,13 +321,11 @@ class CreateCustomerForm(forms.Form):
         })
     )
     
-    user_type = forms.ChoiceField(
-        choices=[('', 'انتخاب کنید')] + Person.USER_TYPE_CHOICES,
+    activity_fields = forms.ModelMultipleChoiceField(
+        queryset=ActivityField.objects.all(),
         required=False,
-        label='نوع کاربری شخص',
-        widget=forms.Select(attrs={
-            'class': 'form-control'
-        })
+        label='حیطه‌های فعالیت',
+        widget=forms.CheckboxSelectMultiple()
     )
     
     description = forms.CharField(
@@ -467,11 +466,17 @@ class CreateCustomerForm(forms.Form):
             person.nature = nature
             person.registration_number = clean_empty_to_none(self.cleaned_data.get('registration_number'))
             person.birth_date = clean_empty_to_none(self.cleaned_data.get('birth_date'))
-            person.user_type = clean_empty_to_none(self.cleaned_data.get('user_type'))
             person.introducer = clean_empty_to_none(self.cleaned_data.get('introducer'))
             person.description = clean_empty_to_none(self.cleaned_data.get('description'))
             # sales_expert را تغییر نمی‌دهیم در حالت ویرایش
             person.save()
+            
+            # مدیریت حیطه‌های فعالیت
+            activity_fields = self.cleaned_data.get('activity_fields', [])
+            if activity_fields:
+                person.activity_fields.set(activity_fields)
+            else:
+                person.activity_fields.clear()
             
             # اگر کد ملی تغییر کرده باشد
             if national_id != person.national_id:
@@ -498,11 +503,17 @@ class CreateCustomerForm(forms.Form):
                 type='customer',  # نوع شخص مشتری
                 registration_number=clean_empty_to_none(self.cleaned_data.get('registration_number')),
                 birth_date=clean_empty_to_none(self.cleaned_data.get('birth_date')),
-                user_type=clean_empty_to_none(self.cleaned_data.get('user_type')),
                 introducer=clean_empty_to_none(self.cleaned_data.get('introducer')),
                 description=clean_empty_to_none(self.cleaned_data.get('description')),
                 sales_expert=user.username  # کارشناس فروش فعلی
             )
+        
+        # مدیریت حیطه‌های فعالیت
+        activity_fields = self.cleaned_data.get('activity_fields', [])
+        if activity_fields:
+            person.activity_fields.set(activity_fields)
+        else:
+            person.activity_fields.clear()
         
         # ایجاد یا به‌روزرسانی شماره موبایل
         person_content_type = ContentType.objects.get_for_model(Person)

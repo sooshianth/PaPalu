@@ -79,9 +79,10 @@
             {% if person_form.accounting_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.accounting_code.errors.0 }}</div>{% endif %}
           </div>
           <div class="field">
-            <label>{{ person_form.user_type.label }}</label>
-            {{ person_form.user_type }}
-            {% if person_form.user_type.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.user_type.errors.0 }}</div>{% endif %}
+            <label>{{ person_form.activity_fields.label }}</label>
+            {{ person_form.activity_fields }}
+            {% if person_form.activity_fields.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.activity_fields.errors.0 }}</div>{% endif %}
+            <small class="form-text text-muted" style="font-size: 0.85rem; color: #6c757d;">می‌توانید چندین مورد را انتخاب کنید (Ctrl+Click)</small>
           </div>
           <div class="field">
             <label>{{ person_form.phone_number.label }}</label>

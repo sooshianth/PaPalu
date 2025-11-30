@@ -73,8 +73,8 @@ def waybill_list_view(request):
     for transport in transports:
         # دریافت شماره سفارش
         order_number = None
-        if transport.allocation_id:
-            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if transport.allocation:
+            allocation = transport.allocation
             if allocation and allocation.order:
                 order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
         
@@ -112,7 +112,7 @@ def waybill_list_view(request):
         transports_with_info.append({
             'transport': transport,
             'order_number': order_number or 'نامشخص',
-            'allocation_id': transport.allocation_id or 'نامشخص',
+            'allocation_id': transport.allocation.allocation_number if transport.allocation else 'نامشخص',
             'vehicle_entry_time': vehicle_entry_time,
             'empty_weight': transport.empty_weight,
             'gross_weight': transport.gross_weight,
@@ -179,8 +179,8 @@ def register_waybill_view(request, waybill_number):
     
     # دریافت شماره سفارش
     order_number = None
-    if transport.allocation_id:
-        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+    if transport.allocation:
+        allocation = transport.allocation
         if allocation and allocation.order:
             order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
     

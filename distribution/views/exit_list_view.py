@@ -42,8 +42,8 @@ def exit_list_view(request):
     for transport in transports:
         # دریافت شماره سفارش
         order_number = None
-        if transport.allocation_id:
-            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if transport.allocation:
+            allocation = transport.allocation
             if allocation and allocation.order:
                 order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
         
@@ -68,7 +68,7 @@ def exit_list_view(request):
         transports_with_info.append({
             'transport': transport,
             'order_number': order_number or 'نامشخص',
-            'allocation_id': transport.allocation_id or 'نامشخص',
+            'allocation_id': transport.allocation.allocation_number if transport.allocation else 'نامشخص',
             'plate_number': plate_number or 'نامشخص',
             'product_name': product_name or 'نامشخص',
             'quantity': quantity or 0,
@@ -116,8 +116,8 @@ def print_waybill_pdf_view(request, waybill_number):
         product_info = transport.product_infos.first()
         allocation = None
         order = None
-        if transport.allocation_id:
-            allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+        if transport.allocation:
+            allocation = transport.allocation
             if allocation:
                 order = allocation.order
         
@@ -201,11 +201,11 @@ def mark_vehicle_exited_view(request, waybill_number):
             transport.save(update_fields=['status'])
             
             # بررسی تغییر وضعیت تخصیص
-            if transport.allocation_id:
-                allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
+            if transport.allocation:
+                allocation = transport.allocation
                 if allocation and allocation.allocation_status == 'pending_loading_completion':
                     # بررسی اینکه آیا همه حمل‌های تخصیص به completed یا loaded رسیدند
-                    all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
+                    all_transports = Transport.objects.filter(allocation=allocation)
                     all_transports_count = all_transports.count()
                     completed_or_loaded_transports = all_transports.filter(
                         status__in=['completed', 'loaded']
@@ -231,7 +231,7 @@ def mark_vehicle_exited_view(request, waybill_number):
                             # فقط تخصیص‌هایی که حداقل یک حمل دارند را بررسی می‌کنیم
                             allocations_with_transports = []
                             for alloc in relevant_allocations:
-                                alloc_transports = Transport.objects.filter(allocation_id=alloc.allocation_number)
+                                alloc_transports = Transport.objects.filter(allocation=alloc)
                                 if alloc_transports.exists():
                                     allocations_with_transports.append(alloc)
                             

@@ -155,7 +155,7 @@
                             <span class="code-badge">{{ item.order_number }}</span>
                         </td>
                         <td>
-                            <span class="code-badge">{{ item.allocation_id }}</span>
+                            <span class="code-badge">{{ item.transport.allocation.allocation_number|default:"-" }}</span>
                         </td>
                         <td>
                             {% if item.plate_number %}

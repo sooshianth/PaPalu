@@ -1,4 +1,4 @@
-from .PersonModel import Person
+from .PersonModel import Person, ActivityField
 from .PhoneNumberModel import PhoneNumber
 from .PurchasePreferenceModel import PurchasePreference
 from .PaymentPreferenceModel import PaymentPreference
@@ -11,6 +11,7 @@ from .DeliveryAddressModel import DeliveryAddress
 
 __all__ = [
     'Person',
+    'ActivityField',
     'PhoneNumber',
     'PurchasePreference',
     'PaymentPreference',

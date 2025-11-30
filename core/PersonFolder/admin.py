@@ -4,19 +4,20 @@ from . import (
     Person, PhoneNumber, DeliveryAddress, BankAccount, FinancialBanking,
     PaymentPreference, PurchasePreference, Representative, SocialNetwork, Attachment
 )
+from .PersonModel import ActivityField
 
 
 @admin.register(Person)
 class PersonAdmin(admin.ModelAdmin):
     list_display = ['national_id', 'name', 'type', 'nature', 'accounting_code', 'sales_expert', 'warehouse']
-    list_filter = ['type', 'nature', 'user_type', 'warehouse']
+    list_filter = ['type', 'nature', 'activity_fields', 'warehouse']
     search_fields = ['national_id', 'name', 'accounting_code', 'registration_number']
     fieldsets = (
         ('اطلاعات پایه', {
             'fields': ('national_id', 'name', 'type', 'nature', 'accounting_code')
         }),
         ('اطلاعات تکمیلی', {
-            'fields': ('registration_number', 'birth_date', 'user_type', 'sales_expert', 'introducer')
+            'fields': ('registration_number', 'birth_date', 'activity_fields', 'sales_expert', 'introducer')
         }),
         ('انبار', {
             'fields': ('warehouse',),
@@ -85,3 +86,9 @@ class SocialNetworkAdmin(admin.ModelAdmin):
 @admin.register(Attachment)
 class AttachmentAdmin(admin.ModelAdmin):
     list_display = ['id']
+
+
+@admin.register(ActivityField)
+class ActivityFieldAdmin(admin.ModelAdmin):
+    list_display = ['code', '__str__']
+    search_fields = ['code']
