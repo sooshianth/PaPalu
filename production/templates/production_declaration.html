@@ -4,24 +4,25 @@
 {% block extra_css %}
 <style>
     .page-header {
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 15px;
     }
     
     .page-header h1 {
-        font-size: 1.75rem;
-        color: #343a40;
+        color: var(--gray-800);
+        font-size: 1.8rem;
         font-weight: 600;
+        margin: 0;
     }
     
     .page-header p {
-        color: #6c757d;
+        color: var(--gray-600);
         font-size: 0.95rem;
         margin-top: 8px;
     }
@@ -58,7 +59,7 @@
     .section-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #343a40;
+        color: var(--gray-800);
         margin-bottom: 16px;
         display: flex;
         align-items: center;
@@ -75,19 +76,19 @@
     }
     
     .card {
-        background: #fff;
+        background: white;
         border: 1px solid #e9ecef;
         border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         overflow: hidden;
     }
     
     .card-header {
         padding: 14px 18px;
         border-bottom: 1px solid #e9ecef;
-        background: #f8f9fa;
+        background: var(--gray-100);
         font-weight: 600;
-        color: #343a40;
+        color: var(--gray-800);
     }
     
     .card-body {
@@ -102,25 +103,38 @@
     table.data-table {
         width: 100%;
         border-collapse: collapse;
+        background: white;
         font-size: 0.9rem;
+    }
+    
+    table.data-table thead {
+        background: var(--gray-100);
     }
     
     table.data-table th,
     table.data-table td {
-        border: 1px solid #e9ecef;
-        padding: 10px 12px;
+        padding: 15px;
         text-align: center;
     }
     
-    table.data-table th {
-        background: #f8f9fa;
+    table.data-table thead th {
         font-weight: 600;
-        color: #343a40;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
         white-space: nowrap;
     }
     
+    table.data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
     table.data-table tbody tr:hover {
-        background: #f8f9fa;
+        background-color: var(--light-green);
+    }
+    
+    table.data-table tbody td {
+        color: var(--gray-600);
     }
     
     .status-badge {
@@ -170,6 +184,11 @@
         gap: 6px;
         justify-content: center;
         align-items: center;
+    }
+    
+    .action-buttons button,
+    .action-buttons a {
+        cursor: pointer;
     }
     
     .btn-action {
@@ -432,23 +451,24 @@
     
     .empty-state {
         text-align: center;
-        padding: 40px 20px;
-        color: #6c757d;
-        font-size: 0.95rem;
+        padding: 60px 20px;
+        color: var(--gray-600);
     }
     
     .empty-state svg {
-        width: 64px;
-        height: 64px;
-        color: #dee2e6;
-        margin-bottom: 16px;
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        opacity: 0.5;
     }
     
     /* Search form styles */
     .search-form {
-        padding: 16px;
-        background: #f8f9fa;
-        border-bottom: 1px solid #e9ecef;
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
     }
     
     .search-inputs {
@@ -467,59 +487,67 @@
     }
     
     .search-field label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #495057;
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: var(--gray-700);
+        font-size: 0.95rem;
     }
     
     .search-field input {
-        padding: 8px 12px;
-        border: 1px solid #ced4da;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        transition: border-color 0.2s ease;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
     }
     
     .search-field input:focus {
         outline: none;
         border-color: var(--primary-green);
-        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
     }
     
     .btn-search {
-        padding: 8px 20px;
+        padding: 10px 20px;
         background: var(--primary-green);
         color: white;
         border: none;
-        border-radius: 6px;
+        border-radius: 8px;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s;
         white-space: nowrap;
+        text-decoration: none;
+        display: inline-block;
     }
     
     .btn-search:hover {
         background: var(--dark-green);
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
     .btn-clear {
-        padding: 8px 20px;
-        background: #6c757d;
+        padding: 10px 20px;
+        background-color: var(--gray-600);
         color: white;
         border: none;
-        border-radius: 6px;
+        border-radius: 8px;
         font-weight: 600;
         text-decoration: none;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s;
         white-space: nowrap;
         display: inline-block;
     }
     
     .btn-clear:hover {
-        background: #5a6268;
-        transform: translateY(-1px);
+        background-color: var(--gray-700);
+        color: white;
+        transform: translateY(-2px);
     }
     
     /* Sortable table headers */
@@ -534,17 +562,50 @@
         background: #e9ecef !important;
     }
     
-    .sort-icon {
-        margin-right: 6px;
-        font-size: 0.9rem;
-        opacity: 0.5;
+    /* استایل دکمه جزئیات - آبی */
+    .data-table .btn-outline-info,
+    .table-container .btn-outline-info {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #17a2b8;
+        transition: all 0.3s;
+        color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
     }
     
-    .sortable.sorted-asc .sort-icon,
-    .sortable.sorted-desc .sort-icon {
-        opacity: 1;
-        color: var(--primary-green);
-        font-weight: bold;
+    .data-table .btn-outline-info:hover,
+    .table-container .btn-outline-info:hover {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
+    }
+    
+    /* استایل دکمه رد/آرشیو - زرد */
+    .data-table .btn-outline-warning,
+    .table-container .btn-outline-warning {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #ffc107;
+        transition: all 0.3s;
+        color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .data-table .btn-outline-warning:hover,
+    .table-container .btn-outline-warning:hover {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+        border-color: #ffc107 !important;
     }
     
     .grid-2 {
@@ -560,6 +621,11 @@
     }
     
     @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
         .page-header h1 {
             font-size: 1.4rem;
         }
@@ -569,12 +635,12 @@
         }
         
         table.data-table {
-            font-size: 0.8rem;
+            font-size: 0.9rem;
         }
         
-        table.data-table th,
-        table.data-table td {
-            padding: 8px 6px;
+        table.data-table thead th,
+        table.data-table tbody td {
+            padding: 10px;
         }
     }
 </style>
@@ -632,7 +698,6 @@
                             <th class="sortable {% if sort_by_confirmed == 'id' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
                                 onclick="sortTable('id', 'confirmed')">
                                 شناسه
-                                <span class="sort-icon">{% if sort_by_confirmed == 'id' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
@@ -645,14 +710,12 @@
                             <th class="sortable {% if sort_by_confirmed == 'planned_weight_ton' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
                                 onclick="sortTable('planned_weight_ton', 'confirmed')">
                                 تناژ برنامه‌ریزی شده (تن)
-                                <span class="sort-icon">{% if sort_by_confirmed == 'planned_weight_ton' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.execution_date %}
                             <th class="sortable {% if sort_by_confirmed == 'execution_date' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
                                 onclick="sortTable('execution_date', 'confirmed')">
                                 تاریخ اجرا
-                                <span class="sort-icon">{% if sort_by_confirmed == 'execution_date' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.packaging_type %}
@@ -662,7 +725,6 @@
                             <th class="sortable {% if sort_by_confirmed == 'status' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
                                 onclick="sortTable('status', 'confirmed')">
                                 وضعیت
-                                <span class="sort-icon">{% if sort_by_confirmed == 'status' %}{% if sort_dir_confirmed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             <th>عملیات</th>
@@ -694,17 +756,10 @@
                             {% endif %}
                             <td>
                                 <div class="action-buttons">
-                                    <a href="{% url 'production:program_crud' program.id %}" class="btn-action btn-view" title="مشاهده جزئیات">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
-                                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                                        </svg>
+                                    <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                         مشاهده
                                     </a>
-                                    <button type="button" class="btn-action btn-reject" onclick="showDenyModal({{ program.id }})" title="رد کردن">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
+                                    <button type="button" class="btn-outline-warning" onclick="showDenyModal({{ program.id }})" title="رد کردن">
                                         رد
                                     </button>
                                 </div>
@@ -904,7 +959,6 @@
                             <th class="sortable {% if sort_by_progress == 'id' %}sorted-{{ sort_dir_progress }}{% endif %}" 
                                 onclick="sortTable('id', 'progress')">
                                 شناسه
-                                <span class="sort-icon">{% if sort_by_progress == 'id' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
@@ -917,35 +971,30 @@
                             <th class="sortable {% if sort_by_progress == 'planned_weight_ton' %}sorted-{{ sort_dir_progress }}{% endif %}" 
                                 onclick="sortTable('planned_weight_ton', 'progress')">
                                 تناژ برنامه‌ریزی شده (تن)
-                                <span class="sort-icon">{% if sort_by_progress == 'planned_weight_ton' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.execution_date %}
                             <th class="sortable {% if sort_by_progress == 'execution_date' %}sorted-{{ sort_dir_progress }}{% endif %}" 
                                 onclick="sortTable('execution_date', 'progress')">
                                 تاریخ اجرا
-                                <span class="sort-icon">{% if sort_by_progress == 'execution_date' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.predicted_start_time %}
                             <th class="sortable {% if sort_by_progress == 'predicted_start_time' %}sorted-{{ sort_dir_progress }}{% endif %}" 
                                 onclick="sortTable('predicted_start_time', 'progress')">
                                 ساعت شروع پیش‌بینی
-                                <span class="sort-icon">{% if sort_by_progress == 'predicted_start_time' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.predicted_end_time %}
                             <th class="sortable {% if sort_by_progress == 'predicted_end_time' %}sorted-{{ sort_dir_progress }}{% endif %}" 
                                 onclick="sortTable('predicted_end_time', 'progress')">
                                 ساعت پایان پیش‌بینی
-                                <span class="sort-icon">{% if sort_by_progress == 'predicted_end_time' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.status %}
                             <th class="sortable {% if sort_by_progress == 'status' %}sorted-{{ sort_dir_progress }}{% endif %}" 
                                 onclick="sortTable('status', 'progress')">
                                 وضعیت
-                                <span class="sort-icon">{% if sort_by_progress == 'status' %}{% if sort_dir_progress == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                             </th>
                             {% endif %}
                             <th>عملیات</th>
@@ -980,18 +1029,11 @@
                             {% endif %}
                             <td>
                                 <div class="action-buttons">
-                                    <a href="{% url 'production:program_crud' program.id %}" class="btn-action btn-view" title="مشاهده جزئیات">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
-                                            <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                                        </svg>
+                                    <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                         مشاهده
                                     </a>
                                     {% if can_revert %}
-                                    <button type="button" class="btn-action btn-return" onclick="showRevertModal({{ program.id }})" title="برگشت به تایید شده">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                            <path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                        </svg>
+                                    <button type="button" class="btn-outline-warning" onclick="showRevertModal({{ program.id }})" title="برگشت به تایید شده">
                                         برگشت به تایید
                                     </button>
                                     {% endif %}
@@ -1050,14 +1092,12 @@
                                 <th class="sortable {% if sort_by_completed == 'id' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('id', 'completed')">
                                     شناسه
-                                    <span class="sort-icon">{% if sort_by_completed == 'id' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.program_id %}
                                 <th class="sortable {% if sort_by_completed == 'program_id' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('program_id', 'completed')">
                                     شناسه برنامه
-                                    <span class="sort-icon">{% if sort_by_completed == 'program_id' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.product and accessible_product_fields.name %}
@@ -1070,7 +1110,6 @@
                                 <th class="sortable {% if sort_by_completed == 'planned_weight_ton' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('planned_weight_ton', 'completed')">
                                     تناژ (تن)
-                                    <span class="sort-icon">{% if sort_by_completed == 'planned_weight_ton' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.planned_weight_ton and accessible_production_program_fields.produced_weight_ton %}
@@ -1083,21 +1122,18 @@
                                 <th class="sortable {% if sort_by_completed == 'started_at' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('started_at', 'completed')">
                                     زمان شروع واقعی
-                                    <span class="sort-icon">{% if sort_by_completed == 'started_at' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.completed_at %}
                                 <th class="sortable {% if sort_by_completed == 'completed_at' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('completed_at', 'completed')">
                                     زمان پایان واقعی
-                                    <span class="sort-icon">{% if sort_by_completed == 'completed_at' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.status %}
                                 <th class="sortable {% if sort_by_completed == 'status' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('status', 'completed')">
                                     وضعیت
-                                    <span class="sort-icon">{% if sort_by_completed == 'status' %}{% if sort_dir_completed == 'asc' %}↑{% else %}↓{% endif %}{% else %}⇅{% endif %}</span>
                                 </th>
                                 {% endif %}
                                 <th>عملیات</th>
@@ -1150,18 +1186,11 @@
                                 {% endif %}
                                 <td>
                                     <div class="action-buttons">
-                                        <a href="{% url 'production:program_crud' program.id %}" class="btn-action btn-view" title="مشاهده جزئیات">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2"/>
-                                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/>
-                                            </svg>
+                                        <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                             مشاهده
                                         </a>
                                         {% if can_archive %}
-                                        <button type="button" class="btn-action btn-archive" onclick="showArchiveModal({{ program.id }})" title="آرشیو کردن">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                            </svg>
+                                        <button type="button" class="btn-outline-warning" onclick="showArchiveModal({{ program.id }})" title="آرشیو کردن">
                                             آرشیو
                                         </button>
                                         {% endif %}
@@ -1443,10 +1472,6 @@ function updateSortIcons(tableType) {
     const sortableHeaders = tableContainer.querySelectorAll('th.sortable');
     sortableHeaders.forEach(header => {
         header.classList.remove('sorted-asc', 'sorted-desc');
-        const sortIcon = header.querySelector('.sort-icon');
-        if (sortIcon) {
-            sortIcon.textContent = '⇅';
-        }
     });
     
     // Update the current sorted column
@@ -1454,10 +1479,6 @@ function updateSortIcons(tableType) {
         const onclick = header.getAttribute('onclick');
         if (onclick && onclick.includes(`'${currentSort}'`)) {
             header.classList.add(`sorted-${currentDir}`);
-            const sortIcon = header.querySelector('.sort-icon');
-            if (sortIcon) {
-                sortIcon.textContent = currentDir === 'asc' ? '↑' : '↓';
-            }
         }
     });
 }

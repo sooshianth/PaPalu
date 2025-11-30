@@ -4,24 +4,25 @@
 {% block extra_css %}
 <style>
     .page-header {
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 15px;
     }
     
     .page-header h1 {
-        font-size: 1.75rem;
-        color: #343a40;
+        color: var(--gray-800);
+        font-size: 1.8rem;
         font-weight: 600;
+        margin: 0;
     }
     
     .page-header p {
-        color: #6c757d;
+        color: var(--gray-600);
         font-size: 0.95rem;
         margin-top: 8px;
     }
@@ -33,7 +34,7 @@
     .section-title {
         font-size: 1.25rem;
         font-weight: 600;
-        color: #343a40;
+        color: var(--gray-800);
         margin-bottom: 16px;
         display: flex;
         align-items: center;
@@ -58,19 +59,19 @@
     }
     
     .card {
-        background: #fff;
+        background: white;
         border: 1px solid #e9ecef;
         border-radius: 12px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         overflow: hidden;
     }
     
     .card-header {
         padding: 14px 18px;
         border-bottom: 1px solid #e9ecef;
-        background: #f8f9fa;
+        background: var(--gray-100);
         font-weight: 600;
-        color: #343a40;
+        color: var(--gray-800);
     }
     
     .card-body {
@@ -85,25 +86,38 @@
     table.data-table {
         width: 100%;
         border-collapse: collapse;
+        background: white;
         font-size: 0.9rem;
+    }
+    
+    table.data-table thead {
+        background: var(--gray-100);
     }
     
     table.data-table th,
     table.data-table td {
-        border: 1px solid #e9ecef;
-        padding: 10px 12px;
+        padding: 15px;
         text-align: center;
     }
     
-    table.data-table th {
-        background: #f8f9fa;
+    table.data-table thead th {
         font-weight: 600;
-        color: #343a40;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
         white-space: nowrap;
     }
     
+    table.data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
     table.data-table tbody tr:hover {
-        background: #f8f9fa;
+        background-color: var(--light-green);
+    }
+    
+    table.data-table tbody td {
+        color: var(--gray-600);
     }
     
     .status-badge {
@@ -130,71 +144,127 @@
         color: #dc3545;
     }
     
-    .btn-detail {
-        display: inline-block;
-        padding: 6px 14px;
-        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
-        color: white;
-        text-decoration: none;
+    /* استایل دکمه جزئیات - آبی */
+    .data-table .btn-outline-info,
+    .table-container .btn-outline-info {
+        padding: 5px 10px;
         border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        white-space: nowrap;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #17a2b8;
+        transition: all 0.3s;
+        color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
     }
     
-    .btn-detail:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
-        color: white;
+    .data-table .btn-outline-info:hover,
+    .table-container .btn-outline-info:hover {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
+    }
+    
+    /* استایل دکمه حل مشکل - زرد */
+    .data-table .btn-outline-warning,
+    .table-container .btn-outline-warning {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #ffc107;
+        transition: all 0.3s;
+        color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .data-table .btn-outline-warning:hover,
+    .table-container .btn-outline-warning:hover {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+        border-color: #ffc107 !important;
     }
     
     .pagination-container {
-        margin-top: 20px;
+        margin-top: 30px;
+        margin-bottom: 20px;
         display: flex;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
         flex-wrap: wrap;
+        direction: ltr;
     }
     
     .pagination-info {
-        color: #6c757d;
+        color: var(--gray-600);
         font-size: 0.9rem;
     }
     
     .pagination-buttons {
         display: flex;
-        gap: 6px;
+        gap: 8px;
+        list-style: none;
+        padding: 0;
+        margin: 0;
     }
     
     .pagination-button {
-        padding: 8px 14px;
-        background: white;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        color: #343a40;
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        color: var(--gray-700);
         text-decoration: none;
         font-size: 0.9rem;
-        font-weight: 600;
+        font-weight: 500;
+        min-width: 40px;
+        text-align: center;
+        background-color: white;
         transition: all 0.3s ease;
     }
     
     .pagination-button:hover {
-        background: var(--primary-green);
+        background-color: var(--primary-green);
+        color: white !important;
         border-color: var(--primary-green);
-        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
     .pagination-button.active {
-        background: var(--primary-green);
-        border-color: var(--primary-green);
-        color: white;
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
     .pagination-button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+        pointer-events: none;
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .empty-state svg {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        opacity: 0.5;
     }
     
     @media (max-width: 768px) {
@@ -208,12 +278,12 @@
         }
         
         table.data-table {
-            font-size: 0.8rem;
+            font-size: 0.9rem;
         }
         
-        table.data-table th,
-        table.data-table td {
-            padding: 8px 6px;
+        table.data-table thead th,
+        table.data-table tbody td {
+            padding: 10px;
         }
     }
 </style>
@@ -290,7 +360,7 @@
                             <td><span class="status-badge status-completed">{{ program.get_status_display }}</span></td>
                             {% endif %}
                             <td>
-                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-detail">مشاهده جزئیات</a>
+                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-outline-info">مشاهده جزئیات</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -387,7 +457,7 @@
                             <td><span class="status-badge status-approved">تایید شده</span></td>
                             {% endif %}
                             <td>
-                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-detail">مشاهده جزئیات</a>
+                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-outline-info">مشاهده جزئیات</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -478,9 +548,9 @@
                             <td><span class="status-badge status-disapproved">ارسال شده به مدیر</span></td>
                             {% endif %}
                             <td>
-                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-detail">مشاهده جزئیات</a>
+                                <a href="{% url 'production:warehouse_production_detail' program.id %}" class="btn-outline-info" style="margin-left: 8px;">مشاهده جزئیات</a>
                                 {% if user_can_manage_issues %}
-                                <a href="{% url 'production:manager_warehouse_resolve' program.id %}" class="btn-detail" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); margin-right: 8px;">حل مشکل</a>
+                                <a href="{% url 'production:manager_warehouse_resolve' program.id %}" class="btn-outline-warning">حل مشکل</a>
                                 {% endif %}
                             </td>
                         </tr>
