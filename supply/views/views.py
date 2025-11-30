@@ -172,7 +172,7 @@ class SupplierPersonForm(ModelForm):
 			'registration_number': TextInput(attrs={'class': 'form-control'}),
 			'birth_date': TextInput(attrs={'class': 'form-control jalali-date', 'dir': 'ltr', 'placeholder': 'YYYY-MM-DD'}),
 			'activity_fields': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '5'}),
-			'sales_expert': TextInput(attrs={'class': 'form-control'}),
+			'sales_expert': forms.Select(attrs={'class': 'form-control'}),
 			'description': Textarea(attrs={'class': 'form-control', 'rows': 3}),
 			'phone_number': TextInput(attrs={'class': 'form-control'}),
 			'introducer': TextInput(attrs={'class': 'form-control'}),

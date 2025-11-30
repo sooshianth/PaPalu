@@ -19,15 +19,13 @@ class CreateOrderForm(forms.ModelForm):
         model = Order
         fields = [
             'order_number',
-            'customer',
             'order_type',
             'registration_source',
             'status',
             'freight_payment_type',
         ]
         widgets = {
-            'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
-            'customer': forms.Select(attrs={'class': 'form-control'}),
+            'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr', 'readonly': True}),
             'order_type': forms.Select(attrs={'class': 'form-control'}),
             'registration_source': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
@@ -39,24 +37,38 @@ class CreateOrderForm(forms.ModelForm):
         accessible_fields: Optional[Dict[str, bool]] = kwargs.pop('accessible_fields', None)
         super().__init__(*args, **kwargs)
 
-        # فیلتر کردن مشتریان - فقط نمایش مشتریان واقعی
+        # اضافه کردن فیلد customer به صورت TextInput برای autocomplete
         from core.PersonFolder.PersonModel import Person
-        if 'customer' in self.fields:
-            self.fields['customer'].queryset = Person.objects.filter(type='customer').order_by('name')
-            self.fields['customer'].empty_label = '-- انتخاب مشتری --'
+        self.fields['customer'] = forms.CharField(
+            required=True,
+            label='مشتری',
+            widget=forms.TextInput(attrs={
+                'class': 'form-control customer-autocomplete',
+                'placeholder': 'جستجوی مشتری...',
+                'autocomplete': 'off'
+            })
+        )
+        
+        # اضافه کردن فیلد مخفی برای ذخیره ID مشتری
+        self.fields['customer_id'] = forms.CharField(
+            required=False,
+            widget=forms.HiddenInput()
+        )
 
         # Set defaults for creation context
         self.fields['order_type'].required = False
         self.fields['registration_source'].required = False
-        self.fields['status'].required = False
-
-        # Read-only/display-only fields
+        
+        # حذف فیلد status چون باید توسط backend تنظیم شود
         if 'status' in self.fields:
-            self.fields['status'].disabled = True
+            del self.fields['status']
 
         # Required fields
         self.fields['order_number'].required = True
-        self.fields['customer'].required = True
+        # تولید خودکار شماره سفارش
+        if not self.instance or not self.instance.order_number:
+            self.fields['order_number'].initial = Order.generate_order_number()
+        
         self.fields['freight_payment_type'].required = True
 
         # Remove non-accessible fields if mapping provided
@@ -65,15 +77,60 @@ class CreateOrderForm(forms.ModelForm):
                 if not allowed and field_name in self.fields:
                     del self.fields[field_name]
 
+    def clean(self):
+        cleaned_data = super().clean()
+        # تبدیل customer_id به customer
+        customer_id = cleaned_data.get('customer_id', '').strip()
+        customer_text = cleaned_data.get('customer', '').strip()
+        
+        # اگر customer_id وجود ندارد اما متن وارد شده، سعی کن از متن استخراج کن
+        if not customer_id and customer_text:
+            # استخراج کد ملی از متن (فرمت: "نام (کد ملی)")
+            import re
+            match = re.search(r'\((\d+)\)', customer_text)
+            if match:
+                customer_id = match.group(1)
+                cleaned_data['customer_id'] = customer_id
+        
+        if not customer_id:
+            self.add_error('customer', 'لطفاً یک مشتری را از لیست انتخاب کنید.')
+            return cleaned_data
+        
+        if customer_id:
+            from core.PersonFolder.PersonModel import Person
+            try:
+                # بررسی دسترسی: فقط مشتری‌های کارشناس فروش فعلی (یا همه برای superuser)
+                if self.request_user and self.request_user.is_superuser:
+                    customer = Person.objects.get(national_id=customer_id, type='customer')
+                elif self.request_user:
+                    customer = Person.objects.get(national_id=customer_id, type='customer', sales_expert=self.request_user)
+                else:
+                    customer = Person.objects.get(national_id=customer_id, type='customer')
+                
+                # ذخیره customer برای استفاده در save
+                self._customer = customer
+            except Person.DoesNotExist:
+                self.add_error('customer', 'مشتری انتخاب شده یافت نشد یا شما دسترسی به آن ندارید.')
+            except Person.MultipleObjectsReturned:
+                self.add_error('customer', 'چندین مشتری با این کد ملی یافت شد. لطفاً با پشتیبانی تماس بگیرید.')
+        
+        return cleaned_data
+    
     def save(self, commit=True) -> Order:
         order: Order = super().save(commit=False)
+        # تنظیم customer از clean
+        if hasattr(self, '_customer'):
+            order.customer = self._customer
         # Defaults on create
         if not order.order_type:
             order.order_type = 'sale'
         if not order.registration_source:
             order.registration_source = 'expert'
         if not order.status:
-            order.status = 'pending'
+            order.status = 'pending_proforma_issue'
+        # اگر شماره سفارش خالی است، تولید کن
+        if not order.order_number:
+            order.order_number = Order.generate_order_number()
         if commit:
             order.save()
         return order
@@ -250,9 +307,9 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
     order_field_mapping = {
         'order_number': ('Order', 'order_number'),
         'customer': ('Order', 'customer'),
+        'customer_id': None,  # فیلد مخفی، همیشه دسترسی دارد
         'order_type': ('Order', 'order_type'),
         'registration_source': ('Order', 'registration_source'),
-        'status': ('Order', 'status'),
         'freight_payment_type': ('Order', 'freight_payment_type'),
     }
     # Mapping for item form
@@ -281,8 +338,13 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
     from core.OrderFolder.OrderItemModel import OrderItem as OrderItemModel
 
     access_main = {}
-    for form_field, (model_name, model_field) in order_field_mapping.items():
-        access_main[form_field] = can_edit_field(OrderModel, model_field)
+    for form_field, mapping_value in order_field_mapping.items():
+        if mapping_value is None:
+            # فیلدهایی که نیازی به بررسی دسترسی ندارند (مثل customer_id)
+            access_main[form_field] = True
+        else:
+            model_name, model_field = mapping_value
+            access_main[form_field] = can_edit_field(OrderModel, model_field)
 
     access_item = {}
     for form_field, (model_name, model_field) in item_field_mapping.items():

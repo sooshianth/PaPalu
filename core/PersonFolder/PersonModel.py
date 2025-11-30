@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from django_jalali.db import models as jmodels
 from django.utils.translation import gettext_lazy as _
 from core.WarehouseFolder.WarehouseModel import Warehouse
@@ -56,7 +57,6 @@ class Person(models.Model):
     # فیلدهای پایه
     national_id = models.CharField(
         max_length=10,
-        primary_key=True,
         verbose_name='کد ملی')
         
     type = models.CharField(
@@ -102,11 +102,14 @@ class Person(models.Model):
         verbose_name='حیطه‌های فعالیت'
     )
 
-    sales_expert = models.CharField(
-        max_length=100, 
-        verbose_name='کارشناس فروش', 
+    sales_expert = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
         null=True,
-        blank=True)
+        blank=True,
+        related_name='persons',
+        verbose_name='کارشناس فروش',
+    )
 
     description = models.TextField(
         verbose_name='توضیحات شخص', 

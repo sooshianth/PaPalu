@@ -172,3 +172,21 @@ class Order(models.Model):
         from django.db.models import Sum
         total = self.order_items.aggregate(total=Sum('total_purchase_cost'))['total']
         return total or 0
+    
+    @staticmethod
+    def generate_order_number():
+        """
+        تولید خودکار شماره سفارش
+        شروع از 100000 و افزایش تدریجی
+        """
+        last_order = Order.objects.all().order_by('-order_number').first()
+        if last_order:
+            try:
+                last_number = int(last_order.order_number)
+                if last_number >= 100000:
+                    return str(last_number + 1)
+                else:
+                    return '100000'
+            except (ValueError, TypeError):
+                return '100000'
+        return '100000'

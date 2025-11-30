@@ -265,6 +265,101 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    
+    // مدیریت autocomplete برای انتخاب مشتری
+    const customerInput = document.querySelector('input[name="customer"]');
+    const customerIdInput = document.querySelector('input[name="customer_id"]');
+    let customerSuggestions = [];
+    let selectedCustomerId = null;
+    
+    console.log('Customer input found:', !!customerInput);
+    console.log('Customer ID input found:', !!customerIdInput);
+    
+    if (customerInput) {
+        // ایجاد container برای پیشنهادات
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'customer-suggestions';
+        suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+        customerInput.parentElement.style.position = 'relative';
+        customerInput.parentElement.appendChild(suggestionsContainer);
+        
+        let searchTimeout;
+        
+        customerInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                suggestionsContainer.style.display = 'none';
+                customerSuggestions = [];
+                selectedCustomerId = null;
+                if (customerIdInput) customerIdInput.value = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "sales:customer_search_api" %}?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        customerSuggestions = data.results || [];
+                        displaySuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی مشتری:', error);
+                    });
+            }, 300);
+        });
+        
+        function displaySuggestions() {
+            suggestionsContainer.innerHTML = '';
+            
+            if (customerSuggestions.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            customerSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f0f0f0';
+                });
+                suggestionItem.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+                suggestionItem.addEventListener('click', function() {
+                    customerInput.value = item.text;
+                    selectedCustomerId = item.id;
+                    if (customerIdInput) {
+                        customerIdInput.value = item.id;
+                        console.log('Customer ID set to:', item.id);
+                    } else {
+                        console.error('customerIdInput not found!');
+                    }
+                    suggestionsContainer.style.display = 'none';
+                });
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            
+            suggestionsContainer.style.display = 'block';
+        }
+        
+        // بستن پیشنهادات با کلیک خارج
+        document.addEventListener('click', function(e) {
+            if (!customerInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+        
+        // مدیریت کلیدهای کیبورد
+        customerInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+    }
 });
 </script>
 {% endblock %}
@@ -304,6 +399,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.customer.label }}</label>
                     {{ form.customer }}
+                    {{ form.customer_id }}
                     {% if form.customer.errors %}
                         <div class="text-danger">{{ form.customer.errors.0 }}</div>
                     {% endif %}
