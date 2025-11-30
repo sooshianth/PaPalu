@@ -30,4 +30,5 @@ urlpatterns = [
     path('manager/warehouse/resolve/<int:program_id>/save/', manager_warehouse_resolve_view.manager_save_program, name='manager_save_program'),
     path('manager/warehouse/resolve/<int:program_id>/create-stock-entry/', manager_warehouse_resolve_view.manager_create_stock_entry, name='manager_create_stock_entry'),
     path('manager/warehouse/resolve/<int:program_id>/commit-stock-entry/<int:entry_id>/', manager_warehouse_resolve_view.manager_commit_stock_entry, name='manager_commit_stock_entry'),
+    path('manager/warehouse/resolve/<int:program_id>/resolve-all/', manager_warehouse_resolve_view.manager_resolve_all, name='manager_resolve_all'),
 ]

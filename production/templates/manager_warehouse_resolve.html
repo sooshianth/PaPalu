@@ -1296,14 +1296,6 @@ document.querySelectorAll('.bom-variance-badge, .bom-variance-percent').forEach(
                     
                     <!-- Action Buttons -->
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        {% if not entry.is_committed %}
-                        <button onclick="commitStockEntry({{ entry.id }})" class="btn-action btn-approve" style="padding: 6px 12px; font-size: 0.8rem;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            تایید
-                        </button>
-                        {% endif %}
                         <button onclick="showStockEntryDetail({{ entry.id }}, event)" class="btn-action btn-view-comparison" style="padding: 6px 12px; font-size: 0.8rem;">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1406,6 +1398,18 @@ document.querySelectorAll('.bom-variance-badge, .bom-variance-percent').forEach(
             <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         عدم تایید و ارسال به مدیر
+    </button>
+</div>
+{% endif %}
+
+<!-- Resolve Button - برای مدیر -->
+{% if program.sent_to_manager_for_revalidation %}
+<div class="action-buttons" style="margin-top: 32px; padding-top: 24px; border-top: 2px solid #e9ecef;">
+    <button onclick="resolveAll()" class="btn-action btn-approve" style="font-size: 1.1rem; padding: 16px 32px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        حل مشکلات و تایید نهایی
     </button>
 </div>
 {% endif %}
@@ -1590,7 +1594,7 @@ document.querySelectorAll('.bom-variance-badge, .bom-variance-percent').forEach(
         </div>
         <div class="modal-footer">
             <button class="btn btn-secondary" onclick="hideCreateStockEntryModal()">انصراف</button>
-            <button class="btn btn-approve" onclick="createStockEntry()">ایجاد و تایید</button>
+            <button class="btn btn-approve" onclick="createStockEntry()">ایجاد (بدون تایید)</button>
         </div>
     </div>
 </div>
@@ -2025,7 +2029,6 @@ async function createStockEntry() {
         formData.append('notes', notes);
         formData.append('source_stocks', JSON.stringify(sourceStocks));
         formData.append('target_stocks', JSON.stringify(targetStocks));
-        formData.append('commit', 'true');
         
         const response = await fetch('{% url "production:manager_create_stock_entry" program.id %}', {
             method: 'POST',
@@ -2038,7 +2041,7 @@ async function createStockEntry() {
         const data = await response.json();
         
         if (data.success) {
-            alert('ثبت انبار با موفقیت ایجاد و تایید شد');
+            alert('ثبت انبار با موفقیت ایجاد شد (در انتظار تایید نهایی)');
             window.location.reload();
         } else {
             alert('خطا: ' + (data.error || data.message));
@@ -2112,5 +2115,34 @@ document.getElementById('createStockEntryModal').addEventListener('click', funct
         hideCreateStockEntryModal();
     }
 });
+
+// Resolve All Function
+async function resolveAll() {
+    if (!confirm('آیا از حل مشکلات و تایید نهایی همه ثبت‌های انبار اطمینان دارید؟\n\nاین عمل:\n- همه ثبت‌های انبار را تایید می‌کند\n- وضعیت برنامه را به‌روزرسانی می‌کند\n- تایید انبار را فعال می‌کند\n- ارسال به مدیر را غیرفعال می‌کند')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('{% url "production:manager_resolve_all" program.id %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message || 'همه ثبت‌های انبار تایید شدند و وضعیت برنامه به‌روزرسانی شد');
+            window.location.href = '{% url "production:warehouse_production_list" %}';
+        } else {
+            alert('خطا: ' + (data.error || data.message));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('خطا در ارتباط با سرور');
+    }
+}
 </script>
 {% endblock %}

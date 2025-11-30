@@ -473,10 +473,126 @@ def manager_save_program(request, program_id):
                     program.planned_weight_ton = Decimal(request.POST.get('planned_weight_ton', 0))
                 except:
                     pass
+            old_produced_weight = program.produced_weight_ton or Decimal('0')
             if 'produced_weight_ton' in request.POST:
                 try:
-                    program.produced_weight_ton = Decimal(request.POST.get('produced_weight_ton', 0))
-                except:
+                    new_produced_weight = Decimal(request.POST.get('produced_weight_ton', 0))
+                    
+                    # پیدا کردن مقدار اولیه (original first real tonnage) از stock entry "تکمیل تولید"
+                    original_produced_weight = None
+                    if program.product and program.product_warehouse:
+                        product_ct = ContentType.objects.get_for_model(Product)
+                        # جستجوی stock entry committed با notes "تکمیل تولید برنامه X - تبدیل مواد اولیه به محصول نهایی"
+                        completion_entry = StockEntry.objects.filter(
+                            (Q(notes__icontains=f'تکمیل تولید برنامه {program.program_id or program.id}') |
+                             Q(notes__icontains=f'تکمیل تولید برنامه {program.id}')) &
+                            Q(notes__icontains='تبدیل مواد اولیه به محصول نهایی') &
+                            Q(is_committed=True)
+                        ).first()
+                        
+                        if completion_entry:
+                            # پیدا کردن target stock که مربوط به محصول و انبار محصول است
+                            target_stock = completion_entry.target_stocks.filter(
+                                to_content_type=product_ct,
+                                to_object_id=program.product.id,
+                                to_warehouse=program.product_warehouse
+                            ).first()
+                            
+                            if target_stock and target_stock.quantity:
+                                original_produced_weight = target_stock.quantity
+                    
+                    # اگر مقدار اولیه پیدا نشد، از مقدار فعلی استفاده کن (یا 0)
+                    if original_produced_weight is None:
+                        original_produced_weight = Decimal('0')
+                    
+                    # محاسبه تفاوت بر اساس مقدار اولیه (نه مقدار قبلی)
+                    difference = new_produced_weight - original_produced_weight
+                    
+                    # بررسی اینکه آیا مقدار جدید برابر با مقدار اولیه است
+                    if new_produced_weight == original_produced_weight:
+                        # اگر برابر است، stock entry تصحیحی را حذف کن (اگر وجود داشته باشد)
+                        correction_entry = StockEntry.objects.filter(
+                            Q(notes__icontains=f'تصحیح تناژ تولید شده برنامه {program.program_id or program.id}') |
+                            Q(notes__icontains=f'correction produced_weight program {program.program_id or program.id}')
+                        ).exclude(is_committed=True).first()
+                        
+                        if correction_entry:
+                            correction_entry.delete()
+                            bug_logger.info(f"Stock entry تصحیحی {correction_entry.id} حذف شد چون مقدار به مقدار اولیه ({original_produced_weight}) برگشت")
+                        
+                        program.produced_weight_ton = new_produced_weight
+                    # فقط اگر تفاوت وجود داشته باشد و محصول و انبار محصول مشخص باشند
+                    elif difference != 0 and program.product and program.product_warehouse:
+                        program.produced_weight_ton = new_produced_weight
+                        
+                        product_ct = ContentType.objects.get_for_model(Product)
+                        
+                        # جستجوی stock entry تصحیحی uncommitted موجود
+                        correction_entry = StockEntry.objects.filter(
+                            Q(notes__icontains=f'تصحیح تناژ تولید شده برنامه {program.program_id or program.id}') |
+                            Q(notes__icontains=f'correction produced_weight program {program.program_id or program.id}')
+                        ).exclude(is_committed=True).first()
+                        
+                        if correction_entry:
+                            # ویرایش stock entry تصحیحی موجود
+                            # حذف source و target stocks قبلی
+                            correction_entry.source_stocks.all().delete()
+                            correction_entry.target_stocks.all().delete()
+                            
+                            # ایجاد stock جدید با مقدار تفاوت
+                            if difference > 0:
+                                TargetStock.objects.create(
+                                    stock_entry=correction_entry,
+                                    to_content_type=product_ct,
+                                    to_object_id=program.product.id,
+                                    to_warehouse=program.product_warehouse,
+                                    quantity=difference,
+                                )
+                            # اگر difference منفی باشد، باید source stock ایجاد کنیم (کاهش)
+                            elif difference < 0:
+                                SourceStock.objects.create(
+                                    stock_entry=correction_entry,
+                                    from_content_type=product_ct,
+                                    from_object_id=program.product.id,
+                                    from_warehouse=program.product_warehouse,
+                                    quantity=abs(difference),
+                                )
+                            
+                            bug_logger.info(f"Stock entry تصحیحی {correction_entry.id} برای تناژ تولید شده به‌روزرسانی شد: تفاوت {difference}")
+                        else:
+                            # ایجاد stock entry تصحیحی جدید
+                            correction_entry = StockEntry.objects.create(
+                                transaction_date=timezone.now(),
+                                notes=f'تصحیح تناژ تولید شده برنامه {program.program_id or program.id}',
+                                is_committed=False
+                            )
+                            
+                            # ایجاد target stock (اگر تفاوت مثبت باشد - افزودن)
+                            if difference > 0:
+                                TargetStock.objects.create(
+                                    stock_entry=correction_entry,
+                                    to_content_type=product_ct,
+                                    to_object_id=program.product.id,
+                                    to_warehouse=program.product_warehouse,
+                                    quantity=difference,
+                                )
+                            # ایجاد source stock (اگر تفاوت منفی باشد - کاهش)
+                            elif difference < 0:
+                                SourceStock.objects.create(
+                                    stock_entry=correction_entry,
+                                    from_content_type=product_ct,
+                                    from_object_id=program.product.id,
+                                    from_warehouse=program.product_warehouse,
+                                    quantity=abs(difference),
+                                )
+                            
+                            bug_logger.info(f"Stock entry تصحیحی {correction_entry.id} برای تناژ تولید شده ایجاد شد: تفاوت {difference} (از {old_produced_weight} به {new_produced_weight})")
+                    elif difference == 0:
+                        # اگر تفاوتی نیست، فقط مقدار را ذخیره کن
+                        program.produced_weight_ton = new_produced_weight
+                except Exception as e:
+                    bug_logger.error(f"خطا در ایجاد/ویرایش stock entry تصحیحی برای produced_weight_ton: {str(e)}\n{traceback.format_exc()}")
+                    # در صورت خطا، مقدار را ذخیره نکن
                     pass
             if 'packaging_type' in request.POST:
                 program.packaging_type = request.POST.get('packaging_type', '')
@@ -621,40 +737,15 @@ def manager_create_stock_entry(request, program_id):
                     bug_logger.warning(f"خطا در ایجاد target stock: {str(e)}")
                     continue
             
-            # Commit the stock entry if requested
-            should_commit = request.POST.get('commit', 'false').lower() == 'true'
-            if should_commit:
-                stock_entry.commit()
-                
-                # به‌روزرسانی actual_consumption از تمام stock entries مربوط به برنامه
-                stock_entries = StockEntry.objects.filter(
-                    Q(notes__icontains=f'برنامه {program.program_id}') |
-                    Q(notes__icontains=f'برنامه {program.id}') |
-                    Q(notes__icontains=f'program {program.program_id}') |
-                    Q(notes__icontains=f'program {program.id}')
-                )
-                
-                actual_consumption = calculate_actual_consumption_from_stock_entries(program, stock_entries)
-                program.actual_consumption = actual_consumption
-                program.save(update_fields=['actual_consumption'])
-                
-                audit_logger.info(f"Stock entry {stock_entry.id} ایجاد و commit شد توسط مدیر {request.user.username}")
-                bug_logger.info(f"Stock entry {stock_entry.id} ایجاد و commit شد برای برنامه {program_id}")
-                
-                return JsonResponse({
-                    'success': True,
-                    'stock_entry_id': stock_entry.id,
-                    'message': 'ثبت انبار با موفقیت ایجاد و تایید شد و جزئیات مواد اولیه به‌روزرسانی شد'
-                })
-            else:
-                audit_logger.info(f"Stock entry {stock_entry.id} ایجاد شد (uncommitted) توسط مدیر {request.user.username}")
-                bug_logger.info(f"Stock entry {stock_entry.id} ایجاد شد برای برنامه {program_id}")
-                
-                return JsonResponse({
-                    'success': True,
-                    'stock_entry_id': stock_entry.id,
-                    'message': 'ثبت انبار با موفقیت ایجاد شد'
-                })
+            # Stock entry همیشه uncommitted ایجاد می‌شود تا زمانی که resolve فشرده شود
+            audit_logger.info(f"Stock entry {stock_entry.id} ایجاد شد (uncommitted) توسط مدیر {request.user.username}")
+            bug_logger.info(f"Stock entry {stock_entry.id} ایجاد شد برای برنامه {program_id}")
+            
+            return JsonResponse({
+                'success': True,
+                'stock_entry_id': stock_entry.id,
+                'message': 'ثبت انبار با موفقیت ایجاد شد (در انتظار تایید نهایی)'
+            })
             
     except Exception as e:
         bug_logger.error(f"خطا در ایجاد stock entry: {str(e)}\n{traceback.format_exc()}")
@@ -665,6 +756,7 @@ def manager_create_stock_entry(request, program_id):
 def manager_commit_stock_entry(request, program_id, entry_id):
     """
     Commit کردن stock entry و به‌روزرسانی actual_consumption
+    این تابع دیگر استفاده نمی‌شود - همه commit ها از طریق resolve انجام می‌شود
     """
     if not user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value):
         return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
@@ -705,5 +797,74 @@ def manager_commit_stock_entry(request, program_id, entry_id):
         
     except Exception as e:
         bug_logger.error(f"خطا در commit stock entry {entry_id}: {str(e)}\n{traceback.format_exc()}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+def manager_resolve_all(request, program_id):
+    """
+    Resolve کردن همه stock entries و به‌روزرسانی وضعیت برنامه
+    - همه stock entries uncommitted را commit می‌کند
+    - actual_consumption را به‌روزرسانی می‌کند
+    - confirmed_by_warehouseman را True می‌کند
+    - sent_to_manager_for_revalidation را False می‌کند
+    """
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value):
+        audit_logger.alert(f"دسترسی غیرمجاز به resolve برنامه - برنامه {program_id}")
+        return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'متد نامعتبر'}, status=400)
+    
+    try:
+        program = get_object_or_404(ProductionProgram, id=program_id)
+        
+        with transaction.atomic():
+            # دریافت همه stock entries مربوط به برنامه که uncommitted هستند
+            uncommitted_entries = StockEntry.objects.filter(
+                (Q(notes__icontains=f'برنامه {program.program_id}') |
+                 Q(notes__icontains=f'برنامه {program.id}') |
+                 Q(notes__icontains=f'program {program.program_id}') |
+                 Q(notes__icontains=f'program {program.id}')) &
+                Q(is_committed=False)
+            )
+            
+            # Commit کردن همه stock entries
+            committed_count = 0
+            for entry in uncommitted_entries:
+                try:
+                    entry.commit()
+                    committed_count += 1
+                    bug_logger.info(f"Stock entry {entry.id} commit شد در resolve")
+                except Exception as e:
+                    bug_logger.error(f"خطا در commit stock entry {entry.id}: {str(e)}")
+                    continue
+            
+            # به‌روزرسانی actual_consumption از تمام stock entries مربوط به برنامه
+            all_stock_entries = StockEntry.objects.filter(
+                Q(notes__icontains=f'برنامه {program.program_id}') |
+                Q(notes__icontains=f'برنامه {program.id}') |
+                Q(notes__icontains=f'program {program.program_id}') |
+                Q(notes__icontains=f'program {program.id}')
+            )
+            
+            actual_consumption = calculate_actual_consumption_from_stock_entries(program, all_stock_entries)
+            program.actual_consumption = actual_consumption
+            
+            # به‌روزرسانی وضعیت برنامه
+            program.confirmed_by_warehouseman = True
+            program.sent_to_manager_for_revalidation = False
+            program.save(update_fields=['actual_consumption', 'confirmed_by_warehouseman', 'sent_to_manager_for_revalidation'])
+            
+            audit_logger.info(f"Resolve برنامه {program_id} انجام شد: {committed_count} stock entry commit شد توسط مدیر {request.user.username}")
+            bug_logger.info(f"Resolve برنامه {program_id} انجام شد: {committed_count} stock entry commit شد")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'همه ثبت‌های انبار تایید شدند ({committed_count} مورد) و وضعیت برنامه به‌روزرسانی شد'
+        })
+        
+    except Exception as e:
+        bug_logger.error(f"خطا در resolve برنامه {program_id}: {str(e)}\n{traceback.format_exc()}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
