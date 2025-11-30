@@ -304,20 +304,11 @@ def register_vehicle_entry_view(request, waybill_number):
                 schedule_info.vehicle_entry_time = timezone.now()
                 schedule_info.save(update_fields=['vehicle_entry_time'])
                 
-                # بررسی تغییر وضعیت تخصیص
-                if transport.allocation_id:
-                    allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
-                    if allocation and allocation.allocation_status == 'pending_vehicle_entry':
-                        # بررسی اینکه آیا همه حمل‌های تخصیص به loading رسیدند
-                        all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
-                        all_transports_count = all_transports.count()
-                        loading_transports_count = all_transports.filter(status='loading').count()
-                        
-                        # اگر همه حمل‌ها به loading رسیدند، تخصیص را به pending_loading ببر
-                        if all_transports_count > 0 and all_transports_count == loading_transports_count:
-                            allocation.allocation_status = 'pending_loading'
-                            allocation.save(update_fields=['allocation_status'])
-                            bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در انتظار بارگیری' تغییر کرد")
+                # توجه: وضعیت تخصیص در این مرحله تغییر نمی‌کند
+                # وضعیت تخصیص فقط در مراحل خاص تغییر می‌کند:
+                # 1. هنگام اعلام بار: pending_shipping -> pending_vehicle_recruitment
+                # 2. وقتی همه حمل‌ها به pending_waybill رفتند: pending_vehicle_recruitment -> pending_loading_completion
+                # 3. وقتی همه حمل‌ها به completed یا loaded رفتند: pending_loading_completion -> delivered
                 
                 bug_logger.info(f"ورود خودرو برای حمل {waybill_number} ثبت شد")
                 messages.success(request, f'ورود خودرو برای حمل {waybill_number} با موفقیت ثبت شد.')

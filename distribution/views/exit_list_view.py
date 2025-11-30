@@ -203,17 +203,20 @@ def mark_vehicle_exited_view(request, waybill_number):
             # بررسی تغییر وضعیت تخصیص
             if transport.allocation_id:
                 allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
-                if allocation:
-                    # بررسی اینکه آیا همه حمل‌های تخصیص به completed رسیدند
+                if allocation and allocation.allocation_status == 'pending_loading_completion':
+                    # بررسی اینکه آیا همه حمل‌های تخصیص به completed یا loaded رسیدند
                     all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
                     all_transports_count = all_transports.count()
-                    completed_transports_count = all_transports.filter(status='completed').count()
+                    completed_or_loaded_transports = all_transports.filter(
+                        status__in=['completed', 'loaded']
+                    )
+                    completed_or_loaded_count = completed_or_loaded_transports.count()
                     
-                    # اگر همه حمل‌ها به completed رسیدند، تخصیص را به delivered ببر
-                    if all_transports_count > 0 and all_transports_count == completed_transports_count:
-                        allocation.allocation_status = 'delivered'
+                    # اگر همه حمل‌ها به completed یا loaded رسیدند، تخصیص را به completed ببر
+                    if all_transports_count > 0 and all_transports_count == completed_or_loaded_count:
+                        allocation.allocation_status = 'completed'
                         allocation.save(update_fields=['allocation_status'])
-                        bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'تحویل شده' تغییر کرد")
+                        bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'تکمیل شده' تغییر کرد")
                         
                         # بررسی تغییر وضعیت سفارش
                         if allocation.order:
@@ -232,14 +235,14 @@ def mark_vehicle_exited_view(request, waybill_number):
                                 if alloc_transports.exists():
                                     allocations_with_transports.append(alloc)
                             
-                            # بررسی اینکه آیا همه تخصیص‌های دارای حمل به delivered رسیدند
+                            # بررسی اینکه آیا همه تخصیص‌های دارای حمل به completed رسیدند
                             if allocations_with_transports:
-                                all_delivered = all(
-                                    alloc.allocation_status == 'delivered' 
+                                all_completed = all(
+                                    alloc.allocation_status == 'completed' 
                                     for alloc in allocations_with_transports
                                 )
                                 
-                                if all_delivered:
+                                if all_completed:
                                     order.status = 'pending_unloading_approval'
                                     order.save(update_fields=['status'])
                                     bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تخلیه' تغییر کرد")

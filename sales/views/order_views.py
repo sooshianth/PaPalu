@@ -195,10 +195,27 @@ def order_list_view(request):
         messages.error(request, 'شما دسترسی به مشاهده لیست سفارش‌ها ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # دریافت پارامترهای جستجو و فیلتر
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+
     if request.user.is_superuser:
         orders_qs = Order.objects.all().select_related('customer', 'registered_by').prefetch_related('order_items').order_by('-created_at')
     else:
         orders_qs = Order.objects.filter(registered_by=request.user).select_related('customer', 'registered_by').prefetch_related('order_items').order_by('-created_at')
+
+    # اعمال جستجو
+    if search_query:
+        # جستجو در شماره سفارش، نام مشتری و نام کاربری ثبت‌کننده
+        orders_qs = orders_qs.filter(
+            Q(order_number__icontains=search_query) |
+            Q(customer__name__icontains=search_query) |
+            Q(registered_by__username__icontains=search_query)
+        )
+    
+    # اعمال فیلتر وضعیت
+    if status_filter:
+        orders_qs = orders_qs.filter(status=status_filter)
 
     # محاسبه مجموع بهای تمام شده خرید و وزن کل برای هر سفارش با annotate
     # منطق تبدیل واحد: kg = quantity, ton = quantity * 1000, bag = quantity * bag_weight, piece = quantity
@@ -230,6 +247,8 @@ def order_list_view(request):
         'table': table,
         'accessible_fields': accessible_fields,
         'page_title': 'لیست سفارش‌ها',
+        'search_query': search_query,
+        'status_filter': status_filter,
     }
     return render(request, 'order/order_list.html', context)
 

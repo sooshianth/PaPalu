@@ -361,17 +361,17 @@ def register_loading_exit_view(request, waybill_number):
                     # بررسی تغییر وضعیت تخصیص
                     if transport.allocation_id:
                         allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
-                        if allocation and allocation.allocation_status == 'pending_loading':
+                        if allocation and allocation.allocation_status == 'pending_vehicle_recruitment':
                             # بررسی اینکه آیا همه حمل‌های تخصیص به pending_waybill رسیدند
                             all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
                             all_transports_count = all_transports.count()
                             pending_waybill_transports_count = all_transports.filter(status='pending_waybill').count()
                             
-                            # اگر همه حمل‌ها به pending_waybill رسیدند، تخصیص را به pending_waybill ببر
+                            # اگر همه حمل‌ها به pending_waybill رسیدند، تخصیص را به pending_loading_completion ببر
                             if all_transports_count > 0 and all_transports_count == pending_waybill_transports_count:
-                                allocation.allocation_status = 'pending_waybill'
+                                allocation.allocation_status = 'pending_loading_completion'
                                 allocation.save(update_fields=['allocation_status'])
-                                bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در انتظار بارنامه' تغییر کرد")
+                                bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در انتظار تکمیل بارگیری‌های تخصیص' تغییر کرد")
                                 
                     bug_logger.info(f"خروج کالا برای حمل {waybill_number} ثبت شد")
                     messages.success(request, f'خروج کالا برای حمل {waybill_number} با موفقیت ثبت شد.')

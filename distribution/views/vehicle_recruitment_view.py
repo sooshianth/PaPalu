@@ -445,16 +445,11 @@ def complete_vehicle_recruitment_view(request, allocation_number):
                 schedule_info.vehicle_attraction_time = now
                 schedule_info.save(update_fields=['vehicle_attraction_time'])
             
-            # بررسی اینکه آیا همه حمل‌های تخصیص به pending_vehicle_entry رسیدند
-            all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
-            all_transports_count = all_transports.count()
-            pending_entry_transports_count = all_transports.filter(status='pending_vehicle_entry').count()
-            
-            # اگر همه حمل‌ها به pending_vehicle_entry رسیدند، تخصیص را هم به این وضعیت ببر
-            if all_transports_count > 0 and all_transports_count == pending_entry_transports_count:
-                allocation.allocation_status = 'pending_vehicle_entry'
-                allocation.save(update_fields=['allocation_status'])
-                bug_logger.info(f"وضعیت تخصیص {allocation_number} به 'در انتظار ورود خودرو به کارخانه' تغییر کرد")
+            # توجه: وضعیت تخصیص در این مرحله تغییر نمی‌کند
+            # وضعیت تخصیص فقط در مراحل خاص تغییر می‌کند:
+            # 1. هنگام اعلام بار: pending_shipping -> pending_vehicle_recruitment
+            # 2. وقتی همه حمل‌ها به pending_waybill رفتند: pending_vehicle_recruitment -> pending_loading_completion
+            # 3. وقتی همه حمل‌ها به completed یا loaded رفتند: pending_loading_completion -> delivered
             
             bug_logger.info(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد")
             messages.success(request, f'جذب خودرو برای تخصیص {allocation_number} با موفقیت تکمیل شد.')

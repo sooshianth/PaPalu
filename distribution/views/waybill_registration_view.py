@@ -241,20 +241,11 @@ def register_waybill_view(request, waybill_number):
                         description='بارنامه حمل'
                     )
                     
-                    # بررسی تغییر وضعیت تخصیص
-                    if transport.allocation_id:
-                        allocation = Allocation.objects.filter(allocation_number=transport.allocation_id).first()
-                        if allocation and allocation.allocation_status == 'pending_waybill':
-                            # بررسی اینکه آیا همه حمل‌های تخصیص به pending_exit رسیدند
-                            all_transports = Transport.objects.filter(allocation_id=allocation.allocation_number)
-                            all_transports_count = all_transports.count()
-                            pending_exit_transports_count = all_transports.filter(status='pending_exit').count()
-                            
-                            # اگر همه حمل‌ها به pending_exit رسیدند، تخصیص را به pending_exit ببر
-                            if all_transports_count > 0 and all_transports_count == pending_exit_transports_count:
-                                allocation.allocation_status = 'pending_exit'
-                                allocation.save(update_fields=['allocation_status'])
-                                bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'در انتظار خروج' تغییر کرد")
+                    # توجه: وضعیت تخصیص در این مرحله تغییر نمی‌کند
+                    # وضعیت تخصیص فقط در مراحل خاص تغییر می‌کند:
+                    # 1. هنگام اعلام بار: pending_shipping -> pending_vehicle_recruitment
+                    # 2. وقتی همه حمل‌ها به pending_waybill رفتند: pending_vehicle_recruitment -> pending_loading_completion
+                    # 3. وقتی همه حمل‌ها به completed یا loaded رفتند: pending_loading_completion -> delivered
                     
                     bug_logger.info(f"اطلاعات بارنامه برای حمل {waybill_number} ثبت شد")
                     messages.success(request, f'اطلاعات بارنامه برای حمل {waybill_number} با موفقیت ثبت شد.')
