@@ -55,16 +55,20 @@ class ProductionProgram(models.Model):
         verbose_name='تناژ برنامه ریزی شده (تن)',
         null=True, blank=True
     )
-    execution_date = jmodels.jDateField(
-        verbose_name='تاریخ اجرای برنامه',
+    predicted_start_date = jmodels.jDateField(
+        verbose_name='تاریخ شروع پیشبینی شده',
         null=True, blank=True
     )
     predicted_start_time = models.TimeField(
-        verbose_name='شروع پیشبینی شده',
+        verbose_name='زمان شروع پیشبینی شده',
+        null=True, blank=True
+    )
+    predicted_end_date = jmodels.jDateField(
+        verbose_name='تاریخ پایان پیشبینی شده',
         null=True, blank=True
     )
     predicted_end_time = models.TimeField(
-        verbose_name='پایان پیشبینی شده',
+        verbose_name='زمان پایان پیشبینی شده',
         null=True, blank=True
     )
     packaging_type = models.CharField(

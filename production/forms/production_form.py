@@ -40,26 +40,27 @@ class ProductionForm(forms.ModelForm):
         label='تناژ برنامه (تن)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
-    execution_date = jDateField(
+    # Separate date and time fields for start
+    predicted_start_date = jDateField(
         required=False,
-        label='تاریخ اجرای برنامه',
+        label='تاریخ شروع پیشبینی شده',
         widget=forms.TextInput(attrs={'class': 'form-control jalali-date-input', 'dir': 'ltr', 'placeholder': '1403-08-29'})
     )
-    # Custom datetime fields (will be split into date + time fields)
-    predicted_start_datetime = forms.CharField(
+    predicted_start_time = forms.TimeField(
         required=False,
-        label='شروع پیشبینی شده',
-        widget=forms.HiddenInput()
+        label='زمان شروع پیشبینی شده',
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
-    predicted_end_datetime = forms.CharField(
-        required=False,
-        label='پایان پیشبینی شده',
-        widget=forms.HiddenInput()
-    )
+    # Separate date and time fields for end
     predicted_end_date = jDateField(
         required=False,
         label='تاریخ پایان پیشبینی شده',
         widget=forms.TextInput(attrs={'class': 'form-control jalali-date-input', 'dir': 'ltr', 'placeholder': '1403-08-29'})
+    )
+    predicted_end_time = forms.TimeField(
+        required=False,
+        label='زمان پایان پیشبینی شده',
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
     packaging_type = forms.ChoiceField(
         required=False,
@@ -111,7 +112,8 @@ class ProductionForm(forms.ModelForm):
         model = ProductionProgram
         fields = [
             'production_info', 'product', 'program_id', 'planned_weight_ton',
-            'execution_date', 'predicted_start_time', 'predicted_end_time', 'packaging_type', 'extra_description',
+            'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
+            'packaging_type', 'extra_description',
             'inventory_snapshot', 'net_unplanned_requirement', 'produced_weight_ton',
             'actual_start_date', 'started_at', 'completed_at', 'status'
         ]
@@ -121,36 +123,12 @@ class ProductionForm(forms.ModelForm):
         # Get the current status
         instance: ProductionProgram | None = getattr(self, 'instance', None)
         status = instance.status if instance and instance.pk else ProductionProgram.Status.DRAFT
-        
-        # Override time field widgets to use text input for time picker
-        if 'predicted_start_time' in self.fields:
-            self.fields['predicted_start_time'].widget = forms.TimeInput(attrs={
-                'class': 'form-control time-picker-input',
-                'type': 'text',
-                'placeholder': 'HH:MM'
-            })
-        if 'predicted_end_time' in self.fields:
-            self.fields['predicted_end_time'].widget = forms.TimeInput(attrs={
-                'class': 'form-control time-picker-input',
-                'type': 'text',
-                'placeholder': 'HH:MM'
-            })
-        
-        # Set initial values for datetime fields from model's time fields
-        if instance and instance.pk:
-            # For start: use execution_date
-            if instance.execution_date:
-                self.fields['execution_date'].initial = instance.execution_date
-            
-            # For end: use execution_date as default (or we could add a separate field in model later)
-            if instance.execution_date:
-                self.fields['predicted_end_date'].initial = instance.execution_date
 
         # All main fields (cannot edit when confirmed)
         main_field_names = [
             'production_info', 'product', 'program_id', 'planned_weight_ton',
-            'predicted_start_datetime', 'predicted_end_datetime', 'predicted_end_date', 'execution_date', 'packaging_type',
-            'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
+            'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
+            'packaging_type', 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
         ]
 
         if status == ProductionProgram.Status.DRAFT:
@@ -219,75 +197,6 @@ class ProductionForm(forms.ModelForm):
             raise forms.ValidationError('تناژ باید بزرگتر از صفر باشد.')
         return val
 
-    def clean_predicted_start_datetime(self):
-        """Parse datetime string and extract time component"""
-        datetime_str = self.cleaned_data.get('predicted_start_datetime', '').strip()
-        if not datetime_str:
-            return None
-        
-        try:
-            # Parse jalali datetime string (format: YYYY-MM-DD HH:MM)
-            parts = datetime_str.split()
-            if len(parts) >= 2:
-                date_str = parts[0]
-                time_str = parts[1]
-                # Parse jalali date
-                year, month, day = map(int, date_str.split('-'))
-                jdate = jdatetime.date(year, month, day)
-                # Convert to gregorian
-                gdate = jdate.togregorian()
-                # Parse time
-                hour, minute = map(int, time_str.split(':'))
-                from datetime import datetime, time
-                time_obj = time(hour, minute)
-                # Store time in predicted_start_time field
-                self.cleaned_data['predicted_start_time'] = time_obj
-                # Store date in execution_date if not set
-                if not self.cleaned_data.get('execution_date'):
-                    self.cleaned_data['execution_date'] = jdate
-                return datetime_str
-            else:
-                raise forms.ValidationError('فرمت تاریخ و زمان نامعتبر است. فرمت صحیح: 1403-08-29 14:30')
-        except (ValueError, AttributeError) as e:
-            raise forms.ValidationError(f'فرمت تاریخ و زمان نامعتبر است: {str(e)}')
-
-    def clean_predicted_end_datetime(self):
-        """Parse datetime string and extract time component"""
-        datetime_str = self.cleaned_data.get('predicted_end_datetime', '').strip()
-        if not datetime_str:
-            # Try to get from separate date and time fields
-            end_date = self.cleaned_data.get('predicted_end_date')
-            end_time = self.cleaned_data.get('predicted_end_time')
-            if end_date and end_time:
-                # Combine them
-                datetime_str = f"{end_date.year:04d}-{end_date.month:02d}-{end_date.day:02d} {end_time.hour:02d}:{end_time.minute:02d}"
-                return datetime_str
-            return None
-        
-        try:
-            # Parse jalali datetime string (format: YYYY-MM-DD HH:MM)
-            parts = datetime_str.split()
-            if len(parts) >= 2:
-                date_str = parts[0]
-                time_str = parts[1]
-                # Parse jalali date
-                year, month, day = map(int, date_str.split('-'))
-                jdate = jdatetime.date(year, month, day)
-                # Store date in predicted_end_date if not already set
-                if not self.cleaned_data.get('predicted_end_date'):
-                    self.cleaned_data['predicted_end_date'] = jdate
-                # Parse time
-                hour, minute = map(int, time_str.split(':'))
-                from datetime import time
-                time_obj = time(hour, minute)
-                # Store time in predicted_end_time field
-                self.cleaned_data['predicted_end_time'] = time_obj
-                return datetime_str
-            else:
-                raise forms.ValidationError('فرمت تاریخ و زمان نامعتبر است. فرمت صحیح: 1403-08-29 18:30')
-        except (ValueError, AttributeError) as e:
-            raise forms.ValidationError(f'فرمت تاریخ و زمان نامعتبر است: {str(e)}')
-
     def clean(self):
         cleaned = super().clean()
         instance = getattr(self, 'instance', None)
@@ -315,31 +224,35 @@ class ProductionForm(forms.ModelForm):
                 if not value or (isinstance(value, str) and not value.strip()):
                     self.add_error(field_name, f'{field_label} الزامی است.')
             
-            # Validate datetime fields (check both date and time components)
-            # For start: execution_date + predicted_start_time
-            if not cleaned.get('execution_date'):
-                self.add_error('execution_date', 'تاریخ شروع پیشبینی شده الزامی است.')
+            # Validate date and time fields separately
+            if not cleaned.get('predicted_start_date'):
+                self.add_error('predicted_start_date', 'تاریخ شروع پیشبینی شده الزامی است.')
             if not cleaned.get('predicted_start_time'):
                 self.add_error('predicted_start_time', 'زمان شروع پیشبینی شده الزامی است.')
-            
-            # For end: predicted_end_date + predicted_end_time
             if not cleaned.get('predicted_end_date'):
                 self.add_error('predicted_end_date', 'تاریخ پایان پیشبینی شده الزامی است.')
             if not cleaned.get('predicted_end_time'):
                 self.add_error('predicted_end_time', 'زمان پایان پیشبینی شده الزامی است.')
         
-        # Time ordering validation (only validate if fields are not readonly)
-        ps = cleaned.get('predicted_start_time')
-        pe = cleaned.get('predicted_end_time')
-        if ps and pe:
-            # Compare times
-            from datetime import datetime, date
-            ps_dt = datetime.combine(date.today(), ps)
-            pe_dt = datetime.combine(date.today(), pe)
-            if pe_dt <= ps_dt:
-                # Check if fields are not readonly before adding error
-                if 'predicted_end_datetime' not in self.fields or not self.fields['predicted_end_datetime'].widget.attrs.get('readonly'):
-                    self.add_error('predicted_end_datetime', 'زمان پایان باید بعد از زمان شروع باشد.')
+        # DateTime ordering validation - combine date and time for comparison
+        start_date = cleaned.get('predicted_start_date')
+        start_time = cleaned.get('predicted_start_time')
+        end_date = cleaned.get('predicted_end_date')
+        end_time = cleaned.get('predicted_end_time')
+        
+        if start_date and start_time and end_date and end_time:
+            from datetime import datetime
+            try:
+                # Convert jdate to gregorian datetime
+                start_greg = start_date.togregorian()
+                end_greg = end_date.togregorian()
+                start_dt = datetime.combine(start_greg, start_time)
+                end_dt = datetime.combine(end_greg, end_time)
+                
+                if end_dt <= start_dt:
+                    self.add_error('predicted_end_date', 'زمان پایان باید بعد از زمان شروع باشد.')
+            except Exception:
+                pass
         
         # For readonly decimal fields that might be empty, set them to None
         for field_name in ['planned_weight_ton', 'inventory_snapshot', 'net_unplanned_requirement']:
@@ -358,8 +271,9 @@ class ProductionForm(forms.ModelForm):
             
             # List of all main fields that should be locked when not in draft
             main_field_names = [
-                'production_info', 'product', 'program_id', 'planned_weight_ton', 'predicted_start_datetime',
-                'predicted_end_datetime', 'predicted_end_date', 'execution_date', 'packaging_type', 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
+                'production_info', 'product', 'program_id', 'planned_weight_ton',
+                'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
+                'packaging_type', 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
             ]
             
             # If status is not DRAFT, preserve all main fields from database

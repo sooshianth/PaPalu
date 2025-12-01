@@ -13,7 +13,7 @@ from .ProductionRevertLogModel import ProductionRevertLog
 @admin.register(ProductionProgram)
 class ProductionProgramAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'program_id', 'product', 'planned_weight_ton', 'execution_date', 'packaging_type', 'status', 'is_denied', 'is_archived', 'priority_index', 'fulfillment_percentage'
+        'id', 'program_id', 'product', 'planned_weight_ton', 'predicted_start_date', 'packaging_type', 'status', 'is_denied', 'is_archived', 'priority_index', 'fulfillment_percentage'
     )
     list_filter = ('status', 'product')
     search_fields = ('program_id', 'product__name', 'product__code')
@@ -26,9 +26,9 @@ class ProductionProgramAdmin(admin.ModelAdmin):
         fields = list(self.readonly_fields)
         if obj and obj.status != ProductionProgram.Status.DRAFT:
             fields.extend([
-                'program_id', 'product', 'planned_weight_ton', 'predicted_start_time',
-                'predicted_end_time', 'execution_date', 'packaging_type',
-                'inventory_snapshot', 'net_unplanned_requirement'
+                'program_id', 'product', 'planned_weight_ton',
+                'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
+                'packaging_type', 'inventory_snapshot', 'net_unplanned_requirement'
             ])
         return fields
 

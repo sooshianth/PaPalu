@@ -181,20 +181,38 @@
     table.data-table {
         width: 100%;
         border-collapse: collapse;
+        background: white;
         font-size: 0.9rem;
+    }
+    
+    table.data-table thead {
+        background: var(--gray-100);
     }
     
     table.data-table th,
     table.data-table td {
-        border: 1px solid #e9ecef;
-        padding: 10px 12px;
+        padding: 15px;
         text-align: center;
     }
     
-    table.data-table th {
-        background: #f8f9fa;
+    table.data-table thead th {
         font-weight: 600;
-        color: #343a40;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+        white-space: nowrap;
+    }
+    
+    table.data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    table.data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    table.data-table tbody td {
+        color: var(--gray-600);
     }
     
     .empty-state {
@@ -226,12 +244,12 @@
         }
         
         table.data-table {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
         }
         
-        table.data-table th,
-        table.data-table td {
-            padding: 8px 6px;
+        table.data-table thead th,
+        table.data-table tbody td {
+            padding: 10px 8px;
         }
     }
     
@@ -526,33 +544,18 @@
         cursor: not-allowed;
         transform: none !important;
     }
+    
+    /* Persian Datepicker z-index fix */
+    .pwt-datepicker-view-container {
+        z-index: 10000 !important;
+        position: absolute !important;
+    }
+    .datepicker-plot-area {
+        z-index: 10000 !important;
+    }
 </style>
 <!-- Persian Datepicker CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
-<!-- Time Picker CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-timepicker@1.13.18/jquery.timepicker.min.css">
-<style>
-    /* Custom styles for time picker */
-    .ui-timepicker-wrapper {
-        z-index: 10000 !important;
-        direction: ltr;
-    }
-    .ui-timepicker-list {
-        max-height: 200px;
-        overflow-y: auto;
-    }
-    .ui-timepicker-list li {
-        padding: 8px 12px;
-        cursor: pointer;
-    }
-    .ui-timepicker-list li:hover {
-        background-color: #f0f0f0;
-    }
-    .ui-timepicker-selected {
-        background-color: var(--primary-green) !important;
-        color: white !important;
-    }
-</style>
 {% endblock %}
 
 {% block content %}
@@ -839,13 +842,12 @@
                 <span class="detail-value">
                     {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' %}
                         <div style="display: flex; gap: 8px; align-items: center;">
-                            {{ form.execution_date }}
+                            {{ form.predicted_start_date }}
                             {{ form.predicted_start_time }}
                         </div>
-                        {{ form.predicted_start_datetime }}
                     {% else %}
-                        {% if program and program.predicted_start_time and program.execution_date %}
-                            {{ program.execution_date.year }}-{{ program.execution_date.month|stringformat:"02d" }}-{{ program.execution_date.day|stringformat:"02d" }} {{ program.predicted_start_time|time:"H:i" }}
+                        {% if program and program.predicted_start_date and program.predicted_start_time %}
+                            {{ program.predicted_start_date.year }}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }} {{ program.predicted_start_time|time:"H:i" }}
                         {% else %}-{% endif %}
                     {% endif %}
                 </span>
@@ -860,10 +862,9 @@
                             {{ form.predicted_end_date }}
                             {{ form.predicted_end_time }}
                         </div>
-                        {{ form.predicted_end_datetime }}
                     {% else %}
-                        {% if program and program.predicted_end_time and program.execution_date %}
-                            {{ program.execution_date.year }}-{{ program.execution_date.month|stringformat:"02d" }}-{{ program.execution_date.day|stringformat:"02d" }} {{ program.predicted_end_time|time:"H:i" }}
+                        {% if program and program.predicted_end_date and program.predicted_end_time %}
+                            {{ program.predicted_end_date.year }}-{{ program.predicted_end_date.month|stringformat:"02d" }}-{{ program.predicted_end_date.day|stringformat:"02d" }} {{ program.predicted_end_time|time:"H:i" }}
                         {% else %}-{% endif %}
                     {% endif %}
                 </span>
@@ -1220,24 +1221,7 @@
 <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
 
-<!-- Time Picker CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jquery-timepicker@1.13.18/jquery.timepicker.min.css">
-<!-- Time Picker JS -->
-<script src="https://cdn.jsdelivr.net/npm/jquery-timepicker@1.13.18/jquery.timepicker.min.js"></script>
-
 <script>
-// Wait for jQuery and timepicker to be fully loaded
-function waitForTimepicker(callback, maxAttempts = 10) {
-    if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.timepicker) {
-        callback();
-    } else if (maxAttempts > 0) {
-        setTimeout(function() {
-            waitForTimepicker(callback, maxAttempts - 1);
-        }, 100);
-    } else {
-        console.error('jQuery Timepicker failed to load');
-    }
-}
 // Permission variables for frontend
 const CAN_DENY = '{{ can_deny|yesno:"true,false" }}' === 'true';
 const CAN_REVERT = '{{ can_revert|yesno:"true,false" }}' === 'true';
@@ -2060,7 +2044,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialize Persian datepickers for all jalali date inputs
     if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
-        // Initialize all inputs with jalali-date-input class
+        // Initialize all inputs with jalali-date-input class (date only)
         jQuery('.jalali-date-input').persianDatepicker({
             format: 'YYYY-MM-DD',
             observer: true,
@@ -2073,167 +2057,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Function to initialize time pickers
-    function initializeTimePickers() {
-        if (typeof jQuery === 'undefined' || !jQuery.fn || !jQuery.fn.timepicker) {
-            console.warn('jQuery Timepicker not loaded, retrying...');
-            setTimeout(initializeTimePickers, 200);
-            return;
-        }
-        
-        // Function to setup a time picker on a field
-        function setupTimePicker(selector) {
-            const $field = jQuery(selector);
-            console.log('Setting up timepicker for:', selector, 'Found:', $field.length);
-            if ($field.length) {
-                // Change type to text if it's time input
-                const currentType = $field.attr('type');
-                console.log('Current type for', selector, ':', currentType);
-                if (currentType === 'time' || !currentType) {
-                    $field.attr('type', 'text');
-                    console.log('Changed type to text for', selector);
-                }
-                $field.addClass('time-picker-input');
-                
-                // Remove any existing timepicker instance
-                if ($field.data('timepicker')) {
-                    try {
-                        $field.timepicker('remove');
-                        console.log('Removed existing timepicker for', selector);
-                    } catch(e) {
-                        console.log('Error removing timepicker:', e);
-                    }
-                }
-                
-                // Initialize timepicker
-                try {
-                    $field.timepicker({
-                        timeFormat: 'HH:mm',
-                        interval: 15,
-                        minTime: '00:00',
-                        maxTime: '23:59',
-                        defaultTime: false,
-                        startTime: '00:00',
-                        dynamic: false,
-                        dropdown: true,
-                        scrollbar: true,
-                        zindex: 10000,
-                        show2400: false,
-                        step: 15,
-                        disableTextInput: false
-                    });
-                    
-                    // Mark as initialized
-                    $field.data('timepicker-initialized', true);
-                    console.log('✓ Time picker successfully initialized for:', selector);
-                } catch(e) {
-                    console.error('✗ Error initializing timepicker for', selector, ':', e);
-                }
-            } else {
-                console.warn('Field not found:', selector);
-            }
-        }
-        
-        // Initialize for all time fields
-        setupTimePicker('#id_predicted_start_time');
-        setupTimePicker('#id_predicted_end_time');
-        setupTimePicker('#id_started_at');
-        setupTimePicker('#id_completed_at');
-        
-        // Also initialize for any fields with time-picker-input class
-        jQuery('.time-picker-input').each(function() {
-            const $this = jQuery(this);
-            if (!$this.data('timepicker-initialized')) {
-                const currentType = $this.attr('type');
-                if (currentType === 'time' || !currentType) {
-                    $this.attr('type', 'text');
-                }
-                if ($this.data('timepicker')) {
-                    try {
-                        $this.timepicker('remove');
-                    } catch(e) {}
-                }
-                try {
-                    $this.timepicker({
-                        timeFormat: 'HH:mm',
-                        interval: 15,
-                        minTime: '00:00',
-                        maxTime: '23:59',
-                        defaultTime: false,
-                        startTime: '00:00',
-                        dynamic: false,
-                        dropdown: true,
-                        scrollbar: true,
-                        zindex: 10000,
-                        show2400: false,
-                        step: 15,
-                        disableTextInput: false
-                    });
-                    $this.data('timepicker-initialized', true);
-                } catch(e) {
-                    console.error('Error initializing timepicker:', e);
-                }
-            }
-        });
-    }
-    
-    // Wait for timepicker library to load, then initialize
-    waitForTimepicker(function() {
-        console.log('jQuery Timepicker loaded, initializing...');
-        // Initialize time pickers after DOM is ready
-        initializeTimePickers();
-        
-        // Also try to initialize after a short delay to ensure all fields are rendered
-        setTimeout(function() {
-            console.log('Re-initializing time pickers after delay...');
-            initializeTimePickers();
-        }, 500);
-        
-        // Also try after 1 second
-        setTimeout(function() {
-            console.log('Final time picker initialization attempt...');
-            initializeTimePickers();
-        }, 1000);
-        
-        // Re-initialize when form fields change (for dynamic content)
-        jQuery(document).on('change', '#id_product, #id_production_info', function() {
-            setTimeout(function() {
-                initializeTimePickers();
-            }, 100);
-        });
-    });
-    
-    // Also try direct initialization as fallback
-    jQuery(document).ready(function() {
-        setTimeout(function() {
-            if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.timepicker) {
-                console.log('Fallback: Direct time picker initialization');
-                jQuery('#id_predicted_start_time, #id_predicted_end_time, #id_started_at, #id_completed_at').each(function() {
-                    const $this = jQuery(this);
-                    if ($this.length && !$this.data('timepicker-initialized')) {
-                        $this.attr('type', 'text');
-                        $this.addClass('time-picker-input');
-                        try {
-                            $this.timepicker({
-                                timeFormat: 'HH:mm',
-                                interval: 15,
-                                minTime: '00:00',
-                                maxTime: '23:59',
-                                dropdown: true,
-                                scrollbar: true,
-                                zindex: 10000
-                            });
-                            $this.data('timepicker-initialized', true);
-                            console.log('Fallback: Time picker initialized for', $this.attr('id'));
-                        } catch(e) {
-                            console.error('Fallback: Error initializing timepicker:', e);
-                        }
-                    }
-                });
-            }
-        }, 1500);
-    });
-        
         // Combine date and time inputs into datetime fields before form submission
         function combineDateTimeFields() {
             // For predicted_start: combine execution_date + predicted_start_time
@@ -2263,89 +2086,85 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Combine datetime fields on form submit
+        // Combine datetime fields on form submit and validate
         const productionForm = document.getElementById('productionForm');
         if (productionForm) {
             productionForm.addEventListener('submit', function(e) {
+                // Combine datetime fields first
                 combineDateTimeFields();
-            });
-        }
-    }
-    
-    // Form validation before submit
-    const productionForm = document.getElementById('productionForm');
-    if (productionForm) {
-        productionForm.addEventListener('submit', function(e) {
-            const isCreate = {{ is_create|yesno:"true,false" }};
-            const programStatus = '{{ program.status|default:"draft" }}';
-            
-            // Only validate required fields for new programs or draft status
-            if (isCreate || programStatus === 'draft') {
-                const requiredFields = {
-                    'id_product': 'محصول',
-                    'id_production_info': 'اطلاعات فرمول',
-                    'id_program_id': 'شناسه برنامه',
-                    'id_planned_weight_ton': 'تناژ برنامه',
-                    'id_packaging_type': 'نوع بسته بندی'
-                };
                 
-                // Check datetime fields (date + time combinations)
-                const startDateField = document.getElementById('id_execution_date');
-                const startTimeField = document.getElementById('id_predicted_start_time');
-                if (startDateField && startTimeField && startDateField.offsetParent !== null && !startDateField.disabled) {
-                    if (!startDateField.value.trim() || !startTimeField.value.trim()) {
-                        hasErrors = true;
-                        errors.push('شروع پیشبینی شده الزامی است.');
-                        if (startDateField) startDateField.style.borderColor = '#dc3545';
-                        if (startTimeField) startTimeField.style.borderColor = '#dc3545';
-                    } else {
-                        if (startDateField) startDateField.style.borderColor = '';
-                        if (startTimeField) startTimeField.style.borderColor = '';
+                // Form validation
+                const isCreate = {{ is_create|yesno:"true,false" }};
+                const programStatus = '{{ program.status|default:"draft" }}';
+                
+                // Only validate required fields for new programs or draft status
+                if (isCreate || programStatus === 'draft') {
+                    const requiredFields = {
+                        'id_product': 'محصول',
+                        'id_production_info': 'اطلاعات فرمول',
+                        'id_program_id': 'شناسه برنامه',
+                        'id_planned_weight_ton': 'تناژ برنامه',
+                        'id_packaging_type': 'نوع بسته بندی'
+                    };
+                    
+                    // Initialize error tracking
+                    let hasErrors = false;
+                    const errors = [];
+                    
+                    // Check datetime fields (date + time combinations)
+                    const startDateField = document.getElementById('id_execution_date');
+                    const startTimeField = document.getElementById('id_predicted_start_time');
+                    if (startDateField && startTimeField && startDateField.offsetParent !== null && !startDateField.disabled) {
+                        if (!startDateField.value.trim() || !startTimeField.value.trim()) {
+                            hasErrors = true;
+                            errors.push('شروع پیشبینی شده الزامی است.');
+                            if (startDateField) startDateField.style.borderColor = '#dc3545';
+                            if (startTimeField) startTimeField.style.borderColor = '#dc3545';
+                        } else {
+                            if (startDateField) startDateField.style.borderColor = '';
+                            if (startTimeField) startTimeField.style.borderColor = '';
+                        }
                     }
-                }
-                
-                const endDateField = document.getElementById('id_predicted_end_date');
-                const endTimeField = document.getElementById('id_predicted_end_time');
-                if (endDateField && endTimeField && endDateField.offsetParent !== null && !endDateField.disabled) {
-                    if (!endDateField.value.trim() || !endTimeField.value.trim()) {
-                        hasErrors = true;
-                        errors.push('پایان پیشبینی شده الزامی است.');
-                        if (endDateField) endDateField.style.borderColor = '#dc3545';
-                        if (endTimeField) endTimeField.style.borderColor = '#dc3545';
-                    } else {
-                        if (endDateField) endDateField.style.borderColor = '';
-                        if (endTimeField) endTimeField.style.borderColor = '';
+                    
+                    const endDateField = document.getElementById('id_predicted_end_date');
+                    const endTimeField = document.getElementById('id_predicted_end_time');
+                    if (endDateField && endTimeField && endDateField.offsetParent !== null && !endDateField.disabled) {
+                        if (!endDateField.value.trim() || !endTimeField.value.trim()) {
+                            hasErrors = true;
+                            errors.push('پایان پیشبینی شده الزامی است.');
+                            if (endDateField) endDateField.style.borderColor = '#dc3545';
+                            if (endTimeField) endTimeField.style.borderColor = '#dc3545';
+                        } else {
+                            if (endDateField) endDateField.style.borderColor = '';
+                            if (endTimeField) endTimeField.style.borderColor = '';
+                        }
                     }
-                }
-                
-                let hasErrors = false;
-                const errors = [];
-                
-                for (const [fieldId, fieldLabel] of Object.entries(requiredFields)) {
-                    const field = document.getElementById(fieldId);
-                    if (field) {
-                        // Check if field is visible and not disabled
-                        if (field.offsetParent !== null && !field.disabled && !field.readOnly) {
-                            const value = field.value ? field.value.trim() : '';
-                            if (!value) {
-                                hasErrors = true;
-                                errors.push(`${fieldLabel} الزامی است.`);
-                                field.style.borderColor = '#dc3545';
-                            } else {
-                                field.style.borderColor = '';
+                    
+                    for (const [fieldId, fieldLabel] of Object.entries(requiredFields)) {
+                        const field = document.getElementById(fieldId);
+                        if (field) {
+                            // Check if field is visible and not disabled
+                            if (field.offsetParent !== null && !field.disabled && !field.readOnly) {
+                                const value = field.value ? field.value.trim() : '';
+                                if (!value) {
+                                    hasErrors = true;
+                                    errors.push(`${fieldLabel} الزامی است.`);
+                                    field.style.borderColor = '#dc3545';
+                                } else {
+                                    field.style.borderColor = '';
+                                }
                             }
                         }
                     }
+                    
+                    if (hasErrors) {
+                        e.preventDefault();
+                        alert('لطفاً فیلدهای الزامی را پر کنید:\n\n' + errors.join('\n'));
+                        return false;
+                    }
                 }
-                
-                if (hasErrors) {
-                    e.preventDefault();
-                    alert('لطفاً فیلدهای الزامی را پر کنید:\n\n' + errors.join('\n'));
-                    return false;
-                }
-            }
-        });
-    }
+            });
+        }
 });
 
 // Deny, Revert, Archive functions

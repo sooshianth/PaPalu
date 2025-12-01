@@ -36,6 +36,15 @@
 	.optional-section{display:none;animation:fadeIn .25s ease}
 	.optional-section.active{display:grid}
 	@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+	
+	/* Persian Datepicker z-index fix */
+	.pwt-datepicker-view-container {
+		z-index: 9999 !important;
+		position: absolute !important;
+	}
+	.datepicker-plot-area {
+		z-index: 9999 !important;
+	}
 </style>
 <!-- Persian Datepicker CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
@@ -79,10 +88,12 @@
 						<div class="form-row"><label>{% if form.production_info.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.production_info.label }}</label>{{ form.production_info }}</div>
 						<div class="form-row"><label>{% if form.product.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.product.label }}</label>{{ form.product }}</div>
 						{% if form.formula_id %}<div class="form-row"><label>{% if form.formula_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.formula_id.label }}</label>{{ form.formula_id }}</div>{% endif %}
+						<div class="form-row"><label>{% if form.program_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.program_id.label }}</label>{{ form.program_id }}</div>
 						<div class="form-row"><label>{% if form.planned_weight_ton.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.planned_weight_ton.label }}</label>{{ form.planned_weight_ton }}</div>
-						<div class="form-row"><label>{% if form.predicted_start_time.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.predicted_start_time.label }}</label>{{ form.predicted_start_time }}</div>
-						<div class="form-row"><label>{% if form.predicted_end_time.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.predicted_end_time.label }}</label>{{ form.predicted_end_time }}</div>
-						<div class="form-row"><label>{% if form.execution_date.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.execution_date.label }}</label>{{ form.execution_date }}</div>
+						<div class="form-row"><label>{% if form.predicted_start_date.field.required %}<span class="required-marker">*</span>{% endif %}تاریخ شروع</label>{{ form.predicted_start_date }}</div>
+						<div class="form-row"><label>{% if form.predicted_start_time.field.required %}<span class="required-marker">*</span>{% endif %}زمان شروع</label>{{ form.predicted_start_time }}</div>
+						<div class="form-row"><label>{% if form.predicted_end_date.field.required %}<span class="required-marker">*</span>{% endif %}تاریخ پایان</label>{{ form.predicted_end_date }}</div>
+						<div class="form-row"><label>{% if form.predicted_end_time.field.required %}<span class="required-marker">*</span>{% endif %}زمان پایان</label>{{ form.predicted_end_time }}</div>
 						<div class="form-row"><label>{% if form.packaging_type.field.required %}<span class="required-marker">*</span>{% endif %}{{ form.packaging_type.label }}</label>{{ form.packaging_type }}</div>
 						<div class="form-row" style="grid-column:1/-1"><label>{{ form.extra_description.label }}</label>{{ form.extra_description }}</div>
 						<div class="group-divider"></div>
