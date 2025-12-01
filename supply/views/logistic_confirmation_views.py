@@ -162,9 +162,9 @@ def logistic_confirmation_detail_view(request, transport_number):
                     # Save the transport with financial data
                     transport = form.save()
                     
-                    # Transition to completed status
+                    # Transition to awaiting payment doc status
                     transport.transition(
-                        new_status=PurchaseTransport.STATUS_COMPLETED,
+                        new_status=PurchaseTransport.STATUS_AWAITING_PAYMENT_DOC,
                         user=request.user,
                         note='تایید لجستیک و تکمیل اطلاعات مالی'
                     )

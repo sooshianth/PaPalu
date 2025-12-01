@@ -50,6 +50,7 @@ class TaskChoices(models.TextChoices):
     SUPPLY_REGISTER_WAYBILL = 'supply.register_waybill', 'بارگذاری بارنامه'
     SUPPLY_WAREHOUSE_DELIVERY = 'supply.warehouse_delivery', 'تحویل انبار'
     SUPPLY_LOGISTIC_CONFIRMATION = 'supply.logistic_confirmation', 'تایید لجستیک'
+    SUPPLY_UPLOAD_FREIGHT_PAYMENT_DOCS = 'supply.upload_freight_payment_docs', 'بارگذاری اسناد پرداخت کرایه'
     SUPPLY_REGISTER_SYSTEM_WAYBILL = 'supply.register_system_waybill', 'ثبت سیستمی اطلاعات بارنامه'
     SUPPLY_REGISTER_GROSS_WEIGHT = 'supply.register_gross_weight', 'ثبت وزن پر'
     SUPPLY_REGISTER_NET_WEIGHT = 'supply.register_net_weight', 'وزن خالی'

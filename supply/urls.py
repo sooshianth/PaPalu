@@ -43,6 +43,10 @@ from .views.logistic_confirmation_views import (
     logistic_confirmation_list_view,
     logistic_confirmation_detail_view,
 )
+from .views.upload_fare_payment_docs_views import (
+    upload_fare_payment_docs_list_view,
+    upload_fare_payment_docs_detail_view,
+)
 
 app_name = 'supply'
 
@@ -86,4 +90,7 @@ urlpatterns = [
     # Logistic Confirmation
     path('logistic-confirmation/', logistic_confirmation_list_view, name='logistic_confirmation_list'),
     path('logistic-confirmation/<str:transport_number>/', logistic_confirmation_detail_view, name='logistic_confirmation_detail'),
+    # Upload Fare Payment Documents
+    path('upload-fare-payment-docs/', upload_fare_payment_docs_list_view, name='upload_fare_payment_docs_list'),
+    path('upload-fare-payment-docs/<str:transport_number>/', upload_fare_payment_docs_detail_view, name='upload_fare_payment_docs_detail'),
 ]

@@ -22,6 +22,8 @@ class PurchaseTransport(models.Model):
     STATUS_AWAITING_WH_RECONCILIATION = 'awaiting_wh_reconciliation'
     STATUS_AWAITING_SETTLEMENT = 'awaiting_settlement'
     STATUS_COMPLETED = 'completed'
+    STATUS_AWAITING_PAYMENT_DOC = 'awaiting_payment_doc'
+    STATUS_PAYMENT_DOC_UPLOADED = 'payment_doc_uploaded'
     
     STATUS_CHOICES = [
         (STATUS_DRAFT, 'پیش‌نویس'),
@@ -32,6 +34,8 @@ class PurchaseTransport(models.Model):
         (STATUS_AWAITING_WH_RECONCILIATION, 'در انتظار تطبیق انبار'),
         (STATUS_AWAITING_SETTLEMENT, 'در انتظار تسویه'),
         (STATUS_COMPLETED, 'تکمیل شده'),
+        (STATUS_AWAITING_PAYMENT_DOC, 'در انتظار بارگذاری اسناد پرداخت'),
+        (STATUS_PAYMENT_DOC_UPLOADED, 'سند پرداخت بارگذاری شده'),
     ]
     
     TRANSPORT_TYPE_CHOICES = [
@@ -288,6 +292,30 @@ class PurchaseTransport(models.Model):
         blank=True
     )
     
+    # Freight Payment Documents
+    freight_payment_document = models.FileField(
+        upload_to='freight_payment_documents/%Y/%m/',
+        verbose_name='سند پرداخت کرایه',
+        null=True,
+        blank=True,
+        help_text='سند حسابداری پرداخت کرایه (فیش واریز، تاییدیه بانکی، سند تسویه حساب نهایی)'
+    )
+    
+    freight_payment_document_uploaded_at = jmodels.jDateTimeField(
+        verbose_name='تاریخ بارگذاری سند',
+        null=True,
+        blank=True
+    )
+    
+    freight_payment_document_uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_freight_payment_documents',
+        verbose_name='بارگذار کننده سند'
+    )
+    
     # Timestamps
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -339,7 +367,9 @@ class PurchaseTransport(models.Model):
         STATUS_VEHICLE_ENTERED: {STATUS_AWAITING_UNLOADING},
         STATUS_AWAITING_UNLOADING: {STATUS_AWAITING_WH_RECONCILIATION},  # After warehouseman completes unloading
         STATUS_AWAITING_WH_RECONCILIATION: {STATUS_AWAITING_SETTLEMENT},  # After guard confirms vehicle exit
-        STATUS_AWAITING_SETTLEMENT: {STATUS_COMPLETED},  # After financial settlement
+        STATUS_AWAITING_SETTLEMENT: {STATUS_COMPLETED, STATUS_AWAITING_PAYMENT_DOC},  # After financial settlement OR logistics confirmation
+        STATUS_COMPLETED: {STATUS_AWAITING_PAYMENT_DOC, STATUS_PAYMENT_DOC_UPLOADED},  # After logistics confirmation OR direct upload for legacy
+        STATUS_AWAITING_PAYMENT_DOC: {STATUS_PAYMENT_DOC_UPLOADED},  # After payment document upload
     }
     
     def transition(self, new_status, user=None, note=None):
@@ -396,15 +426,20 @@ class PurchaseTransport(models.Model):
                 # PO status remains at awaiting_warehouse_reconciliation during settlement
                 pass
             
-            # When transport completes
-            elif new_status == self.STATUS_COMPLETED:
-                # Check if all transports for this order are completed
-                all_completed = not po.transports.exclude(status=self.STATUS_COMPLETED).exists()
-                if all_completed:
+            # When awaiting payment doc upload
+            elif new_status == self.STATUS_AWAITING_PAYMENT_DOC:
+                # Status remains unchanged for purchase order until document is uploaded
+                pass
+            
+            # When payment document uploaded (transport fully completed)
+            elif new_status == self.STATUS_PAYMENT_DOC_UPLOADED:
+                # Check if all transports for this order have payment docs uploaded
+                all_docs_uploaded = not po.transports.exclude(status=self.STATUS_PAYMENT_DOC_UPLOADED).exists()
+                if all_docs_uploaded:
                     po.transition(
                         ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT,
                         user=user,
-                        note=f'حمل {self.transport_number} تکمیل شد (همه حمل‌ها تکمیل شده‌اند)'
+                        note=f'حمل {self.transport_number} تکمیل شد (همه اسناد پرداخت بارگذاری شده‌اند)'
                     )
             
             # Send notification to guard when status changes to awaiting_vehicle_entry
