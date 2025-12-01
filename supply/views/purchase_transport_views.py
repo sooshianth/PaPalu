@@ -204,8 +204,9 @@ def purchase_transport_detail_view(request, transport_number):
     from supply.tables import PurchaseTransportStatusLogTable
     
     pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
-    logs = pt.status_logs.all()
+    logs = pt.status_logs.all().order_by('-changed_at')
     log_table = PurchaseTransportStatusLogTable(logs)
+    RequestConfig(request, paginate=False).configure(log_table)
     
     # Get allowed next statuses for workflow transitions
     allowed_next_statuses = pt.WORKFLOW_ALLOWED.get(pt.status, set())

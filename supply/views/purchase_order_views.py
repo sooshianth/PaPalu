@@ -169,9 +169,18 @@ def create_procurement_purchase_order_view(request):
             if form.is_valid():
                 with transaction.atomic():
                     po = form.save(commit=False)
-                    po.status = ProcurementPurchaseOrder.STATUS_DRAFT  # initial
                     po.created_by = request.user
-                    po.save()  # triggers order_number generation
+                    po.save()  # triggers order_number generation, status defaults to DRAFT
+                    
+                    # Create initial status log
+                    ProcurementPurchaseOrderStatusLog.objects.create(
+                        purchase_order=po,
+                        old_status='',
+                        new_status=po.status,
+                        changed_by=request.user,
+                        note='ایجاد سفارش خرید'
+                    )
+                    
                     material_formset = MaterialFormSet(request.POST, instance=po, prefix='mat')
                     if material_formset.is_valid():
                         material_formset.save()
@@ -217,8 +226,9 @@ def procurement_purchase_order_detail_view(request, order_number):
     
     po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
     materials = po.materials.select_related('raw_material').all()
-    logs = po.status_logs.all()
+    logs = po.status_logs.all().order_by('-changed_at')
     log_table = ProcurementPurchaseOrderStatusLogTable(logs)
+    RequestConfig(request, paginate=False).configure(log_table)
     can_edit_financial = not po.payment_confirmed
     
     # Get transports for this purchase order

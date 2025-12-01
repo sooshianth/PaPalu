@@ -790,3 +790,151 @@ class RawMaterialTable(tables.Table):
     
     def render_status(self, record):
         return format_html('<span class="status-chip">{}</span>', record.get_status_display() or '—')
+
+
+class LogisticConfirmationTable(tables.Table):
+    """جدول لیست حمل‌های در انتظار تایید لجستیک"""
+    
+    transport_number = tables.Column(
+        verbose_name='شماره حمل',
+        linkify=lambda record: ('supply:logistic_confirmation_detail', {'transport_number': record.transport_number}) if record.transport_number else None,
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    purchase_order = tables.Column(
+        verbose_name='شماره سفارش خرید',
+        accessor='purchase_order__order_number',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    supplier = tables.Column(
+        verbose_name='تأمین‌کننده',
+        accessor='purchase_order__supplier__name',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    vehicle_type = tables.Column(
+        verbose_name='نوع خودرو',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    plate_number = tables.Column(
+        verbose_name='پلاک',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    driver = tables.Column(
+        verbose_name='راننده',
+        accessor='driver__name',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    net_weight = tables.Column(
+        verbose_name='وزن خالص (کیلوگرم)',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    delivery_date = tables.DateColumn(
+        verbose_name='تاریخ تحویل',
+        format='Y-m-d',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+        model = PurchaseTransport
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('transport_number', 'purchase_order', 'supplier', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'id': 'logisticConfirmationTable',
+            'style': 'border-collapse:collapse;font-size:.88rem'
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
+        }
+        sequence = ('transport_number', 'purchase_order', 'supplier', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
+    
+    def render_transport_number(self, value):
+        """نمایش شماره حمل به صورت bold"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
+    def render_vehicle_type(self, record):
+        """نمایش نوع خودرو"""
+        return record.get_vehicle_type_display() if record.vehicle_type else '—'
+    
+    def render_plate_number(self, value):
+        """نمایش پلاک"""
+        return value or '—'
+    
+    def render_driver(self, value):
+        """نمایش راننده"""
+        return value or '—'
+    
+    def render_net_weight(self, value):
+        """نمایش وزن خالص با فرمت عددی"""
+        if value:
+            # Convert to float and format it as string first
+            formatted_value = '{:,.2f}'.format(float(value))
+            return format_html('<span dir="ltr">{}</span>', formatted_value)
+        return '—'
+    
+    def render_delivery_date(self, value):
+        """نمایش تاریخ تحویل"""
+        if value:
+            return value.strftime('%Y/%m/%d')
+        return '—'
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        if not record.transport_number:
+            return format_html('<span class="text-muted">شماره حمل ناموجود</span>')
+        detail_url = reverse('supply:logistic_confirmation_detail', kwargs={'transport_number': record.transport_number})
+        return format_html(
+            '<a href="{}" class="btn btn-sm btn-primary">تایید لجستیک</a>',
+            detail_url
+        )

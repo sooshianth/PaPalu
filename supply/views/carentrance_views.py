@@ -163,8 +163,11 @@ def register_driver_for_transport_view(request, transport_number):
                     # Update purchase order status to awaiting_delivery (در انتظار تحویل بار)
                     po = pt.purchase_order
                     if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY:
-                        po.status = ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY
-                        po.save(update_fields=['status'])
+                        po.transition(
+                            ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY,
+                            user=request.user,
+                            note='ورود خودرو ثبت شد'
+                        )
                         bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
                         audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال ورود خودرو به‌روزرسانی شد")
                     
@@ -225,8 +228,11 @@ def mark_vehicle_entered_view(request, transport_number):
             # Update purchase order status
             po = pt.purchase_order
             if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY:
-                po.status = ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY
-                po.save(update_fields=['status'])
+                po.transition(
+                    ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY,
+                    user=request.user,
+                    note='ثبت سریع ورود خودرو'
+                )
                 bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
             
             audit_logger.info(f"ورود سریع خودرو ثبت شد - حمل: {transport_number}")

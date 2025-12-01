@@ -39,6 +39,10 @@ from .views.warehouse_delivery_views import (
     warehouse_delivery_detail_view,
     guard_vehicle_exit_view,
 )
+from .views.logistic_confirmation_views import (
+    logistic_confirmation_list_view,
+    logistic_confirmation_detail_view,
+)
 
 app_name = 'supply'
 
@@ -79,4 +83,7 @@ urlpatterns = [
     path('warehouse-delivery/', warehouse_delivery_list_view, name='warehouse_delivery'),
     path('warehouse-delivery/<str:transport_number>/', warehouse_delivery_detail_view, name='warehouse_delivery_detail'),
     path('warehouse-delivery/<str:transport_number>/guard-exit/', guard_vehicle_exit_view, name='guard_vehicle_exit'),
+    # Logistic Confirmation
+    path('logistic-confirmation/', logistic_confirmation_list_view, name='logistic_confirmation_list'),
+    path('logistic-confirmation/<str:transport_number>/', logistic_confirmation_detail_view, name='logistic_confirmation_detail'),
 ]

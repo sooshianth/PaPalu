@@ -337,20 +337,29 @@ class PurchaseTransport(models.Model):
             # When transport moves to awaiting_vehicle_entry
             if old_status == self.STATUS_DRAFT and new_status == self.STATUS_AWAITING_VEHICLE_ENTRY:
                 if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_TRANSPORT_DEFINITION:
-                    po.status = ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY
-                    po.save(update_fields=['status'])
+                    po.transition(
+                        ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY,
+                        user=user,
+                        note=f'حمل {self.transport_number} تغییر وضعیت داد'
+                    )
             
             # When vehicle enters (vehicle_entered or awaiting_unloading)
             elif new_status in [self.STATUS_VEHICLE_ENTERED, self.STATUS_AWAITING_UNLOADING]:
                 if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY:
-                    po.status = ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY
-                    po.save(update_fields=['status'])
+                    po.transition(
+                        ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY,
+                        user=user,
+                        note=f'حمل {self.transport_number} تغییر وضعیت داد'
+                    )
             
             # When awaiting warehouse reconciliation (after warehouseman completes unloading)
             elif new_status == self.STATUS_AWAITING_WH_RECONCILIATION:
                 if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY:
-                    po.status = ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION
-                    po.save(update_fields=['status'])
+                    po.transition(
+                        ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION,
+                        user=user,
+                        note=f'حمل {self.transport_number} تغییر وضعیت داد'
+                    )
             
             # When awaiting settlement (after guard confirms vehicle exit)
             elif new_status == self.STATUS_AWAITING_SETTLEMENT:
@@ -362,8 +371,11 @@ class PurchaseTransport(models.Model):
                 # Check if all transports for this order are completed
                 all_completed = not po.transports.exclude(status=self.STATUS_COMPLETED).exists()
                 if all_completed:
-                    po.status = ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT
-                    po.save(update_fields=['status'])
+                    po.transition(
+                        ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT,
+                        user=user,
+                        note=f'حمل {self.transport_number} تکمیل شد (همه حمل‌ها تکمیل شده‌اند)'
+                    )
             
             # Send notification to guard when status changes to awaiting_vehicle_entry
             if new_status == self.STATUS_AWAITING_VEHICLE_ENTRY:
