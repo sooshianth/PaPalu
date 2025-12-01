@@ -250,6 +250,35 @@
 </div>
 
 <div class="list-card">
+        {% if awaiting_pos %}
+        <div class="dual-table-section">
+            <h3>سفارش‌های در انتظار تعریف حمل</h3>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>شماره سفارش</th>
+                            <th>تأمین‌کننده</th>
+                            <th>تاریخ ایجاد</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for po in awaiting_pos %}
+                        <tr>
+                            <td>{{ po.order_number }}</td>
+                            <td>{{ po.supplier.name }}</td>
+                            <td>{{ po.created_at|date:'Y-m-d' }}</td>
+                            <td>
+                                <a class="btn btn-secondary btn-sm" href="{% url 'supply:create_purchase_transport' %}?order={{ po.order_number }}">تعریف حمل</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
     <div class="dual-table-section">
       <h3>حمل‌های فعال (پیش‌نویس تا در انتظار تسویه)</h3>
       <div class="table-container">

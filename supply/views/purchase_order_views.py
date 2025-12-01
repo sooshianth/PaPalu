@@ -176,7 +176,17 @@ def create_procurement_purchase_order_view(request):
                     if material_formset.is_valid():
                         material_formset.save()
                     else:
-                        raise ValueError(f"Material formset invalid: {material_formset.errors}")
+                        bug_logger.warning(f"Material formset invalid on create: {material_formset.errors}")
+                        messages.error(request, 'مواد اولیه تکراری یا نامعتبر هستند. لطفاً خطاهای فرم را بررسی و اصلاح کنید.')
+                        # Rollback parent creation to avoid orphan PO
+                        try:
+                            po.delete()
+                        except Exception:
+                            pass
+                        return render(request, 'supply_create_procurement_purchase_order.html', {
+                            'form': form,
+                            'material_formset': material_formset,
+                        })
                 messages.success(request, 'سفارش خرید ثبت شد.')
                 return redirect(reverse('supply:purchase_order_management'))
             else:

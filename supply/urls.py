@@ -34,6 +34,10 @@ from .views.carentrance_views import (
     car_exit_list_view,
     mark_vehicle_exited_view,
 )
+from .views.warehouse_delivery_views import (
+    warehouse_delivery_list_view,
+    warehouse_delivery_detail_view,
+)
 
 app_name = 'supply'
 
@@ -70,4 +74,7 @@ urlpatterns = [
     # Car Exit (Gatekeeper)
     path('carexit/', car_exit_list_view, name='carexit'),
     path('carexit/<str:transport_number>/mark-exited/', mark_vehicle_exited_view, name='carexit_mark_exited'),
+    # Warehouse Delivery
+    path('warehouse-delivery/', warehouse_delivery_list_view, name='warehouse_delivery'),
+    path('warehouse-delivery/<str:transport_number>/', warehouse_delivery_detail_view, name='warehouse_delivery_detail'),
 ]

@@ -48,6 +48,7 @@ class TaskChoices(models.TextChoices):
     SUPPLY_REGISTER_VEHICLE_EXIT = 'supply.register_vehicle_exit', 'ثبت خروج خودرو'
     SUPPLY_REGISTER_DRIVER = 'supply.register_driver', 'ثبت شخص راننده تامین'
     SUPPLY_REGISTER_WAYBILL = 'supply.register_waybill', 'بارگذاری بارنامه'
+    SUPPLY_WAREHOUSE_DELIVERY = 'supply.warehouse_delivery', 'تحویل انبار'
     SUPPLY_REGISTER_SYSTEM_WAYBILL = 'supply.register_system_waybill', 'ثبت سیستمی اطلاعات بارنامه'
     SUPPLY_REGISTER_GROSS_WEIGHT = 'supply.register_gross_weight', 'ثبت وزن پر'
     SUPPLY_REGISTER_NET_WEIGHT = 'supply.register_net_weight', 'وزن خالی'

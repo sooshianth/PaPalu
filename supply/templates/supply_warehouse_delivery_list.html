@@ -1,0 +1,282 @@
+{% extends 'base.html' %}
+{% load render_table from django_tables2 %}
+{% block title %}تحویل انبار{% endblock %}
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .info-section {
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .info-section p {
+        color: var(--gray-600);
+        font-size: 0.95rem;
+        margin: 0;
+        line-height: 1.6;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        margin-bottom: 30px;
+    }
+    
+    /* استایل جدول django-tables2 */
+    .table-container table,
+    .table-container .table {
+        width: 100%;
+        border-collapse: collapse !important;
+        background: white;
+        margin-bottom: 0;
+    }
+    
+    .table-container table thead,
+    .table-container .table thead {
+        background: var(--gray-100);
+    }
+    
+    .table-container table thead th,
+    .table-container .table thead th {
+        padding: 12px 15px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--gray-800);
+        border: 1px solid var(--gray-300) !important;
+        vertical-align: middle;
+    }
+    
+    .table-container table tbody tr,
+    .table-container .table tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .table-container table tbody tr:hover,
+    .table-container .table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .table-container table tbody td,
+    .table-container .table tbody td {
+        padding: 12px 15px;
+        color: var(--gray-600);
+        border: 1px solid var(--gray-300) !important;
+        text-align: center;
+        vertical-align: middle;
+    }
+    
+    .table-container table a:not(.btn),
+    .table-container .table a:not(.btn) {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .pagination {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 0;
+        direction: ltr;
+    }
+    
+    .pagination li {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        order: 0;
+    }
+    
+    .pagination li:last-child {
+        order: -1;
+    }
+    
+    .pagination li:first-child {
+        order: 999;
+    }
+    
+    .pagination a,
+    .pagination span {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        color: var(--gray-700);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        font-weight: 500;
+        min-width: 40px;
+        text-align: center;
+        background-color: white;
+        margin: 0 2px;
+    }
+    
+    .pagination a:hover {
+        background-color: var(--primary-green);
+        color: white !important;
+        border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .current {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    /* استایل دکمه‌ها */
+    .table-container .btn {
+        padding: 5px 12px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.8rem;
+        transition: all 0.3s;
+        display: inline-block;
+        border: 1px solid;
+    }
+    
+    .table-container .btn-primary {
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        background-color: var(--primary-green) !important;
+    }
+    
+    .table-container .btn-primary:hover {
+        background-color: var(--dark-green) !important;
+        border-color: var(--dark-green) !important;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .status-awaiting_unloading{background:#fff8e1;color:#ff6f00}
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-500);
+    }
+    
+    .empty-state svg {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 20px;
+        color: var(--gray-400);
+    }
+    
+    .empty-state p {
+        font-size: 1.1rem;
+        margin-bottom: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .table-container .table {
+            font-size: 0.9rem;
+        }
+        
+        .table-container .table thead th,
+        .table-container .table tbody td {
+            padding: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>تحویل انبار - حمل‌های در انتظار تخلیه</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="info-section">
+        <p>
+            در این صفحه فهرست حمل‌هایی که وارد کارخانه شده و در وضعیت "در انتظار تخلیه" هستند نمایش داده می‌شود. 
+            انباردار می‌تواند با کلیک بر روی دکمه "ثبت اطلاعات تخلیه" اطلاعات وزن‌ها و هزینه‌های کرایه را ثبت نماید.
+        </p>
+    </div>
+    
+    {% if table.page.object_list %}
+        <div class="table-container">
+            {% render_table table %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 9L12 4L21 9V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M9 21V12H15V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>هیچ حملی در انتظار تخلیه نیست.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px; color: var(--gray-600);">
+                تمام حمل‌ها تخلیه شده‌اند یا هنوز حملی به مرحله تخلیه نرسیده است.
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh every 2 minutes
+    setTimeout(function() {
+        location.reload();
+    }, 120000);
+</script>
+{% endblock %}

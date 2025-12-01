@@ -106,6 +106,10 @@ def purchase_transport_list_view(request):
     audit_logger.info("مشاهده لیست حمل‌های خرید")
     try:
         from supply.tables import PurchaseTransportTable
+        # Orders awaiting transport definition (for quick create)
+        awaiting_pos = ProcurementPurchaseOrder.objects.filter(
+            status=ProcurementPurchaseOrder.STATUS_AWAITING_TRANSPORT_DEFINITION
+        ).select_related('supplier').order_by('-created_at')
         
         # Active transports (not completed)
         active_transports = PurchaseTransport.objects.exclude(
@@ -128,6 +132,7 @@ def purchase_transport_list_view(request):
         context = {
             'active_table': active_table,
             'completed_table': completed_table,
+            'awaiting_pos': awaiting_pos,
         }
         return render(request, 'supply_purchase_transport_list.html', context)
     except Exception as e:
