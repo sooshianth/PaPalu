@@ -10,6 +10,7 @@ from production.forms.program_form import ProductionProgramForm
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.ProductFolder.BOMModel import BOM
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
+from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -19,11 +20,21 @@ def _get_dashboard_context():
     """Helper: gathers dashboard data for inventory, flow status, and allocations."""
     audit_logger.debug("جمع‌آوری داده‌های داشبورد برنامه تولید")
     try:
-        raw_material_inventory = BOM.objects.values(
-            'raw_material_id', 'raw_material', 'unit_used'
-        ).distinct()
-        for item in raw_material_inventory:
-            item['current_inventory'] = 0
+        # Get raw materials from BOM with their related RawMaterial data
+        raw_materials_in_bom = BOM.objects.select_related('raw_material').values_list('raw_material_id', flat=True).distinct()
+        raw_material_inventory = []
+        for rm_id in raw_materials_in_bom:
+            if rm_id:
+                try:
+                    raw_material = RawMaterial.objects.get(id=rm_id)
+                    raw_material_inventory.append({
+                        'raw_material_id': raw_material.raw_material_id or '-',
+                        'raw_material': raw_material.name or '-',
+                        'unit_used': raw_material.unit or '-',
+                        'current_inventory': 0
+                    })
+                except RawMaterial.DoesNotExist:
+                    pass
 
         product_flow_status = []
         production_infos = ProductionInfo.objects.select_related('product').all()

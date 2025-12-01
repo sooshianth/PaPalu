@@ -1,7 +1,26 @@
 from django import forms
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
+from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from django_jalali.forms import jDateField
 from django_jalali.forms.widgets import jDateInput
+
+
+class ProductionInfoSelectWidget(forms.Select):
+    """Custom widget that adds data-product-id attribute to each option"""
+    
+    def create_option(self, name, value, label, selected, index, subindex=None, attrs=None):
+        option = super().create_option(name, value, label, selected, index, subindex, attrs)
+        if value:
+            try:
+                # Extract the actual value from ModelChoiceIteratorValue if needed
+                actual_value = value.value if hasattr(value, 'value') else value
+                if actual_value:
+                    production_info = ProductionInfo.objects.get(pk=actual_value)
+                    if production_info.product:
+                        option['attrs']['data-product-id'] = str(production_info.product.id)
+            except (ProductionInfo.DoesNotExist, ValueError, TypeError):
+                pass
+        return option
 
 
 class ProductionProgramForm(forms.ModelForm):
@@ -19,7 +38,7 @@ class ProductionProgramForm(forms.ModelForm):
         queryset=ProductionProgram._meta.get_field('production_info').remote_field.model.objects.all(),
         required=False,
         label='اطلاعات فرمول',
-        widget=forms.Select(attrs={'class': 'form-control'})
+        widget=ProductionInfoSelectWidget(attrs={'class': 'form-control'})
     )
     product = forms.ModelChoiceField(
         queryset=ProductionProgram._meta.get_field('product').remote_field.model.objects.all(),

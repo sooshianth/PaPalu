@@ -234,6 +234,24 @@ class ProductionForm(forms.ModelForm):
             if not cleaned.get('predicted_end_time'):
                 self.add_error('predicted_end_time', 'زمان پایان پیشبینی شده الزامی است.')
         
+        # Critical validation: Ensure product matches production_info.product
+        # This is Rule #1 from requirements - each formula is specific to one product
+        production_info = cleaned.get('production_info')
+        product = cleaned.get('product')
+        
+        if production_info and product:
+            if production_info.product and production_info.product != product:
+                self.add_error('product', 
+                    f'محصول انتخاب شده ({product.name}) با محصول فرمول ({production_info.product.name}) مطابقت ندارد. '
+                    f'هر فرمول منحصراً برای یک محصول مشخص است.')
+                self.add_error('production_info',
+                    f'فرمول انتخاب شده برای محصول "{production_info.product.name}" است، نه "{product.name}".')
+        
+        # If production_info is selected but has no product, warn the user
+        if production_info and not production_info.product:
+            self.add_error('production_info', 
+                'فرمول انتخاب شده فاقد محصول مرتبط است. لطفاً فرمول دیگری انتخاب کنید یا فرمول را در سیستم تکمیل کنید.')
+        
         # DateTime ordering validation - combine date and time for comparison
         start_date = cleaned.get('predicted_start_date')
         start_time = cleaned.get('predicted_start_time')
