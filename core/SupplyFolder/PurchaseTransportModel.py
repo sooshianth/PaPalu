@@ -20,6 +20,7 @@ class PurchaseTransport(models.Model):
     STATUS_AWAITING_UNLOADING = 'awaiting_unloading'
     STATUS_AWAITING_DELIVERY = 'awaiting_delivery'
     STATUS_AWAITING_WH_RECONCILIATION = 'awaiting_wh_reconciliation'
+    STATUS_AWAITING_SETTLEMENT = 'awaiting_settlement'
     STATUS_COMPLETED = 'completed'
     
     STATUS_CHOICES = [
@@ -29,6 +30,7 @@ class PurchaseTransport(models.Model):
         (STATUS_AWAITING_UNLOADING, 'در انتظار تخلیه'),
         (STATUS_AWAITING_DELIVERY, 'در انتظار تحویل بار'),
         (STATUS_AWAITING_WH_RECONCILIATION, 'در انتظار تطبیق انبار'),
+        (STATUS_AWAITING_SETTLEMENT, 'در انتظار تسویه'),
         (STATUS_COMPLETED, 'تکمیل شده'),
     ]
     
@@ -305,9 +307,9 @@ class PurchaseTransport(models.Model):
         STATUS_DRAFT: {STATUS_AWAITING_VEHICLE_ENTRY},
         STATUS_AWAITING_VEHICLE_ENTRY: {STATUS_VEHICLE_ENTERED, STATUS_AWAITING_UNLOADING},  # Can go directly to unloading or through vehicle_entered
         STATUS_VEHICLE_ENTERED: {STATUS_AWAITING_UNLOADING},
-        STATUS_AWAITING_UNLOADING: {STATUS_AWAITING_DELIVERY},
-        STATUS_AWAITING_DELIVERY: {STATUS_AWAITING_WH_RECONCILIATION},
-        STATUS_AWAITING_WH_RECONCILIATION: {STATUS_COMPLETED},
+        STATUS_AWAITING_UNLOADING: {STATUS_AWAITING_WH_RECONCILIATION},  # After warehouseman completes unloading
+        STATUS_AWAITING_WH_RECONCILIATION: {STATUS_AWAITING_SETTLEMENT},  # After guard confirms vehicle exit
+        STATUS_AWAITING_SETTLEMENT: {STATUS_COMPLETED},  # After financial settlement
     }
     
     def transition(self, new_status, user=None, note=None):
@@ -344,20 +346,24 @@ class PurchaseTransport(models.Model):
                     po.status = ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY
                     po.save(update_fields=['status'])
             
-            # When awaiting warehouse reconciliation
+            # When awaiting warehouse reconciliation (after warehouseman completes unloading)
             elif new_status == self.STATUS_AWAITING_WH_RECONCILIATION:
                 if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY:
                     po.status = ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION
                     po.save(update_fields=['status'])
             
+            # When awaiting settlement (after guard confirms vehicle exit)
+            elif new_status == self.STATUS_AWAITING_SETTLEMENT:
+                # PO status remains at awaiting_warehouse_reconciliation during settlement
+                pass
+            
             # When transport completes
             elif new_status == self.STATUS_COMPLETED:
-                if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
-                    # Check if all transports for this order are completed
-                    all_completed = not po.transports.exclude(status=self.STATUS_COMPLETED).exists()
-                    if all_completed:
-                        po.status = ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT
-                        po.save(update_fields=['status'])
+                # Check if all transports for this order are completed
+                all_completed = not po.transports.exclude(status=self.STATUS_COMPLETED).exists()
+                if all_completed:
+                    po.status = ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT
+                    po.save(update_fields=['status'])
             
             # Send notification to guard when status changes to awaiting_vehicle_entry
             if new_status == self.STATUS_AWAITING_VEHICLE_ENTRY:

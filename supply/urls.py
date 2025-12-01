@@ -37,6 +37,7 @@ from .views.carentrance_views import (
 from .views.warehouse_delivery_views import (
     warehouse_delivery_list_view,
     warehouse_delivery_detail_view,
+    guard_vehicle_exit_view,
 )
 
 app_name = 'supply'
@@ -77,4 +78,5 @@ urlpatterns = [
     # Warehouse Delivery
     path('warehouse-delivery/', warehouse_delivery_list_view, name='warehouse_delivery'),
     path('warehouse-delivery/<str:transport_number>/', warehouse_delivery_detail_view, name='warehouse_delivery_detail'),
+    path('warehouse-delivery/<str:transport_number>/guard-exit/', guard_vehicle_exit_view, name='guard_vehicle_exit'),
 ]

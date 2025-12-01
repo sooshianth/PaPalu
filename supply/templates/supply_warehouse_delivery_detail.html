@@ -124,37 +124,76 @@
   </div>
   
   <div class="form-group">
-    <label>{{ form.warehouse_identifier.label }}</label>
+    <label>{{ form.warehouse_identifier.label }}{% if form.warehouse_identifier.field.required %} *{% endif %}</label>
     {{ form.warehouse_identifier }}
     {% if form.warehouse_identifier.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.warehouse_identifier.errors|join:'، ' }}</div>{% endif %}
   </div>
   
+  <div class="section-divider"></div>
+  <div class="section-title">وزن خالص محاسبه شده</div>
+  
+  <div class="form-group" style="grid-column:1/-1">
+    <label>وزن خالص (محاسبه خودکار)</label>
+    <input type="text" id="calculated_net_weight" class="form-control readonly-field" readonly value="—">
+  </div>
+  
+  {% if form.non_field_errors %}
+  <div style="grid-column:1/-1;background:#ffebee;padding:12px;border-radius:8px;border-right:4px solid #d32f2f;margin-top:10px">
+    <p style="color:#c62828;font-size:.75rem;margin:0">{{ form.non_field_errors|join:'، ' }}</p>
+  </div>
+  {% endif %}
+  
   <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
     <a href="{% url 'supply:warehouse_delivery' %}" class="btn btn-secondary btn-sm">بازگشت</a>
+    {% if not read_only %}
     <button type="submit" class="btn btn-primary btn-sm">ثبت و تکمیل تخلیه</button>
+    {% endif %}
   </div>
+  
+  {% if awaiting_guard %}
+  <div style="grid-column:1/-1;background:#fff3e0;padding:15px;border-radius:8px;border-right:4px solid #ff9800;margin-top:15px">
+    <p style="color:#e65100;font-size:.8rem;margin:0">
+      ℹ️ اطلاعات تخلیه ثبت شده است. این حمل در انتظار تایید خروج توسط نگهبان می‌باشد.
+    </p>
+  </div>
+  {% endif %}
 </form>
 
 {% block extra_js %}
 <script>
-  // محاسبه خودکار وزن خالص
+  // محاسبه خودکار وزن خالص و نمایش آن
   document.addEventListener('DOMContentLoaded', function(){
     const grossInput = document.getElementById('id_gross_weight');
     const tareInput = document.getElementById('id_tare_weight');
+    const netDisplay = document.getElementById('calculated_net_weight');
     
     function calculateNet() {
       const gross = parseFloat(grossInput.value) || 0;
       const tare = parseFloat(tareInput.value) || 0;
-      const net = gross - tare;
       
       if (gross > 0 && tare > 0) {
-        console.log('وزن خالص محاسبه شده:', net);
+        const net = gross - tare;
+        if (net > 0) {
+          netDisplay.value = net.toFixed(3) + ' کیلوگرم';
+          netDisplay.style.background = '#e8f5e9';
+          netDisplay.style.color = '#2e7d32';
+          netDisplay.style.fontWeight = '600';
+        } else {
+          netDisplay.value = 'خطا: وزن پر باید بزرگتر از وزن خالی باشد!';
+          netDisplay.style.background = '#ffebee';
+          netDisplay.style.color = '#c62828';
+        }
+      } else {
+        netDisplay.value = '—';
+        netDisplay.style.background = '#f5f5f5';
+        netDisplay.style.color = '#546e7a';
       }
     }
     
-    if (grossInput && tareInput) {
+    if (grossInput && tareInput && netDisplay) {
       grossInput.addEventListener('input', calculateNet);
       tareInput.addEventListener('input', calculateNet);
+      calculateNet(); // Initial calculation
     }
   });
 </script>

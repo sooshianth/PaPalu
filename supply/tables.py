@@ -598,6 +598,96 @@ class ProcurementPurchaseOrderStatusLogTable(tables.Table):
         return value or '—'
 
 
+class GuardExitTable(tables.Table):
+    """جدول حمل‌های در انتظار تایید خروج توسط نگهبان"""
+    
+    transport_number = tables.Column(
+        verbose_name='شماره حمل',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    purchase_order = tables.Column(
+        verbose_name='شماره سفارش',
+        accessor='purchase_order.order_number',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    plate_number = tables.Column(
+        verbose_name='پلاک',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    vehicle_type = tables.Column(
+        verbose_name='نوع ماشین',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    net_weight = tables.Column(
+        verbose_name='وزن خالص',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    def render_vehicle_type(self, record):
+        return record.get_vehicle_type_display() or '—'
+    
+    def render_plate_number(self, value):
+        return value or '—'
+    
+    def render_net_weight(self, value):
+        if value:
+            return format_html('{} کیلوگرم', value)
+        return '—'
+    
+    def render_actions(self, record):
+        identifier = record.transport_number or record.transport_id
+        exit_url = reverse('supply:guard_vehicle_exit', args=[identifier])
+        return format_html(
+            '<a href="{}" class="btn btn-success btn-sm">تایید خروج خودرو</a>',
+            exit_url
+        )
+    
+    class Meta:
+        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+        model = PurchaseTransport
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('transport_number', 'purchase_order', 'plate_number', 'vehicle_type', 'net_weight', 'actions')
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'border-collapse:collapse;font-size:.85rem'
+        }
+        sequence = ('transport_number', 'purchase_order', 'plate_number', 'vehicle_type', 'net_weight', 'actions')
+
+
 class RawMaterialTable(tables.Table):
     """جدول فهرست مواد اولیه"""
     
