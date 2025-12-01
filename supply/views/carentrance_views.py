@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django import forms
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponseForbidden
 from django.utils.html import format_html
 from django.utils import timezone
 from django_tables2 import RequestConfig
@@ -18,7 +18,10 @@ audit_logger = logging.getLogger("audit")
 from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
 from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrder
 from core.PersonFolder.PersonModel import Person
+from core.RBACModel.TaskPermission import TaskChoices
+from core.RBACModel.Roles import user_has_task
 from supply.tables import PurchaseTransportTable
+import django_tables2 as tables
 
 
 class CarEntranceDriverForm(forms.Form):
@@ -31,6 +34,26 @@ class CarEntranceDriverForm(forms.Form):
 
 
 class CarEntranceTable(PurchaseTransportTable):
+    raw_materials = tables.Column(
+        verbose_name='نام مواد اولیه',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    def render_raw_materials(self, record):
+        """نمایش لیست مواد اولیه از سفارش خرید"""
+        if not record.purchase_order:
+            return '—'
+        materials = record.purchase_order.materials.select_related('raw_material').all()
+        if materials:
+            names = [m.raw_material.name for m in materials if m.raw_material]
+            return format_html('<br>'.join(names)) if names else '—'
+        return '—'
+    
     def render_actions(self, record):
         register_url = reverse('supply:carentrance_register_driver', args=[record.transport_number])
         enter_url = reverse('supply:carentrance_mark_entered', args=[record.transport_number])
@@ -42,12 +65,21 @@ class CarEntranceTable(PurchaseTransportTable):
             register_url,
             enter_url
         )
+    
+    class Meta(PurchaseTransportTable.Meta):
+        sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'status', 'created_at', 'actions')
 
 
 @login_required
 def car_entrance_list_view(request):
     """صفحه لیست ورود خودروها مخصوص نگهبان - فقط حمل‌هایی که در وضعیت "در انتظار ورود خودرو" هستند."""
     audit_logger.info("مشاهده صفحه ورود خودرو (نگهبان)")
+    
+    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
+        audit_logger.activity("تلاش برای دسترسی به صفحه ورود خودرو بدون دسترسی")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
     try:
         transports = PurchaseTransport.objects.filter(status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY).select_related('purchase_order', 'driver').order_by('-created_at')
         table = CarEntranceTable(transports, prefix='car-')
@@ -63,6 +95,12 @@ def car_entrance_list_view(request):
 def register_driver_for_transport_view(request, transport_number):
     """فرم ثبت اطلاعات راننده و پلاک برای یک حمل؛ پس از ثبت، وضعیت به "در انتظار تخلیه" تغییر می‌یابد."""
     audit_logger.info(f"دسترسی به فرم ثبت راننده برای حمل {transport_number}")
+    
+    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
+        audit_logger.activity(f"تلاش برای ثبت راننده بدون دسترسی - حمل {transport_number}")
+        messages.error(request, 'شما دسترسی به ثبت راننده را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
     pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
 
     if pt.status != PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY:
@@ -97,9 +135,11 @@ def register_driver_for_transport_view(request, transport_number):
                     pt.driver = driver
                     if data.get('plate_number'):
                         pt.plate_number = data.get('plate_number')
-                    # For account/sheba we store reference to driver if provided
-                    pt.driver_account_number = driver
-                    pt.driver_sheba_number = driver
+                    # Store account/sheba as actual values
+                    if data.get('account'):
+                        pt.driver_account_number = data.get('account')
+                    if data.get('sheba'):
+                        pt.driver_sheba_number = data.get('sheba')
                     
                     # Record actual arrival time (gate entry time)
                     today_jalali = jdatetime.date.today()
@@ -155,6 +195,12 @@ def register_driver_for_transport_view(request, transport_number):
 def mark_vehicle_entered_view(request, transport_number):
     """علامت‌گذاری سریع ورود خودرو بدون اطلاعات راننده کامل - انتقال مستقیم به در انتظار تخلیه"""
     audit_logger.info(f"ثبت سریع ورود خودرو برای حمل {transport_number}")
+    
+    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
+        audit_logger.activity(f"تلاش برای ثبت سریع ورود بدون دسترسی - حمل {transport_number}")
+        messages.error(request, 'شما دسترسی به این عملیات را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
     pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
     
     if pt.status != PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY:

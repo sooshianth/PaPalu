@@ -172,25 +172,21 @@ class PurchaseTransport(models.Model):
         blank=True
     )
     
-    # Driver account references (Foreign Keys to Person with type='driver')
-    driver_account_number = models.ForeignKey(
-        Person,
-        on_delete=models.SET_NULL,
+    # Driver banking information (stored as strings)
+    driver_account_number = models.CharField(
+        max_length=50,
         null=True,
         blank=True,
-        related_name='purchase_transports_account_number',
         verbose_name='شماره حساب راننده',
-        limit_choices_to={'type': 'driver'}
+        help_text='شماره حساب بانکی راننده'
     )
     
-    driver_sheba_number = models.ForeignKey(
-        Person,
-        on_delete=models.SET_NULL,
+    driver_sheba_number = models.CharField(
+        max_length=26,
         null=True,
         blank=True,
-        related_name='purchase_transports_sheba_number',
         verbose_name='شماره شبا راننده',
-        limit_choices_to={'type': 'driver'}
+        help_text='شماره شبا بانکی راننده (24 رقم + IR)'
     )
     
     # Dates
@@ -333,12 +329,35 @@ class PurchaseTransport(models.Model):
                 note=note or ''
             )
             
-            # Update purchase order status when transport moves from draft to awaiting_vehicle_entry
+            # Update purchase order status based on transport status changes
+            po = self.purchase_order
+            
+            # When transport moves to awaiting_vehicle_entry
             if old_status == self.STATUS_DRAFT and new_status == self.STATUS_AWAITING_VEHICLE_ENTRY:
-                po = self.purchase_order
                 if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_TRANSPORT_DEFINITION:
                     po.status = ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY
                     po.save(update_fields=['status'])
+            
+            # When vehicle enters (vehicle_entered or awaiting_unloading)
+            elif new_status in [self.STATUS_VEHICLE_ENTERED, self.STATUS_AWAITING_UNLOADING]:
+                if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY:
+                    po.status = ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY
+                    po.save(update_fields=['status'])
+            
+            # When awaiting warehouse reconciliation
+            elif new_status == self.STATUS_AWAITING_WH_RECONCILIATION:
+                if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY:
+                    po.status = ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION
+                    po.save(update_fields=['status'])
+            
+            # When transport completes
+            elif new_status == self.STATUS_COMPLETED:
+                if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                    # Check if all transports for this order are completed
+                    all_completed = not po.transports.exclude(status=self.STATUS_COMPLETED).exists()
+                    if all_completed:
+                        po.status = ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT
+                        po.save(update_fields=['status'])
             
             # Send notification to guard when status changes to awaiting_vehicle_entry
             if new_status == self.STATUS_AWAITING_VEHICLE_ENTRY:

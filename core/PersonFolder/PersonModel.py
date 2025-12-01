@@ -57,6 +57,7 @@ class Person(models.Model):
     # فیلدهای پایه
     national_id = models.CharField(
         max_length=10,
+        primary_key=True,
         verbose_name='کد ملی')
         
     type = models.CharField(
@@ -102,13 +103,12 @@ class Person(models.Model):
         verbose_name='حیطه‌های فعالیت'
     )
 
-    sales_expert = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
+    sales_expert = models.CharField(
+        max_length=100,
         null=True,
         blank=True,
-        related_name='persons',
         verbose_name='کارشناس فروش',
+        help_text='نام کارشناس فروش'
     )
 
     description = models.TextField(
