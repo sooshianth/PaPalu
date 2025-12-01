@@ -825,6 +825,16 @@ class LogisticConfirmationTable(tables.Table):
         }
     )
     
+    raw_materials = tables.Column(
+        verbose_name='نوع ماده اولیه',
+        orderable=False,
+        empty_values=(),
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
     vehicle_type = tables.Column(
         verbose_name='نوع خودرو',
         orderable=True,
@@ -886,7 +896,7 @@ class LogisticConfirmationTable(tables.Table):
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
         model = PurchaseTransport
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('transport_number', 'purchase_order', 'supplier', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
+        fields = ('transport_number', 'purchase_order', 'supplier', 'raw_materials', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'id': 'logisticConfirmationTable',
@@ -895,7 +905,17 @@ class LogisticConfirmationTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('transport_number', 'purchase_order', 'supplier', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
+        sequence = ('transport_number', 'purchase_order', 'supplier', 'raw_materials', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
+    
+    def render_raw_materials(self, record):
+        """نمایش مواد اولیه سفارش (ممکن چندتا باشد)"""
+        materials = record.purchase_order.materials.select_related('raw_material').all()
+        if materials:
+            names = [m.raw_material.name for m in materials]
+            if len(names) > 2:
+                return format_html('{}, ...', ', '.join(names[:2]))
+            return ', '.join(names)
+        return '—'
     
     def render_transport_number(self, value):
         """نمایش شماره حمل به صورت bold"""

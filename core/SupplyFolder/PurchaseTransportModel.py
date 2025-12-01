@@ -258,6 +258,36 @@ class PurchaseTransport(models.Model):
         blank=True
     )
     
+    bill_of_lading_file = models.FileField(
+        upload_to='bill_of_lading/%Y/%m/',
+        verbose_name='فایل بارنامه',
+        null=True,
+        blank=True,
+        help_text='فایل بارنامه فیزیکی/الکترونیکی'
+    )
+    
+    origin = models.CharField(
+        max_length=200,
+        verbose_name='مبدأ',
+        null=True,
+        blank=True,
+        help_text='مبدأ حمل'
+    )
+    
+    destination = models.CharField(
+        max_length=200,
+        verbose_name='مقصد',
+        null=True,
+        blank=True,
+        help_text='مقصد حمل'
+    )
+    
+    bill_of_lading_date = jmodels.jDateField(
+        verbose_name='تاریخ صدور بارنامه',
+        null=True,
+        blank=True
+    )
+    
     # Timestamps
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
