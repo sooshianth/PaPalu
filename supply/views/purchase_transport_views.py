@@ -113,12 +113,12 @@ def purchase_transport_list_view(request):
         
         # Active transports (not completed)
         active_transports = PurchaseTransport.objects.exclude(
-            status=PurchaseTransport.STATUS_COMPLETED
+            status__in=[PurchaseTransport.STATUS_COMPLETED, PurchaseTransport.STATUS_PAYMENT_DOC_UPLOADED]
         ).select_related('purchase_order', 'created_by').order_by('-created_at')
         
-        # Completed transports
+        # Completed transports (both old completed status and new payment_doc_uploaded status)
         completed_transports = PurchaseTransport.objects.filter(
-            status=PurchaseTransport.STATUS_COMPLETED
+            status__in=[PurchaseTransport.STATUS_COMPLETED, PurchaseTransport.STATUS_PAYMENT_DOC_UPLOADED]
         ).select_related('purchase_order', 'created_by').order_by('-created_at')
         
         # Create tables
@@ -226,7 +226,7 @@ def edit_purchase_transport_view(request, transport_number):
     audit_logger.info(f"ویرایش حمل خرید {transport_number}")
     pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
     
-    if pt.status == PurchaseTransport.STATUS_COMPLETED:
+    if pt.status in [PurchaseTransport.STATUS_COMPLETED, PurchaseTransport.STATUS_PAYMENT_DOC_UPLOADED]:
         messages.error(request, 'حمل تکمیل شده قابل ویرایش نیست.')
         return redirect(reverse('supply:purchase_transport_detail', kwargs={'transport_number': transport_number}))
     

@@ -416,6 +416,17 @@ class PurchaseTransportTable(tables.Table):
         }
     )
     
+    purchase_order_status = tables.Column(
+        verbose_name='وضعیت سفارش',
+        accessor='purchase_order.status',
+        orderable=False,
+        empty_values=(),
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
     transport_type = tables.Column(
         verbose_name='نوع حمل',
         orderable=True,
@@ -435,7 +446,7 @@ class PurchaseTransportTable(tables.Table):
     )
     
     status = tables.Column(
-        verbose_name='وضعیت',
+        verbose_name='وضعیت حمل',
         orderable=True,
         attrs={
             'td': {'class': 'text-center'},
@@ -486,7 +497,7 @@ class PurchaseTransportTable(tables.Table):
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
         model = PurchaseTransport
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('transport_number', 'purchase_order', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
+        fields = ('transport_number', 'purchase_order', 'purchase_order_status', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.85rem'
@@ -494,7 +505,18 @@ class PurchaseTransportTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('transport_number', 'purchase_order', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
+        sequence = ('transport_number', 'purchase_order', 'purchase_order_status', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
+    
+    def render_purchase_order_status(self, record):
+        """نمایش وضعیت سفارش خرید"""
+        if record.purchase_order:
+            status_class = f'status-{record.purchase_order.status}'
+            return format_html(
+                '<span class="status-badge {}">{}</span>',
+                status_class,
+                record.purchase_order.get_status_display()
+            )
+        return '—'
     
     def render_transport_type(self, record):
         """نمایش نوع حمل"""
@@ -505,7 +527,7 @@ class PurchaseTransportTable(tables.Table):
         return record.get_vehicle_type_display() or '—'
     
     def render_status(self, value, record):
-        """نمایش وضعیت به صورت badge"""
+        """نمایش وضعیت حمل به صورت badge"""
         status_class = f'status-{record.status}'
         return format_html(
             '<span class="status-badge {}">{}</span>',
@@ -1002,8 +1024,8 @@ class UploadFarePaymentDocsTable(tables.Table):
         }
     )
     
-    freight_payment_type = tables.Column(
-        verbose_name='کرایه پرداختی (نهایی)',
+    freight_payment = tables.Column(
+        verbose_name='کرایه پرداختی نهایی',
         orderable=True,
         attrs={
             'td': {'class': 'text-center'},
@@ -1034,7 +1056,7 @@ class UploadFarePaymentDocsTable(tables.Table):
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
         model = PurchaseTransport
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('transport_number', 'purchase_order', 'raw_materials', 'net_weight', 'freight_payment_type', 'status', 'actions')
+        fields = ('transport_number', 'purchase_order', 'raw_materials', 'net_weight', 'freight_payment', 'status', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'id': 'uploadFarePaymentDocsTable',
@@ -1043,7 +1065,7 @@ class UploadFarePaymentDocsTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('transport_number', 'purchase_order', 'raw_materials', 'net_weight', 'freight_payment_type', 'status', 'actions')
+        sequence = ('transport_number', 'purchase_order', 'raw_materials', 'net_weight', 'freight_payment', 'status', 'actions')
     
     def render_raw_materials(self, record):
         """نمایش مواد اولیه سفارش"""
@@ -1068,10 +1090,10 @@ class UploadFarePaymentDocsTable(tables.Table):
             return format_html('<span dir="ltr">{}</span> کیلوگرم', formatted_value)
         return '—'
     
-    def render_freight_payment_type(self, record):
+    def render_freight_payment(self, value):
         """نمایش کرایه پرداختی نهایی (جهت کنترل)"""
-        if record.freight_payment:
-            formatted_value = '{:,.0f}'.format(float(record.freight_payment))
+        if value:
+            formatted_value = '{:,.0f}'.format(float(value))
             return format_html('<span dir="ltr">{}</span> ریال', formatted_value)
         return '—'
     

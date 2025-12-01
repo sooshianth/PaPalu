@@ -436,11 +436,25 @@ class PurchaseTransport(models.Model):
                 # Check if all transports for this order have payment docs uploaded
                 all_docs_uploaded = not po.transports.exclude(status=self.STATUS_PAYMENT_DOC_UPLOADED).exists()
                 if all_docs_uploaded:
-                    po.transition(
-                        ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT,
-                        user=user,
-                        note=f'حمل {self.transport_number} تکمیل شد (همه اسناد پرداخت بارگذاری شده‌اند)'
-                    )
+                    # If PO is in awaiting_warehouse_reconciliation, move to completed directly
+                    # Otherwise move through awaiting_final_settlement first
+                    if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                        po.transition(
+                            ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT,
+                            user=user,
+                            note=f'همه اسناد پرداخت بارگذاری شد'
+                        )
+                        po.transition(
+                            ProcurementPurchaseOrder.STATUS_COMPLETED,
+                            user=user,
+                            note=f'حمل {self.transport_number} تکمیل شد (همه اسناد پرداخت بارگذاری شده‌اند)'
+                        )
+                    elif po.status == ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT:
+                        po.transition(
+                            ProcurementPurchaseOrder.STATUS_COMPLETED,
+                            user=user,
+                            note=f'حمل {self.transport_number} تکمیل شد (همه اسناد پرداخت بارگذاری شده‌اند)'
+                        )
             
             # Send notification to guard when status changes to awaiting_vehicle_entry
             if new_status == self.STATUS_AWAITING_VEHICLE_ENTRY:
