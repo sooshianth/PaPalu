@@ -72,24 +72,51 @@ def create_customer_view(request):
                     # ذخیره مشتری
                     person = form.save_customer(request.user)
                     
-                    # ایجاد اطلاعات مالیاتی (در صورت وجود هر یک از فیلدها)
+                    # بررسی وجود حساب بانکی
+                    has_bank_account = False
+                    for bank_form in bank_formset:
+                        if not getattr(bank_form, 'cleaned_data', None):
+                            continue
+                        if bank_form.cleaned_data.get('DELETE', False):
+                            continue
+                        account_number = bank_form.cleaned_data.get('account_number')
+                        if account_number:
+                            has_bank_account = True
+                            break
+                    
+                    # ایجاد یا دریافت اطلاعات مالیاتی
+                    from core.PersonFolder.FinancialBankingModel import FinancialBanking
                     financial_banking = None
-                    if any([
+                    
+                    # اگر حساب بانکی وجود دارد یا فیلدهای مالیاتی پر شده‌اند، FinancialBanking ایجاد/دریافت کن
+                    if has_bank_account or any([
                         form.cleaned_data.get('economic_code'),
                         form.cleaned_data.get('tax_postal_code'),
                         form.cleaned_data.get('tax_province'),
                         form.cleaned_data.get('tax_city'),
                         form.cleaned_data.get('tax_address')
                     ]):
-                        from core.PersonFolder.FinancialBankingModel import FinancialBanking
-                        financial_banking = FinancialBanking.objects.create(
-                            person=person,
-                            economic_code=clean_empty_to_none(form.cleaned_data.get('economic_code')),
-                            tax_postal_code=clean_empty_to_none(form.cleaned_data.get('tax_postal_code')),
-                            tax_province=clean_empty_to_none(form.cleaned_data.get('tax_province')),
-                            tax_city=clean_empty_to_none(form.cleaned_data.get('tax_city')),
-                            tax_address=clean_empty_to_none(form.cleaned_data.get('tax_address'))
-                        )
+                        # بررسی وجود FinancialBanking برای این شخص
+                        financial_banking = FinancialBanking.objects.filter(person=person).first()
+                        
+                        if not financial_banking:
+                            # ایجاد FinancialBanking جدید
+                            financial_banking = FinancialBanking.objects.create(
+                                person=person,
+                                economic_code=clean_empty_to_none(form.cleaned_data.get('economic_code')),
+                                tax_postal_code=clean_empty_to_none(form.cleaned_data.get('tax_postal_code')),
+                                tax_province=clean_empty_to_none(form.cleaned_data.get('tax_province')),
+                                tax_city=clean_empty_to_none(form.cleaned_data.get('tax_city')),
+                                tax_address=clean_empty_to_none(form.cleaned_data.get('tax_address'))
+                            )
+                        else:
+                            # به‌روزرسانی FinancialBanking موجود
+                            financial_banking.economic_code = clean_empty_to_none(form.cleaned_data.get('economic_code'))
+                            financial_banking.tax_postal_code = clean_empty_to_none(form.cleaned_data.get('tax_postal_code'))
+                            financial_banking.tax_province = clean_empty_to_none(form.cleaned_data.get('tax_province'))
+                            financial_banking.tax_city = clean_empty_to_none(form.cleaned_data.get('tax_city'))
+                            financial_banking.tax_address = clean_empty_to_none(form.cleaned_data.get('tax_address'))
+                            financial_banking.save()
                     
                     # ذخیره حساب‌های بانکی (در صورت وجود FinancialBanking)
                     if financial_banking:
@@ -176,7 +203,7 @@ def create_customer_view(request):
                         if rep_form.cleaned_data.get('mobile'):
                             PhoneNumber.objects.create(
                                 content_type=rep_content_type,
-                                object_id=representative.name,
+                                object_id=representative.id,
                                 phone_type='mobile',
                                 number=rep_form.cleaned_data['mobile'],
                                 is_primary=True
@@ -185,7 +212,7 @@ def create_customer_view(request):
                         if rep_form.cleaned_data.get('landline'):
                             PhoneNumber.objects.create(
                                 content_type=rep_content_type,
-                                object_id=representative.name,
+                                object_id=representative.id,
                                 phone_type='landline',
                                 number=rep_form.cleaned_data['landline'],
                                 is_primary=False
@@ -731,8 +758,23 @@ def edit_customer_view(request, national_id):
                     # به‌روزرسانی مشتری
                     person = form.save_customer(request.user, update=True)
                     
-                    # به‌روزرسانی یا ایجاد اطلاعات مالیاتی
-                    if any([
+                    # بررسی وجود حساب بانکی
+                    has_bank_account = False
+                    for bank_form in bank_formset:
+                        if not getattr(bank_form, 'cleaned_data', None):
+                            continue
+                        if bank_form.cleaned_data.get('DELETE', False):
+                            continue
+                        account_number = bank_form.cleaned_data.get('account_number')
+                        if account_number:
+                            has_bank_account = True
+                            break
+                    
+                    # ایجاد یا به‌روزرسانی اطلاعات مالیاتی
+                    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+                    
+                    # اگر حساب بانکی وجود دارد یا فیلدهای مالیاتی پر شده‌اند، FinancialBanking ایجاد/به‌روزرسانی کن
+                    if has_bank_account or any([
                         form.cleaned_data.get('economic_code'),
                         form.cleaned_data.get('tax_postal_code'),
                         form.cleaned_data.get('tax_province'),
@@ -740,7 +782,7 @@ def edit_customer_view(request, national_id):
                         form.cleaned_data.get('tax_address')
                     ]):
                         if not financial_banking:
-                            from core.PersonFolder.FinancialBankingModel import FinancialBanking
+                            # ایجاد FinancialBanking جدید
                             financial_banking = FinancialBanking.objects.create(
                                 person=person,
                                 economic_code=clean_empty_to_none(form.cleaned_data.get('economic_code')),
@@ -750,6 +792,7 @@ def edit_customer_view(request, national_id):
                                 tax_address=clean_empty_to_none(form.cleaned_data.get('tax_address'))
                             )
                         else:
+                            # به‌روزرسانی FinancialBanking موجود
                             financial_banking.economic_code = clean_empty_to_none(form.cleaned_data.get('economic_code'))
                             financial_banking.tax_postal_code = clean_empty_to_none(form.cleaned_data.get('tax_postal_code'))
                             financial_banking.tax_province = clean_empty_to_none(form.cleaned_data.get('tax_province'))
@@ -896,13 +939,13 @@ def edit_customer_view(request, national_id):
                         # حذف شماره‌های قدیمی
                         PhoneNumber.objects.filter(
                             content_type=rep_content_type,
-                            object_id=representative.name
+                            object_id=representative.id
                         ).delete()
                         
                         if rep_form.cleaned_data.get('mobile'):
                             PhoneNumber.objects.create(
                                 content_type=rep_content_type,
-                                object_id=representative.name,
+                                object_id=representative.id,
                                 phone_type='mobile',
                                 number=rep_form.cleaned_data['mobile'],
                                 is_primary=True
@@ -911,7 +954,7 @@ def edit_customer_view(request, national_id):
                         if rep_form.cleaned_data.get('landline'):
                             PhoneNumber.objects.create(
                                 content_type=rep_content_type,
-                                object_id=representative.name,
+                                object_id=representative.id,
                                 phone_type='landline',
                                 number=rep_form.cleaned_data['landline'],
                                 is_primary=False
@@ -999,12 +1042,12 @@ def edit_customer_view(request, national_id):
             rep_content_type = ContentType.objects.get_for_model(Representative)
             rep_mobile = PhoneNumber.objects.filter(
                 content_type=rep_content_type,
-                object_id=rep.name,
+                object_id=rep.id,
                 phone_type='mobile'
             ).first()
             rep_landline = PhoneNumber.objects.filter(
                 content_type=rep_content_type,
-                object_id=rep.name,
+                object_id=rep.id,
                 phone_type='landline'
             ).first()
             

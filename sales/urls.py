@@ -37,8 +37,14 @@ urlpatterns = [
     # API برای جستجوی مشتری‌ها
     path('api/customers/search/', order_views.customer_search_api, name='customer_search_api'),
     
+    # API برای دریافت اطلاعات محصول (واحد و قیمت)
+    path('api/products/<int:product_id>/info/', order_views.product_info_api, name='product_info_api'),
+    
     # API برای جستجوی سفارش‌ها
     path('api/orders/search/', proforma_list_view.order_search_api, name='order_search_api'),
+    
+    # API برای جستجوی محصولات
+    path('api/products/search/', product_price_view.product_search_api, name='product_search_api'),
     
     # مسیرهای تأیید پیش فاکتور
     path('approve-proforma/list/', proforma_approve_view.approve_proforma_list_view, name='approve_proforma_list'),

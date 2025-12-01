@@ -143,6 +143,42 @@ class RepresentativeForm(forms.Form):
         label='نامه تایید نماینده',
         widget=forms.FileInput(attrs={'class': 'form-control'})
     )
+    
+    def clean_name(self):
+        """اعتبارسنجی نام نماینده"""
+        name = self.cleaned_data.get('name')
+        
+        if name:
+            # نام نماینده نباید فقط عدد باشد
+            if name.strip().isdigit():
+                raise forms.ValidationError('نام نماینده نمی‌تواند فقط عدد باشد.')
+            
+            # نام نماینده باید حداقل 2 کاراکتر داشته باشد
+            if len(name.strip()) < 2:
+                raise forms.ValidationError('نام نماینده باید حداقل 2 کاراکتر باشد.')
+        
+        return name
+    
+    def clean_mobile(self):
+        """اعتبارسنجی شماره موبایل نماینده"""
+        mobile = self.cleaned_data.get('mobile')
+        
+        if mobile:
+            # بررسی فرمت شماره همراه ایرانی
+            if not re.match(r'^09\d{9}$', mobile):
+                raise forms.ValidationError('شماره همراه باید با 09 شروع شود و 11 رقم باشد.')
+        
+        return mobile
+    
+    def clean_landline(self):
+        """اعتبارسنجی شماره ثابت نماینده"""
+        landline = self.cleaned_data.get('landline')
+        
+        if landline:
+            if not re.match(r'^0\d{10}$', landline):
+                raise forms.ValidationError('شماره ثابت باید با 0 شروع شود و 11 رقم باشد.')
+        
+        return landline
 
 
 def build_delivery_address_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
@@ -205,6 +241,47 @@ class BankAccountForm(forms.Form):
         label='نام بانک',
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
+    
+    def clean_account_number(self):
+        """اعتبارسنجی شماره حساب بانکی"""
+        account_number = self.cleaned_data.get('account_number')
+        
+        if account_number:
+            # شماره حساب باید فقط شامل اعداد باشد
+            if not account_number.isdigit():
+                raise forms.ValidationError('شماره حساب بانکی باید فقط شامل اعداد باشد.')
+            
+            # باید دقیقاً 16 رقم باشد
+            if len(account_number) != 16:
+                raise forms.ValidationError('شماره حساب بانکی باید دقیقاً 16 رقم باشد.')
+        
+        return account_number
+    
+    def clean_shaba_number(self):
+        """اعتبارسنجی شماره شبا"""
+        shaba_number = self.cleaned_data.get('shaba_number')
+        
+        if shaba_number:
+            # حذف فاصله‌ها و کاراکترهای خاص
+            shaba_clean = shaba_number.replace(' ', '').replace('-', '').replace('IR', '').replace('ir', '')
+            
+            # باید با IR شروع شود و سپس 24 رقم داشته باشد
+            if shaba_number.upper().startswith('IR'):
+                # اگر با IR شروع شده، باید 26 کاراکتر کل داشته باشد (IR + 24 رقم)
+                if len(shaba_clean) != 24:
+                    raise forms.ValidationError('شماره شبا باید 24 رقم باشد (بعد از IR).')
+                if not shaba_clean.isdigit():
+                    raise forms.ValidationError('شماره شبا باید فقط شامل اعداد باشد (بعد از IR).')
+            else:
+                # اگر با IR شروع نشده، باید 24 رقم باشد
+                if len(shaba_clean) != 24:
+                    raise forms.ValidationError('شماره شبا باید 24 رقم باشد یا با IR شروع شود.')
+                if not shaba_clean.isdigit():
+                    raise forms.ValidationError('شماره شبا باید فقط شامل اعداد باشد.')
+                # اضافه کردن IR به ابتدا
+                shaba_number = 'IR' + shaba_clean
+        
+        return shaba_number
 
 
 def build_bank_account_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
@@ -435,6 +512,21 @@ class CreateCustomerForm(forms.Form):
         
         return landline
     
+    def clean_registration_number(self):
+        """اعتبارسنجی شماره ثبت شرکت"""
+        registration_number = self.cleaned_data.get('registration_number')
+        
+        if registration_number:
+            # شماره ثبت شرکت باید فقط شامل اعداد باشد
+            if not registration_number.isdigit():
+                raise forms.ValidationError('شماره ثبت شرکت باید فقط شامل اعداد باشد.')
+            
+            # باید بین 3 تا 10 رقم باشد
+            if len(registration_number) < 3 or len(registration_number) > 10:
+                raise forms.ValidationError('شماره ثبت شرکت باید بین 3 تا 10 رقم باشد.')
+        
+        return registration_number
+    
     def clean(self):
         """اعتبارسنجی کلی فرم"""
         cleaned_data = super().clean()
@@ -614,7 +706,7 @@ class CreateCustomerForm(forms.Form):
             if self.cleaned_data.get('representative_mobile'):
                 PhoneNumber.objects.create(
                     content_type=rep_content_type,
-                    object_id=representative.name,
+                    object_id=representative.id,
                     phone_type='mobile',
                     number=self.cleaned_data['representative_mobile'],
                     is_primary=True
@@ -623,7 +715,7 @@ class CreateCustomerForm(forms.Form):
             if self.cleaned_data.get('representative_landline'):
                 PhoneNumber.objects.create(
                     content_type=rep_content_type,
-                    object_id=representative.name,
+                    object_id=representative.id,
                     phone_type='landline',
                     number=self.cleaned_data['representative_landline'],
                     is_primary=False

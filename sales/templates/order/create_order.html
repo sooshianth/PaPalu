@@ -182,6 +182,59 @@ document.addEventListener('DOMContentLoaded', function() {
     // اعمال به تمام فرم‌های موجود
     document.querySelectorAll('.item-form-row').forEach(setupBagWeightToggle);
     
+    // تابع برای پر کردن خودکار واحد و قیمت هنگام انتخاب محصول
+    function setupProductAutoFill(formRow) {
+        const productSelect = formRow.querySelector('select[name*="-product"]');
+        const weightUnitSelect = formRow.querySelector('select[name*="-weight_unit"]');
+        const unitPriceInput = formRow.querySelector('input[name*="-unit_price"]');
+        
+        if (productSelect && weightUnitSelect && unitPriceInput) {
+            productSelect.addEventListener('change', function() {
+                const productId = this.value;
+                
+                if (!productId) {
+                    // اگر محصول انتخاب نشده، فیلدها را خالی کن
+                    weightUnitSelect.value = 'kg';
+                    unitPriceInput.value = '';
+                    return;
+                }
+                
+                // درخواست اطلاعات محصول
+                const url = '{% url "sales:product_info_api" product_id=0 %}'.replace('0', productId);
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            console.error('خطا در دریافت اطلاعات محصول:', data.error);
+                            return;
+                        }
+                        
+                        // پر کردن واحد وزن
+                        if (data.weight_unit && weightUnitSelect) {
+                            weightUnitSelect.value = data.weight_unit;
+                            
+                            // اگر واحد تغییر کرد، bag weight toggle را فراخوانی کن
+                            const event = new Event('change');
+                            weightUnitSelect.dispatchEvent(event);
+                        }
+                        
+                        // پر کردن قیمت واحد
+                        if (data.has_price && data.unit_price && unitPriceInput) {
+                            unitPriceInput.value = data.unit_price;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا در دریافت اطلاعات محصول:', error);
+                    });
+            });
+        }
+    }
+    
+    // اعمال به تمام فرم‌های موجود
+    document.querySelectorAll('.item-form-row').forEach(function(row) {
+        setupProductAutoFill(row);
+    });
+    
     // مدیریت formset اقلام
     const formsetContainer = document.getElementById('items-container');
     const addButton = document.getElementById('add-item-btn');
@@ -248,6 +301,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // اعمال toggle bag weight به فرم جدید
         setupBagWeightToggle(newForm);
+        
+        // اعمال auto fill محصول به فرم جدید
+        setupProductAutoFill(newForm);
         
         // به‌روزرسانی تعداد فرم‌ها
         formCount++;

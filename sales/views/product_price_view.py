@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.core.paginator import Paginator
 from django.db.models import Q
 import logging
@@ -208,7 +208,8 @@ def set_product_price_view(request, product_id=None):
         # ایجاد فرم خالی
         initial_data = {}
         if product:
-            initial_data['product'] = product.id
+            initial_data['product'] = f"{product.code} - {product.name}"
+            initial_data['product_id'] = product.id
         
         financial_info_form = ProductFinancialInfoForm(
             user=request.user,
@@ -237,4 +238,30 @@ def set_product_price_view(request, product_id=None):
     }
     
     return render(request, 'product/set_product_price.html', context)
+
+
+@login_required
+def product_search_api(request):
+    """
+    API endpoint برای جستجوی محصولات
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # فیلتر کردن محصولات
+    products = Product.objects.filter(
+        Q(name__icontains=query) |
+        Q(code__icontains=query)
+    ).order_by('code')[:20]
+    
+    results = []
+    for product in products:
+        results.append({
+            'id': product.id,
+            'text': f"{product.code} - {product.name}"
+        })
+    
+    return JsonResponse({'results': results})
 

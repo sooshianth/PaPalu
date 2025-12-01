@@ -978,7 +978,7 @@ class ProductPriceTable(tables.Table):
     )
     
     loading_date = tables.Column(
-        verbose_name='زمان بارگیری',
+        verbose_name='مدت زمان بارگیری',
         orderable=True,
         attrs={
             'td': {'class': 'text-right'},
@@ -1045,7 +1045,7 @@ class ProductPriceTable(tables.Table):
             price_float = float(value)
             return format_html(
                 '<strong style="color: var(--primary-green);">{}</strong>'
-                '<span style="color: var(--gray-600); font-size: 0.85rem;"> تومان</span>',
+                '<span style="color: var(--gray-600); font-size: 0.85rem;"> ریال</span>',
                 f"{price_float:,.0f}"
             )
         return '-'
@@ -1062,14 +1062,10 @@ class ProductPriceTable(tables.Table):
         return '-'
     
     def render_loading_date(self, value, record):
-        """نمایش زمان بارگیری"""
+        """نمایش مدت زمان بارگیری"""
         if value:
-            try:
-                # برای jDateTimeField از strftime استفاده می‌کنیم
-                return value.strftime('%Y/%m/%d %H:%M')
-            except (AttributeError, TypeError):
-                # اگر strftime کار نکرد، از str استفاده می‌کنیم
-                return str(value)
+            # loading_date اکنون یک CharField است و به صورت متن ذخیره می‌شود
+            return str(value)
         return '-'
     
     def render_condition(self, value, record):

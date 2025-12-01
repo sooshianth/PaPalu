@@ -284,6 +284,7 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ financial_info_form.product.label }}</label>
                     {{ financial_info_form.product }}
+                    {{ financial_info_form.product_id }}
                     {% if financial_info_form.product.errors %}
                         <div class="text-danger">{{ financial_info_form.product.errors.0 }}</div>
                     {% endif %}
@@ -371,73 +372,244 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Persian Datepicker CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
-<!-- jQuery (needed for persian-datepicker) -->
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Persian Datepicker JS -->
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 <script>
-    // اعتبارسنجی فرم قبل از ارسال
-    document.getElementById('price-form').addEventListener('submit', function(e) {
-        var isValid = true;
-        var requiredFields = this.querySelectorAll('.required-field');
+document.addEventListener('DOMContentLoaded', function() {
+    // مدیریت autocomplete برای انتخاب محصول
+    const productInput = document.querySelector('input[name="product"]');
+    const productIdInput = document.querySelector('input[name="product_id"]');
+    let productSuggestions = [];
+    let selectedProductId = null;
+    
+    console.log('Product input found:', !!productInput);
+    console.log('Product ID input found:', !!productIdInput);
+    
+    if (productInput) {
+        // ایجاد container برای پیشنهادات
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'product-suggestions';
+        suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+        productInput.parentElement.style.position = 'relative';
+        productInput.parentElement.appendChild(suggestionsContainer);
         
-        requiredFields.forEach(function(label) {
-            var fieldName = label.getAttribute('for');
-            if (fieldName) {
-                var field = document.getElementById(fieldName);
-                if (field && !field.value.trim()) {
-                    isValid = false;
-                    field.style.borderColor = '#dc3545';
-                } else if (field) {
-                    field.style.borderColor = '';
+        let searchTimeout;
+        
+        productInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 1) {
+                suggestionsContainer.style.display = 'none';
+                productSuggestions = [];
+                selectedProductId = null;
+                if (productIdInput) productIdInput.value = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "sales:product_search_api" %}?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        productSuggestions = data.results || [];
+                        displaySuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی محصول:', error);
+                    });
+            }, 300);
+        });
+        
+        function displaySuggestions() {
+            suggestionsContainer.innerHTML = '';
+            
+            if (productSuggestions.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            productSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f0f0f0';
+                });
+                suggestionItem.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+                suggestionItem.addEventListener('click', function() {
+                    productInput.value = item.text;
+                    selectedProductId = item.id;
+                    if (productIdInput) {
+                        productIdInput.value = item.id;
+                        console.log('Product ID set to:', item.id);
+                    }
+                    suggestionsContainer.style.display = 'none';
+                });
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            
+            suggestionsContainer.style.display = 'block';
+        }
+        
+        // بستن پیشنهادات با کلیک خارج
+        document.addEventListener('click', function(e) {
+            if (!productInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+        
+        // مدیریت کلیدهای کیبورد
+        productInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+    }
+    
+    // اعتبارسنجی فرم قبل از ارسال
+    const priceForm = document.getElementById('price-form');
+    if (priceForm) {
+        priceForm.addEventListener('submit', function(e) {
+            var isValid = true;
+            var requiredFields = this.querySelectorAll('.required-field');
+            
+            requiredFields.forEach(function(label) {
+                var fieldName = label.getAttribute('for');
+                if (fieldName) {
+                    var field = document.getElementById(fieldName);
+                    if (field && !field.value.trim()) {
+                        isValid = false;
+                        field.style.borderColor = '#dc3545';
+                    } else if (field) {
+                        field.style.borderColor = '';
+                    }
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('لطفاً تمام فیلدهای اجباری را پر کنید.');
+            }
+        });
+    }
+});
+
+$(document).ready(function() {
+    // تبدیل فیلد تاریخ مهلت اعتبار به تقویم شمسی
+    var deadlineInput = $('#id_deadline');
+    
+    if (deadlineInput.length) {
+        // تبدیل type='date' به text برای استفاده از تقویم شمسی
+        deadlineInput.attr('type', 'text');
+        deadlineInput.attr('readonly', 'readonly');
+        deadlineInput.css('cursor', 'pointer');
+        
+        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+        var initialValue = deadlineInput.val();
+        var persianDateValue = '';
+        
+        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+        if (initialValue) {
+            var parts = initialValue.split('-');
+            if (parts.length === 3) {
+                var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                var pDate = persianDate.fromGregorian(gregorianDate);
+                persianDateValue = pDate.format('YYYY/MM/DD');
+                deadlineInput.val(persianDateValue);
+            }
+        }
+        
+        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+        var hiddenInput = $('<input>', {
+            type: 'hidden',
+            id: 'id_deadline_hidden',
+            name: 'deadline'
+        });
+        if (initialValue) {
+            hiddenInput.val(initialValue);
+        }
+        deadlineInput.after(hiddenInput);
+        
+        // راه‌اندازی تقویم شمسی
+        deadlineInput.pDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            altField: '#id_deadline_hidden',
+            altFormat: 'YYYY-MM-DD',
+            calendarType: 'persian',
+            initialValue: persianDateValue || false,
+            timePicker: {
+                enabled: false
+            },
+            onSelect: function() {
+                // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                var selectedDate = deadlineInput.val();
+                if (selectedDate) {
+                    try {
+                        var persianDateParts = selectedDate.split('/');
+                        if (persianDateParts.length === 3) {
+                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var formattedDate = gregorianDate.year + '-' + 
+                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                               String(gregorianDate.day).padStart(2, '0');
+                            
+                            hiddenInput.val(formattedDate);
+                        }
+                    } catch (e) {
+                        console.error('خطا در تبدیل تاریخ:', e);
+                    }
                 }
             }
         });
         
-        if (!isValid) {
-            e.preventDefault();
-            alert('لطفاً تمام فیلدهای اجباری را پر کنید.');
-        }
-    });
-    
-    // Initialize Jalali date picker for deadline field
-    (function() {
-        function initJalali() {
-            var inputs = document.querySelectorAll('.jalali-date');
-            inputs.forEach(function(inp) {
-                try {
-                    if (!inp._pd_inited && typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
-                        jQuery(inp).persianDatepicker({
-                            format: 'YYYY/MM/DD',
-                            autoClose: true,
-                            calendarType: 'persian',
-                            observer: true,
-                            timePicker: false,
-                            initialValue: false
-                        });
-                        inp._pd_inited = true;
-                    }
-                } catch (e) {
-                    console.error('Error initializing Persian datepicker:', e);
+        // اضافه کردن آیکون تقویم
+        if (!deadlineInput.parent().find('.p-datepicker-trigger').length) {
+            var iconSpan = $('<span>', {
+                class: 'p-datepicker-trigger',
+                html: '📅',
+                css: {
+                    'position': 'absolute',
+                    'right': '10px',
+                    'top': '50%',
+                    'transform': 'translateY(-50%)',
+                    'cursor': 'pointer',
+                    'font-size': '1.2rem',
+                    'z-index': '10',
+                    'pointer-events': 'none'
                 }
             });
+            deadlineInput.parent().css('position', 'relative');
+            deadlineInput.parent().append(iconSpan);
         }
-        
-        // Initialize when DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initJalali);
-        } else {
-            initJalali();
-        }
-        
-        // Retry after a short delay if jQuery is not loaded yet
-        if (typeof jQuery === 'undefined' || !jQuery.fn || !jQuery.fn.persianDatepicker) {
-            setTimeout(initJalali, 500);
-        }
-    })();
+    }
+});
 </script>
+
+<style>
+#id_deadline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.p-datepicker-trigger {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    z-index: 10;
+    pointer-events: none;
+}
+</style>
 {% endblock %}
 

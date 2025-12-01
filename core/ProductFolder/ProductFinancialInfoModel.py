@@ -32,8 +32,9 @@ class ProductFinancialInfo(models.Model):
         blank=False
     )
     
-    loading_date = jmodels.jDateTimeField(
-        verbose_name='زمان بارگیری',
+    loading_date = models.CharField(
+        max_length=255,
+        verbose_name='مدت زمان بارگیری',
         null=True,
         blank=True
     )

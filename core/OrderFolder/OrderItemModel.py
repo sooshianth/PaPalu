@@ -182,10 +182,27 @@ class OrderItem(models.Model):
         return 0
     
     def calculate_total(self):
-        """محاسبه مجموع بهای قلم"""
+        """
+        محاسبه مجموع بهای قلم
+        unit_price بر اساس هر کیلوگرم است (مگر برای piece که بر اساس هر عدد است)
+        """
         if not self.quantity or not self.unit_price:
             return 0
-        subtotal = float(self.quantity) * float(self.unit_price)
+        
+        # برای واحد piece، قیمت مستقیماً برای هر عدد است
+        if self.weight_unit == 'piece':
+            subtotal = float(self.quantity) * float(self.unit_price)
+        else:
+            # برای سایر واحدها (kg, ton, bag)، ابتدا وزن را به کیلوگرم تبدیل می‌کنیم
+            weight_in_kg = self.get_weight_in_kg()
+            
+            if weight_in_kg == 0:
+                return 0
+            
+            # محاسبه subtotal: وزن به کیلوگرم * قیمت هر کیلوگرم
+            subtotal = weight_in_kg * float(self.unit_price)
+        
+        # محاسبه نهایی با در نظر گیری تخفیف، اضافات و مالیات
         total = subtotal - float(self.discount or 0) + float(self.additional_charges or 0) + float(self.vat or 0)
         return total
     

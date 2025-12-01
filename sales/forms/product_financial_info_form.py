@@ -14,12 +14,8 @@ class ProductFinancialInfoForm(forms.ModelForm):
     
     class Meta:
         model = ProductFinancialInfo
-        fields = ['product', 'price', 'deadline', 'condition', 'loading_date', 'condition_description', 'description']
+        fields = ['price', 'deadline', 'condition', 'loading_date', 'condition_description', 'description']
         widgets = {
-            'product': forms.Select(attrs={
-                'class': 'form-control',
-                'placeholder': 'انتخاب محصول'
-            }),
             'price': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
@@ -34,9 +30,9 @@ class ProductFinancialInfoForm(forms.ModelForm):
                 'rows': 3,
                 'placeholder': 'شرط'
             }),
-            'loading_date': jDateTimeInput(attrs={
+            'loading_date': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'زمان بارگیری'
+                'placeholder': 'مدت زمان بارگیری (متن)'
             }),
             'condition_description': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -55,6 +51,30 @@ class ProductFinancialInfoForm(forms.ModelForm):
         accessible_fields = kwargs.pop('accessible_fields', None)
         super().__init__(*args, **kwargs)
         
+        # اضافه کردن فیلد product به صورت CharField برای autocomplete (قبل از اعمال محدودیت‌ها)
+        # چون product در Meta نیست، باید دستی اضافه شود
+        if accessible_fields is None or accessible_fields.get('product', True):
+            self.fields['product'] = forms.CharField(
+                required=True,
+                label='محصول',
+                widget=forms.TextInput(attrs={
+                    'class': 'form-control product-autocomplete',
+                    'placeholder': 'جستجوی محصول...',
+                    'autocomplete': 'off'
+                })
+            )
+            
+            # اضافه کردن فیلد مخفی برای ذخیره ID محصول
+            self.fields['product_id'] = forms.CharField(
+                required=False,
+                widget=forms.HiddenInput()
+            )
+            
+            # اگر instance موجود است و product دارد، مقدار اولیه را تنظیم کن
+            if self.instance and self.instance.pk and self.instance.product:
+                self.fields['product'].initial = f"{self.instance.product.code} - {self.instance.product.name}"
+                self.fields['product_id'].initial = self.instance.product.id
+        
         # اعمال محدودیت‌های دسترسی فیلدی
         if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
             fields_to_remove = []
@@ -64,19 +84,6 @@ class ProductFinancialInfoForm(forms.ModelForm):
             
             for field_name in fields_to_remove:
                 del self.fields[field_name]
-        
-        # تنظیم فیلد product به صورت SelectField
-        if 'product' in self.fields:
-            self.fields['product'] = forms.ModelChoiceField(
-                queryset=Product.objects.all().order_by('code'),
-                required=True,
-                label='محصول',
-                widget=forms.Select(attrs={
-                    'class': 'form-control',
-                    'placeholder': 'انتخاب محصول'
-                }),
-                empty_label='-- انتخاب محصول --'
-            )
         
         # تنظیم فیلد deadline به صورت jDateField با تقویم شمسی
         if 'deadline' in self.fields:
@@ -130,9 +137,60 @@ class ProductFinancialInfoForm(forms.ModelForm):
         
         return deadline
     
+    
+    def clean(self):
+        """اعتبارسنجی کلی فرم"""
+        cleaned_data = super().clean()
+        
+        # تبدیل product_id به product
+        product_id = cleaned_data.get('product_id', '').strip()
+        product_text = cleaned_data.get('product', '').strip()
+        
+        # اگر product_id وجود ندارد اما متن وارد شده، سعی کن از متن استخراج کن
+        if not product_id and product_text:
+            # استخراج ID از متن (فرمت: "کد - نام" یا فقط ID)
+            import re
+            # اگر متن به صورت "ID - نام" است
+            match = re.match(r'^(\d+)', product_text)
+            if match:
+                product_id = match.group(1)
+                cleaned_data['product_id'] = product_id
+        
+        if not product_id:
+            self.add_error('product', 'لطفاً یک محصول را از لیست انتخاب کنید.')
+            return cleaned_data
+        
+        if product_id:
+            try:
+                # تبدیل به عدد در صورت نیاز
+                product_id_int = int(product_id)
+                product = Product.objects.get(id=product_id_int)
+                # ذخیره product برای استفاده در save
+                self._product = product
+                # حذف product از cleaned_data تا Django سعی نکند آن را اختصاص دهد
+                if 'product' in cleaned_data:
+                    del cleaned_data['product']
+            except Product.DoesNotExist:
+                self.add_error('product', 'محصول انتخاب شده یافت نشد.')
+            except (ValueError, TypeError):
+                self.add_error('product', 'شناسه محصول معتبر نیست.')
+        
+        # بررسی اینکه همه فیلدهای اجباری پر شده‌اند
+        required_fields = ['price', 'deadline', 'condition', 'condition_description']
+        for field_name in required_fields:
+            if field_name not in cleaned_data or not cleaned_data.get(field_name):
+                if field_name in self.fields:
+                    self.add_error(field_name, f'فیلد {self.fields[field_name].label} الزامی است.')
+        
+        return cleaned_data
+    
     def save(self, commit=True):
-        """ذخیره فرم - deadline از jDateField مستقیماً jdatetime.date است"""
+        """ذخیره فرم - تنظیم product از clean"""
         instance = super().save(commit=False)
+        
+        # تنظیم product از clean
+        if hasattr(self, '_product'):
+            instance.product = self._product
         
         # deadline از jDateField مستقیماً jdatetime.date است، نیازی به تبدیل نیست
         # اما برای اطمینان بررسی می‌کنیم
@@ -150,18 +208,6 @@ class ProductFinancialInfoForm(forms.ModelForm):
             instance.save()
         
         return instance
-    
-    def clean(self):
-        """اعتبارسنجی کلی فرم"""
-        cleaned_data = super().clean()
-        
-        # بررسی اینکه همه فیلدهای اجباری پر شده‌اند
-        required_fields = ['product', 'price', 'deadline', 'condition', 'condition_description']
-        for field_name in required_fields:
-            if field_name not in cleaned_data or not cleaned_data.get(field_name):
-                self.add_error(field_name, f'فیلد {self.fields[field_name].label} الزامی است.')
-        
-        return cleaned_data
 
 
 def get_accessible_financial_info_fields(user, financial_info_form: ProductFinancialInfoForm = None):

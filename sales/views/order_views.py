@@ -23,8 +23,11 @@ from sales.forms.order_create_form import (
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 from core.PersonFolder.PersonModel import Person
+from core.ProductFolder.ProductModel import Product
+from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
 from access.helpers import check_field_access_prefer_edit
 from sales.tables import OrderTable
+import jdatetime
 
 
 @login_required
@@ -291,5 +294,70 @@ def customer_search_api(request):
         })
     
     return JsonResponse({'results': results})
+
+
+@login_required
+@require_http_methods(["GET"])
+def product_info_api(request, product_id):
+    """
+    API endpoint برای دریافت اطلاعات محصول شامل واحد و آخرین قیمت
+    """
+    if not product_id:
+        audit_logger.alert("درخواست API اطلاعات محصول بدون product_id")
+        return JsonResponse({'error': 'شناسه محصول الزامی است'}, status=400)
+    
+    bug_logger.debug(f"درخواست API اطلاعات محصول {product_id}")
+    
+    try:
+        product = Product.objects.get(id=product_id)
+        
+        # دریافت آخرین قیمت معتبر (deadline >= today)
+        today = jdatetime.date.today()
+        latest_price = ProductFinancialInfo.objects.filter(
+            product=product,
+            deadline__gte=today
+        ).order_by('-created_at').first()
+        
+        # تبدیل main_unit به weight_unit
+        # mapping: kg -> kg, ton -> ton, bag -> bag, piece -> piece
+        # یا اگر main_unit با وزن واحدها match نمی‌کند، سعی می‌کنیم تطبیق دهیم
+        main_unit = product.main_unit or 'kg'
+        main_unit_lower = main_unit.lower().strip()
+        
+        # تبدیل واحد محصول به واحد وزن سفارش
+        weight_unit_mapping = {
+            'kg': 'kg',
+            'کیلوگرم': 'kg',
+            'kilogram': 'kg',
+            'ton': 'ton',
+            'تن': 'ton',
+            'bag': 'bag',
+            'کیسه': 'bag',
+            'piece': 'piece',
+            'عدد': 'piece',
+            'تعداد': 'piece',
+        }
+        
+        weight_unit = weight_unit_mapping.get(main_unit_lower, 'kg')  # پیش‌فرض kg
+        
+        # اطلاعات پاسخ
+        data = {
+            'main_unit': product.main_unit or '',
+            'weight_unit': weight_unit,
+            'unit_price': None,
+            'has_price': False,
+        }
+        
+        if latest_price:
+            data['unit_price'] = str(latest_price.price)
+            data['has_price'] = True
+        
+        return JsonResponse(data)
+    except Product.DoesNotExist:
+        bug_logger.warning(f"محصول {product_id} یافت نشد")
+        return JsonResponse({'error': 'محصول یافت نشد'}, status=404)
+    except Exception as e:
+        bug_logger.error(f"خطا در دریافت اطلاعات محصول {product_id}: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
 
 
