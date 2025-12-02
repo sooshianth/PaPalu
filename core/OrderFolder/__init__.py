@@ -4,6 +4,7 @@ from .ApprovalInfoModel import ApprovalInfo
 from .DocumentRelationModel import DocumentRelation
 from .OrderDocumentModel import OrderDocument
 from .ProformaModel import Proforma
+from .InvoiceModel import Invoice
 
 __all__ = [
     'Order',
@@ -12,4 +13,5 @@ __all__ = [
     'DocumentRelation',
     'OrderDocument',
     'Proforma',
+    'Invoice',
 ]
