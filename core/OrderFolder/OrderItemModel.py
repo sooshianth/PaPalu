@@ -95,7 +95,7 @@ class OrderItem(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
-        verbose_name='فی'
+        verbose_name='فی (ریال)'
     )
     
     # تخفیف
@@ -127,14 +127,14 @@ class OrderItem(models.Model):
         verbose_name='بهای تمام شده بدون احتساب کرایه'
     )
     
-    # مالیات بر ارزش افزوده
-    vat = models.DecimalField(
-        max_digits=12,
+    # درصد مالیات بر ارزش افزوده (VAT percent)
+    vat_percent = models.DecimalField(
+        max_digits=5,   # e.g., 9.00%
         decimal_places=2,
         default=0,
         null=True,
         blank=True,
-        verbose_name='مالیات بر ارزش افزوده'
+        verbose_name='درصد مالیات بر ارزش افزوده'
     )
     
     # بهای تمام شده کرایه خرید
@@ -185,6 +185,7 @@ class OrderItem(models.Model):
         """
         محاسبه مجموع بهای قلم
         unit_price بر اساس هر کیلوگرم است (مگر برای piece که بر اساس هر عدد است)
+        مالیات بر ارزش افزوده به صورت درصدی (vat_percent) محاسبه می‌شود.
         """
         if not self.quantity or not self.unit_price:
             return 0
@@ -202,8 +203,11 @@ class OrderItem(models.Model):
             # محاسبه subtotal: وزن به کیلوگرم * قیمت هر کیلوگرم
             subtotal = weight_in_kg * float(self.unit_price)
         
-        # محاسبه نهایی با در نظر گیری تخفیف، اضافات و مالیات
-        total = subtotal - float(self.discount or 0) + float(self.additional_charges or 0) + float(self.vat or 0)
+        # محاسبه مالیات بر اساس درصد
+        vat_amount = (float(self.vat_percent or 0) / 100) * subtotal
+        
+        # محاسبه نهایی با در نظرگیری تخفیف، اضافات و مالیات درصدی
+        total = subtotal - float(self.discount or 0) + float(self.additional_charges or 0) + vat_amount
         return total
     
     def save(self, *args, **kwargs):
