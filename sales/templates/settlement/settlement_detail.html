@@ -386,7 +386,7 @@
             <div class="info-item">
                 <strong>مبلغ اختلاف:</strong>
                 <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
-                    {{ difference_amount|floatformat:0 }} تومان
+                    {{ difference_amount|floatformat:0 }} ریال
                 </span>
             </div>
         </div>
@@ -397,7 +397,7 @@
                 {% if settlement_completed %}
                     تسویه کامل شد
                 {% else %}
-                    {{ settled_amount|floatformat:0 }} از {{ difference_amount|floatformat:0 }} تومان
+                    {{ settled_amount|floatformat:0 }} از {{ difference_amount|floatformat:0 }} ریال
                 {% endif %}
             </div>
         </div>
@@ -405,19 +405,19 @@
         <div class="info-row">
             <div class="info-item">
                 <strong>مبلغ تسویه شده:</strong>
-                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|floatformat:0 }} تومان</span>
+                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|floatformat:0 }} ریال</span>
             </div>
             <div class="info-item">
                 <strong>مانده تسویه:</strong>
                 <span class="{% if remaining_amount > 0 %}negative{% else %}positive{% endif %}">
-                    {{ remaining_amount|floatformat:0 }} تومان
+                    {{ remaining_amount|floatformat:0 }} ریال
                 </span>
             </div>
         </div>
         
         {% if remaining_amount > 0 and not settlement_completed %}
         <div class="alert-warning">
-            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} تومان باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
+            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} ریال باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
         </div>
         {% elif settlement_completed %}
         <div class="alert-success">
@@ -622,7 +622,7 @@
                         <td>
                             <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
                         </td>
-                        <td><strong>{{ transaction.document_amount|floatformat:0 }}</strong> تومان</td>
+                        <td><strong>{{ transaction.document_amount|floatformat:0 }}</strong> ریال</td>
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
@@ -638,7 +638,7 @@
             </table>
         </div>
         <div class="total-amount">
-            جمع مبالغ تراکنش‌ها: {{ settled_amount|floatformat:0 }} تومان
+            جمع مبالغ تراکنش‌ها: {{ settled_amount|floatformat:0 }} ریال
         </div>
     </div>
 </div>

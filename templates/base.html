@@ -982,6 +982,15 @@
                                 <span class="nav-text">تسویه</span>
                             </a>
                         </li>
+                        <li class="submenu-item">
+                            <a href="{% url 'sales:settlement_approval_list' %}" class="nav-link submenu-link" title="تایید تسویه کامل">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">تایید تسویه کامل</span>
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 <li class="nav-item has-submenu" id="supplySubmenu">
@@ -1540,7 +1549,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check if current page is in sales, production, distribution or supply section
         const currentPath = window.location.pathname;
-        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/approve-transaction-receipt/', '/sales/unload-approval/', '/sales/settlement/'];
+        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/approve-transaction-receipt/', '/sales/unload-approval/', '/sales/settlement/', '/sales/settlement-approval/'];
         const productionPaths = ['/production/'];
         const distributionPaths = ['/distribution/'];
         const supplyPaths = ['/supply/'];

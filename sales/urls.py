@@ -12,6 +12,7 @@ from sales.views import (
     allocation_approve_view,
     unload_approval_view,
     settlement_view,
+    settlement_approval_view,
 )
 
 app_name = 'sales'
@@ -76,6 +77,10 @@ urlpatterns = [
     # مسیرهای تسویه
     path('settlement/list/', settlement_view.settlement_list_view, name='settlement_list'),
     path('settlement/<str:order_number>/', settlement_view.settlement_detail_view, name='settlement_detail'),
+    
+    # مسیرهای تایید تسویه کامل
+    path('settlement-approval/list/', settlement_approval_view.settlement_approval_list_view, name='settlement_approval_list'),
+    path('settlement-approval/<str:order_number>/', settlement_approval_view.settlement_approval_detail_view, name='settlement_approval_detail'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     

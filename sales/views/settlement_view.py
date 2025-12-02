@@ -273,7 +273,7 @@ def settlement_detail_view(request, order_number):
                         messages.success(request, f'تراکنش با موفقیت ثبت شد. تسویه سفارش {order_number} کامل شد و به وضعیت "در انتظار تایید تسویه کامل" منتقل شد.')
                     else:
                         settlement.settlement_status = 'partial'
-                        messages.success(request, f'تراکنش با موفقیت ثبت شد. مانده تسویه: {new_remaining:,.0f} تومان')
+                        messages.success(request, f'تراکنش با موفقیت ثبت شد. مانده تسویه: {new_remaining:,.0f} ریال')
                     
                     settlement.save(update_fields=['settled_amount', 'settlement_status'])
                     

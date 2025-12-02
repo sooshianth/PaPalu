@@ -1,0 +1,376 @@
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Sum
+from django.http import HttpResponseForbidden
+from django.shortcuts import get_object_or_404, render, redirect
+from decimal import Decimal
+import logging
+from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
+
+from core.RBACModel import user_has_task, TaskChoices
+from core.OrderFolder.OrderModel import Order
+from core.AllocationFolder.AllocationModel import Allocation
+from core.TransportFolder.TransportModel import Transport
+from core.SettlementFolder.SettlementModel import Settlement
+from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
+from sales.tables import PendingSettlementApprovalOrderTable
+
+bug_logger = logging.getLogger("bugs")
+audit_logger = logging.getLogger("audit")
+
+
+@login_required
+def settlement_approval_list_view(request):
+    """
+    لیست سفارش‌های در وضعیت «در انتظار تایید تسویه کامل»
+    با استفاده از django-tables2
+    """
+    audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار تایید تسویه کامل")
+    
+    # بررسی دسترسی
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_SETTLEMENT.value):
+        audit_logger.activity("تلاش برای مشاهده لیست تایید تسویه کامل بدون دسترسی")
+        messages.error(request, 'شما دسترسی به تایید تسویه کامل را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
+    # دریافت سفارش‌های در انتظار تایید تسویه کامل
+    orders_qs = Order.objects.filter(
+        status='pending_settlement_approval'
+    ).select_related('customer').prefetch_related(
+        'order_items',
+        'allocations',
+        'order_items__product'
+    ).order_by('-created_at')
+
+    # دریافت تمام تخصیص‌ها و حمل‌ها به صورت bulk
+    all_allocations = Allocation.objects.filter(order__in=orders_qs).select_related('order')
+    allocation_dict = {}
+    for alloc in all_allocations:
+        if alloc.order_id not in allocation_dict:
+            allocation_dict[alloc.order_id] = []
+        allocation_dict[alloc.order_id].append(alloc.allocation_number)
+    
+    all_allocations = Allocation.objects.filter(allocation_number__in=[num for nums in allocation_dict.values() for num in nums])
+    all_transports = Transport.objects.filter(allocation__in=all_allocations).select_related('allocation')
+    
+    # ایجاد دیکشنری برای حمل‌ها بر اساس allocation
+    transport_dict = {}
+    for transport in all_transports:
+        if transport.allocation:
+            allocation_number = transport.allocation.allocation_number
+            if allocation_number not in transport_dict:
+                transport_dict[allocation_number] = []
+            transport_dict[allocation_number].append(transport)
+
+    # تبدیل QuerySet به list برای اضافه کردن فیلدهای محاسبه شده
+    orders_list = list(orders_qs)
+    
+    # Annotate کردن وزن سفارش، وزن تحویلی و مبلغ اختلاف
+    for order in orders_list:
+        # محاسبه وزن سفارش
+        order_weight = Decimal('0')
+        for item in order.order_items.all():
+            weight_kg = item.get_weight_in_kg()
+            order_weight += Decimal(str(weight_kg))
+        order._order_weight = order_weight
+        
+        # محاسبه وزن تحویلی
+        allocation_numbers = allocation_dict.get(order.pk, [])
+        delivered_weight = Decimal('0')
+        for alloc_num in allocation_numbers:
+            transports = transport_dict.get(alloc_num, [])
+            for transport in transports:
+                if transport.net_weight:
+                    delivered_weight += Decimal(str(transport.net_weight))
+        order._delivered_weight = delivered_weight
+        
+        # محاسبه میانگین وزن‌دار فی فروش
+        total_price = Decimal('0')
+        total_weight_for_avg = Decimal('0')
+        
+        for item in order.order_items.all():
+            if item.unit_price and item.quantity:
+                item_weight = Decimal(str(item.get_weight_in_kg()))
+                item_price = Decimal(str(item.unit_price))
+                total_price += item_weight * item_price
+                total_weight_for_avg += item_weight
+        
+        if total_weight_for_avg > 0:
+            weighted_avg_price = total_price / total_weight_for_avg
+        else:
+            weighted_avg_price = Decimal('0')
+        
+        # محاسبه مبلغ اختلاف
+        weight_difference = delivered_weight - order_weight
+        difference_amount = weight_difference * weighted_avg_price
+        order._difference_amount = difference_amount
+        
+        # محاسبه مبلغ تسویه شده
+        settlement = Settlement.objects.filter(
+            order=order,
+            settlement_type='weight_discrepancy'
+        ).first()
+        
+        if settlement:
+            settled_amount = settlement.transaction_documents.aggregate(
+                total=Sum('document_amount')
+            )['total'] or Decimal('0')
+        else:
+            settled_amount = Decimal('0')
+        
+        order._settled_amount = settled_amount
+
+    bug_logger.debug(f"تعداد {len(orders_list)} سفارش در انتظار تایید تسویه کامل لود شد")
+
+    # محاسبه فیلدهای قابل دسترسی
+    accessible_fields = {
+        'order_number': True,
+        'customer_name': True,
+        'order_weight': True,
+        'delivered_weight': True,
+        'difference_amount': True,
+        'settled_amount': True,
+        'actions': True,
+    }
+    
+    # ایجاد جدول با django-tables2
+    table = PendingSettlementApprovalOrderTable(orders_list, user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 20}).configure(table)
+    
+    context = {
+        'table': table,
+        'accessible_fields': accessible_fields,
+        'page_title': 'سفارش‌های در انتظار تایید تسویه کامل',
+    }
+    return render(request, 'settlement_approval/settlement_approval_list.html', context)
+
+
+@login_required
+def settlement_approval_detail_view(request, order_number):
+    """
+    جزئیات تایید تسویه کامل سفارش
+    """
+    audit_logger.info(f"درخواست تایید تسویه کامل برای سفارش {order_number}")
+    
+    # بررسی دسترسی
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_SETTLEMENT.value):
+        audit_logger.activity(f"تلاش برای تایید تسویه کامل سفارش {order_number} بدون دسترسی")
+        messages.error(request, 'شما دسترسی به تایید تسویه کامل را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
+    order = get_object_or_404(Order, order_number=order_number)
+
+    if order.status != 'pending_settlement_approval':
+        bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_settlement_approval می‌رود")
+        messages.error(request, 'این سفارش در وضعیت مناسب برای تایید تسویه کامل نیست.')
+        return redirect('sales:settlement_approval_list')
+
+    # محاسبه وزن سفارش
+    order_weight = Decimal('0')
+    for item in order.order_items.all():
+        weight_kg = item.get_weight_in_kg()
+        order_weight += Decimal(str(weight_kg))
+    
+    # محاسبه وزن تحویلی
+    allocations = Allocation.objects.filter(order=order)
+    transports = Transport.objects.filter(allocation__in=allocations)
+    delivered_weight = sum(
+        Decimal(str(t.net_weight or 0)) for t in transports
+    )
+    
+    # محاسبه اختلاف وزن
+    weight_difference = delivered_weight - order_weight
+    
+    # محاسبه میانگین وزن‌دار فی فروش
+    total_price = Decimal('0')
+    total_weight_for_avg = Decimal('0')
+    
+    for item in order.order_items.all():
+        if item.unit_price and item.quantity:
+            item_weight = Decimal(str(item.get_weight_in_kg()))
+            item_price = Decimal(str(item.unit_price))
+            total_price += item_weight * item_price
+            total_weight_for_avg += item_weight
+    
+    # محاسبه میانگین فی
+    if total_weight_for_avg > 0:
+        weighted_avg_price = total_price / total_weight_for_avg
+    else:
+        weighted_avg_price = Decimal('0')
+    
+    # محاسبه مبلغ اختلاف
+    difference_amount = weight_difference * weighted_avg_price
+    
+    # دریافت Settlement مربوط به کسری و سرک
+    weight_discrepancy_settlement = Settlement.objects.filter(
+        order=order,
+        settlement_type='weight_discrepancy'
+    ).first()
+    
+    # دریافت Settlement مربوط به فروش
+    sale_settlement = Settlement.objects.filter(
+        order=order,
+        settlement_type='sale'
+    ).first()
+    
+    # دریافت Settlement مربوط به کرایه
+    freight_settlements = Settlement.objects.filter(
+        order=order,
+        settlement_type='rent'
+    )
+    
+    # دریافت تراکنش‌های کسری و سرک
+    weight_discrepancy_transactions = []
+    if weight_discrepancy_settlement:
+        weight_discrepancy_transactions = TransactionDocument.objects.filter(
+            settlement=weight_discrepancy_settlement
+        ).order_by('-id')
+    
+    # محاسبه مجموع مبلغ تراکنش‌های کسری و سرک
+    settled_weight_discrepancy = weight_discrepancy_transactions.aggregate(
+        total=Sum('document_amount')
+    )['total'] or Decimal('0')
+    
+    # دریافت تراکنش‌های فروش
+    sale_transactions = []
+    if sale_settlement:
+        sale_transactions = TransactionDocument.objects.filter(
+            settlement=sale_settlement
+        ).order_by('-id')
+    
+    # محاسبه مجموع مبلغ تراکنش‌های فروش
+    settled_sale = sale_transactions.aggregate(
+        total=Sum('document_amount')
+    )['total'] or Decimal('0')
+    
+    # دریافت تراکنش‌های کرایه
+    freight_transactions = []
+    freight_settled_amount = Decimal('0')
+    for freight_settlement in freight_settlements:
+        freight_trans = TransactionDocument.objects.filter(
+            settlement=freight_settlement
+        ).order_by('-id')
+        freight_transactions.extend(freight_trans)
+        freight_settled = freight_trans.aggregate(
+            total=Sum('document_amount')
+        )['total'] or Decimal('0')
+        freight_settled_amount += freight_settled
+    
+    # بررسی اتمام تسویه کسری و سرک
+    weight_discrepancy_completed = abs(difference_amount) - settled_weight_discrepancy <= 0
+    
+    # بررسی اتمام تسویه فروش
+    sale_completed = False
+    if sale_settlement and sale_settlement.original_document_amount:
+        sale_completed = settled_sale >= sale_settlement.original_document_amount
+    
+    # بررسی اتمام تسویه کرایه
+    freight_completed = True
+    for freight_settlement in freight_settlements:
+        if freight_settlement.original_document_amount:
+            freight_settled = TransactionDocument.objects.filter(
+                settlement=freight_settlement
+            ).aggregate(total=Sum('document_amount'))['total'] or Decimal('0')
+            if freight_settled < freight_settlement.original_document_amount:
+                freight_completed = False
+                break
+    
+    # بررسی اینکه همه تسویه‌ها کامل شده‌اند
+    all_settlements_completed = (
+        weight_discrepancy_completed and 
+        sale_completed and 
+        freight_completed
+    )
+    
+    # دریافت اطلاعات مشتری
+    customer = order.customer
+    customer_info = None
+    if customer:
+        from core.PersonFolder.FinancialBankingModel import FinancialBanking
+        from core.PersonFolder.BankAccountModel import BankAccount
+        
+        # دریافت حساب‌های بانکی
+        financial_banking = FinancialBanking.objects.filter(person=customer).first()
+        bank_accounts = []
+        if financial_banking:
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking)
+        
+        customer_info = {
+            'name': customer.name,
+            'national_id': customer.national_id,
+            'type': customer.get_type_display() if customer.type else '-',
+            'nature': customer.get_nature_display() if customer.nature else '-',
+            'accounting_code': customer.accounting_code or '-',
+            'registration_number': customer.registration_number or '-',
+            'bank_accounts': bank_accounts,
+        }
+    
+    # دریافت اطلاعات تخصیص‌ها و حمل‌ها
+    allocations_with_transports = []
+    for allocation in allocations:
+        alloc_transports = transports.filter(allocation=allocation)
+        allocations_with_transports.append({
+            'allocation': allocation,
+            'transports': alloc_transports,
+        })
+    
+    if request.method == 'POST':
+        # تایید تسویه کامل
+        try:
+            with transaction.atomic():
+                # تغییر وضعیت سفارش به archived (بایگانی شده)
+                order.status = 'archived'
+                order.save(update_fields=['status'])
+                
+                # به‌روزرسانی وضعیت Settlement‌ها به completed
+                if weight_discrepancy_settlement:
+                    weight_discrepancy_settlement.settlement_status = 'completed'
+                    weight_discrepancy_settlement.save(update_fields=['settlement_status'])
+                
+                if sale_settlement:
+                    sale_settlement.settlement_status = 'completed'
+                    sale_settlement.save(update_fields=['settlement_status'])
+                
+                for freight_settlement in freight_settlements:
+                    freight_settlement.settlement_status = 'completed'
+                    freight_settlement.save(update_fields=['settlement_status'])
+                
+                bug_logger.info(f"تایید تسویه کامل برای سفارش {order_number} ثبت شد و به وضعیت 'بایگانی شده' تغییر کرد")
+                messages.success(request, f'تایید تسویه کامل برای سفارش {order_number} با موفقیت ثبت شد. سفارش در حال حاضر در وضعیت «بایگانی شده» قرار دارد.')
+                audit_logger.activity(f"تایید تسویه کامل برای سفارش {order_number} ثبت شد و به وضعیت 'بایگانی شده' تغییر کرد توسط کاربر {request.user.username}")
+                
+                return redirect('sales:settlement_approval_list')
+                
+        except Exception as e:
+            bug_logger.error(f"خطا در تایید تسویه کامل: {str(e)}")
+            messages.error(request, f'خطا در تایید تسویه کامل: {str(e)}')
+    
+    context = {
+        'order': order,
+        'order_weight': order_weight,
+        'delivered_weight': delivered_weight,
+        'weight_difference': weight_difference,
+        'weighted_avg_price': weighted_avg_price,
+        'difference_amount': difference_amount,
+        'settled_weight_discrepancy': settled_weight_discrepancy,
+        'weight_discrepancy_completed': weight_discrepancy_completed,
+        'weight_discrepancy_transactions': weight_discrepancy_transactions,
+        'sale_settlement': sale_settlement,
+        'settled_sale': settled_sale,
+        'sale_completed': sale_completed,
+        'sale_transactions': sale_transactions,
+        'freight_settlements': freight_settlements,
+        'freight_settled_amount': freight_settled_amount,
+        'freight_completed': freight_completed,
+        'freight_transactions': freight_transactions,
+        'all_settlements_completed': all_settlements_completed,
+        'customer_info': customer_info,
+        'allocations_with_transports': allocations_with_transports,
+        'page_title': f'تایید تسویه کامل - سفارش {order.order_number}',
+    }
+    return render(request, 'settlement_approval/settlement_approval_detail.html', context)
+
