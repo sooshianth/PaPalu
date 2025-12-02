@@ -258,13 +258,13 @@ class OrderTable(tables.Table):
     def __init__(self, *args, **kwargs):
         # دریافت اطلاعات دسترسی فیلدها
         self.accessible_fields = kwargs.pop('accessible_fields', None)
-        user = kwargs.pop('user', None)
+        self.user = kwargs.pop('user', None)
         
         super().__init__(*args, **kwargs)
         
         # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
-        if self.accessible_fields is None and user is not None:
-            self.accessible_fields = self._get_accessible_fields(user)
+        if self.accessible_fields is None and self.user is not None:
+            self.accessible_fields = self._get_accessible_fields(self.user)
         
         # فیلتر کردن ستون‌ها بر اساس دسترسی
         if self.accessible_fields:
@@ -413,12 +413,12 @@ class OrderTable(tables.Table):
     class Meta:
         model = Order
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at')
+        fields = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at')
+        sequence = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
     
     def render_order_number(self, value, record):
         """نمایش شماره سفارش به صورت badge"""
@@ -517,6 +517,45 @@ class OrderTable(tables.Table):
         if value:
             return value
         return '-'
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        from django.urls import reverse
+        from core.RBACModel import user_has_task, TaskChoices
+        
+        buttons = []
+        
+        # دکمه جزئیات
+        detail_url = reverse('sales:order_detail', args=[record.order_number])
+        buttons.append(
+            format_html(
+                '<a href="{}" class="btn-outline-info">جزئیات</a>',
+                detail_url
+            )
+        )
+        
+        # دکمه ویرایش (فقط اگر کاربر دسترسی داشته باشد)
+        if hasattr(self, 'user') and self.user:
+            if user_has_task(self.user, TaskChoices.SALES_EDIT_ORDER.value):
+                edit_url = reverse('sales:order_edit', args=[record.order_number])
+                buttons.append(
+                    format_html(
+                        '<a href="{}" class="btn-outline-warning">ویرایش</a>',
+                        edit_url
+                    )
+                )
+        
+        return format_html(''.join(buttons))
 
 
 class ProductTable(tables.Table):

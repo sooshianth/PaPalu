@@ -932,6 +932,18 @@
                             </a>
                         </li>
                         <li class="submenu-item">
+                            <a href="{% url 'sales:invoice_list' %}" class="nav-link submenu-link" title="فاکتورها">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M10 9H9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">فاکتورها</span>
+                            </a>
+                        </li>
+                        <li class="submenu-item">
                             <a href="{% url 'sales:transaction_receipt_order_list' %}" class="nav-link submenu-link" title="رسیدهای تراکنش فروش">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1549,7 +1561,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Check if current page is in sales, production, distribution or supply section
         const currentPath = window.location.pathname;
-        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/approve-transaction-receipt/', '/sales/unload-approval/', '/sales/settlement/', '/sales/settlement-approval/'];
+        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/invoice/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/approve-transaction-receipt/', '/sales/unload-approval/', '/sales/settlement/', '/sales/settlement-approval/'];
         const productionPaths = ['/production/'];
         const distributionPaths = ['/distribution/'];
         const supplyPaths = ['/supply/'];

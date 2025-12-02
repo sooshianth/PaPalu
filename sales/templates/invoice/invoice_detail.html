@@ -1,0 +1,662 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--light-green);
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .mb-3 { margin-bottom: 1rem; }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .info-box {
+        background: white;
+        border: 2px solid var(--primary-green);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .info-label {
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+    
+    .info-value {
+        color: var(--gray-800);
+        font-weight: 600;
+    }
+    
+    .order-items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    
+    .order-items-table thead {
+        background: var(--gray-100);
+    }
+    
+    .order-items-table th {
+        padding: 12px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .order-items-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--gray-600);
+    }
+    
+    .order-items-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .alert-warning {
+        background-color: #fff6db;
+        border-color: #ffe1a3;
+        color: #b95c00;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .settlement-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .settlement-completed {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .settlement-pending {
+        background-color: #ffc107;
+        color: #856404;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-6 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        .form-card { padding: 20px; }
+        .form-section { padding: 15px; }
+        .form-actions { flex-direction: column; }
+        .btn { width: 100%; }
+        .page-header { flex-direction: column; align-items: flex-start; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+    <a href="{% url 'sales:invoice_list' %}" class="btn btn-secondary">
+        بازگشت به لیست
+    </a>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if not is_complete %}
+    <div class="alert alert-warning" role="alert">
+        <strong>هشدار:</strong> تمام اطلاعات فاکتور باید پر شده باشد.
+    </div>
+    {% else %}
+    <div class="alert alert-success" role="alert">
+        <strong>تمام اطلاعات تکمیل شده است.</strong>
+    </div>
+    {% endif %}
+
+    <!-- وضعیت تسویه -->
+    {% if settlement_completed %}
+    <div class="alert alert-success" role="alert">
+        <strong>وضعیت تسویه:</strong> <span class="settlement-badge settlement-completed">تمام شد</span>
+    </div>
+    {% else %}
+    <div class="alert alert-warning" role="alert">
+        <strong>وضعیت تسویه:</strong> <span class="settlement-badge settlement-pending">در انتظار</span>
+    </div>
+    {% endif %}
+
+    <!-- اطلاعات سفارش -->
+    {% if order %}
+    <div class="form-section">
+        <h5>اطلاعات سفارش</h5>
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">شماره سفارش:</span>
+                <span class="info-value">{{ order.order_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">وضعیت سفارش:</span>
+                <span class="info-value">{{ order.get_status_display|default:order.status }}</span>
+            </div>
+            {% if order.registered_by %}
+            <div class="info-item">
+                <span class="info-label">ثبت‌کننده:</span>
+                <span class="info-value">{{ order.registered_by.username }}</span>
+            </div>
+            {% endif %}
+            {% if order.created_at %}
+            <div class="info-item">
+                <span class="info-label">تاریخ ایجاد:</span>
+                <span class="info-value">{{ order.created_at|date:"Y/m/d H:i" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- اطلاعات مشتری -->
+    {% if customer_info %}
+    <div class="form-section">
+        <h5>اطلاعات مشتری</h5>
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">نام:</span>
+                <span class="info-value">{{ customer_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ملی:</span>
+                <span class="info-value">{{ customer_info.national_id }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ثبت شرکت:</span>
+                <span class="info-value">{{ customer_info.registration_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره اقتصادی:</span>
+                <span class="info-value">{{ economic_code|default:customer_info.economic_code|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">آدرس:</span>
+                <span class="info-value">{{ customer_info.address }}</span>
+            </div>
+            {% if customer_info.tax_province != '-' %}
+            <div class="info-item">
+                <span class="info-label">استان:</span>
+                <span class="info-value">{{ customer_info.tax_province }}</span>
+            </div>
+            {% endif %}
+            {% if customer_info.tax_city != '-' %}
+            <div class="info-item">
+                <span class="info-label">شهر:</span>
+                <span class="info-value">{{ customer_info.tax_city }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <span class="info-label">کدپستی:</span>
+                <span class="info-value">{{ customer_info.postal_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره تلفن:</span>
+                <span class="info-value">{{ customer_info.phone_number }} {% if customer_info.phone_type != '-' %}({{ customer_info.phone_type }}){% endif %}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- اطلاعات شرکت -->
+    {% if company_info %}
+    <div class="form-section">
+        <h5>اطلاعات شرکت</h5>
+        <div class="info-box">
+            <div class="info-item">
+                <span class="info-label">نام شرکت:</span>
+                <span class="info-value">{{ company_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ملی:</span>
+                <span class="info-value">{{ company_info.national_id }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره ثبت شرکت:</span>
+                <span class="info-value">{{ company_info.registration_number }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره اقتصادی:</span>
+                <span class="info-value">{{ company_info.economic_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">آدرس:</span>
+                <span class="info-value">{{ company_info.address }}</span>
+            </div>
+            {% if company_info.tax_province != '-' %}
+            <div class="info-item">
+                <span class="info-label">استان:</span>
+                <span class="info-value">{{ company_info.tax_province }}</span>
+            </div>
+            {% endif %}
+            {% if company_info.tax_city != '-' %}
+            <div class="info-item">
+                <span class="info-label">شهر:</span>
+                <span class="info-value">{{ company_info.tax_city }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <span class="info-label">کدپستی:</span>
+                <span class="info-value">{{ company_info.postal_code }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">شماره تلفن:</span>
+                <span class="info-value">{{ company_info.phone_number }} {% if company_info.phone_type != '-' %}({{ company_info.phone_type }}){% endif %}</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- اقلام سفارش -->
+    {% if order_items %}
+    <div class="form-section">
+        <h5>اقلام سفارش</h5>
+        <table class="order-items-table">
+            <thead>
+                <tr>
+                    <th>محصول</th>
+                    <th>مقدار</th>
+                    <th>واحد</th>
+                    <th>فی</th>
+                    <th>تخفیف</th>
+                    <th>اضافات</th>
+                    <th>مالیات</th>
+                    <th>جمع</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order_items %}
+                <tr>
+                    <td>{{ item.product.name|default:"-" }}</td>
+                    <td>{{ item.quantity|default:"-" }}</td>
+                    <td>{{ item.weight_unit|default:item.requested_unit|default:"-" }}</td>
+                    <td>{{ item.unit_price|default:"-"|floatformat:0 }}</td>
+                    <td>{{ item.discount|default:"0"|floatformat:0 }}</td>
+                    <td>{{ item.additional_charges|default:"0"|floatformat:0 }}</td>
+                    <td>{{ item.vat|default:"0"|floatformat:0 }}</td>
+                    <td>
+                        {% if item.total_purchase_cost %}
+                            {{ item.total_purchase_cost|floatformat:0 }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    <!-- فرم ویرایش فاکتور -->
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-section">
+            <h5>ویرایش اطلاعات فاکتور</h5>
+            <div class="row">
+                {% if accessible_fields.order %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.order.label }}</label>
+                    {{ form.order }}
+                    {% if form.order.errors %}
+                        <div class="text-danger">{{ form.order.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.tax_invoice_number %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.tax_invoice_number.label }}</label>
+                    {{ form.tax_invoice_number }}
+                    {% if form.tax_invoice_number.errors %}
+                        <div class="text-danger">{{ form.tax_invoice_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.customer_tax_type %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.customer_tax_type.label }}</label>
+                    {{ form.customer_tax_type }}
+                    {% if form.customer_tax_type.errors %}
+                        <div class="text-danger">{{ form.customer_tax_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.issue_date %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.issue_date.label }}</label>
+                    {{ form.issue_date }}
+                    {% if form.issue_date.errors %}
+                        <div class="text-danger">{{ form.issue_date.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.customer %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.customer.label }}</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                        <div class="text-danger">{{ form.customer.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.company %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.company.label }}</label>
+                    {{ form.company }}
+                    <input type="text" class="form-control" value="{{ form.company_display.name|default:invoice.company.name|default:'تامین نهاده سیمرغ' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    {% if form.company.errors %}
+                        <div class="text-danger">{{ form.company.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.invoice_file %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.invoice_file.label }}</label>
+                    {{ form.invoice_file }}
+                    {% if invoice.invoice_file %}
+                        <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">
+                            فایل فعلی: <a href="{{ invoice.invoice_file.url }}" target="_blank">مشاهده فایل</a>
+                        </small>
+                    {% endif %}
+                    {% if form.invoice_file.errors %}
+                        <div class="text-danger">{{ form.invoice_file.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.description %}
+                <div class="col-12 mb-3">
+                    <label class="form-label">{{ form.description.label }}</label>
+                    {{ form.description }}
+                    {% if form.description.errors %}
+                        <div class="text-danger">{{ form.description.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- دکمه‌ها -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+            {% if is_complete %}
+            <a href="{% url 'sales:invoice_download_pdf' invoice.id %}" class="btn btn-success">دانلود PDF فاکتور</a>
+            {% else %}
+            <a href="{% url 'sales:invoice_download_pdf' invoice.id %}" class="btn btn-success" style="opacity: 0.5; cursor: not-allowed;" onclick="event.preventDefault(); alert('لطفاً ابتدا تمام اطلاعات فاکتور را تکمیل کنید.');">دانلود PDF فاکتور</a>
+            {% endif %}
+            <a href="{% url 'sales:invoice_list' %}" class="btn btn-secondary">انصراف</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // تبدیل فیلد تاریخ صدور به تقویم شمسی
+    var issueDateInput = $('#id_issue_date');
+    
+    if (issueDateInput.length) {
+        // تبدیل type='date' به text برای استفاده از تقویم شمسی
+        issueDateInput.attr('type', 'text');
+        issueDateInput.attr('readonly', 'readonly');
+        issueDateInput.css('cursor', 'pointer');
+        
+        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+        var initialValue = issueDateInput.val();
+        var persianDateValue = '';
+        
+        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+        if (initialValue) {
+            var parts = initialValue.split('-');
+            if (parts.length === 3) {
+                var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                var pDate = persianDate.fromGregorian(gregorianDate);
+                persianDateValue = pDate.format('YYYY/MM/DD');
+                issueDateInput.val(persianDateValue);
+            }
+        }
+        
+        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+        var hiddenInput = $('<input>', {
+            type: 'hidden',
+            id: 'id_issue_date_hidden',
+            name: 'issue_date'
+        });
+        if (initialValue) {
+            hiddenInput.val(initialValue);
+        }
+        issueDateInput.after(hiddenInput);
+        
+        // راه‌اندازی تقویم شمسی
+        issueDateInput.pDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            altField: '#id_issue_date_hidden',
+            altFormat: 'YYYY-MM-DD',
+            calendarType: 'persian',
+            initialValue: persianDateValue || false,
+            timePicker: {
+                enabled: false
+            },
+            onSelect: function() {
+                // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                var selectedDate = issueDateInput.val();
+                if (selectedDate) {
+                    try {
+                        var persianDateParts = selectedDate.split('/');
+                        if (persianDateParts.length === 3) {
+                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var formattedDate = gregorianDate.year + '-' + 
+                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                               String(gregorianDate.day).padStart(2, '0');
+                            
+                            hiddenInput.val(formattedDate);
+                        }
+                    } catch (e) {
+                        console.error('خطا در تبدیل تاریخ:', e);
+                    }
+                }
+            }
+        });
+        
+        // اضافه کردن آیکون تقویم
+        if (!issueDateInput.parent().find('.p-datepicker-trigger').length) {
+            var iconSpan = $('<span>', {
+                class: 'p-datepicker-trigger',
+                html: '📅',
+                css: {
+                    'position': 'absolute',
+                    'right': '10px',
+                    'top': '50%',
+                    'transform': 'translateY(-50%)',
+                    'cursor': 'pointer',
+                    'font-size': '1.2rem',
+                    'z-index': '10',
+                    'pointer-events': 'none'
+                }
+            });
+            issueDateInput.parent().css('position', 'relative');
+            issueDateInput.parent().append(iconSpan);
+        }
+    }
+});
+</script>
+
+<style>
+#id_issue_date {
+    position: relative;
+    padding-left: 40px;
+}
+
+.p-datepicker-trigger {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    z-index: 10;
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+

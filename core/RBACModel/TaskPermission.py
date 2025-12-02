@@ -14,6 +14,8 @@ class TaskChoices(models.TextChoices):
     SALES_CREATE_CUSTOMER = 'sales.create_customer', 'ایجاد شخص مشتری'
     SALES_CREATE_ORDER = 'sales.create_order', 'ایجاد سفارش فروش'
     SALES_VIEW_ORDER_LIST = 'sales.view_order_list', 'مشاهده لیست سفارش‌های فروش'
+    SALES_VIEW_ORDER_DETAIL = 'sales.view_order_detail', 'مشاهده جزئیات سفارش فروش'
+    SALES_EDIT_ORDER = 'sales.edit_order', 'ویرایش سفارش فروش'
     SALES_ISSUE_PROFORMA = 'sales.issue_proforma', 'صدور پیش فاکتور فروش'
     SALES_APPROVE_PROFORMA = 'sales.approve_proforma', 'تایید پیش فاکتور فروش'
     SALES_TRANSACTION_RECEIPT = 'sales.transaction_receipt', 'رسید تراکنش فروش'

@@ -13,6 +13,7 @@ from sales.views import (
     unload_approval_view,
     settlement_view,
     settlement_approval_view,
+    invoice_list_view,
 )
 
 app_name = 'sales'
@@ -25,6 +26,8 @@ urlpatterns = [
     # مسیرهای سفارش
     path('order/create/', order_views.create_order_view, name='order_create'),
     path('order/list/', order_views.order_list_view, name='order_list'),
+    path('order/<str:order_number>/', order_views.order_detail_view, name='order_detail'),
+    path('order/<str:order_number>/edit/', order_views.edit_order_view, name='order_edit'),
     
     # مسیرهای پیش فاکتور
     path('proforma/list/', proforma_list_view.proforma_list_view, name='proforma_list'),
@@ -32,8 +35,15 @@ urlpatterns = [
     path('proforma/<int:proforma_id>/', proforma_list_view.proforma_detail_view, name='proforma_detail'),
     path('proforma/<int:proforma_id>/download-pdf/', proforma_list_view.proforma_download_pdf, name='proforma_download_pdf'),
     
+    # مسیرهای فاکتور
+    path('invoice/list/', invoice_list_view.invoice_list_view, name='invoice_list'),
+    path('invoice/create/', invoice_list_view.invoice_create_view, name='invoice_create'),
+    path('invoice/<int:invoice_id>/', invoice_list_view.invoice_detail_view, name='invoice_detail'),
+    path('invoice/<int:invoice_id>/download-pdf/', invoice_list_view.invoice_download_pdf, name='invoice_download_pdf'),
+    
     # API برای دریافت اطلاعات سفارش
     path('api/order/<str:order_number>/customer/', proforma_list_view.get_order_customer_api, name='get_order_customer_api'),
+    path('api/purchase-order/<str:order_number>/customer/', invoice_list_view.get_order_customer_api, name='get_purchase_order_customer_api'),
     
     # API برای جستجوی مشتری‌ها
     path('api/customers/search/', order_views.customer_search_api, name='customer_search_api'),
@@ -43,6 +53,7 @@ urlpatterns = [
     
     # API برای جستجوی سفارش‌ها
     path('api/orders/search/', proforma_list_view.order_search_api, name='order_search_api'),
+    path('api/purchase-orders/search/', invoice_list_view.order_search_api, name='purchase_order_search_api'),
     
     # API برای جستجوی محصولات
     path('api/products/search/', product_price_view.product_search_api, name='product_search_api'),

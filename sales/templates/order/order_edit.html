@@ -1,0 +1,688 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title|default:"ویرایش سفارش" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--light-green);
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .mb-3 { margin-bottom: 1rem; }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-4 {
+        flex: 0 0 33.3333%;
+        max-width: 33.3333%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-6, .col-md-4, .col-md-3 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        .form-card { padding: 20px; }
+        .form-section { padding: 15px; }
+        .form-actions { flex-direction: column; }
+        .btn { width: 100%; }
+    }
+    
+    .item-form-row {
+        transition: opacity 0.3s;
+    }
+    
+    .item-form-row.deleted {
+        opacity: 0.5;
+        background-color: #f8f9fa;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--dark-green);
+        color: white;
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background-color: #218838;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // تابع برای مدیریت نمایش فیلد "وزن هر کیسه" برای هر قلم
+    function setupBagWeightToggle(formRow) {
+        const weightUnitSelect = formRow.querySelector('.weight-unit-select');
+        const bagWeightField = formRow.querySelector('.bag-weight-input');
+        
+        if (weightUnitSelect && bagWeightField) {
+            const bagWeightContainer = bagWeightField.closest('.bag-weight-field');
+            
+            function toggleBagWeight() {
+                if (weightUnitSelect.value === 'bag') {
+                    if (bagWeightContainer) {
+                        bagWeightContainer.style.display = 'block';
+                    }
+                    bagWeightField.required = true;
+                } else {
+                    if (bagWeightContainer) {
+                        bagWeightContainer.style.display = 'none';
+                    }
+                    bagWeightField.required = false;
+                    bagWeightField.value = '';
+                }
+            }
+            
+            // اجرای اولیه
+            toggleBagWeight();
+            
+            // Listen for changes
+            weightUnitSelect.addEventListener('change', toggleBagWeight);
+        }
+    }
+    
+    // اعمال به تمام فرم‌های موجود
+    document.querySelectorAll('.item-form-row').forEach(setupBagWeightToggle);
+    
+    // تابع برای پر کردن خودکار واحد و قیمت هنگام انتخاب محصول
+    function setupProductAutoFill(formRow) {
+        const productSelect = formRow.querySelector('select[name*="-product"]');
+        const weightUnitSelect = formRow.querySelector('select[name*="-weight_unit"]');
+        const unitPriceInput = formRow.querySelector('input[name*="-unit_price"]');
+        
+        if (productSelect && weightUnitSelect && unitPriceInput) {
+            productSelect.addEventListener('change', function() {
+                const productId = this.value;
+                
+                if (!productId) {
+                    // اگر محصول انتخاب نشده، فیلدها را خالی کن
+                    weightUnitSelect.value = 'kg';
+                    unitPriceInput.value = '';
+                    return;
+                }
+                
+                // درخواست اطلاعات محصول
+                const url = '{% url "sales:product_info_api" product_id=0 %}'.replace('0', productId);
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            console.error('خطا در دریافت اطلاعات محصول:', data.error);
+                            return;
+                        }
+                        
+                        // پر کردن واحد وزن
+                        if (data.weight_unit && weightUnitSelect) {
+                            weightUnitSelect.value = data.weight_unit;
+                            
+                            // اگر واحد تغییر کرد، bag weight toggle را فراخوانی کن
+                            const event = new Event('change');
+                            weightUnitSelect.dispatchEvent(event);
+                        }
+                        
+                        // پر کردن قیمت واحد
+                        if (data.has_price && data.unit_price && unitPriceInput) {
+                            unitPriceInput.value = data.unit_price;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا در دریافت اطلاعات محصول:', error);
+                    });
+            });
+        }
+    }
+    
+    // اعمال به تمام فرم‌های موجود
+    document.querySelectorAll('.item-form-row').forEach(function(row) {
+        setupProductAutoFill(row);
+    });
+    
+    // مدیریت formset اقلام
+    const formsetContainer = document.getElementById('items-container');
+    const addButton = document.getElementById('add-item-btn');
+    
+    // پیدا کردن فیلد TOTAL_FORMS در management form
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    if (!totalFormsInput) {
+        console.error('فیلد TOTAL_FORMS پیدا نشد');
+        return;
+    }
+    
+    // استخراج prefix از نام فیلد (مثلاً "form" از "form-TOTAL_FORMS")
+    const prefix = totalFormsInput.name.replace('-TOTAL_FORMS', '');
+    let formCount = parseInt(totalFormsInput.value) || 0;
+    
+    // تابع برای افزودن قلم جدید
+    if (addButton) {
+        addButton.addEventListener('click', function() {
+            const firstForm = formsetContainer.querySelector('.item-form-row');
+            if (!firstForm) {
+                console.error('فرم اولیه پیدا نشد');
+                return;
+            }
+            
+            // کلون کردن فرم اول
+            const newForm = firstForm.cloneNode(true);
+            newForm.classList.add('item-form-row');
+            
+            // به‌روزرسانی تمام فیلدها با شماره جدید
+            const formIndex = formCount;
+            const regex = new RegExp(`${prefix}-(\\d+)-`, 'g');
+            
+            // به‌روزرسانی name و id فیلدها
+            newForm.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+                if (element.name) {
+                    element.name = element.name.replace(regex, `${prefix}-${formIndex}-`);
+                }
+                if (element.id) {
+                    element.id = element.id.replace(regex, `${prefix}-${formIndex}-`);
+                }
+                if (element.getAttribute('for')) {
+                    element.setAttribute('for', element.getAttribute('for').replace(regex, `${prefix}-${formIndex}-`));
+                }
+            });
+            
+            // پاک کردن مقادیر فیلدها
+            newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                if (input.type === 'checkbox') {
+                    // برای checkbox حذف، مقدار را false کن
+                    if (input.name.includes('-DELETE')) {
+                        input.checked = false;
+                    }
+                } else if (input.type !== 'hidden') {
+                    input.value = '';
+                }
+            });
+            
+            // پاک کردن فیلد id برای قلم جدید
+            const idInput = newForm.querySelector('input[name*="-id"]');
+            if (idInput) {
+                idInput.value = '';
+            }
+            
+            // پاک کردن پیام‌های خطا
+            newForm.querySelectorAll('.text-danger').forEach(function(error) {
+                error.remove();
+            });
+            
+            // اضافه کردن به container
+            formsetContainer.appendChild(newForm);
+            
+            // اعمال toggle bag weight به فرم جدید
+            setupBagWeightToggle(newForm);
+            
+            // اعمال auto fill محصول به فرم جدید
+            setupProductAutoFill(newForm);
+            
+            // به‌روزرسانی تعداد فرم‌ها
+            formCount++;
+            totalFormsInput.value = formCount;
+        });
+    }
+    
+    // مدیریت checkbox حذف
+    if (formsetContainer) {
+        formsetContainer.addEventListener('change', function(e) {
+            if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
+                const formRow = e.target.closest('.item-form-row');
+                if (e.target.checked) {
+                    formRow.classList.add('deleted');
+                } else {
+                    formRow.classList.remove('deleted');
+                }
+            }
+        });
+    }
+    
+    // مدیریت autocomplete برای انتخاب مشتری
+    const customerInput = document.querySelector('input[name="customer"]');
+    const customerIdInput = document.querySelector('input[name="customer_id"]');
+    let customerSuggestions = [];
+    let selectedCustomerId = null;
+    
+    if (customerInput) {
+        // ایجاد container برای پیشنهادات
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'customer-suggestions';
+        suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+        customerInput.parentElement.style.position = 'relative';
+        customerInput.parentElement.appendChild(suggestionsContainer);
+        
+        let searchTimeout;
+        
+        customerInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                suggestionsContainer.style.display = 'none';
+                customerSuggestions = [];
+                selectedCustomerId = null;
+                if (customerIdInput) customerIdInput.value = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "sales:customer_search_api" %}?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        customerSuggestions = data.results || [];
+                        displaySuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی مشتری:', error);
+                    });
+            }, 300);
+        });
+        
+        function displaySuggestions() {
+            suggestionsContainer.innerHTML = '';
+            
+            if (customerSuggestions.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            customerSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f0f0f0';
+                });
+                suggestionItem.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+                suggestionItem.addEventListener('click', function() {
+                    customerInput.value = item.text;
+                    selectedCustomerId = item.id;
+                    if (customerIdInput) {
+                        customerIdInput.value = item.id;
+                    }
+                    suggestionsContainer.style.display = 'none';
+                });
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            
+            suggestionsContainer.style.display = 'block';
+        }
+        
+        // بستن پیشنهادات با کلیک خارج
+        document.addEventListener('click', function(e) {
+            if (!customerInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+        
+        // مدیریت کلیدهای کیبورد
+        customerInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title|default:"ویرایش سفارش" }}</h2>
+    <a href="{% url 'sales:order_detail' order.order_number %}" class="btn btn-secondary">بازگشت به جزئیات</a>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- بخش اطلاعات اجباری -->
+        <div class="form-section">
+            <h5>اطلاعات اجباری</h5>
+            <div class="row">
+                {% if accessible_fields_main.order_number %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.order_number.label }}</label>
+                    {{ form.order_number }}
+                    {% if form.order_number.errors %}
+                        <div class="text-danger">{{ form.order_number.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields_main.customer %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.customer.label }}</label>
+                    {{ form.customer }}
+                    {{ form.customer_id }}
+                    {% if form.customer.errors %}
+                        <div class="text-danger">{{ form.customer.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields_main.freight_payment_type %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.freight_payment_type.label }}</label>
+                    {{ form.freight_payment_type }}
+                    {% if form.freight_payment_type.errors %}
+                        <div class="text-danger">{{ form.freight_payment_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- بخش اطلاعات اختیاری -->
+        <div class="form-section">
+            <h5>اطلاعات اختیاری</h5>
+            <div class="row">
+                {% if accessible_fields_main.order_type %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.order_type.label }}</label>
+                    {{ form.order_type }}
+                    {% if form.order_type.errors %}
+                        <div class="text-danger">{{ form.order_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields_main.registration_source %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.registration_source.label }}</label>
+                    {{ form.registration_source }}
+                    {% if form.registration_source.errors %}
+                        <div class="text-danger">{{ form.registration_source.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- بخش اقلام سفارش -->
+        <div class="form-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h5 style="margin: 0;">اقلام سفارش</h5>
+                <button type="button" id="add-item-btn" class="btn btn-success" style="padding: 8px 16px;">
+                    <span>+ افزودن قلم جدید</span>
+                </button>
+            </div>
+
+            {{ item_formset.management_form }}
+            <div id="items-container">
+                {% for f in item_formset.forms %}
+                    <div class="item-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
+                        {% if f.DELETE %}
+                            <div style="position: absolute; left: 10px; top: 10px;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    {{ f.DELETE }}
+                                    <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
+                                </label>
+                            </div>
+                        {% endif %}
+                        <div class="row">
+                            <!-- فیلد مخفی id برای اقلام موجود -->
+                            {% if f.id %}
+                                {{ f.id }}
+                            {% endif %}
+                            
+                            <!-- اجباری های قلم -->
+                            {% if accessible_fields_item.product %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.product.label }}</label>
+                                {{ f.product }}
+                                {% if f.product.errors %}
+                                    <div class="text-danger">{{ f.product.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if accessible_fields_item.weight_unit %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.weight_unit.label }}</label>
+                                {{ f.weight_unit }}
+                                {% if f.weight_unit.errors %}
+                                    <div class="text-danger">{{ f.weight_unit.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if accessible_fields_item.bag_weight %}
+                            <div class="col-md-3 mb-3 bag-weight-field">
+                                <label class="form-label">{{ f.bag_weight.label }}</label>
+                                {{ f.bag_weight }}
+                                {% if f.bag_weight.errors %}
+                                    <div class="text-danger">{{ f.bag_weight.errors.0 }}</div>
+                                {% endif %}
+                                <small style="color: var(--gray-600); font-size: 0.85rem; display: block; margin-top: 3px;">
+                                    فقط برای واحد "کیسه"
+                                </small>
+                            </div>
+                            {% endif %}
+
+                            {% if accessible_fields_item.quantity %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.quantity.label }}</label>
+                                {{ f.quantity }}
+                                {% if f.quantity.errors %}
+                                    <div class="text-danger">{{ f.quantity.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if accessible_fields_item.unit_price %}
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label required-field">{{ f.unit_price.label }}</label>
+                                {{ f.unit_price }}
+                                {% if f.unit_price.errors %}
+                                    <div class="text-danger">{{ f.unit_price.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            <!-- اختیاری های قلم -->
+                            {% if accessible_fields_item.discount %}
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ f.discount.label }}</label>
+                                {{ f.discount }}
+                                {% if f.discount.errors %}
+                                    <div class="text-danger">{{ f.discount.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if accessible_fields_item.additional_charges %}
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ f.additional_charges.label }}</label>
+                                {{ f.additional_charges }}
+                                {% if f.additional_charges.errors %}
+                                    <div class="text-danger">{{ f.additional_charges.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if accessible_fields_item.vat %}
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">{{ f.vat.label }}</label>
+                                {{ f.vat }}
+                                {% if f.vat.errors %}
+                                    <div class="text-danger">{{ f.vat.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% for hidden in f.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% if item_formset.non_form_errors %}
+                {% for err in item_formset.non_form_errors %}
+                    <div class="text-danger">{{ err }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- دکمه‌ها -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+            <a href="{% url 'sales:order_detail' order.order_number %}" class="btn btn-secondary">انصراف</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
