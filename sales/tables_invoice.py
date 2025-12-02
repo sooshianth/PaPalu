@@ -217,13 +217,37 @@ class InvoiceTable(tables.Table):
         """نمایش دکمه‌های عملیات"""
         try:
             detail_url = reverse('sales:invoice_detail', args=[record.id])
+            download_url = reverse('sales:invoice_download_pdf', args=[record.id])
             
-            html = format_html(
-                '<div class="btn-group">'
-                '<a href="{}" class="btn-outline-info" title="جزئیات">جزئیات</a>'
-                '</div>',
-                detail_url
+            # بررسی اینکه آیا اطلاعات فاکتور کامل است
+            is_complete = (
+                record.order is not None and
+                record.tax_invoice_number is not None and
+                record.tax_invoice_number.strip() != '' and
+                record.customer_tax_type is not None and
+                record.issue_date is not None and
+                record.customer is not None and
+                record.company is not None
             )
+            
+            if is_complete:
+                html = format_html(
+                    '<div class="btn-group">'
+                    '<a href="{}" class="btn-outline-info" title="جزئیات">جزئیات</a>'
+                    '<a href="{}" class="btn-outline-info" style="color: #28a745; border-color: #28a745;" title="دانلود PDF">دانلود PDF</a>'
+                    '</div>',
+                    detail_url,
+                    download_url
+                )
+            else:
+                html = format_html(
+                    '<div class="btn-group">'
+                    '<a href="{}" class="btn-outline-info" title="جزئیات">جزئیات</a>'
+                    '<a href="{}" class="btn-outline-info" style="opacity: 0.5; cursor: not-allowed; color: #28a745; border-color: #28a745;" title="لطفاً ابتدا اطلاعات فاکتور را تکمیل کنید" onclick="event.preventDefault();">دانلود PDF</a>'
+                    '</div>',
+                    detail_url,
+                    download_url
+                )
             return html
         except Exception as e:
             # در صورت بروز خطا، یک پیام خطا برگردان

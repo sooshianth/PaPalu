@@ -25,9 +25,12 @@ from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
+from core.AllocationFolder.AllocationModel import Allocation
+from core.TransportFolder.TransportModel import Transport
 from django.contrib.contenttypes.models import ContentType
 from access.helpers import check_field_access_prefer_edit
 from sales.tables_invoice import InvoiceTable
+from decimal import Decimal
 import json
 import jdatetime
 
@@ -348,6 +351,7 @@ def order_search_api(request):
         'pending_unloading_approval',
         'pending_settlement',
         'pending_settlement_approval',
+        'archived',
     ]
     
     if request.user.is_superuser:
@@ -421,4 +425,137 @@ def get_order_customer_api(request, order_number):
     except Exception as e:
         bug_logger.error(f"خطا در دریافت اطلاعات مشتری سفارش {order_number}: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def invoice_download_pdf(request, invoice_id):
+    """
+    دانلود فاکتور به صورت PDF
+    """
+    audit_logger.info(f"درخواست دانلود PDF فاکتور {invoice_id}")
+    
+    # بررسی TaskPermission
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA_PRICE.value):
+        audit_logger.activity(f"تلاش برای دانلود PDF فاکتور {invoice_id} بدون دسترسی")
+        messages.error(request, 'شما دسترسی به دانلود PDF فاکتور ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    try:
+        from weasyprint import HTML, CSS
+        from weasyprint.text.fonts import FontConfiguration
+    except ImportError:
+        messages.error(request, "خطا: پکیج WeasyPrint به درستی نصب نشده است. لطفاً با مدیر سیستم تماس بگیرید.")
+        return redirect('sales:invoice_detail', invoice_id=invoice_id)
+    
+    invoice = get_object_or_404(Invoice, pk=invoice_id)
+    
+    # بررسی دسترسی - کاربر باید بتواند فاکتورهای مرتبط با سفارش‌های خود را ببیند
+    if not request.user.is_superuser:
+        if invoice.order and invoice.order.registered_by != request.user:
+            audit_logger.activity(f"تلاش برای دانلود PDF فاکتور {invoice_id} متعلق به کاربر دیگر")
+            messages.error(request, 'شما دسترسی به این فاکتور ندارید.')
+            return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    try:
+        bug_logger.debug(f"تولید PDF برای فاکتور {invoice.tax_invoice_number or invoice_id}")
+        # دریافت اطلاعات سفارش و اقلام
+        order = invoice.order
+        order_items = []
+        total_amount = 0
+        order_weight = Decimal('0')
+        delivered_weight = Decimal('0')
+        
+        if order:
+            order_items = OrderItem.objects.filter(order=order).select_related('product')
+            
+            # محاسبه وزن سفارش
+            for item in order_items:
+                weight_kg = item.get_weight_in_kg()
+                order_weight += Decimal(str(weight_kg))
+                
+                # محاسبه مجموع کل
+                if item.total_purchase_cost:
+                    total_amount += float(item.total_purchase_cost)
+                elif item.quantity and item.unit_price:
+                    subtotal = float(item.quantity) * float(item.unit_price)
+                    total_amount += subtotal
+            
+            # محاسبه وزن تحویلی از Transport
+            allocations = Allocation.objects.filter(order=order)
+            transports = Transport.objects.filter(allocation__in=allocations)
+            
+            for transport in transports:
+                if transport.net_weight:
+                    delivered_weight += Decimal(str(transport.net_weight))
+        
+        # اگر وزن تحویلی وجود نداشت، از وزن سفارش استفاده کن
+        if delivered_weight == 0:
+            delivered_weight = order_weight
+        
+        # محاسبه اختلاف وزن
+        weight_difference = delivered_weight - order_weight
+        
+        # دریافت اطلاعات کامل مشتری و شرکت
+        customer_info = get_person_complete_info(invoice.customer) if invoice.customer else None
+        company_info = get_person_complete_info(invoice.company) if invoice.company else None
+        
+        # رندر HTML
+        from django.template.loader import render_to_string
+        html_string = render_to_string('invoice/invoice_pdf_template.html', {
+            'invoice': invoice,
+            'order': order,
+            'order_items': order_items,
+            'customer_info': customer_info,
+            'company_info': company_info,
+            'total_amount': total_amount,
+            'order_weight': order_weight,
+            'delivered_weight': delivered_weight,
+            'weight_difference': weight_difference,
+        })
+        
+        # تبدیل به PDF
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        
+        # کانفیگ فونت برای فارسی
+        font_config = FontConfiguration()
+        
+        # CSS برای فونت وزیر و تنظیمات landscape
+        css = CSS(string='''
+            @page {
+                size: A4 landscape;
+                margin: 15mm;
+            }
+            @font-face {
+                font-family: 'Vazir';
+                src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Regular.ttf') format('truetype');
+                font-weight: normal;
+                font-style: normal;
+            }
+            @font-face {
+                font-family: 'Vazir';
+                src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Bold.ttf') format('truetype');
+                font-weight: bold;
+                font-style: normal;
+            }
+            body {
+                font-family: 'Vazir', sans-serif;
+                direction: rtl;
+                text-align: right;
+            }
+        ''', font_config=font_config)
+        
+        # تولید PDF
+        pdf = html.write_pdf(stylesheets=[css], font_config=font_config)
+        
+        # ارسال به عنوان پاسخ
+        response = HttpResponse(pdf, content_type='application/pdf')
+        filename = f"invoice_{invoice.tax_invoice_number or invoice.id}.pdf"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        bug_logger.info(f"PDF فاکتور {invoice.tax_invoice_number or invoice_id} با موفقیت تولید شد")
+        return response
+    except Exception as e:
+        bug_logger.error(f"خطا در تولید PDF فاکتور {invoice_id}: {str(e)}", exc_info=True)
+        messages.error(request, f"خطا در تولید PDF: {str(e)}")
+        return redirect('sales:invoice_detail', invoice_id=invoice_id)
 

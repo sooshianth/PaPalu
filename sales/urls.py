@@ -37,6 +37,7 @@ urlpatterns = [
     path('invoice/list/', invoice_list_view.invoice_list_view, name='invoice_list'),
     path('invoice/create/', invoice_list_view.invoice_create_view, name='invoice_create'),
     path('invoice/<int:invoice_id>/', invoice_list_view.invoice_detail_view, name='invoice_detail'),
+    path('invoice/<int:invoice_id>/download-pdf/', invoice_list_view.invoice_download_pdf, name='invoice_download_pdf'),
     
     # API برای دریافت اطلاعات سفارش
     path('api/order/<str:order_number>/customer/', proforma_list_view.get_order_customer_api, name='get_order_customer_api'),

@@ -206,6 +206,7 @@ class CreateInvoiceForm(forms.ModelForm):
                 'pending_unloading_approval',
                 'pending_settlement',
                 'pending_settlement_approval',
+                'archived',
             ]
             
             if order.status in ['cancelled', 'archived']:
