@@ -159,6 +159,12 @@ class OrderItemForm(forms.Form):
                 if not allowed and field_name in self.fields:
                     del self.fields[field_name]
 
+    # فیلد id برای ویرایش اقلام موجود
+    id = forms.IntegerField(
+        required=False,
+        widget=forms.HiddenInput()
+    )
+
     product = forms.ModelChoiceField(
         queryset=Product.objects.all(),
         required=True,
@@ -314,6 +320,7 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
     }
     # Mapping for item form
     item_field_mapping = {
+        'id': None,  # فیلد مخفی، همیشه دسترسی دارد
         'product': ('OrderItem', 'product'),
         'weight_unit': ('OrderItem', 'weight_unit'),
         'bag_weight': ('OrderItem', 'bag_weight'),
@@ -347,9 +354,32 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
         access_main[form_field] = can_edit_field(OrderModel, model_field)
 
     access_item = {}
-    for form_field, (model_name, model_field) in item_field_mapping.items():
-        access_item[form_field] = can_edit_field(OrderItemModel, model_field)
+    for form_field, mapping_value in item_field_mapping.items():
+        if mapping_value is None:
+            # فیلدهایی که نیازی به بررسی دسترسی ندارند (مثل id)
+            access_item[form_field] = True
+        else:
+            model_name, model_field = mapping_value
+            access_item[form_field] = can_edit_field(OrderItemModel, model_field)
 
     return access_main, access_item
 
+
+class EditOrderForm(CreateOrderForm):
+    """
+    فرم ویرایش سفارش
+    مشابه CreateOrderForm اما برای ویرایش
+    """
+    def __init__(self, *args, **kwargs):
+        instance = kwargs.get('instance')
+        super().__init__(*args, **kwargs)
+        
+        # برای ویرایش، شماره سفارش فقط خواندنی است
+        if instance and instance.order_number:
+            self.fields['order_number'].widget.attrs['readonly'] = True
+            
+        # تنظیم مقدار اولیه customer برای autocomplete
+        if instance and instance.customer:
+            self.fields['customer'].initial = f"{instance.customer.name} ({instance.customer.national_id})"
+            self.fields['customer_id'].initial = instance.customer.national_id
 

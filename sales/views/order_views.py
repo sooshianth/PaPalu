@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden, JsonResponse
@@ -17,6 +17,7 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 from sales.forms.order_create_form import (
     CreateOrderForm,
+    EditOrderForm,
     build_order_item_formset,
     get_accessible_order_fields,
 )
@@ -28,6 +29,7 @@ from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
 from access.helpers import check_field_access_prefer_edit
 from sales.tables import OrderTable
 import jdatetime
+from decimal import Decimal
 
 
 @login_required
@@ -359,5 +361,277 @@ def product_info_api(request, product_id):
     except Exception as e:
         bug_logger.error(f"خطا در دریافت اطلاعات محصول {product_id}: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def order_detail_view(request, order_number):
+    """
+    ویو نمایش جزئیات سفارش
+    - کنترل دسترسی TaskPermission: SALES_VIEW_ORDER_DETAIL
+    - نمایش اطلاعات سفارش و اقلام آن
+    """
+    audit_logger.info(f"درخواست مشاهده جزئیات سفارش {order_number}")
+    
+    if not user_has_task(request.user, TaskChoices.SALES_VIEW_ORDER_DETAIL.value):
+        audit_logger.activity("تلاش برای مشاهده جزئیات سفارش بدون دسترسی")
+        messages.error(request, 'شما دسترسی به مشاهده جزئیات سفارش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت سفارش
+    try:
+        if request.user.is_superuser:
+            order = Order.objects.select_related('customer', 'registered_by').prefetch_related('order_items__product').get(order_number=order_number)
+        else:
+            order = Order.objects.select_related('customer', 'registered_by').prefetch_related('order_items__product').get(
+                order_number=order_number,
+                registered_by=request.user
+            )
+    except Order.DoesNotExist:
+        messages.error(request, 'سفارش مورد نظر یافت نشد.')
+        return redirect('sales:order_list')
+    
+    # محاسبه مجموع بهای تمام شده خرید و وزن کل
+    from django.db.models import Sum, Case, When, F, DecimalField, Value
+    from django.db.models.functions import Coalesce
+    
+    order_items = order.order_items.all()
+    total_purchase_cost = order_items.aggregate(
+        total=Sum('total_purchase_cost')
+    )['total'] or 0
+    
+    # محاسبه وزن کل
+    total_weight = 0
+    for item in order_items:
+        total_weight += item.get_weight_in_kg()
+    
+    # محاسبه وزن به تن برای نمایش
+    total_weight_ton = total_weight / 1000 if total_weight >= 1000 else None
+    
+    # بررسی دسترسی ویرایش
+    can_edit = user_has_task(request.user, TaskChoices.SALES_EDIT_ORDER.value)
+    
+    context = {
+        'order': order,
+        'order_items': order_items,
+        'total_purchase_cost': total_purchase_cost,
+        'total_weight': total_weight,
+        'total_weight_ton': total_weight_ton,
+        'can_edit': can_edit,
+        'page_title': f'جزئیات سفارش {order_number}',
+    }
+    return render(request, 'order/order_detail.html', context)
+
+
+@login_required
+def edit_order_view(request, order_number):
+    """
+    ویو ویرایش سفارش
+    - کنترل دسترسی TaskPermission: SALES_EDIT_ORDER
+    - کنترل دسترسی فیلدها با FieldAccessRule
+    - امکان ویرایش سفارش و اقلام آن
+    """
+    audit_logger.info(f"درخواست ویرایش سفارش {order_number}")
+    
+    if not user_has_task(request.user, TaskChoices.SALES_EDIT_ORDER.value):
+        audit_logger.activity("تلاش برای ویرایش سفارش بدون دسترسی")
+        messages.error(request, 'شما دسترسی به ویرایش سفارش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت سفارش
+    try:
+        if request.user.is_superuser:
+            order = Order.objects.select_related('customer', 'registered_by').prefetch_related('order_items__product').get(order_number=order_number)
+        else:
+            order = Order.objects.select_related('customer', 'registered_by').prefetch_related('order_items__product').get(
+                order_number=order_number,
+                registered_by=request.user
+            )
+    except Order.DoesNotExist:
+        messages.error(request, 'سفارش مورد نظر یافت نشد.')
+        return redirect('sales:order_list')
+    
+    if request.method == 'POST':
+        # Build temporary instances to compute field-access
+        temp_order_form = EditOrderForm(instance=order)
+        temp_item_form = None
+        # Compute access maps
+        access_main, access_item = get_accessible_order_fields(
+            request.user,
+            temp_order_form,
+            temp_item_form or build_order_item_formset().form()
+        )
+        order_form = EditOrderForm(request.POST, instance=order, user=request.user, accessible_fields=access_main)
+        item_formset = build_order_item_formset(request.POST, accessible_fields=access_item)
+
+        if order_form.is_valid() and item_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    # ذخیره سفارش
+                    order = order_form.save(commit=False)
+                    order.save()
+
+                    # حذف اقلامی که برای حذف علامت خورده‌اند
+                    existing_item_ids = set()
+                    for form in item_formset:
+                        if not getattr(form, 'cleaned_data', None):
+                            continue
+                        if form.cleaned_data.get('DELETE', False):
+                            # اگر فرم برای حذف علامت خورده، قلم را حذف کن
+                            item_id = form.cleaned_data.get('id')
+                            if item_id:
+                                try:
+                                    item = OrderItem.objects.get(id=item_id, order=order)
+                                    item.delete()
+                                except OrderItem.DoesNotExist:
+                                    pass
+                            continue
+                        
+                        item_id = form.cleaned_data.get('id')
+                        if item_id:
+                            existing_item_ids.add(item_id)
+                    
+                    # حذف اقلامی که در فرم نیستند (فقط اگر existing_item_ids خالی نباشد)
+                    if existing_item_ids:
+                        OrderItem.objects.filter(order=order).exclude(id__in=existing_item_ids).delete()
+                    
+                    # ذخیره یا به‌روزرسانی اقلام
+                    items_saved = 0
+                    skipped_items = []
+                    for idx, form in enumerate(item_formset):
+                        if not getattr(form, 'cleaned_data', None):
+                            skipped_items.append(f"فرم {idx+1}: بدون cleaned_data")
+                            continue
+                        # اگر فرم برای حذف علامت خورده باشد، آن را نادیده بگیر
+                        if form.cleaned_data.get('DELETE', False):
+                            skipped_items.append(f"فرم {idx+1}: علامت حذف")
+                            continue
+                        
+                        product = form.cleaned_data.get('product')
+                        weight_unit = form.cleaned_data.get('weight_unit')
+                        quantity = form.cleaned_data.get('quantity')
+                        unit_price = form.cleaned_data.get('unit_price')
+                        
+                        # حداقل محصول، واحد، مقدار و قیمت باید وجود داشته باشد
+                        if not (product and weight_unit and quantity is not None and unit_price is not None):
+                            missing = []
+                            if not product: missing.append('محصول')
+                            if not weight_unit: missing.append('واحد')
+                            if quantity is None: missing.append('مقدار')
+                            if unit_price is None: missing.append('قیمت')
+                            skipped_items.append(f"فرم {idx+1}: فیلدهای ناقص ({', '.join(missing)})")
+                            continue
+                        
+                        # بررسی اینکه آیا قلم موجود است یا جدید
+                        item_id = form.cleaned_data.get('id')
+                        if item_id:
+                            try:
+                                item = OrderItem.objects.get(id=item_id, order=order)
+                                # به‌روزرسانی قلم موجود
+                                item.product = product
+                                item.weight_unit = weight_unit
+                                item.bag_weight = form.cleaned_data.get('bag_weight')
+                                item.requested_unit = form.cleaned_data.get('requested_unit') or weight_unit
+                                item.quantity = quantity
+                                item.unit_price = unit_price
+                                item.discount = form.cleaned_data.get('discount') or Decimal('0')
+                                item.additional_charges = form.cleaned_data.get('additional_charges') or Decimal('0')
+                                item.vat = form.cleaned_data.get('vat') or Decimal('0')
+                                item.save()
+                                items_saved += 1
+                            except OrderItem.DoesNotExist:
+                                # اگر قلم پیدا نشد، یک قلم جدید ایجاد کن
+                                item = form.to_instance(order)
+                                item.save()
+                                items_saved += 1
+                        else:
+                            # ایجاد قلم جدید
+                            item = form.to_instance(order)
+                            item.save()
+                            items_saved += 1
+
+                if items_saved == 0:
+                    warning_msg = 'سفارش به‌روزرسانی شد اما هیچ قلمی ذخیره نشد!'
+                    if skipped_items:
+                        warning_msg += f' اقلام رد شده: {"; ".join(skipped_items)}'
+                    bug_logger.warning(f"سفارش به‌روزرسانی شد اما هیچ قلمی ذخیره نشد. اقلام رد شده: {len(skipped_items)}")
+                    messages.warning(request, warning_msg)
+                else:
+                    success_msg = f'سفارش با موفقیت به‌روزرسانی شد و {items_saved} قلم ثبت شد.'
+                    if skipped_items:
+                        success_msg += f' ({len(skipped_items)} قلم رد شد)'
+                    bug_logger.info(f"سفارش {order_number} با {items_saved} قلم به‌روزرسانی شد")
+                    messages.success(request, success_msg)
+                
+                return redirect('sales:order_detail', order_number=order.order_number)
+            except Exception as e:
+                bug_logger.error(f"خطا در ویرایش سفارش: {str(e)}", exc_info=True)
+                messages.error(request, f'خطا در ویرایش سفارش: {str(e)}')
+        else:
+            bug_logger.warning("فرم ویرایش سفارش معتبر نیست")
+            if order_form.errors:
+                bug_logger.warning(f"خطاهای فرم: {order_form.errors}")
+            if item_formset.errors:
+                bug_logger.warning(f"خطاهای فرمست: {item_formset.errors}")
+            messages.error(request, 'اطلاعات وارد شده معتبر نیست. لطفاً خطاهای فرم را بررسی کنید.')
+    else:
+        # ایجاد فرم‌ها با داده‌های موجود
+        temp_order_form = EditOrderForm(instance=order)
+        temp_item_form = build_order_item_formset().form()
+        access_main, access_item = get_accessible_order_fields(request.user, temp_order_form, temp_item_form)
+        
+        order_form = EditOrderForm(instance=order, user=request.user, accessible_fields=access_main)
+        
+        # ایجاد formset با اقلام موجود - استفاده از prefix برای جلوگیری از تداخل
+        from django.forms import formset_factory
+        from sales.forms.order_create_form import OrderItemForm, RequiredOrderItemFormSet
+        
+        ItemFormSet = formset_factory(
+            form=OrderItemForm,
+            formset=RequiredOrderItemFormSet,
+            extra=0,  # برای ویرایش، فرم اضافی نمی‌خواهیم
+            can_delete=True
+        )
+        
+        # ساخت data dictionary برای formset
+        formset_data = {}
+        items = list(order.order_items.all())
+        formset_data['form-TOTAL_FORMS'] = len(items)  # فقط اقلام موجود
+        formset_data['form-INITIAL_FORMS'] = len(items)
+        formset_data['form-MIN_NUM_FORMS'] = 0
+        formset_data['form-MAX_NUM_FORMS'] = 1000
+        
+        for idx, item in enumerate(items):
+            prefix = f'form-{idx}'
+            formset_data[f'{prefix}-id'] = item.id
+            formset_data[f'{prefix}-product'] = item.product.id if item.product else ''
+            formset_data[f'{prefix}-weight_unit'] = item.weight_unit or 'kg'
+            formset_data[f'{prefix}-bag_weight'] = item.bag_weight or ''
+            formset_data[f'{prefix}-requested_unit'] = item.requested_unit or item.weight_unit or 'kg'
+            formset_data[f'{prefix}-quantity'] = item.quantity or ''
+            formset_data[f'{prefix}-unit_price'] = item.unit_price or ''
+            formset_data[f'{prefix}-discount'] = item.discount or '0'
+            formset_data[f'{prefix}-additional_charges'] = item.additional_charges or '0'
+            formset_data[f'{prefix}-vat'] = item.vat or '0'
+            formset_data[f'{prefix}-DELETE'] = False
+        
+        item_formset = ItemFormSet(formset_data, form_kwargs={'accessible_fields': access_item})
+
+    # Ensure access maps exist in context
+    if 'access_main' not in locals() or 'access_item' not in locals():
+        access_main, access_item = get_accessible_order_fields(
+            request.user,
+            order_form if 'order_form' in locals() else EditOrderForm(instance=order),
+            build_order_item_formset().form()
+        )
+
+    context = {
+        'form': order_form,
+        'item_formset': item_formset,
+        'order': order,
+        'accessible_fields_main': access_main,
+        'accessible_fields_item': access_item,
+        'page_title': f'ویرایش سفارش {order_number}',
+    }
+    return render(request, 'order/order_edit.html', context)
 
 

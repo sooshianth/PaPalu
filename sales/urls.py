@@ -26,6 +26,8 @@ urlpatterns = [
     # مسیرهای سفارش
     path('order/create/', order_views.create_order_view, name='order_create'),
     path('order/list/', order_views.order_list_view, name='order_list'),
+    path('order/<str:order_number>/', order_views.order_detail_view, name='order_detail'),
+    path('order/<str:order_number>/edit/', order_views.edit_order_view, name='order_edit'),
     
     # مسیرهای پیش فاکتور
     path('proforma/list/', proforma_list_view.proforma_list_view, name='proforma_list'),
