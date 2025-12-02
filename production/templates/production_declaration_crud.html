@@ -837,37 +837,37 @@
         <div class="detail-card">
             <div class="detail-card-title">زمان‌بندی</div>
             {% if accessible_production_program_fields.predicted_start_time %}
-            <div class="detail-row">
+            <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">شروع پیشبینی شده: <span style="color: red;">*</span></span>
-                <span class="detail-value">
-                    {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' %}
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            {{ form.predicted_start_date }}
-                            {{ form.predicted_start_time }}
-                        </div>
-                    {% else %}
+                {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' %}
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <div style="flex: 1;">{{ form.predicted_start_date }}</div>
+                        <div style="flex: 1;">{{ form.predicted_start_time }}</div>
+                    </div>
+                {% else %}
+                    <div style="width: 100%;">
                         {% if program and program.predicted_start_date and program.predicted_start_time %}
                             {{ program.predicted_start_date.year }}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }} {{ program.predicted_start_time|time:"H:i" }}
                         {% else %}-{% endif %}
-                    {% endif %}
-                </span>
+                    </div>
+                {% endif %}
             </div>
             {% endif %}
             {% if accessible_production_program_fields.predicted_end_time %}
-            <div class="detail-row">
+            <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">پایان پیشبینی شده: <span style="color: red;">*</span></span>
-                <span class="detail-value">
-                    {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_end_time_edit and program.status == 'confirmed' %}
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            {{ form.predicted_end_date }}
-                            {{ form.predicted_end_time }}
-                        </div>
-                    {% else %}
+                {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_end_time_edit and program.status == 'confirmed' %}
+                    <div style="display: flex; gap: 8px; width: 100%;">
+                        <div style="flex: 1;">{{ form.predicted_end_date }}</div>
+                        <div style="flex: 1;">{{ form.predicted_end_time }}</div>
+                    </div>
+                {% else %}
+                    <div style="width: 100%;">
                         {% if program and program.predicted_end_date and program.predicted_end_time %}
                             {{ program.predicted_end_date.year }}-{{ program.predicted_end_date.month|stringformat:"02d" }}-{{ program.predicted_end_date.day|stringformat:"02d" }} {{ program.predicted_end_time|time:"H:i" }}
                         {% else %}-{% endif %}
-                    {% endif %}
-                </span>
+                    </div>
+                {% endif %}
             </div>
             {% endif %}
         </div>

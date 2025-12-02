@@ -639,24 +639,24 @@ def production_declaration_view(request):
         search_completed = request.GET.get('search_completed', '').strip()
         
         # Get sort parameters for each table
-        sort_by_confirmed = request.GET.get('sort_confirmed', 'execution_date')
+        sort_by_confirmed = request.GET.get('sort_confirmed', 'predicted_start_date')
         sort_dir_confirmed = request.GET.get('dir_confirmed', 'asc')
         
-        sort_by_progress = request.GET.get('sort_progress', 'execution_date')
+        sort_by_progress = request.GET.get('sort_progress', 'predicted_start_date')
         sort_dir_progress = request.GET.get('dir_progress', 'asc')
         
-        sort_by_completed = request.GET.get('sort_completed', 'execution_date')
+        sort_by_completed = request.GET.get('sort_completed', 'predicted_start_date')
         sort_dir_completed = request.GET.get('dir_completed', 'desc')
         
         # Validate sort columns
-        allowed_sorts = ['id', 'program_id', 'execution_date', 'predicted_start_time', 'predicted_end_time', 'planned_weight_ton', 'status', 'started_at', 'completed_at']
+        allowed_sorts = ['id', 'program_id', 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time', 'planned_weight_ton', 'status', 'started_at', 'completed_at', 'actual_start_date']
         
         if sort_by_confirmed not in allowed_sorts:
-            sort_by_confirmed = 'execution_date'
+            sort_by_confirmed = 'predicted_start_date'
         if sort_by_progress not in allowed_sorts:
-            sort_by_progress = 'execution_date'
+            sort_by_progress = 'predicted_start_date'
         if sort_by_completed not in allowed_sorts:
-            sort_by_completed = 'execution_date'
+            sort_by_completed = 'predicted_start_date'
         
         # Build order_by strings
         order_by_confirmed = f'-{sort_by_confirmed}' if sort_dir_confirmed == 'desc' else sort_by_confirmed
