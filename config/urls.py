@@ -26,7 +26,6 @@ urlpatterns = [
     path('home/', home_view, name='home'),
     path('', home_view, name='root'),
     path('accounting/', include('accounting.urls')),
-    path('custody/', include('custody.urls')),
     path('distribution/', include('distribution.urls')),
     path('supply/', include('supply.urls')),
     path('production/', include('production.urls')),  # Use only namespaced production routes

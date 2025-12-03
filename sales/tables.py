@@ -4,7 +4,7 @@ from django.urls import reverse
 from core.PersonFolder import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 from typing import Optional, Dict
 from core.OrderFolder.OrderModel import Order
 

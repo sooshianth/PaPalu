@@ -5,122 +5,147 @@
 {% block extra_css %}
 <style>
     .page-header {
-        margin-bottom: 30px;
-        padding-bottom: 20px;
-        border-bottom: 3px solid var(--primary-green);
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid #e9ecef;
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 15px;
+        gap: 16px;
     }
     
-    .page-header h2 {
-        color: var(--gray-800);
-        font-size: 1.8rem;
+    .page-header h1 {
+        font-size: 1.75rem;
+        color: #343a40;
         font-weight: 600;
         margin: 0;
     }
     
-    .list-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        padding: 30px;
-        margin-bottom: 30px;
-    }
-    
-    .section-title {
-        font-size: 1.1rem;
-        margin: 25px 0 15px 0;
-        color: var(--gray-800);
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .section-title svg {
-        width: 20px;
-        height: 20px;
-        color: var(--primary-green);
-    }
-    
-    .rules {
-        background: var(--gray-100);
-        border: 1px dashed var(--gray-400);
-        padding: 15px 20px;
-        border-radius: 10px;
-        font-size: 0.95rem;
-        color: var(--gray-700);
-        margin-bottom: 20px;
-        line-height: 1.7;
-    }
-    
-    .form-wrapper {
-        background: var(--gray-50);
-        border: 1px solid var(--gray-300);
-        border-radius: 12px;
-        padding: 25px;
-        margin-bottom: 30px;
-    }
-    
-    .form-groups {
+    .detail-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 32px;
     }
     
-    .field {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+    .detail-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
     }
     
-    .field label {
-        font-size: 0.875rem;
+    .detail-card-title {
+        font-size: 1.1rem;
         font-weight: 600;
-        color: var(--gray-700);
+        color: #343a40;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--primary-green);
     }
     
-    .field input[type=text],
-    .field input[type=number],
-    .field select,
-    .field textarea {
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .detail-value {
+        color: #343a40;
+        font-size: 0.9rem;
+        text-align: left;
+        flex: 1;
+    }
+    
+    .detail-value input,
+    .detail-value select,
+    .detail-value textarea,
+    .detail-value input[type=file] {
         width: 100%;
-        padding: 10px 15px;
-        border: 1px solid var(--gray-300);
-        background: white;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-family: inherit;
-        transition: all 0.3s;
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.3s ease;
     }
     
-    .field textarea {
+    .detail-value input:focus,
+    .detail-value select:focus,
+    .detail-value textarea:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .detail-value textarea {
         min-height: 90px;
         resize: vertical;
     }
     
-    .field input:focus,
-    .field select:focus,
-    .field textarea:focus {
-        outline: none;
-        border-color: var(--primary-green);
-        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    .card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        overflow: hidden;
+        margin-bottom: 32px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 16px;
+    }
+    
+    /* Match suppliers page button style */
+    .btn.btn-primary {
+      background-color: var(--primary-green);
+      border-color: var(--primary-green);
+      font-weight: 600;
+    }
+    .btn.btn-primary:hover {
+      background-color: var(--dark-green);
+      border-color: var(--dark-green);
+    }
+    
+    .form-wrapper {
+        display: none;
+        margin-bottom: 24px;
+    }
+    
+    .form-wrapper.active {
+        display: block;
     }
     
     .required-marker {
         color: #c62828;
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 0.9rem;
         margin-right: 4px;
     }
     
     .group-divider {
         grid-column: 1/-1;
         height: 1px;
-        background: linear-gradient(90deg, var(--gray-300), var(--gray-200));
+        background: #e9ecef;
         margin: 10px 0 15px;
     }
     
@@ -128,7 +153,7 @@
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        font-size: 0.875rem;
+        font-size: 0.85rem;
         color: #0d6efd;
         background: #e9f2ff;
         padding: 8px 15px;
@@ -138,6 +163,7 @@
         border: 1px solid #b5d5ff;
         margin: 5px 0 15px;
         transition: all 0.3s;
+        font-weight: 600;
     }
     
     .optional-toggle:hover {
@@ -170,12 +196,8 @@
         gap: 10px;
     }
     
-    .table-container {
-        overflow-x: auto;
-        margin-top: 15px;
-    }
+    /* Remove old data-table rules and mirror suppliers table styles */
     
-    /* استایل جدول django-tables2 */
     .table-container .table {
         width: 100%;
         border-collapse: collapse;
@@ -188,29 +210,91 @@
     }
     
     .table-container .table thead th {
-        padding: 12px 15px;
-        text-align: center;
-        font-weight: 600;
-        color: var(--gray-800);
-        border: 1px solid var(--gray-300);
-        vertical-align: middle;
+      padding: 12px 15px;
+      text-align: center;
+      font-weight: 600;
+      color: var(--gray-800);
+      border: 1px solid var(--gray-300);
+      vertical-align: middle;
+      white-space: nowrap;
     }
     
     .table-container .table tbody tr {
-        transition: background-color 0.2s;
-        cursor: pointer;
+      transition: background-color 0.2s;
+      cursor: pointer;
     }
     
     .table-container .table tbody tr:hover {
-        background-color: var(--light-green);
+      background-color: var(--light-green);
     }
     
     .table-container .table tbody td {
-        padding: 12px 15px;
-        color: var(--gray-600);
-        border: 1px solid var(--gray-300);
-        text-align: center;
-        vertical-align: middle;
+      padding: 12px 15px;
+      color: var(--gray-600);
+      border: 1px solid var(--gray-300);
+      text-align: center;
+      vertical-align: middle;
+    }
+    /* Match suppliers table button variants inside cells (if any) */
+    .table-container .btn-warning {
+      color: #ffc107 !important;
+      border-color: #ffc107 !important;
+      background-color: transparent !important;
+    }
+    .table-container .btn-warning:hover {
+      background-color: #ffc107 !important;
+      color: #212529 !important;
+    }
+    /* Pagination styles to match suppliers page */
+    .pagination {
+      margin-top: 30px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      list-style: none;
+      padding: 0;
+      direction: ltr;
+    }
+    .pagination li {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      order: 0;
+    }
+    .pagination li:last-child { order: -1; }
+    .pagination li:first-child { order: 999; }
+    .pagination a,
+    .pagination span {
+      display: inline-block;
+      padding: 10px 16px;
+      border: 1px solid var(--gray-300);
+      border-radius: 8px;
+      color: var(--gray-700);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+      font-weight: 500;
+      min-width: 40px;
+      text-align: center;
+      background-color: white;
+      margin: 0 2px;
+    }
+    .pagination a:hover {
+      background-color: var(--primary-green);
+      color: white !important;
+      border-color: var(--primary-green);
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    .pagination .current {
+      background-color: var(--primary-green) !important;
+      color: white !important;
+      border-color: var(--primary-green) !important;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
     .pagination {
@@ -321,69 +405,178 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>تعریف مواد اولیه</h2>
+    <h1>تعریف مواد اولیه</h1>
     <a href="{% url 'supply:home' %}" class="btn btn-secondary">دامنه تامین</a>
 </div>
 
-<div class="list-card">
-    {% if messages %}
-      {% for m in messages %}<div class="alert alert-{{ m.tags }}" role="alert">{{ m }}</div>{% endfor %}
-    {% endif %}
+{% if messages %}
+  {% for m in messages %}<div class="alert alert-{{ m.tags }}" role="alert">{{ m }}</div>{% endfor %}
+{% endif %}
 
-    <div class="rules">
-      ابتدا فیلدهای اجباری را تکمیل کنید. سپس می‌توانید سایر اطلاعات را در ویرایش تکمیل نمایید.
-    </div>
-
-    <div class="form-wrapper">
-      <div class="section-title">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        فرم ثبت ماده اولیه
-      </div>
-      <form method="post" action="" novalidate enctype="multipart/form-data">
-        {% csrf_token %}
-        <div class="form-groups">
-          <div class="field"><label>{% if rm_form.name.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.name.label }}</label>{{ rm_form.name }}</div>
-          <div class="field"><label>{% if rm_form.physical_form.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.physical_form.label }}</label>{{ rm_form.physical_form }}</div>
-          <div class="field" style="grid-column:1/-1"><label>{% if rm_form.technical_description.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.technical_description.label }}</label>{{ rm_form.technical_description }}</div>
-          <div class="field"><label>{% if rm_form.primary_unit.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.primary_unit.label }}</label>{{ rm_form.primary_unit }}</div>
-          <div class="field"><label>{% if rm_form.secondary_unit.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.secondary_unit.label }}</label>{{ rm_form.secondary_unit }}</div>
-          <div class="field"><label>{% if rm_form.conversion_factor.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.conversion_factor.label }}</label>{{ rm_form.conversion_factor }}</div>
-          <div class="field"><label>{% if pi_form.transportation_conditions.field.required %}<span class="required-marker">*</span>{% endif %}{{ pi_form.transportation_conditions.label }}</label>{{ pi_form.transportation_conditions }}</div>
-          <div class="field"><label>{% if pi_form.storage_conditions.field.required %}<span class="required-marker">*</span>{% endif %}{{ pi_form.storage_conditions.label }}</label>{{ pi_form.storage_conditions }}</div>
-          <div class="field"><label>{% if rm_form.status.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.status.label }}</label>{{ rm_form.status }}</div>
-          <div class="field"><label>{{ rm_form.main_supplier.label }}</label>{{ rm_form.main_supplier }}</div>
-          <div class="group-divider"></div>
-          <div class="optional-toggle" id="toggleOptional">اطلاعات تکمیلی (اختیاری) ▼</div>
-          <div class="optional-section" id="optionalSection" style="grid-column:1/-1;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
-            <div class="field"><label>{{ rm_form.expiration_date.label }}</label>{{ rm_form.expiration_date }}</div>
-            <div class="field"><label>{{ rm_form.attachments.label }}</label>{{ rm_form.attachments }}</div>
-            <div class="field"><label>{{ rm_form.hs_code.label }}</label>{{ rm_form.hs_code }}</div>
-            <div class="field"><label>{{ rm_form.veterinary_health_id.label }}</label>{{ rm_form.veterinary_health_id }}</div>
-            <div class="field"><label>{{ rm_form.standard_loss_percentage.label }}</label>{{ rm_form.standard_loss_percentage }}</div>
-            <div class="field"><label>{{ pi_form.minimum_order_quantity.label }}</label>{{ pi_form.minimum_order_quantity }}</div>
-            <div class="field"><label>{{ pi_form.vat_percentage.label }}</label>{{ pi_form.vat_percentage }}</div>
-            <div class="field"><label>{{ pi_form.accounting_code.label }}</label>{{ pi_form.accounting_code }}</div>
-            <div class="field"><label>{{ pi_form.tax_code.label }}</label>{{ pi_form.tax_code }}</div>
-            <div class="field"><label>{{ pi_form.supplier.label }}</label>{{ pi_form.supplier }}</div>
-          </div>
+<div class="card">
+    <div class="card-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div class="section-title" style="margin-bottom: 0;">فهرست مواد اولیه</div>
+          <button type="button" class="btn btn-primary" id="toggleFormBtn"><span>+</span> تعریف ماده اولیه جدید</button>
         </div>
-        <div class="submit-row">
-          <button type="submit" class="btn btn-primary btn-sm">ثبت ماده اولیه</button>
-        </div>
-      </form>
-    </div>
 
-    <div class="section-title" style="margin-top:10px">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      فهرست مواد اولیه
+        <div class="form-wrapper" id="formWrapper">
+            <form method="post" action="" novalidate enctype="multipart/form-data">
+              {% csrf_token %}
+              
+              <div class="detail-grid">
+                <div class="detail-card">
+                  <div class="detail-card-title">اطلاعات پایه</div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.name.label }}:{% if rm_form.name.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ rm_form.name }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.physical_form.label }}:{% if rm_form.physical_form.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ rm_form.physical_form }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.status.label }}:{% if rm_form.status.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ rm_form.status }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.main_supplier.label }}:</span>
+                    <span class="detail-value">{{ rm_form.main_supplier }}</span>
+                  </div>
+                </div>
+                
+                <div class="detail-card">
+                  <div class="detail-card-title">واحدها و تبدیل</div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.primary_unit.label }}:{% if rm_form.primary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ rm_form.primary_unit }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.secondary_unit.label }}:{% if rm_form.secondary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ rm_form.secondary_unit }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.conversion_factor.label }}:{% if rm_form.conversion_factor.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ rm_form.conversion_factor }}</span>
+                  </div>
+                </div>
+                
+                <div class="detail-card">
+                  <div class="detail-card-title">شرایط نگهداری و حمل</div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ pi_form.transportation_conditions.label }}:{% if pi_form.transportation_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ pi_form.transportation_conditions }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ pi_form.storage_conditions.label }}:{% if pi_form.storage_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ pi_form.storage_conditions }}</span>
+                  </div>
+                </div>
+                
+                <div class="detail-card" style="grid-column: 1/-1;">
+                  <div class="detail-card-title">توضیحات فنی</div>
+                  <div class="detail-row">
+                    <span class="detail-label">{{ rm_form.technical_description.label }}:{% if rm_form.technical_description.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                    <span class="detail-value">{{ rm_form.technical_description }}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="optional-toggle" id="toggleOptional">اطلاعات تکمیلی (اختیاری) ▼</div>
+              
+              <div class="optional-section" id="optionalSection">
+                <div class="detail-grid">
+                  <div class="detail-card">
+                    <div class="detail-card-title">اطلاعات اضافی</div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ rm_form.expiration_date.label }}:</span>
+                      <span class="detail-value">{{ rm_form.expiration_date }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ rm_form.hs_code.label }}:</span>
+                      <span class="detail-value">{{ rm_form.hs_code }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ rm_form.veterinary_health_id.label }}:</span>
+                      <span class="detail-value">{{ rm_form.veterinary_health_id }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ rm_form.standard_loss_percentage.label }}:</span>
+                      <span class="detail-value">{{ rm_form.standard_loss_percentage }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ rm_form.attachments.label }}:</span>
+                      <span class="detail-value">{{ rm_form.attachments }}</span>
+                    </div>
+                  </div>
+                  
+                  <div class="detail-card">
+                    <div class="detail-card-title">اطلاعات خرید</div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ pi_form.minimum_order_quantity.label }}:</span>
+                      <span class="detail-value">{{ pi_form.minimum_order_quantity }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ pi_form.vat_percentage.label }}:</span>
+                      <span class="detail-value">{{ pi_form.vat_percentage }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ pi_form.accounting_code.label }}:</span>
+                      <span class="detail-value">{{ pi_form.accounting_code }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ pi_form.tax_code.label }}:</span>
+                      <span class="detail-value">{{ pi_form.tax_code }}</span>
+                    </div>
+                    <div class="detail-row">
+                      <span class="detail-label">{{ pi_form.supplier.label }}:</span>
+                      <span class="detail-value">{{ pi_form.supplier }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="submit-row">
+                <button type="submit" class="btn btn-primary btn-sm">ثبت ماده اولیه</button>
+              </div>
+            </form>
+        </div>
+
+        <div class="table-container">
+          {% render_table table %}
+        </div>
+        <div id="piModalHost"></div>
     </div>
-    
-    <div class="table-container">
-      {% render_table table %}
-    </div>
-    <div id="piModalHost"></div>
+</div>
     <script>
       (function(){
+        // Toggle form visibility
+        const toggleFormBtn = document.getElementById('toggleFormBtn');
+        const formWrapper = document.getElementById('formWrapper');
+        
+        if (toggleFormBtn && formWrapper) {
+          // Initialize button label to "+" when form hidden
+          if (!formWrapper.classList.contains('active')) {
+            toggleFormBtn.innerHTML = '<span>+</span> تعریف ماده اولیه جدید';
+            toggleFormBtn.setAttribute('aria-expanded', 'false');
+          }
+
+          toggleFormBtn.addEventListener('click', function() {
+            const isActive = formWrapper.classList.toggle('active');
+            if (isActive) {
+              toggleFormBtn.innerHTML = '<span>-</span> بستن فرم';
+              toggleFormBtn.setAttribute('aria-expanded', 'true');
+              formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+              toggleFormBtn.innerHTML = '<span>+</span> تعریف ماده اولیه جدید';
+              toggleFormBtn.setAttribute('aria-expanded', 'false');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          });
+        }
+        
+        // Cancel button removed per request; toggle button handles close/open
+        
+        // Optional fields toggle
         const toggle = document.getElementById('toggleOptional');
         const section = document.getElementById('optionalSection');
         if(toggle && section){
@@ -397,15 +590,177 @@
         const table = document.getElementById('materialsTable');
 
         function initPriceInquiryModal(url){
+          console.log('[PI] initPriceInquiryModal url=', url);
           const modal = document.getElementById('priceInquiryModal');
           if (!modal) return;
           modal.dataset.url = url;
           const form = modal.querySelector('#piForm');
           if (!form) return;
+          console.log('[PI] form found, binding handlers');
           const pkInput = form.querySelector('#piPk');
+          const tableWrap = modal.querySelector('.pi-table-wrap');
           const saveBtn = modal.querySelector('#piSaveBtn');
           const resetBtn = modal.querySelector('#piResetBtn');
           const closeBtn = modal.querySelector('#piCloseBtn');
+          const newBtn = modal.querySelector('#piNewBtn');
+          const formWrapper = modal.querySelector('.form-wrapper');
+
+          // Expose a global fallback handler for the inline onclick
+          window.PI_newInquiry = function(e){
+            try {
+              // Prevent multiple rapid calls
+              if (window.PI_newInquiry._processing) return;
+              window.PI_newInquiry._processing = true;
+              
+              console.log('[PI] global new click');
+              form.reset();
+              pkInput.value='';
+              
+              // Enable reset button for new entry mode
+              if (resetBtn) {
+                resetBtn.disabled = false;
+                resetBtn.style.opacity = '1';
+                resetBtn.style.cursor = 'pointer';
+              }
+              
+              // Ensure form wrapper is visible
+              if (formWrapper) {
+                formWrapper.style.display = 'block';
+                formWrapper.style.visibility = 'visible';
+                formWrapper.style.pointerEvents = 'auto';
+              }
+              
+              // Ensure form controls are enabled and visible
+              form.querySelectorAll('input, select, textarea, button').forEach(function(el){ try { el.disabled = false; el.style.pointerEvents = 'auto'; } catch(e){} });
+              
+              // Hide table to avoid overlap capturing clicks
+              if (tableWrap) { tableWrap.style.display = 'none'; }
+              
+              const dateEl = form.querySelector('.jalali-date');
+              if (dateEl){
+                try {
+                  // Set to today's Jalali date
+                  if (typeof persianDate !== 'undefined') {
+                    const today = new persianDate();
+                    jQuery(dateEl).val(today.format('YYYY-MM-DD'));
+                  } else {
+                    jQuery(dateEl).val('');
+                  }
+                  dateEl.removeAttribute('readonly');
+                  // Reinitialize datepicker to ensure proper state
+                  if (jQuery.fn && jQuery.fn.persianDatepicker){
+                    try { jQuery(dateEl).persianDatepicker('destroy'); } catch(e){}
+                    try {
+                      jQuery(dateEl).persianDatepicker({
+                        format: 'YYYY-MM-DD',
+                        initialValue: false,
+                        initialValueType: 'gregorian',
+                        autoClose: true,
+                        observer: true
+                      });
+                    } catch(e){ console.error('[PI] reinit datepicker error', e); }
+                  }
+                } catch(e){ console.error('[PI] date clear error', e); }
+              }
+              
+              // Focus the first input
+              const firstInput = form.querySelector('input, select, textarea');
+              if (firstInput) { try { setTimeout(()=>firstInput.focus(), 100); } catch(e){} }
+              
+              form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              
+              // Reset processing flag after a delay
+              setTimeout(() => { window.PI_newInquiry._processing = false; }, 300);
+            } catch(err) {
+              console.error('[PI] global new error', err);
+              window.PI_newInquiry._processing = false;
+            }
+          };
+
+          window.PI_edit = function(btn){
+            try {
+              const tr = btn.closest('tr');
+              console.log('[PI] global edit click');
+              
+              // Disable reset button in edit mode to prevent accidental data loss
+              if (resetBtn) {
+                resetBtn.disabled = true;
+                resetBtn.style.opacity = '0.5';
+                resetBtn.style.cursor = 'not-allowed';
+                resetBtn.title = 'در حالت ویرایش غیرفعال است';
+              }
+              
+              // Ensure form wrapper is visible
+              if (formWrapper) {
+                formWrapper.style.display = 'block';
+                formWrapper.style.visibility = 'visible';
+                formWrapper.style.pointerEvents = 'auto';
+              }
+              
+              if (tr) {
+                // populate form from row
+                pkInput.value = tr.dataset.pk || '';
+                const tds = tr.querySelectorAll('td');
+                const setVal = (name, idx) => { const el = form.querySelector(`[name="${name}"]`); if (el && tds[idx]) el.value = tds[idx].textContent.trim(); };
+                setVal('inquiry_date',0);
+                const idEl = form.querySelector('[name="inquiry_date"]');
+                const s = (idEl && idEl.value) ? idEl.value.trim() : '';
+                if (idEl && /^\d{4}-\d{2}-\d{2}$/.test(s) && !/^(13|14)\d{2}-/.test(s) && typeof persianDate !== 'undefined') {
+                  const g = new Date(s);
+                  if (!isNaN(g)) idEl.value = new persianDate(g).format('YYYY-MM-DD');
+                }
+                const supplierSelect = form.querySelector('[name="supplier"]');
+                if (supplierSelect && tds[1]) {
+                  const supplierName = tds[1].textContent.trim();
+                  Array.from(supplierSelect.options).forEach(o=>{ if (o.text.trim()===supplierName) supplierSelect.value=o.value; });
+                }
+                setVal('price',2);
+                setVal('delivery_terms',4);
+                setVal('loading_location',5);
+                setVal('freight_unit_price',6);
+                setVal('negotiation_note',7);
+              }
+              // Ensure form controls enabled (but reset button stays disabled)
+              form.querySelectorAll('input, select, textarea').forEach(function(el){ try { el.disabled = false; el.style.pointerEvents = 'auto'; } catch(e){} });
+              // Hide table while editing to prevent overlap
+              if (tableWrap) { tableWrap.style.display = 'none'; }
+              form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch(err) {
+              console.error('[PI] global edit error', err);
+            }
+          };
+
+          window.PI_save = async function(){
+            console.log('[PI] global save click');
+            const fd = new FormData(form);
+            try {
+              const resp = await fetch(url, { method:'POST', body: fd, headers:{'X-Requested-With':'XMLHttpRequest'} });
+              console.log('[PI] POST status', resp.status);
+              const html = await resp.text();
+              console.log('[PI] POST response length', html.length);
+              host.innerHTML = html;
+              initPriceInquiryModal(url);
+              // After save, show table again
+              try {
+                const newModal = document.getElementById('priceInquiryModal');
+                const newTableWrap = newModal ? newModal.querySelector('.pi-table-wrap') : null;
+                if (newTableWrap) newTableWrap.style.display = 'block';
+              } catch(e){}
+            } catch(e){ console.error('PriceInquiry save error', e); }
+          };
+
+          window.PI_reset = function(){
+            try {
+              // Only allow reset if not in edit mode (when pkInput is empty)
+              if (pkInput && pkInput.value) {
+                console.log('[PI] reset blocked - in edit mode');
+                return;
+              }
+              console.log('[PI] global reset click');
+              form.reset(); 
+              pkInput.value='';
+            } catch(err) { console.error('[PI] global reset error', err); }
+          };
 
           // Initialize DataTable safely
           if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
@@ -413,6 +768,7 @@
             if (tableEl && tableEl.querySelector('thead') && tableEl.querySelector('tbody')) {
               if (!jQuery.fn.DataTable.isDataTable('#piTable')) {
                 try {
+                  console.log('[PI] initializing DataTable');
                   jQuery('#piTable').DataTable({ paging:true, searching:true, order:[[0,'desc']] });
                 } catch(e){ console.error('DataTable init error:', e); }
               }
@@ -432,6 +788,7 @@
                 }
               } catch(e) { /* ignore */ }
               try {
+                console.log('[PI] initializing persianDatepicker for', this);
                 $el.persianDatepicker({
                   format: 'YYYY-MM-DD',
                   initialValue: false,
@@ -473,29 +830,59 @@
           }
 
           modal.querySelectorAll('.pi-edit').forEach(btn=>{
-            btn.addEventListener('click', function(){ fillFormFromRow(this.closest('tr')); });
+            btn.addEventListener('click', function(){
+              console.log('[PI] edit click');
+              fillFormFromRow(this.closest('tr'));
+            });
           });
 
           if (saveBtn){
             saveBtn.onclick = async function(){
+              console.log('[PI] save click');
               const fd = new FormData(form);
               try {
                 const resp = await fetch(url, { method:'POST', body: fd, headers:{'X-Requested-With':'XMLHttpRequest'} });
+                console.log('[PI] POST status', resp.status);
                 const html = await resp.text();
+                console.log('[PI] POST response length', html.length);
                 host.innerHTML = html;
                 initPriceInquiryModal(url);
               } catch(e){ console.error('PriceInquiry save error', e); }
             };
           }
-          if (resetBtn){ resetBtn.onclick = function(){ form.reset(); pkInput.value=''; }; }
-          if (closeBtn){ closeBtn.onclick = function(){ modal.remove(); }; }
+          if (resetBtn){ 
+            resetBtn.onclick = function(){ 
+              // Only allow reset if not in edit mode
+              if (pkInput && pkInput.value) {
+                console.log('[PI] reset blocked - in edit mode');
+                return;
+              }
+              console.log('[PI] reset click'); 
+              form.reset(); 
+              pkInput.value=''; 
+            }; 
+          }
+          if (newBtn){
+            // Remove inline onclick to prevent double firing
+            newBtn.removeAttribute('onclick');
+            newBtn.onclick = function(e){
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('[PI] new click');
+              window.PI_newInquiry();
+            };
+          }
+          if (closeBtn){ closeBtn.onclick = function(){ console.log('[PI] close click'); modal.remove(); }; }
         }
 
         async function loadPriceInquiryModal(rid){
           const url = `/supply/price-inquiries/${encodeURIComponent(rid)}/`;
           try {
+            console.log('[PI] loading modal for rid=', rid);
             const resp = await fetch(url, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+            console.log('[PI] GET status', resp.status);
             const html = await resp.text();
+            console.log('[PI] GET response length', html.length);
             host.innerHTML = html;
             initPriceInquiryModal(url);
           } catch(err){ console.error('failed to load price inquiries', err); }
@@ -508,12 +895,12 @@
             const firstTd = tr.querySelector('td');
             if (!firstTd) return;
             const rid = (firstTd.textContent||'').trim();
+            console.log('[PI] row click rid=', rid);
             if (rid) loadPriceInquiryModal(rid);
           });
         }
       })();
     </script>
-</div>
 {% endblock %}
 
 {% block extra_js %}

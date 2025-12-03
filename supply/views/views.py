@@ -119,6 +119,7 @@ class RawMaterialPriceInquiryForm(ModelForm):
 			'loading_location': TextInput(attrs={'maxlength': 255, 'class': 'form-control'}),
 			'negotiation_note': Textarea(attrs={'rows': 3, 'class': 'form-control'}),
 			'supplier': forms.Select(attrs={'class': 'form-control'}),
+			'raw_material': forms.HiddenInput(),
 		}
 
 	def __init__(self, *args, **kwargs):
@@ -137,9 +138,9 @@ class RawMaterialPriceInquiryForm(ModelForm):
 			except Exception:
 				pass
 		if material is not None:
-			self.fields['raw_material'].initial = material
-			self.fields['raw_material'].disabled = True
-			self.fields['raw_material'].required = True
+			self.fields['raw_material'].initial = material.id
+			self.fields['raw_material'].required = False  # Hidden field doesn't need required validation
+			self.fields['raw_material'].widget = forms.HiddenInput()
 
 
 class SupplierPersonForm(ModelForm):
@@ -505,15 +506,76 @@ def supply_home_view(request):
 
 
 def supplier_list_view(request):
-	"""نمایش لیست تأمین‌کنندگان"""
+	"""نمایش لیست تأمین‌کنندگان و ایجاد تامین‌کننده جدید"""
 	audit_logger.info("مشاهده لیست تأمین‌کنندگان")
 	try:
+		if request.method == 'POST':
+			audit_logger.info("تعریف تامین‌کننده جدید")
+			person_form = SupplierPersonForm(request.POST, instance=None)
+			fb_form = FinancialBankingForm(request.POST)
+
+			if person_form.is_valid() and fb_form.is_valid():
+				with transaction.atomic():
+					person = person_form.save(commit=False)
+					person.type = 'supplier'
+					person.save()
+
+					# Financial/Banking single row per person
+					financial, _ = FinancialBanking.objects.get_or_create(person=person)
+					for f, v in fb_form.cleaned_data.items():
+						setattr(financial, f, v)
+					financial.save()
+
+					# Bind and save formsets
+					rep_fs = RepresentativeFormSet(request.POST, request.FILES, instance=person, prefix='rep')
+					ba_fs = BankAccountFormSet(request.POST, instance=financial, prefix='ba')
+					pay_fs = PaymentPreferenceFormSet(request.POST, instance=person, prefix='pay')
+					sn_fs = SocialNetworkFormSet(request.POST, instance=person, prefix='sn')
+					att_fs = AttachmentFormSet(request.POST, request.FILES, instance=person, prefix='att')
+
+					all_valid = rep_fs.is_valid() and ba_fs.is_valid() and pay_fs.is_valid() and sn_fs.is_valid() and att_fs.is_valid()
+					if not all_valid:
+						raise ValueError(f"invalid formsets: rep={rep_fs.errors} ba={ba_fs.errors} pay={pay_fs.errors} sn={sn_fs.errors} att={att_fs.errors}")
+
+					rep_fs.save()
+					ba_fs.save()
+					pay_fs.save()
+					sn_fs.save()
+					att_fs.save()
+
+				messages.success(request, 'تامین‌کننده با موفقیت ثبت شد.')
+				return redirect(reverse('supply:supplier_list'))
+			else:
+				bug_logger.warning(f"Supplier form invalid person={person_form.errors} fb={fb_form.errors}")
+				# Re-bind formsets to show errors
+				rep_fs = RepresentativeFormSet(request.POST, request.FILES, prefix='rep')
+				ba_fs = BankAccountFormSet(request.POST, prefix='ba')
+				pay_fs = PaymentPreferenceFormSet(request.POST, prefix='pay')
+				sn_fs = SocialNetworkFormSet(request.POST, prefix='sn')
+				att_fs = AttachmentFormSet(request.POST, request.FILES, prefix='att')
+		else:
+			person_form = SupplierPersonForm()
+			fb_form = FinancialBankingForm()
+			rep_fs = RepresentativeFormSet(prefix='rep')
+			ba_fs = BankAccountFormSet(prefix='ba')
+			pay_fs = PaymentPreferenceFormSet(prefix='pay')
+			sn_fs = SocialNetworkFormSet(prefix='sn')
+			att_fs = AttachmentFormSet(prefix='att')
+		
 		from supply.tables import SupplierTable
 		suppliers = Person.objects.filter(type='supplier').order_by('-national_id')
 		table = SupplierTable(suppliers)
 		RequestConfig(request, paginate={'per_page': 25}).configure(table)
+		
 		context = {
 			'table': table,
+			'person_form': person_form,
+			'fb_form': fb_form,
+			'rep_formset': rep_fs,
+			'ba_formset': ba_fs,
+			'pay_formset': pay_fs,
+			'sn_formset': sn_fs,
+			'att_formset': att_fs,
 		}
 		return render(request, 'supply_supplier_list.html', context)
 	except Exception as e:

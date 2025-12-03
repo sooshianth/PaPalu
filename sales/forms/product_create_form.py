@@ -4,7 +4,7 @@ from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from django_jalali.db import models as jmodels
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 
 
 class CreateProductForm(forms.ModelForm):

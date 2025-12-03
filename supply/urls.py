@@ -57,7 +57,7 @@ urlpatterns = [
     path('suppliers/', supplier_list_view, name='supplier_list'),
     path('suppliers/<str:national_id>/', supplier_detail_view, name='supplier_detail'),
     path('suppliers/<str:national_id>/edit/', supplier_edit_view, name='supplier_edit'),
-    path('createsupplier/', create_supplier_view, name='create_supplier'),
+    # path('createsupplier/', create_supplier_view, name='create_supplier'),  # Deprecated: supplier creation is now inline in supplier_list
     # Purchase Order Management
     path('purchaseordermanagement/', purchase_order_management_view, name='purchase_order_management'),
     path('purchaseorders/create/', create_procurement_purchase_order_view, name='create_procurement_purchase_order'),

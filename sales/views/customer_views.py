@@ -14,7 +14,7 @@ from core.RBACModel import user_has_task, TaskChoices
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 from sales.forms.customer_create_form import (
     CreateCustomerForm,
     build_delivery_address_formset,

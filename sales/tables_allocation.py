@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django.utils.html import format_html
 from django.urls import reverse
 from core.OrderFolder.OrderModel import Order
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 
 
 def calculate_order_total_quantity(order):

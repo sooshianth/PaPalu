@@ -2,7 +2,7 @@ import django_tables2 as tables
 from django.utils.html import format_html, mark_safe
 from django.urls import reverse
 from core.OrderFolder.InvoiceModel import Invoice
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 import json
 import html
 

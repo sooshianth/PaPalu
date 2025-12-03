@@ -279,7 +279,7 @@ def create_program_view(request):
         if request.method == 'POST':
             action = request.POST.get('action')
             bug_logger.debug(f"POST action={action}")
-            bug_logger.debug(f"Date fields received - execution_date: {request.POST.get('execution_date')}, start: {request.POST.get('predicted_start_time')}, end: {request.POST.get('predicted_end_time')}")
+            bug_logger.debug(f"Date fields received - start_date: {request.POST.get('predicted_start_date')}, start_time: {request.POST.get('predicted_start_time')}, end_date: {request.POST.get('predicted_end_date')}, end_time: {request.POST.get('predicted_end_time')}")
             # Create mutable copy and set status based on action BEFORE validation
             post_data = request.POST.copy()
             if action == 'confirm':
