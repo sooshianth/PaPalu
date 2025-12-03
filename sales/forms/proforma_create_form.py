@@ -2,7 +2,7 @@ from django import forms
 from core.OrderFolder.ProformaModel import Proforma
 from core.OrderFolder.OrderModel import Order
 from core.PersonFolder.PersonModel import Person
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 import jdatetime
 
 

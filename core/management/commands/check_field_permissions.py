@@ -111,7 +111,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.SUCCESS('\n=== Practical Test ===\n'))
                 self.stdout.write('Testing access to Person.name field:')
                 
-                from access.helpers import check_field_access_prefer_edit
+                from core.helpers import check_field_access_prefer_edit
                 
                 can_edit = check_field_access_prefer_edit(user, Person, 'name')
                 can_view = check_field_access_prefer_edit(user, Person, 'name')

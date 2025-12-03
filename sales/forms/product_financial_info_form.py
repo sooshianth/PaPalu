@@ -3,7 +3,7 @@ from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
 from core.ProductFolder.ProductModel import Product
 from django_jalali.forms.widgets import jDateTimeInput, jDateInput
 from django_jalali.forms import jDateField
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 import jdatetime
 
 

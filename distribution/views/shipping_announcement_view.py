@@ -18,7 +18,7 @@ from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
 from core.ProductFolder import Product
 from django.contrib.contenttypes.models import ContentType
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

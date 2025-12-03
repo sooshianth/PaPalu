@@ -3,7 +3,7 @@ from core.OrderFolder.InvoiceModel import Invoice
 from core.OrderFolder.OrderModel import Order
 from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 import jdatetime
 
 

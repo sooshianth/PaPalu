@@ -33,7 +33,7 @@ def get_accessible_product_price_list_fields(user):
     """
     from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo as ProductFinancialInfoModel
     from core.ProductFolder.ProductModel import Product as ProductModel
-    from access.helpers import check_field_access_prefer_edit
+    from core.helpers import check_field_access_prefer_edit
     
     # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
