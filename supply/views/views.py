@@ -119,6 +119,7 @@ class RawMaterialPriceInquiryForm(ModelForm):
 			'loading_location': TextInput(attrs={'maxlength': 255, 'class': 'form-control'}),
 			'negotiation_note': Textarea(attrs={'rows': 3, 'class': 'form-control'}),
 			'supplier': forms.Select(attrs={'class': 'form-control'}),
+			'raw_material': forms.HiddenInput(),
 		}
 
 	def __init__(self, *args, **kwargs):
@@ -137,9 +138,9 @@ class RawMaterialPriceInquiryForm(ModelForm):
 			except Exception:
 				pass
 		if material is not None:
-			self.fields['raw_material'].initial = material
-			self.fields['raw_material'].disabled = True
-			self.fields['raw_material'].required = True
+			self.fields['raw_material'].initial = material.id
+			self.fields['raw_material'].required = False  # Hidden field doesn't need required validation
+			self.fields['raw_material'].widget = forms.HiddenInput()
 
 
 class SupplierPersonForm(ModelForm):

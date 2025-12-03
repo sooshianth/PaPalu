@@ -603,22 +603,49 @@
           const resetBtn = modal.querySelector('#piResetBtn');
           const closeBtn = modal.querySelector('#piCloseBtn');
           const newBtn = modal.querySelector('#piNewBtn');
+          const formWrapper = modal.querySelector('.form-wrapper');
 
           // Expose a global fallback handler for the inline onclick
-          window.PI_newInquiry = function(){
+          window.PI_newInquiry = function(e){
             try {
+              // Prevent multiple rapid calls
+              if (window.PI_newInquiry._processing) return;
+              window.PI_newInquiry._processing = true;
+              
               console.log('[PI] global new click');
               form.reset();
               pkInput.value='';
+              
+              // Enable reset button for new entry mode
+              if (resetBtn) {
+                resetBtn.disabled = false;
+                resetBtn.style.opacity = '1';
+                resetBtn.style.cursor = 'pointer';
+              }
+              
+              // Ensure form wrapper is visible
+              if (formWrapper) {
+                formWrapper.style.display = 'block';
+                formWrapper.style.visibility = 'visible';
+                formWrapper.style.pointerEvents = 'auto';
+              }
+              
               // Ensure form controls are enabled and visible
               form.querySelectorAll('input, select, textarea, button').forEach(function(el){ try { el.disabled = false; el.style.pointerEvents = 'auto'; } catch(e){} });
+              
               // Hide table to avoid overlap capturing clicks
               if (tableWrap) { tableWrap.style.display = 'none'; }
+              
               const dateEl = form.querySelector('.jalali-date');
               if (dateEl){
                 try {
-                  // Clear value and ensure input is editable
-                  jQuery(dateEl).val('');
+                  // Set to today's Jalali date
+                  if (typeof persianDate !== 'undefined') {
+                    const today = new persianDate();
+                    jQuery(dateEl).val(today.format('YYYY-MM-DD'));
+                  } else {
+                    jQuery(dateEl).val('');
+                  }
                   dateEl.removeAttribute('readonly');
                   // Reinitialize datepicker to ensure proper state
                   if (jQuery.fn && jQuery.fn.persianDatepicker){
@@ -635,12 +662,18 @@
                   }
                 } catch(e){ console.error('[PI] date clear error', e); }
               }
+              
               // Focus the first input
               const firstInput = form.querySelector('input, select, textarea');
-              if (firstInput) { try { firstInput.focus(); } catch(e){} }
+              if (firstInput) { try { setTimeout(()=>firstInput.focus(), 100); } catch(e){} }
+              
               form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              
+              // Reset processing flag after a delay
+              setTimeout(() => { window.PI_newInquiry._processing = false; }, 300);
             } catch(err) {
               console.error('[PI] global new error', err);
+              window.PI_newInquiry._processing = false;
             }
           };
 
@@ -648,8 +681,22 @@
             try {
               const tr = btn.closest('tr');
               console.log('[PI] global edit click');
-              // Show table to click edit is fine, but focus form for editing
-              if (tableWrap) { tableWrap.style.display = 'block'; }
+              
+              // Disable reset button in edit mode to prevent accidental data loss
+              if (resetBtn) {
+                resetBtn.disabled = true;
+                resetBtn.style.opacity = '0.5';
+                resetBtn.style.cursor = 'not-allowed';
+                resetBtn.title = 'در حالت ویرایش غیرفعال است';
+              }
+              
+              // Ensure form wrapper is visible
+              if (formWrapper) {
+                formWrapper.style.display = 'block';
+                formWrapper.style.visibility = 'visible';
+                formWrapper.style.pointerEvents = 'auto';
+              }
+              
               if (tr) {
                 // populate form from row
                 pkInput.value = tr.dataset.pk || '';
@@ -673,9 +720,9 @@
                 setVal('freight_unit_price',6);
                 setVal('negotiation_note',7);
               }
-              // Ensure form controls enabled
-              form.querySelectorAll('input, select, textarea, button').forEach(function(el){ try { el.disabled = false; el.style.pointerEvents = 'auto'; } catch(e){} });
-              // Optionally hide table while editing to prevent overlap
+              // Ensure form controls enabled (but reset button stays disabled)
+              form.querySelectorAll('input, select, textarea').forEach(function(el){ try { el.disabled = false; el.style.pointerEvents = 'auto'; } catch(e){} });
+              // Hide table while editing to prevent overlap
               if (tableWrap) { tableWrap.style.display = 'none'; }
               form.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch(err) {
@@ -704,8 +751,14 @@
 
           window.PI_reset = function(){
             try {
+              // Only allow reset if not in edit mode (when pkInput is empty)
+              if (pkInput && pkInput.value) {
+                console.log('[PI] reset blocked - in edit mode');
+                return;
+              }
               console.log('[PI] global reset click');
-              form.reset(); pkInput.value='';
+              form.reset(); 
+              pkInput.value='';
             } catch(err) { console.error('[PI] global reset error', err); }
           };
 
@@ -797,22 +850,28 @@
               } catch(e){ console.error('PriceInquiry save error', e); }
             };
           }
-          if (resetBtn){ resetBtn.onclick = function(){ console.log('[PI] reset click'); form.reset(); pkInput.value=''; }; }
+          if (resetBtn){ 
+            resetBtn.onclick = function(){ 
+              // Only allow reset if not in edit mode
+              if (pkInput && pkInput.value) {
+                console.log('[PI] reset blocked - in edit mode');
+                return;
+              }
+              console.log('[PI] reset click'); 
+              form.reset(); 
+              pkInput.value=''; 
+            }; 
+          }
           if (newBtn){
-            newBtn.onclick = function(){
+            // Remove inline onclick to prevent double firing
+            newBtn.removeAttribute('onclick');
+            newBtn.onclick = function(e){
+              e.preventDefault();
+              e.stopPropagation();
               console.log('[PI] new click');
               window.PI_newInquiry();
             };
           }
-          // Fallback: delegate click handling in case direct binding fails
-          host.addEventListener('click', function(ev){
-            const tgt = ev.target;
-            if (tgt && tgt.id === 'piNewBtn'){
-              ev.preventDefault();
-              console.log('[PI] delegated new click');
-              window.PI_newInquiry();
-            }
-          }, { once: false });
           if (closeBtn){ closeBtn.onclick = function(){ console.log('[PI] close click'); modal.remove(); }; }
         }
 
