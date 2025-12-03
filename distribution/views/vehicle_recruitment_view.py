@@ -286,7 +286,8 @@ def create_transport_view(request, allocation_number):
                             phone_number.number = driver_mobile
                             phone_number.save()
                 
-                # ایجاد حمل (شماره بارنامه در مراحل بعدی پر می‌شود)
+                # ایجاد حمل
+                # وضعیت حمل تا قبل از تکمیل جذب خودرو، pending_recruitment_completion است
                 transport = Transport.objects.create(
                     waybill_number=waybill_number,
                     allocation=allocation,
@@ -295,7 +296,7 @@ def create_transport_view(request, allocation_number):
                     carrier_recruitment=carrier_recruitment,
                     vehicle_type_official=vehicle_type_official,
                     driver=driver_person,
-                    status='pending_vehicle_entry',
+                    status='pending_recruitment_completion',
                 )
                 
                 # ایجاد ProductInfo برای هر محصول انتخاب شده
@@ -362,11 +363,40 @@ def create_transport_view(request, allocation_number):
                     'unit': api.unit or '',
                 })
         
+        # محاسبه وزن کل تخصیص (تبدیل به کیلوگرم)
+        total_allocation_weight = Decimal('0')
+        for api in allocation_product_infos:
+            if api.quantity:
+                quantity = Decimal(str(api.quantity))
+                # تبدیل واحد به کیلوگرم
+                if api.unit == 'ton':
+                    quantity = quantity * Decimal('1000')
+                elif api.unit == 'gr':
+                    quantity = quantity / Decimal('1000')
+                total_allocation_weight += quantity
+        
+        # محاسبه وزن حمل‌های موجود
+        existing_transports = Transport.objects.filter(allocation=allocation)
+        total_transports_weight = Decimal('0')
+        for transport in existing_transports:
+            transport_products = ProductInfo.objects.filter(transport=transport)
+            for tp in transport_products:
+                if tp.weight:
+                    total_transports_weight += tp.weight
+        
+        # محاسبه وزن باقیمانده
+        remaining_weight = total_allocation_weight - total_transports_weight
+        
         return JsonResponse({
             'allocation_number': allocation.allocation_number,
             'order_number': allocation.order.order_number if allocation.order else '-',
             'delivery_info': delivery_info,
             'products': products_data,
+            'weight_info': {
+                'total_allocation_weight': float(total_allocation_weight),
+                'total_transports_weight': float(total_transports_weight),
+                'remaining_weight': float(remaining_weight),
+            }
         })
     
     # در غیر این صورت به لیست برگرد
@@ -446,15 +476,19 @@ def complete_vehicle_recruitment_view(request, allocation_number):
                 schedule_info.vehicle_attraction_time = now
                 schedule_info.save(update_fields=['vehicle_attraction_time'])
             
-            # توجه: وضعیت تخصیص در این مرحله تغییر نمی‌کند
-            # وضعیت تخصیص فقط در مراحل خاص تغییر می‌کند:
-            # 1. هنگام اعلام بار: pending_shipping -> pending_vehicle_recruitment
-            # 2. وقتی همه حمل‌ها به pending_waybill رفتند: pending_vehicle_recruitment -> pending_loading_completion
-            # 3. وقتی همه حمل‌ها به completed یا loaded رفتند: pending_loading_completion -> delivered
+            # تغییر وضعیت تخصیص به pending_vehicle_entry (در انتظار ورود خودرو به کارخانه)
+            allocation.allocation_status = 'pending_vehicle_entry'
+            allocation.save(update_fields=['allocation_status'])
             
-            bug_logger.info(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد")
-            messages.success(request, f'جذب خودرو برای تخصیص {allocation_number} با موفقیت تکمیل شد.')
-            audit_logger.activity(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد توسط کاربر {request.user.username}")
+            # وضعیت تخصیص در مراحل مختلف:
+            # 1. هنگام اعلام بار: pending_shipping -> pending_vehicle_recruitment
+            # 2. بعد از تکمیل جذب خودرو: pending_vehicle_recruitment -> pending_vehicle_entry
+            # 3. وقتی همه حمل‌ها به pending_waybill رفتند: pending_vehicle_entry -> pending_loading_completion
+            # 4. وقتی همه حمل‌ها به completed یا loaded رفتند: pending_loading_completion -> delivered
+            
+            bug_logger.info(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد و وضعیت به pending_vehicle_entry تغییر کرد")
+            messages.success(request, f'جذب خودرو برای تخصیص {allocation_number} با موفقیت تکمیل شد و وضعیت به "در انتظار ورود خودرو به کارخانه" تغییر کرد.')
+            audit_logger.activity(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد و وضعیت به pending_vehicle_entry تغییر کرد توسط کاربر {request.user.username}")
             
             return redirect('distribution:vehicle_recruitment_list')
             
