@@ -1,0 +1,330 @@
+{% extends 'base.html' %}
+
+{% block title %}ویرایش سند تراکنش - سفارش {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        padding: 1rem 1.5rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .form-section-body {
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        font-family: inherit;
+    }
+    
+    #id_due_date,
+    #id_check_receipt_date {
+        position: relative;
+        padding-left: 40px;
+    }
+    
+    .p-datepicker-trigger {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 1.2rem;
+        z-index: 10;
+        pointer-events: none;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .form-divider {
+        border: 0;
+        border-top: 2px solid var(--gray-200);
+        margin: 1.5rem 0;
+    }
+    
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 1rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .errorlist li {
+        color: #dc3545;
+        font-size: 0.85rem;
+        padding: 0.25rem 0;
+    }
+    
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="page-header">
+    <h2>ویرایش سند تراکنش - سفارش {{ order.order_number }}</h2>
+</div>
+
+<div class="form-section">
+    <div class="form-section-header">
+        ویرایش سند تراکنش
+    </div>
+    <div class="form-section-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.payment_type.id_for_label }}">نوع تسویه (نقدی بازارگاه / بانکی / چک) <span style="color: #dc3545;">*</span></label>
+                    {{ form.payment_type }}
+                    {{ form.payment_type.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.document_amount.id_for_label }}">مبلغ سند <span style="color: #dc3545;">*</span></label>
+                    {{ form.document_amount }}
+                    {{ form.document_amount.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.due_date.id_for_label }}">تاریخ سررسید <span style="color: #dc3545;">*</span></label>
+                    {{ form.due_date }}
+                    {{ form.due_date.errors }}
+                </div>
+            </div>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.source_account.id_for_label }}">حساب مبدا <span style="color: #dc3545;">*</span></label>
+                    {{ form.source_account }}
+                    {{ form.source_account.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.document_attachment.id_for_label }}">پیوست سند <span style="color: #dc3545;">*</span></label>
+                    {{ form.document_attachment }}
+                    {{ form.document_attachment.errors }}
+                    {% if document.document_attachment %}
+                        <small style="color: var(--gray-600); margin-top: 0.5rem;">
+                            فایل فعلی: <a href="{{ document.document_attachment.url }}" target="_blank">{{ document.document_attachment.name }}</a>
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <hr class="form-divider">
+            <h5 class="section-title">اطلاعات اختیاری</h5>
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.payment_status.id_for_label }}">وضعیت وصول</label>
+                    {{ form.payment_status }}
+                    {{ form.payment_status.errors }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.check_receipt_date.id_for_label }}">تاریخ وصول</label>
+                    {{ form.check_receipt_date }}
+                    {{ form.check_receipt_date.errors }}
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+                <a href="{% url 'sales:transaction_receipt_upload' order.order_number %}" class="btn btn-secondary">بازگشت</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // تابع برای راه‌اندازی date picker برای یک فیلد
+    function setupDatePicker(inputId, hiddenInputName) {
+        var dateInput = $('#' + inputId);
+        
+        if (dateInput.length) {
+            // تبدیل type='date' به text برای استفاده از تقویم شمسی
+            dateInput.attr('type', 'text');
+            dateInput.attr('readonly', 'readonly');
+            dateInput.css('cursor', 'pointer');
+            
+            // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+            var initialValue = dateInput.val();
+            var persianDateValue = '';
+            
+            // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+            if (initialValue) {
+                var parts = initialValue.split('-');
+                if (parts.length === 3) {
+                    var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    var pDate = persianDate.fromGregorian(gregorianDate);
+                    persianDateValue = pDate.format('YYYY/MM/DD');
+                    dateInput.val(persianDateValue);
+                }
+            }
+            
+            // غیرفعال کردن name اصلی input برای جلوگیری از ارسال تاریخ شمسی
+            var originalName = dateInput.attr('name');
+            dateInput.removeAttr('name');
+            
+            // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+            var hiddenInput = $('<input>', {
+                type: 'hidden',
+                id: inputId + '_hidden',
+                name: hiddenInputName
+            });
+            if (initialValue) {
+                hiddenInput.val(initialValue);
+            }
+            dateInput.after(hiddenInput);
+            
+            // راه‌اندازی تقویم شمسی
+            dateInput.pDatepicker({
+                observer: true,
+                format: 'YYYY/MM/DD',
+                altField: '#' + inputId + '_hidden',
+                altFormat: 'YYYY-MM-DD',
+                calendarType: 'persian',
+                initialValue: persianDateValue || false,
+                timePicker: {
+                    enabled: false
+                },
+                onSelect: function() {
+                    // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                    var selectedDate = dateInput.val();
+                    if (selectedDate) {
+                        try {
+                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                            var gregorianDate = persianDateObj.toCalendar('gregorian');
+                            var formattedDate = gregorianDate.year + '-' + 
+                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                               String(gregorianDate.day).padStart(2, '0');
+                            
+                            hiddenInput.val(formattedDate);
+                        } catch (e) {
+                            console.error('خطا در تبدیل تاریخ:', e);
+                        }
+                    }
+                }
+            });
+            
+            // اضافه کردن آیکون تقویم
+            if (!dateInput.parent().find('.p-datepicker-trigger').length) {
+                var iconSpan = $('<span>', {
+                    class: 'p-datepicker-trigger',
+                    html: '📅',
+                    css: {
+                        'position': 'absolute',
+                        'right': '10px',
+                        'top': '50%',
+                        'transform': 'translateY(-50%)',
+                        'cursor': 'pointer',
+                        'font-size': '1.2rem',
+                        'z-index': '10',
+                        'pointer-events': 'none'
+                    }
+                });
+                dateInput.parent().css('position', 'relative');
+                dateInput.parent().append(iconSpan);
+            }
+            
+            // باز کردن تقویم با کلیک روی input
+            dateInput.on('click', function() {
+                dateInput.pDatepicker('show');
+            });
+        }
+    }
+    
+    // راه‌اندازی date picker برای تاریخ سررسید
+    setupDatePicker('id_due_date', 'due_date');
+    
+    // راه‌اندازی date picker برای تاریخ وصول
+    setupDatePicker('id_check_receipt_date', 'check_receipt_date');
+});
+</script>
+{% endblock %}

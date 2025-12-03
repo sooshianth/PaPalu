@@ -57,6 +57,10 @@ class CreateOrderForm(forms.ModelForm):
 
         # Set defaults for creation context
         self.fields['order_type'].required = False
+        
+        if not self.instance or not self.instance.pk:
+            self.fields['order_type'].initial = 'sale'
+        
         self.fields['registration_source'].required = False
 
         # حذف فیلد status چون باید توسط backend تنظیم شود
@@ -222,19 +226,19 @@ class OrderItemForm(forms.Form):
         label='اضافات',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
-    vat = forms.DecimalField(
-        max_digits=12,
+    vat_percent = forms.DecimalField(
+        max_digits=5,
         decimal_places=2,
         required=False,
         initial=Decimal('0'),
-        label='مالیات بر ارزش افزوده',
+        label='درصد مالیات بر ارزش افزوده',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
 
     def clean(self):
         cleaned = super().clean()
         # Ensure non-negative numbers where applicable
-        for key in ['quantity', 'unit_price', 'bag_weight', 'discount', 'additional_charges', 'vat']:
+        for key in ['quantity', 'unit_price', 'bag_weight', 'discount', 'additional_charges', 'vat_percent']:
             value = cleaned.get(key)
             if value is not None and value < 0:
                 self.add_error(key, 'مقدار نمی‌تواند منفی باشد.')
@@ -259,7 +263,7 @@ class OrderItemForm(forms.Form):
             unit_price=data.get('unit_price'),
             discount=data.get('discount') or Decimal('0'),
             additional_charges=data.get('additional_charges') or Decimal('0'),
-            vat=data.get('vat') or Decimal('0'),
+            vat_percent=data.get('vat_percent') or Decimal('0'),
         )
         return item
 
@@ -329,7 +333,7 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
         'unit_price': ('OrderItem', 'unit_price'),
         'discount': ('OrderItem', 'discount'),
         'additional_charges': ('OrderItem', 'additional_charges'),
-        'vat': ('OrderItem', 'vat'),
+        'vat_percent': ('OrderItem', 'vat_percent'),
     }
 
     def can_edit_field(model_class, model_field_name):

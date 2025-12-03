@@ -13,7 +13,7 @@ from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
-from sales.forms.transaction_receipt_approve_form import TransactionApprovalForm
+from sales.forms.transaction_receipt_approve_form import TransactionApprovalForm, TransactionRejectionForm
 from sales.tables_transaction_receipt import ApproveTransactionReceiptTable
 
 bug_logger = logging.getLogger("bugs")
@@ -33,10 +33,67 @@ def approve_transaction_receipt_list_view(request):
         messages.error(request, 'شما دسترسی به تأیید تراکنش فروش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # گرفتن سفارش‌های در وضعیت pending_accounting_approval
     orders_qs = Order.objects.filter(status='pending_accounting_approval').order_by('-created_at')
+    
+    # همچنین سفارش‌هایی که در وضعیت pending_transaction_receipt_upload هستند اما مبلغ کل رسیده است
+    from django.db.models import Q
+    
+    # گرفتن همه سفارش‌های در وضعیت pending_transaction_receipt_upload
+    pending_upload_orders = Order.objects.filter(status='pending_transaction_receipt_upload')
+    
+    # فیلتر کردن سفارش‌هایی که مبلغ کل رسیده است
+    # باید از مجموع همه تراکنش‌ها (چه تایید شده و چه نشده) استفاده کنیم
+    orders_with_complete_amount = []
+    for order in pending_upload_orders:
+        try:
+            settlement = Settlement.objects.get(order=order)
+            if settlement.original_document_amount:
+                # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
+                all_documents_total = settlement.transaction_documents.aggregate(total=Sum('document_amount'))['total'] or 0
+                # بررسی اینکه آیا همه تراکنش‌ها تایید شده‌اند یا نه
+                all_approved = settlement.transaction_documents.exclude(approval_status='approved').count() == 0
+                all_documents_exist = settlement.transaction_documents.count() > 0
+                # فقط اگر مبلغ کامل رسیده و هنوز همه تایید نشده‌اند، نمایش بده
+                if float(all_documents_total) >= float(settlement.original_document_amount) and not (all_approved and all_documents_exist):
+                    orders_with_complete_amount.append(order.order_number)
+        except Settlement.DoesNotExist:
+            pass
+    
+    # اضافه کردن سفارش‌های با مبلغ کامل به query
+    if orders_with_complete_amount:
+        orders_qs = orders_qs | Order.objects.filter(order_number__in=orders_with_complete_amount)
+    
+    # حذف سفارش‌هایی که همه تراکنش‌هایشان تایید شده است
+    orders_to_exclude = []
+    for order in orders_qs:
+        try:
+            settlement = Settlement.objects.get(order=order)
+            all_documents = settlement.transaction_documents.all()
+            all_approved = all_documents.exclude(approval_status='approved').count() == 0
+            all_documents_exist = all_documents.count() > 0
+            # اگر همه تراکنش‌ها تایید شده‌اند، از لیست حذف کن
+            if all_approved and all_documents_exist:
+                orders_to_exclude.append(order.order_number)
+        except Settlement.DoesNotExist:
+            pass
+    
+    if orders_to_exclude:
+        orders_qs = orders_qs.exclude(order_number__in=orders_to_exclude)
+    
+    orders_qs = orders_qs.distinct().order_by('-created_at')
 
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
+
+    # بررسی اینکه آیا تراکنش رد شده وجود دارد و اضافه کردن به record
+    for order in orders_qs:
+        try:
+            settlement = Settlement.objects.get(order=order)
+            has_rejected = settlement.transaction_documents.filter(approval_status='rejected').exists()
+            order._has_rejected = has_rejected
+        except Settlement.DoesNotExist:
+            order._has_rejected = False
 
     bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار تأیید حسابداری لود شد")
 
@@ -84,9 +141,24 @@ def approve_transaction_receipt_detail_view(request, order_number):
         messages.error(request, 'شما دسترسی به این سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    if order.status != 'pending_accounting_approval':
-        bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_accounting_approval می‌رود")
-        messages.error(request, 'این سفارش در وضعیت مناسب برای تأیید حسابداری نیست.')
+    # بررسی اینکه آیا سفارش در وضعیت مناسب است یا مبلغ کل رسیده است
+    is_pending_accounting = order.status == 'pending_accounting_approval'
+    is_pending_upload_with_complete_amount = False
+    
+    if order.status == 'pending_transaction_receipt_upload':
+        try:
+            settlement = Settlement.objects.get(order=order)
+            if settlement.original_document_amount:
+                # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
+                all_documents_total = settlement.transaction_documents.aggregate(total=Sum('document_amount'))['total'] or 0
+                if float(all_documents_total) >= float(settlement.original_document_amount):
+                    is_pending_upload_with_complete_amount = True
+        except Settlement.DoesNotExist:
+            pass
+    
+    if not is_pending_accounting and not is_pending_upload_with_complete_amount:
+        bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است و مبلغ کل نرسیده است")
+        messages.error(request, 'این سفارش در وضعیت مناسب برای تأیید حسابداری نیست یا مبلغ کل نرسیده است.')
         return redirect('sales:approve_transaction_receipt_list')
 
     # محاسبه مبلغ کل سفارش از اقلام
@@ -112,6 +184,9 @@ def approve_transaction_receipt_detail_view(request, order_number):
     # لیست اسناد تراکنش
     documents = settlement.transaction_documents.all().select_related('source_account', 'destination_account').order_by('-id')
     
+    # بررسی اینکه آیا تراکنش رد شده وجود دارد
+    has_rejected_documents = documents.filter(approval_status='rejected').exists()
+    
     # محاسبه مجموع مبالغ استعلام از اسناد تأیید شده
     approved_documents = documents.filter(inquiry_amount__isnull=False)
     total_inquiry_amount = approved_documents.aggregate(total=Sum('inquiry_amount'))['total'] or 0
@@ -133,6 +208,9 @@ def approve_transaction_receipt_detail_view(request, order_number):
             return redirect('sales:approve_transaction_receipt_detail', order_number=order_number)
 
     if request.method == 'POST':
+        # بررسی اینکه آیا درخواست رد است یا تایید
+        action = request.POST.get('action', 'approve')
+        
         # اگر document_id در POST هم باشد، از آن استفاده کن
         if not document and 'document_id' in request.POST:
             try:
@@ -143,54 +221,78 @@ def approve_transaction_receipt_detail_view(request, order_number):
                 return redirect('sales:approve_transaction_receipt_detail', order_number=order_number)
         
         if not document:
-            bug_logger.warning(f"درخواست POST تأیید تراکنش بدون document_id برای سفارش {order_number}")
-            messages.error(request, 'لطفاً یک سند تراکنش را برای تأیید انتخاب کنید.')
+            bug_logger.warning(f"درخواست POST تأیید/رد تراکنش بدون document_id برای سفارش {order_number}")
+            messages.error(request, 'لطفاً یک سند تراکنش را انتخاب کنید.')
             return redirect('sales:approve_transaction_receipt_detail', order_number=order_number)
         
-        form = TransactionApprovalForm(request.POST, settlement=settlement, document=document)
-        if form.is_valid():
-            try:
-                with transaction.atomic():
-                    # ثبت تأیید (override فیلدهای سند)
-                    form.save()
-                    bug_logger.info(f"تأیید تراکنش سند {document.id} برای سفارش {order_number} ثبت شد")
-                    messages.success(request, 'تأیید تراکنش با موفقیت ثبت شد.')
-                    
-                    # Refresh settlement از دیتابیس
-                    settlement.refresh_from_db()
-                    
-                    # محاسبه مجدد مجموع مبالغ استعلام
-                    approved_documents_qs = settlement.transaction_documents.filter(inquiry_amount__isnull=False)
-                    total_inquiry_amount = approved_documents_qs.aggregate(total=Sum('inquiry_amount'))['total'] or 0
-                    
-                    # اگر مجموع مبالغ استعلام >= مبلغ کل تسویه شد، وضعیت سفارش را تغییر بده
-                    if settlement.original_document_amount:
-                        # تبدیل به float برای مقایسه دقیق
-                        total_inquiry_float = float(total_inquiry_amount) if total_inquiry_amount else 0
-                        original_amount_float = float(settlement.original_document_amount)
+        # اگر درخواست رد است
+        if action == 'reject':
+            rejection_form = TransactionRejectionForm(request.POST)
+            if rejection_form.is_valid():
+                try:
+                    with transaction.atomic():
+                        document.approval_status = 'rejected'
+                        document.rejection_reason = rejection_form.cleaned_data['rejection_reason']
+                        document.save(update_fields=['approval_status', 'rejection_reason'])
                         
-                        # Debug: نمایش مقادیر
-                        bug_logger.debug(f"مقایسه مبالغ برای سفارش {order_number}: total_inquiry={total_inquiry_float}, original_amount={original_amount_float}")
+                        bug_logger.info(f"تراکنش سند {document.id} برای سفارش {order_number} رد شد")
+                        messages.success(request, 'تراکنش با موفقیت رد شد.')
                         
-                        if total_inquiry_float >= original_amount_float:
+                        return redirect('sales:approve_transaction_receipt_detail', order_number=order_number)
+                except Exception as e:
+                    bug_logger.error(f"خطا در رد تراکنش سفارش {order_number}: {str(e)}", exc_info=True)
+                    messages.error(request, f'خطا در رد تراکنش: {str(e)}')
+            else:
+                bug_logger.warning(f"فرم رد تراکنش سفارش {order_number} معتبر نیست")
+                messages.error(request, 'اطلاعات فرم معتبر نیست. لطفاً خطاها را بررسی کنید.')
+        else:
+            # درخواست تایید
+            form = TransactionApprovalForm(request.POST, settlement=settlement, document=document)
+            if form.is_valid():
+                try:
+                    with transaction.atomic():
+                        # ثبت تأیید (override فیلدهای سند)
+                        doc = form.save()
+                        # اطمینان از اینکه approval_status = 'approved' است
+                        doc.approval_status = 'approved'
+                        doc.rejection_reason = None
+                        doc.save(update_fields=['approval_status', 'rejection_reason'])
+                        
+                        bug_logger.info(f"تأیید تراکنش سند {document.id} برای سفارش {order_number} ثبت شد")
+                        messages.success(request, 'تأیید تراکنش با موفقیت ثبت شد.')
+                        
+                        # Refresh settlement از دیتابیس
+                        settlement.refresh_from_db()
+                        
+                        # محاسبه مجدد مجموع مبالغ استعلام
+                        approved_documents_qs = settlement.transaction_documents.filter(inquiry_amount__isnull=False)
+                        total_inquiry_amount = approved_documents_qs.aggregate(total=Sum('inquiry_amount'))['total'] or 0
+                        
+                        # بررسی اینکه آیا همه تراکنش‌ها تایید شده‌اند
+                        all_documents = settlement.transaction_documents.all()
+                        all_approved = all_documents.exclude(approval_status='approved').count() == 0
+                        all_documents_exist = all_documents.count() > 0
+                        
+                        # اگر همه تراکنش‌ها تایید شدند، وضعیت سفارش را تغییر بده
+                        if all_approved and all_documents_exist:
                             # Refresh order از دیتابیس
                             order.refresh_from_db()
                             # بررسی مجدد وضعیت قبل از تغییر
-                            if order.status == 'pending_accounting_approval':
+                            if order.status in ['pending_accounting_approval', 'pending_transaction_receipt_upload']:
                                 order.status = 'pending_allocation'
                                 order.save(update_fields=['status'])
-                                bug_logger.info(f"وضعیت سفارش {order_number} به pending_allocation تغییر یافت")
-                                messages.success(request, 'مجموع مبالغ استعلام با مبلغ کل تسویه برابر شد. سفارش به مرحله "در انتظار تخصیص" منتقل شد.')
+                                bug_logger.info(f"وضعیت سفارش {order_number} به pending_allocation تغییر یافت - همه تراکنش‌ها تایید شدند")
+                                messages.success(request, 'همه تراکنش‌ها تایید شدند. سفارش به مرحله "در انتظار تخصیص" منتقل شد.')
                                 # Redirect به لیست چون وضعیت تغییر کرده
                                 return redirect('sales:approve_transaction_receipt_list')
 
-                return redirect('sales:approve_transaction_receipt_detail', order_number=order_number)
-            except Exception as e:
-                bug_logger.error(f"خطا در ثبت تأیید تراکنش سفارش {order_number}: {str(e)}", exc_info=True)
-                messages.error(request, f'خطا در ثبت تأیید تراکنش: {str(e)}')
-        else:
-            bug_logger.warning(f"فرم تأیید تراکنش سفارش {order_number} معتبر نیست")
-            messages.error(request, 'اطلاعات فرم معتبر نیست. لطفاً خطاها را بررسی کنید.')
+                    return redirect('sales:approve_transaction_receipt_detail', order_number=order_number)
+                except Exception as e:
+                    bug_logger.error(f"خطا در ثبت تأیید تراکنش سفارش {order_number}: {str(e)}", exc_info=True)
+                    messages.error(request, f'خطا در ثبت تأیید تراکنش: {str(e)}')
+            else:
+                bug_logger.warning(f"فرم تأیید تراکنش سفارش {order_number} معتبر نیست")
+                messages.error(request, 'اطلاعات فرم معتبر نیست. لطفاً خطاها را بررسی کنید.')
     else:
         # اگر document_id در query string باشد، فرم را با آن سند پر کن
         if document:
@@ -202,21 +304,41 @@ def approve_transaction_receipt_detail_view(request, order_number):
                 initial_data['inquiry_amount'] = document.inquiry_amount
             if document.tracking_number:
                 initial_data['tracking_number'] = document.tracking_number
-            if document.source_bank:
-                initial_data['source_bank'] = document.source_bank
-            if document.approval_account_number:
-                initial_data['approval_account_number'] = document.approval_account_number
-            if document.shaba_number:
-                initial_data['shaba_number'] = document.shaba_number
+            # inquiry_name در فرم به صورت ChoiceField است و خود فرم مقدار پیش‌فرض را تنظیم می‌کند
+            # اما اگر نام دیگری است، باید آن را به initial_data اضافه کنیم
             if document.inquiry_name:
-                initial_data['inquiry_name'] = document.inquiry_name
+                # بررسی می‌کنیم که آیا نام مشتری است یا نه
+                customer_name = None
+                if settlement.order and settlement.order.customer:
+                    customer_name = settlement.order.customer.name or 'مشتری'
+                
+                if document.inquiry_name != customer_name:
+                    # اگر نام مشتری نیست، باید "سایر" را انتخاب کنیم و نام را در inquiry_name_other بگذاریم
+                    initial_data['inquiry_name'] = 'other'
+                    initial_data['inquiry_name_other'] = document.inquiry_name
+                else:
+                    initial_data['inquiry_name'] = document.inquiry_name
             if document.transfer_time:
                 initial_data['transfer_time'] = document.transfer_time
             
+            # اگر حساب بانکی موجود است، آن را به initial_data اضافه کن
+            if document.source_account:
+                try:
+                    from core.PersonFolder import BankAccount
+                    bank_account = BankAccount.objects.filter(
+                        account_number=document.source_account.account_number
+                    ).first()
+                    if bank_account:
+                        initial_data['bank_account'] = bank_account.id
+                except:
+                    pass
+            
             form = TransactionApprovalForm(settlement=settlement, document=document, instance=document, initial=initial_data)
+            rejection_form = TransactionRejectionForm()
         else:
             # فرم خالی برای انتخاب سند
             form = None
+            rejection_form = None
 
     # محاسبه باقیمانده
     remaining_amount = 0
@@ -224,6 +346,13 @@ def approve_transaction_receipt_detail_view(request, order_number):
         remaining_amount = float(settlement.original_document_amount) - float(total_inquiry_amount)
 
     bug_logger.debug(f"نمایش صفحه جزئیات تأیید تراکنش سفارش {order_number}: {len(documents)} سند، {len(approved_documents)} تأیید شده")
+
+    # اطمینان از وجود rejection_form در context
+    if 'rejection_form' not in locals():
+        if form and document:
+            rejection_form = TransactionRejectionForm()
+        else:
+            rejection_form = None
 
     context = {
         'order': order,
@@ -233,7 +362,9 @@ def approve_transaction_receipt_detail_view(request, order_number):
         'total_inquiry_amount': total_inquiry_amount,
         'remaining_amount': remaining_amount,
         'can_approve': can_approve,
+        'has_rejected_documents': has_rejected_documents,
         'form': form,
+        'rejection_form': rejection_form if 'rejection_form' in locals() else None,
         'selected_document': document,
         'page_title': f'تأیید تراکنش - سفارش {order.order_number}',
     }

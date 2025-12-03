@@ -65,6 +65,8 @@ urlpatterns = [
     # مسیرهای ثبت رسید تراکنش فروش
     path('transaction-receipts/orders/', transaction_receipt_view.transaction_receipt_order_list_view, name='transaction_receipt_order_list'),
     path('transaction-receipts/<str:order_number>/upload/', transaction_receipt_view.transaction_receipt_upload_view, name='transaction_receipt_upload'),
+    path('transaction-receipts/<str:order_number>/<int:document_id>/edit/', transaction_receipt_view.transaction_receipt_edit_view, name='transaction_receipt_edit'),
+    path('transaction-receipts/<str:order_number>/<int:document_id>/<str:action>/', transaction_receipt_view.transaction_receipt_approve_reject_view, name='transaction_receipt_approve_reject'),
     
     # مسیرهای تأیید تراکنش فروش
     path('approve-transaction-receipt/list/', transaction_receipt_approve_view.approve_transaction_receipt_list_view, name='approve_transaction_receipt_list'),

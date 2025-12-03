@@ -597,12 +597,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             {% endif %}
 
-                            {% if accessible_fields_item.vat %}
+                            {% if accessible_fields_item.vat_percent %}
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">{{ f.vat.label }}</label>
-                                {{ f.vat }}
-                                {% if f.vat.errors %}
-                                    <div class="text-danger">{{ f.vat.errors.0 }}</div>
+                                <label class="form-label">{{ f.vat_percent.label }}</label>
+                                {{ f.vat_percent }}
+                                {% if f.vat_percent.errors %}
+                                    <div class="text-danger">{{ f.vat_percent.errors.0 }}</div>
                                 {% endif %}
                             </div>
                             {% endif %}

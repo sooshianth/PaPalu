@@ -1,5 +1,6 @@
 from django import forms
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
+from core.PersonFolder import BankAccount
 
 
 class TransactionDocumentForm(forms.ModelForm):
@@ -38,6 +39,9 @@ class TransactionDocumentForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # دریافت customer از kwargs برای فیلتر کردن حساب‌های بانکی
+        customer = kwargs.pop('customer', None)
+        
         super().__init__(*args, **kwargs)
 
         # فیلدهای اجباری
@@ -50,5 +54,14 @@ class TransactionDocumentForm(forms.ModelForm):
         # فیلدهای اختیاری
         self.fields['payment_status'].required = False
         self.fields['check_receipt_date'].required = False
+        
+        # فیلتر کردن حساب‌های بانکی بر اساس مشتری
+        if customer:
+            self.fields['source_account'].queryset = BankAccount.objects.filter(
+                financial_banking__person=customer
+            ).select_related('financial_banking', 'financial_banking__person')
+        else:
+            # اگر customer داده نشد، همه حساب‌ها را نمایش بده (برای سازگاری با کدهای قدیمی)
+            self.fields['source_account'].queryset = BankAccount.objects.all().select_related('financial_banking', 'financial_banking__person')
 
 

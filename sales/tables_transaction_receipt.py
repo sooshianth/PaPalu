@@ -5,6 +5,25 @@ from core.OrderFolder.OrderModel import Order
 from access.helpers import check_field_access_prefer_edit
 
 
+def has_rejected_transaction(record):
+    """بررسی اینکه آیا تراکنش رد شده وجود دارد"""
+    from core.SettlementFolder.SettlementModel import Settlement
+    from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
+    
+    try:
+        settlement = Settlement.objects.get(order=record)
+        return settlement.transaction_documents.filter(approval_status='rejected').exists()
+    except Settlement.DoesNotExist:
+        return False
+
+
+def get_row_class(record):
+    """بررسی و برگرداندن کلاس CSS برای ردیف"""
+    if has_rejected_transaction(record):
+        return 'has-rejected-transaction'
+    return ''
+
+
 class TransactionReceiptOrderTable(tables.Table):
     """جدول لیست سفارش‌های در انتظار بارگذاری رسید تراکنش با استفاده از django-tables2"""
     
@@ -161,9 +180,14 @@ class TransactionReceiptOrderTable(tables.Table):
             'thead': {'class': ''}
         }
         sequence = ('order_number', 'order_type', 'status', 'registered_by', 'actions')
+        row_attrs = {
+            'class': get_row_class
+        }
     
     def render_order_number(self, value, record):
-        """نمایش شماره سفارش"""
+        """نمایش شماره سفارش با رنگ قرمز اگر تراکنش رد شده وجود دارد"""
+        if has_rejected_transaction(record):
+            return format_html('<strong style="color: #dc3545;">{}</strong>', value)
         return format_html('<strong>{}</strong>', value)
     
     def render_order_type(self, value, record):
@@ -252,10 +276,16 @@ class TransactionReceiptOrderTable(tables.Table):
         try:
             upload_url = reverse('sales:transaction_receipt_upload', args=[record.order_number])
             
-            html = format_html(
-                '<a href="{}" class="btn-outline-info" title="ثبت رسید تراکنش">ثبت رسید تراکنش</a>',
-                upload_url
-            )
+            if has_rejected_transaction(record):
+                html = format_html(
+                    '<a href="{}" class="btn-outline-info" title="ثبت رسید تراکنش">ثبت رسید تراکنش</a><br><small style="color: #dc3545; font-weight: 600; display: block; margin-top: 5px;">⚠️ تراکنش رد شده دارد - باید ویرایش شود</small>',
+                    upload_url
+                )
+            else:
+                html = format_html(
+                    '<a href="{}" class="btn-outline-info" title="ثبت رسید تراکنش">ثبت رسید تراکنش</a>',
+                    upload_url
+                )
             return html
         except Exception as e:
             # در صورت بروز خطا، یک پیام خطا برگردان
@@ -407,6 +437,9 @@ class ApproveTransactionReceiptTable(tables.Table):
             'thead': {'class': ''}
         }
         sequence = ('order_number', 'customer', 'created_at', 'actions')
+        row_attrs = {
+            'class': lambda record: 'has-rejected-transaction' if hasattr(record, '_has_rejected') and record._has_rejected else ''
+        }
     
     def render_order_number(self, value, record):
         """نمایش شماره سفارش"""
@@ -437,6 +470,17 @@ class ApproveTransactionReceiptTable(tables.Table):
         try:
             detail_url = reverse('sales:approve_transaction_receipt_detail', args=[record.order_number])
             
+            # بررسی اینکه آیا تراکنش رد شده وجود دارد
+            from core.SettlementFolder.SettlementModel import Settlement
+            from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
+            
+            has_rejected = False
+            try:
+                settlement = Settlement.objects.get(order=record)
+                has_rejected = settlement.transaction_documents.filter(approval_status='rejected').exists()
+            except Settlement.DoesNotExist:
+                pass
+            
             html = format_html(
                 '<a href="{}" class="btn-outline-info" title="مشاهده و تأیید">مشاهده و تأیید</a>',
                 detail_url
@@ -445,4 +489,21 @@ class ApproveTransactionReceiptTable(tables.Table):
         except Exception as e:
             # در صورت بروز خطا، یک پیام خطا برگردان
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+    
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش با رنگ قرمز اگر تراکنش رد شده وجود دارد"""
+        # بررسی اینکه آیا تراکنش رد شده وجود دارد
+        from core.SettlementFolder.SettlementModel import Settlement
+        from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
+        
+        has_rejected = False
+        try:
+            settlement = Settlement.objects.get(order=record)
+            has_rejected = settlement.transaction_documents.filter(approval_status='rejected').exists()
+        except Settlement.DoesNotExist:
+            pass
+        
+        if has_rejected:
+            return format_html('<strong style="color: #dc3545;">{}</strong>', value)
+        return format_html('<strong>{}</strong>', value)
 
