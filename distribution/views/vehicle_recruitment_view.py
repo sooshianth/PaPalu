@@ -21,7 +21,7 @@ from core.TransportFolder.ProductInfoModel import ProductInfo
 from core.TransportFolder.TruckInfoModel import TruckInfo
 from django.contrib.contenttypes.models import ContentType
 from sales.views.allocation_list_view import get_delivery_address_info
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 from decimal import Decimal
 
 bug_logger = logging.getLogger("bugs")

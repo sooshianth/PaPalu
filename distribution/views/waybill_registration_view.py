@@ -18,7 +18,7 @@ from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.AllocationFolder.AllocationModel import Allocation
 from django.contrib.contenttypes.models import ContentType
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 from distribution.forms.waybill_registration_form import WaybillRegistrationForm
 from core.TransportFolder.TransportAttachmentModel import TransportAttachment
 
