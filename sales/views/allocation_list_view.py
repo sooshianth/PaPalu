@@ -6,6 +6,7 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.forms import inlineformset_factory
 import logging
+import json
 from core.logging_levels import *
 import django_tables2 as tables
 from django_tables2 import RequestConfig
@@ -102,6 +103,41 @@ def calculate_allocation_total_quantity(order):
             # برای سایر واحدها، همان مقدار را اضافه می‌کنیم
     
     bug_logger.debug(f"مقدار کل تخصیص‌های سفارش {order.order_number} محاسبه شد: {total_quantity} کیلوگرم")
+    return total_quantity
+
+
+def calculate_formset_total_quantity(formset):
+    """
+    محاسبه مجموع مقدار محصولات از formset (تبدیل به کیلوگرم)
+    برای validation قبل از ذخیره
+    این تابع باید بعد از formset.is_valid() صدا زده شود
+    """
+    total_quantity = 0
+    
+    for form in formset.forms:
+        # بررسی اینکه فرم حذف نشده باشد و cleaned_data داشته باشد
+        if hasattr(form, 'cleaned_data') and form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+            quantity = form.cleaned_data.get('quantity', 0) or 0
+            unit = form.cleaned_data.get('unit', '')
+            
+            if quantity and unit:
+                try:
+                    quantity = float(quantity)
+                    
+                    # تبدیل به کیلوگرم
+                    if unit == 'kg':
+                        total_quantity += quantity
+                    elif unit == 'ton':
+                        total_quantity += quantity * 1000
+                    elif unit == 'gr':
+                        total_quantity += quantity / 1000
+                    # برای سایر واحدها (m3, ltr, cc)، همان مقدار را اضافه می‌کنیم
+                    else:
+                        total_quantity += quantity
+                except (ValueError, TypeError):
+                    # در صورت خطا در تبدیل، مقدار را نادیده می‌گیریم
+                    pass
+    
     return total_quantity
 
 
@@ -219,36 +255,57 @@ def allocation_create_view(request, order_number):
         formset = AllocationProductInfoFormSet(request.POST, instance=None, order=order)
         
         if form.is_valid() and formset.is_valid():
-            try:
-                with transaction.atomic():
-                    allocation = form.save(commit=False)
-                    allocation.order = order
-                    allocation.allocation_status = 'planned'
-                    allocation.save()
-                    
-                    # ذخیره اقلام محصول - تنظیم instance و ذخیره
-                    formset.instance = allocation
-                    # برای formset، باید instance را به صورت صحیح تنظیم کنیم
-                    for form in formset.forms:
-                        form.instance.allocation = allocation
-                    formset.save()
-                    
-                    # بررسی برابری مقادیر
-                    new_allocation_total = calculate_allocation_total_quantity(order)
-                    if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
-                        order.status = 'pending_allocation_approval'
-                        order.save(update_fields=['status'])
-                        bug_logger.info(f"تخصیص {allocation.allocation_number} ایجاد شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد")
-                        messages.success(request, 'تخصیص با موفقیت ایجاد شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد.')
-                    else:
-                        bug_logger.info(f"تخصیص {allocation.allocation_number} برای سفارش {order_number} ایجاد شد (مقدار باقیمانده: {order_total - new_allocation_total} کیلوگرم)")
-                        messages.success(request, 'تخصیص با موفقیت ایجاد شد.')
-                    
-                    audit_logger.activity(f"تخصیص {allocation.allocation_number} برای سفارش {order_number} ایجاد شد")
-                    return redirect('sales:allocation_list')
-            except Exception as e:
-                bug_logger.error(f"خطا در ایجاد تخصیص برای سفارش {order_number}: {str(e)}")
-                messages.error(request, f'خطا در ایجاد تخصیص: {str(e)}')
+            # محاسبه مقدار تخصیص جدید از formset
+            new_allocation_quantity = calculate_formset_total_quantity(formset)
+            
+            # محاسبه مجموع تخصیص‌های موجود
+            existing_allocation_total = calculate_allocation_total_quantity(order)
+            
+            # بررسی اینکه مجموع تخصیص‌ها از مقدار کل سفارش بیشتر نشود
+            total_after_allocation = existing_allocation_total + new_allocation_quantity
+            
+            if total_after_allocation > order_total + 0.001:  # مقایسه با خطای کوچک
+                excess = total_after_allocation - order_total
+                bug_logger.warning(f"تلاش برای ایجاد تخصیص بیشتر از مقدار کل سفارش {order_number}. مقدار اضافی: {excess:.2f} کیلوگرم")
+                messages.error(
+                    request, 
+                    f'مجموع تخصیص‌ها نمی‌تواند بیشتر از مقدار کل سفارش باشد. '
+                    f'مقدار کل سفارش: {order_total:.2f} کیلوگرم، '
+                    f'تخصیص‌های موجود: {existing_allocation_total:.2f} کیلوگرم، '
+                    f'تخصیص جدید: {new_allocation_quantity:.2f} کیلوگرم. '
+                    f'مقدار اضافی: {excess:.2f} کیلوگرم'
+                )
+            else:
+                try:
+                    with transaction.atomic():
+                        allocation = form.save(commit=False)
+                        allocation.order = order
+                        allocation.allocation_status = 'planned'
+                        allocation.save()
+                        
+                        # ذخیره اقلام محصول - تنظیم instance و ذخیره
+                        formset.instance = allocation
+                        # برای formset، باید instance را به صورت صحیح تنظیم کنیم
+                        for form in formset.forms:
+                            form.instance.allocation = allocation
+                        formset.save()
+                        
+                        # بررسی برابری مقادیر
+                        new_allocation_total = calculate_allocation_total_quantity(order)
+                        if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
+                            order.status = 'pending_allocation_approval'
+                            order.save(update_fields=['status'])
+                            bug_logger.info(f"تخصیص {allocation.allocation_number} ایجاد شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد")
+                            messages.success(request, 'تخصیص با موفقیت ایجاد شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد.')
+                        else:
+                            bug_logger.info(f"تخصیص {allocation.allocation_number} برای سفارش {order_number} ایجاد شد (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
+                            messages.success(request, 'تخصیص با موفقیت ایجاد شد.')
+                        
+                        audit_logger.activity(f"تخصیص {allocation.allocation_number} برای سفارش {order_number} ایجاد شد")
+                        return redirect('sales:allocation_list')
+                except Exception as e:
+                    bug_logger.error(f"خطا در ایجاد تخصیص برای سفارش {order_number}: {str(e)}")
+                    messages.error(request, f'خطا در ایجاد تخصیص: {str(e)}')
         else:
             bug_logger.warning(f"فرم ایجاد تخصیص برای سفارش {order_number} نامعتبر است")
     else:
@@ -264,6 +321,29 @@ def allocation_create_view(request, order_number):
     delivery_addresses = []
     if order and order.customer:
         delivery_addresses = DeliveryAddress.objects.filter(person=order.customer)
+    
+    # ایجاد mapping واحدها برای هر محصول در سفارش
+    # این mapping برای JavaScript استفاده می‌شود تا واحد را به صورت خودکار تنظیم کند
+    product_unit_mapping = {}
+    if order:
+        for order_item in order.order_items.all():
+            if order_item.product_id:
+                # تبدیل واحد OrderItem به واحد AllocationProductInfo
+                unit_mapping = {
+                    'kg': 'kg',
+                    'ton': 'ton',
+                    'bag': 'kg',  # کیسه به کیلوگرم تبدیل می‌شود
+                    'piece': 'kg',  # عدد به کیلوگرم تبدیل می‌شود
+                }
+                default_unit = unit_mapping.get(order_item.weight_unit, 'kg')
+                # اگر محصول قبلاً در mapping وجود دارد، از اولین واحد استفاده می‌کنیم
+                # کلید را به string تبدیل می‌کنیم برای سازگاری با JavaScript
+                product_id_str = str(order_item.product_id)
+                if product_id_str not in product_unit_mapping:
+                    product_unit_mapping[product_id_str] = default_unit
+    
+    # تبدیل به JSON برای استفاده در JavaScript
+    product_unit_mapping_json = json.dumps(product_unit_mapping)
 
     context = {
         'form': form,
@@ -274,6 +354,7 @@ def allocation_create_view(request, order_number):
         'remaining': remaining,
         'delivery_info': delivery_info,
         'delivery_addresses': delivery_addresses,
+        'product_unit_mapping': product_unit_mapping_json,
         'page_title': f'ایجاد تخصیص برای سفارش {order_number}',
     }
     return render(request, 'allocation/allocation_create.html', context)
@@ -320,38 +401,59 @@ def allocation_edit_view(request, order_number, allocation_number):
         formset = AllocationProductInfoFormSet(request.POST, instance=allocation, order=order)
         
         if form.is_valid() and formset.is_valid():
-            try:
-                with transaction.atomic():
-                    allocation = form.save()
-                    formset.save()
-                    
-                    # بررسی برابری مقادیر
-                    new_allocation_total = calculate_allocation_total_quantity(order)
-                    if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
-                        if order.status == 'pending_allocation':
-                            order.status = 'pending_allocation_approval'
-                            order.save(update_fields=['status'])
-                            bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد")
-                            messages.success(request, 'تخصیص با موفقیت ویرایش شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد.')
+            # محاسبه مقدار تخصیص ویرایش شده از formset
+            edited_allocation_quantity = calculate_formset_total_quantity(formset)
+            
+            # محاسبه مجموع تخصیص‌های دیگر (غیر از تخصیص فعلی)
+            # other_allocations_total قبلاً محاسبه شده است
+            
+            # بررسی اینکه مجموع تخصیص‌ها از مقدار کل سفارش بیشتر نشود
+            total_after_edit = other_allocations_total + edited_allocation_quantity
+            
+            if total_after_edit > order_total + 0.001:  # مقایسه با خطای کوچک
+                excess = total_after_edit - order_total
+                bug_logger.warning(f"تلاش برای ویرایش تخصیص {allocation_number} که باعث می‌شود مجموع تخصیص‌ها بیشتر از مقدار کل سفارش {order_number} شود. مقدار اضافی: {excess:.2f} کیلوگرم")
+                messages.error(
+                    request, 
+                    f'مجموع تخصیص‌ها نمی‌تواند بیشتر از مقدار کل سفارش باشد. '
+                    f'مقدار کل سفارش: {order_total:.2f} کیلوگرم، '
+                    f'سایر تخصیص‌ها: {other_allocations_total:.2f} کیلوگرم، '
+                    f'تخصیص ویرایش شده: {edited_allocation_quantity:.2f} کیلوگرم. '
+                    f'مقدار اضافی: {excess:.2f} کیلوگرم'
+                )
+            else:
+                try:
+                    with transaction.atomic():
+                        allocation = form.save()
+                        formset.save()
+                        
+                        # بررسی برابری مقادیر
+                        new_allocation_total = calculate_allocation_total_quantity(order)
+                        if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
+                            if order.status == 'pending_allocation':
+                                order.status = 'pending_allocation_approval'
+                                order.save(update_fields=['status'])
+                                bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد")
+                                messages.success(request, 'تخصیص با موفقیت ویرایش شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد.')
+                            else:
+                                bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد")
+                                messages.success(request, 'تخصیص با موفقیت ویرایش شد.')
                         else:
-                            bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد")
-                            messages.success(request, 'تخصیص با موفقیت ویرایش شد.')
-                    else:
-                        # اگر قبلاً در pending_allocation_approval بود و حالا برابر نیست، برگردان به pending_allocation
-                        if order.status == 'pending_allocation_approval':
-                            order.status = 'pending_allocation'
-                            order.save(update_fields=['status'])
-                            bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation برگشت (مقدار باقیمانده: {order_total - new_allocation_total} کیلوگرم)")
-                            messages.success(request, 'تخصیص با موفقیت ویرایش شد. وضعیت سفارش به "در انتظار تخصیص" برگشت.')
-                        else:
-                            bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد (مقدار باقیمانده: {order_total - new_allocation_total} کیلوگرم)")
-                            messages.success(request, 'تخصیص با موفقیت ویرایش شد.')
-                    
-                    audit_logger.activity(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد")
-                    return redirect('sales:allocation_list')
-            except Exception as e:
-                bug_logger.error(f"خطا در ویرایش تخصیص {allocation_number} برای سفارش {order_number}: {str(e)}")
-                messages.error(request, f'خطا در ویرایش تخصیص: {str(e)}')
+                            # اگر قبلاً در pending_allocation_approval بود و حالا برابر نیست، برگردان به pending_allocation
+                            if order.status == 'pending_allocation_approval':
+                                order.status = 'pending_allocation'
+                                order.save(update_fields=['status'])
+                                bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation برگشت (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
+                                messages.success(request, 'تخصیص با موفقیت ویرایش شد. وضعیت سفارش به "در انتظار تخصیص" برگشت.')
+                            else:
+                                bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
+                                messages.success(request, 'تخصیص با موفقیت ویرایش شد.')
+                        
+                        audit_logger.activity(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد")
+                        return redirect('sales:allocation_list')
+                except Exception as e:
+                    bug_logger.error(f"خطا در ویرایش تخصیص {allocation_number} برای سفارش {order_number}: {str(e)}")
+                    messages.error(request, f'خطا در ویرایش تخصیص: {str(e)}')
         else:
             bug_logger.warning(f"فرم ویرایش تخصیص {allocation_number} برای سفارش {order_number} نامعتبر است")
     else:
@@ -379,6 +481,29 @@ def allocation_edit_view(request, order_number, allocation_number):
     delivery_addresses = []
     if order and order.customer:
         delivery_addresses = DeliveryAddress.objects.filter(person=order.customer)
+    
+    # ایجاد mapping واحدها برای هر محصول در سفارش
+    # این mapping برای JavaScript استفاده می‌شود تا واحد را به صورت خودکار تنظیم کند
+    product_unit_mapping = {}
+    if order:
+        for order_item in order.order_items.all():
+            if order_item.product_id:
+                # تبدیل واحد OrderItem به واحد AllocationProductInfo
+                unit_mapping = {
+                    'kg': 'kg',
+                    'ton': 'ton',
+                    'bag': 'kg',  # کیسه به کیلوگرم تبدیل می‌شود
+                    'piece': 'kg',  # عدد به کیلوگرم تبدیل می‌شود
+                }
+                default_unit = unit_mapping.get(order_item.weight_unit, 'kg')
+                # اگر محصول قبلاً در mapping وجود دارد، از اولین واحد استفاده می‌کنیم
+                # کلید را به string تبدیل می‌کنیم برای سازگاری با JavaScript
+                product_id_str = str(order_item.product_id)
+                if product_id_str not in product_unit_mapping:
+                    product_unit_mapping[product_id_str] = default_unit
+    
+    # تبدیل به JSON برای استفاده در JavaScript
+    product_unit_mapping_json = json.dumps(product_unit_mapping)
 
     context = {
         'form': form,
@@ -391,6 +516,7 @@ def allocation_edit_view(request, order_number, allocation_number):
         'remaining': order_total - other_allocations_total - current_allocation_total,
         'delivery_info': delivery_info,
         'delivery_addresses': delivery_addresses,
+        'product_unit_mapping': product_unit_mapping_json,
         'page_title': f'ویرایش تخصیص {allocation_number}',
     }
     return render(request, 'allocation/allocation_edit.html', context)

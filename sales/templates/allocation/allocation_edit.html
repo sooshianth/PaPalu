@@ -372,6 +372,9 @@
 
 {% block extra_js %}
 <script>
+    // Mapping واحدها از سفارش به تخصیص
+    const productUnitMapping = JSON.parse('{{ product_unit_mapping|escapejs }}');
+    
     // بارگذاری اطلاعات آدرس تحویل با تغییر کد پستی
     document.addEventListener('DOMContentLoaded', function() {
         const postalCodeInput = document.querySelector('#id_delivery_postal_code');
@@ -392,6 +395,38 @@
                 }
             });
         }
+        
+        // تنظیم خودکار واحد بر اساس محصول انتخاب شده
+        const productSelects = document.querySelectorAll('.product-select');
+        productSelects.forEach(function(productSelect) {
+            productSelect.addEventListener('change', function() {
+                const productId = this.value;
+                if (productId && productUnitMapping[productId]) {
+                    // پیدا کردن فیلد unit مربوط به این محصول
+                    const formsetItem = this.closest('.formset-item');
+                    if (formsetItem) {
+                        const unitSelect = formsetItem.querySelector('.unit-select');
+                        if (unitSelect && !unitSelect.value) {
+                            // فقط اگر واحد قبلاً انتخاب نشده باشد، آن را تنظیم می‌کنیم
+                            unitSelect.value = productUnitMapping[productId];
+                            // trigger change event برای اطمینان از اعتبارسنجی
+                            unitSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    }
+                }
+            });
+            
+            // اگر محصول قبلاً انتخاب شده است، واحد را تنظیم کن
+            if (productSelect.value && productUnitMapping[productSelect.value]) {
+                const formsetItem = productSelect.closest('.formset-item');
+                if (formsetItem) {
+                    const unitSelect = formsetItem.querySelector('.unit-select');
+                    if (unitSelect && !unitSelect.value) {
+                        unitSelect.value = productUnitMapping[productSelect.value];
+                    }
+                }
+            }
+        });
     });
 </script>
 {% endblock %}

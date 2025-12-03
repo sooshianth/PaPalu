@@ -2,6 +2,7 @@ from django import forms
 from core.AllocationFolder.AllocationModel import Allocation
 from core.AllocationFolder.AllocationProductInfoModel import AllocationProductInfo
 from core.OrderFolder.OrderModel import Order
+from core.OrderFolder.OrderItemModel import OrderItem
 from core.ProductFolder import Product
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 
@@ -14,11 +15,11 @@ class AllocationProductInfoForm(forms.ModelForm):
         fields = ['product', 'unit', 'quantity']
         widgets = {
             'product': forms.Select(attrs={
-                'class': 'form-control',
+                'class': 'form-control product-select',
                 'placeholder': 'انتخاب محصول'
             }),
             'unit': forms.Select(attrs={
-                'class': 'form-control',
+                'class': 'form-control unit-select',
                 'placeholder': 'انتخاب واحد'
             }),
             'quantity': forms.NumberInput(attrs={
@@ -33,6 +34,9 @@ class AllocationProductInfoForm(forms.ModelForm):
         order = kwargs.pop('order', None)
         super().__init__(*args, **kwargs)
         
+        # ذخیره order برای استفاده در متدهای دیگر
+        self.order = order
+        
         # فیلتر محصولات بر اساس سفارش
         if order:
             order_products = order.order_items.values_list('product_id', flat=True).distinct()
@@ -44,6 +48,39 @@ class AllocationProductInfoForm(forms.ModelForm):
         self.fields['product'].required = True
         self.fields['unit'].required = True
         self.fields['quantity'].required = True
+        
+        # اگر instance وجود دارد و محصول و واحد دارد، نیازی به تنظیم پیش‌فرض نیست
+        # اما اگر instance جدید است و initial data وجود دارد، واحد را از OrderItem بگیریم
+        if not self.instance.pk and order:
+            # اگر product در initial data وجود دارد، واحد را از OrderItem بگیریم
+            if 'product' in self.initial and self.initial['product']:
+                product_id = self.initial['product']
+                default_unit = self._get_default_unit_from_order(order, product_id)
+                if default_unit:
+                    self.initial['unit'] = default_unit
+    
+    def _get_default_unit_from_order(self, order, product_id):
+        """
+        دریافت واحد پیش‌فرض از OrderItem مربوط به محصول در سفارش
+        """
+        try:
+            order_item = OrderItem.objects.filter(
+                order=order,
+                product_id=product_id
+            ).first()
+            
+            if order_item and order_item.weight_unit:
+                # تبدیل واحد OrderItem به واحد AllocationProductInfo
+                unit_mapping = {
+                    'kg': 'kg',
+                    'ton': 'ton',
+                    'bag': 'kg',  # کیسه به کیلوگرم تبدیل می‌شود
+                    'piece': 'kg',  # عدد به کیلوگرم تبدیل می‌شود
+                }
+                return unit_mapping.get(order_item.weight_unit, 'kg')
+        except Exception:
+            pass
+        return None
 
 
 BaseAllocationProductInfoFormSet = forms.inlineformset_factory(
