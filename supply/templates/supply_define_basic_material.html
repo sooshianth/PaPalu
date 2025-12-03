@@ -342,7 +342,6 @@
       <form method="post" action="" novalidate enctype="multipart/form-data">
         {% csrf_token %}
         <div class="form-groups">
-          <div class="field"><label>{% if rm_form.raw_material_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.raw_material_id.label }}</label>{{ rm_form.raw_material_id }}</div>
           <div class="field"><label>{% if rm_form.name.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.name.label }}</label>{{ rm_form.name }}</div>
           <div class="field"><label>{% if rm_form.physical_form.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.physical_form.label }}</label>{{ rm_form.physical_form }}</div>
           <div class="field" style="grid-column:1/-1"><label>{% if rm_form.technical_description.field.required %}<span class="required-marker">*</span>{% endif %}{{ rm_form.technical_description.label }}</label>{{ rm_form.technical_description }}</div>

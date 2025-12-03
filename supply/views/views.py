@@ -31,13 +31,12 @@ class RawMaterialDefineForm(ModelForm):
 	class Meta:
 		model = RawMaterial
 		fields = [
-			'raw_material_id', 'name', 'technical_description', 'physical_form',
+			'name', 'technical_description', 'physical_form',
 			'primary_unit', 'secondary_unit', 'conversion_factor',
 			'hs_code', 'veterinary_health_id', 'standard_loss_percentage',
 			'expiration_date', 'attachments', 'main_supplier', 'status'
 		]
 		labels = {
-			'raw_material_id': 'شناسه ماده اولیه',
 			'name': 'نام ماده اولیه',
 			'technical_description': 'توضیحات و مشخصات فنی',
 			'physical_form': 'شکل فیزیکی',
@@ -56,7 +55,6 @@ class RawMaterialDefineForm(ModelForm):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		# Mark core fields as required (per spec)
-		self.fields['raw_material_id'].required = True
 		self.fields['name'].required = True
 		self.fields['technical_description'].required = True
 		self.fields['primary_unit'].required = True
@@ -174,7 +172,7 @@ class SupplierPersonForm(ModelForm):
 			'activity_fields': forms.SelectMultiple(attrs={'class': 'form-control', 'size': '5'}),
 			'sales_expert': forms.Select(attrs={'class': 'form-control'}),
 			'description': Textarea(attrs={'class': 'form-control', 'rows': 3}),
-			'phone_number': TextInput(attrs={'class': 'form-control'}),
+			'phone_number': TextInput(attrs={'class': 'form-control phone-input', 'placeholder': '021-12345678 یا 09123456789', 'dir': 'ltr'}),
 			'introducer': TextInput(attrs={'class': 'form-control'}),
 		}
 
@@ -192,9 +190,9 @@ class SupplierPersonForm(ModelForm):
 		if not national_id:
 			raise forms.ValidationError('کد ملی الزامی است.')
 		
-		# بررسی طول
-		if len(national_id) != 10:
-			raise forms.ValidationError('کد ملی باید 10 رقم باشد.')
+		# بررسی طول (10 یا 11 رقم)
+		if len(national_id) not in [10, 11]:
+			raise forms.ValidationError('کد ملی باید 10 یا 11 رقم باشد.')
 		
 		# بررسی عددی بودن
 		if not national_id.isdigit():
@@ -206,6 +204,46 @@ class SupplierPersonForm(ModelForm):
 				raise forms.ValidationError('این کد ملی قبلاً ثبت شده است.')
 		
 		return national_id
+
+	def clean_phone_number(self):
+		"""اعتبارسنجی و فرمت‌دهی شماره تلفن"""
+		import re
+		phone = self.cleaned_data.get('phone_number')
+		
+		if not phone:
+			return phone
+		
+		# حذف تمام کاراکترهای غیر عددی
+		digits_only = re.sub(r'\D', '', phone)
+		
+		# بررسی که فقط شامل اعداد باشد (بعد از حذف جداکننده‌ها)
+		if not digits_only:
+			raise forms.ValidationError('شماره تلفن باید شامل اعداد باشد.')
+		
+		# بررسی فرمت‌های مجاز
+		if len(digits_only) == 11 and digits_only.startswith('09'):
+			# موبایل: 09123456789 -> 0912-345-6789
+			# اعتبارسنجی: باید با 09 شروع شود و 11 رقم باشد
+			if not re.match(r'^09\d{9}$', digits_only):
+				raise forms.ValidationError('شماره موبایل نامعتبر است. فرمت صحیح: 0912-345-6789')
+			return f"{digits_only[:4]}-{digits_only[4:7]}-{digits_only[7:]}"
+		elif len(digits_only) == 11 and digits_only.startswith('0'):
+			# تلفن ثابت با کد شهر 3 رقمی: 02112345678 -> 021-1234-5678
+			if not re.match(r'^0\d{10}$', digits_only):
+				raise forms.ValidationError('شماره تلفن ثابت نامعتبر است. فرمت صحیح: 021-1234-5678')
+			return f"{digits_only[:3]}-{digits_only[3:7]}-{digits_only[7:]}"
+		elif len(digits_only) == 10:
+			# تلفن ثابت بدون صفر اول: 2112345678 -> 021-1234-5678
+			if not digits_only.isdigit():
+				raise forms.ValidationError('شماره تلفن باید فقط شامل اعداد باشد.')
+			return f"0{digits_only[:2]}-{digits_only[2:6]}-{digits_only[6:]}"
+		elif len(digits_only) == 8:
+			# فقط شماره محلی (فرض تهران): 12345678 -> 021-1234-5678
+			if not digits_only.isdigit():
+				raise forms.ValidationError('شماره تلفن باید فقط شامل اعداد باشد.')
+			return f"021-{digits_only[:4]}-{digits_only[4:]}"
+		else:
+			raise forms.ValidationError('فرمت شماره تلفن نامعتبر است. باید 11 رقم (مثل 09123456789 یا 02112345678) یا 10 رقم (بدون صفر اول) یا 8 رقم (شماره محلی) باشد.')
 
 
 class FinancialBankingForm(ModelForm):
@@ -616,10 +654,8 @@ def define_basic_material_view(request):
 			pi_form = PurchaseInfoInlineForm(request.POST)
 			if rm_form.is_valid() and pi_form.is_valid():
 				with transaction.atomic():
-					raw_id = rm_form.cleaned_data['raw_material_id']
-					instance, created = RawMaterial.objects.get_or_create(raw_material_id=raw_id)
-					for f, v in rm_form.cleaned_data.items():
-						setattr(instance, f, v)
+					# Create new instance - raw_material_id will be auto-generated
+					instance = rm_form.save(commit=False)
 					instance.save()
 
 					# Upsert purchase info (one primary row)

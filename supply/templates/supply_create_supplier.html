@@ -361,7 +361,150 @@
         } catch (e) {}
       });
     }
-    document.addEventListener('DOMContentLoaded', initJalali);
+    
+    // Phone number formatting and validation
+    function formatPhoneNumber(input) {
+      // Remove all non-digit characters
+      let digits = input.replace(/\D/g, '');
+      
+      // Format based on length and pattern
+      if (digits.length <= 3) {
+        return digits;
+      } else if (digits.length <= 7) {
+        // Mobile or landline code: 0912 or 021-1234
+        if (digits.startsWith('09')) {
+          return digits.slice(0, 4) + (digits.length > 4 ? '-' + digits.slice(4) : '');
+        } else {
+          return digits.slice(0, 3) + (digits.length > 3 ? '-' + digits.slice(3) : '');
+        }
+      } else if (digits.length <= 10) {
+        // Mobile: 0912-345-6789 or Landline: 021-1234-5678
+        if (digits.startsWith('09')) {
+          return digits.slice(0, 4) + '-' + digits.slice(4, 7) + (digits.length > 7 ? '-' + digits.slice(7) : '');
+        } else {
+          return digits.slice(0, 3) + '-' + digits.slice(3, 7) + (digits.length > 7 ? '-' + digits.slice(7) : '');
+        }
+      } else if (digits.length === 11) {
+        // Complete mobile or landline
+        if (digits.startsWith('09')) {
+          return digits.slice(0, 4) + '-' + digits.slice(4, 7) + '-' + digits.slice(7, 11);
+        } else {
+          return digits.slice(0, 3) + '-' + digits.slice(3, 7) + '-' + digits.slice(7, 11);
+        }
+      }
+      return input;
+    }
+    
+    function validatePhoneNumber(digits) {
+      // Accept empty (optional field)
+      if (!digits || digits.length === 0) return { valid: true, message: '' };
+      
+      // Validate formats
+      if (digits.length === 11) {
+        if (digits.startsWith('09')) {
+          // Mobile number
+          return /^09\d{9}$/.test(digits) 
+            ? { valid: true, message: '' }
+            : { valid: false, message: 'شماره موبایل نامعتبر است. فرمت: 0912-345-6789' };
+        } else if (digits.startsWith('0')) {
+          // Landline with area code
+          return /^0\d{10}$/.test(digits)
+            ? { valid: true, message: '' }
+            : { valid: false, message: 'شماره تلفن ثابت نامعتبر است. فرمت: 021-1234-5678' };
+        }
+      } else if (digits.length === 10 || digits.length === 8) {
+        // 10 digits without leading zero or 8 digit local
+        return { valid: true, message: '' };
+      }
+      
+      return { 
+        valid: false, 
+        message: 'فرمت نامعتبر. تلفن ثابت: 021-1234-5678 یا موبایل: 0912-345-6789' 
+      };
+    }
+    
+    function initPhoneFormatting() {
+      const phoneInputs = document.querySelectorAll('.phone-input');
+      phoneInputs.forEach(function(input) {
+        // Create error message element
+        let errorDiv = input.parentElement.querySelector('.phone-error');
+        if (!errorDiv) {
+          errorDiv = document.createElement('div');
+          errorDiv.className = 'phone-error';
+          errorDiv.style.cssText = 'color:#c62828;font-size:0.8rem;margin-top:4px;display:none;';
+          input.parentElement.appendChild(errorDiv);
+        }
+        
+        // Only format on blur, not during typing
+        input.addEventListener('blur', function(e) {
+          const value = e.target.value.trim();
+          
+          if (!value) {
+            errorDiv.style.display = 'none';
+            e.target.style.borderColor = '';
+            return;
+          }
+          
+          const formatted = formatPhoneNumber(value);
+          e.target.value = formatted;
+          
+          const digits = formatted.replace(/\D/g, '');
+          const validation = validatePhoneNumber(digits);
+          
+          if (!validation.valid && digits.length > 0) {
+            errorDiv.textContent = validation.message;
+            errorDiv.style.display = 'block';
+            e.target.style.borderColor = '#c62828';
+          } else {
+            errorDiv.style.display = 'none';
+            e.target.style.borderColor = '';
+          }
+        });
+        
+        // Clear error on focus to allow editing
+        input.addEventListener('focus', function(e) {
+          errorDiv.style.display = 'none';
+          e.target.style.borderColor = '';
+        });
+      });
+      
+      // Add form validation on submit
+      const form = document.querySelector('form');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          let hasError = false;
+          phoneInputs.forEach(function(input) {
+            const value = input.value.trim();
+            if (value) {
+              const digits = value.replace(/\D/g, '');
+              const validation = validatePhoneNumber(digits);
+              
+              if (!validation.valid) {
+                hasError = true;
+                const errorDiv = input.parentElement.querySelector('.phone-error');
+                if (errorDiv) {
+                  errorDiv.textContent = validation.message;
+                  errorDiv.style.display = 'block';
+                }
+                input.style.borderColor = '#c62828';
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+            }
+          });
+          
+          if (hasError) {
+            e.preventDefault();
+            alert('لطفاً خطاهای فرم را برطرف کنید.');
+            return false;
+          }
+        });
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      initJalali();
+      initPhoneFormatting();
+    });
   })();
 </script>
 {% endblock %}

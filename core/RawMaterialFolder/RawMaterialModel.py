@@ -157,6 +157,32 @@ class RawMaterial(models.Model):
             models.Index(fields=['-created_at']),
         ]
 
+    def save(self, *args, **kwargs):
+        """Auto-generate raw_material_id if not provided"""
+        if not self.raw_material_id:
+            # Generate unique ID with format: RM-YYYY-NNNN
+            from django.utils import timezone
+            year = timezone.now().year
+            
+            # Find the last material for this year
+            last_material = RawMaterial.objects.filter(
+                raw_material_id__startswith=f'RM-{year}-'
+            ).order_by('-raw_material_id').first()
+            
+            if last_material and last_material.raw_material_id:
+                try:
+                    # Extract the number part and increment
+                    last_num = int(last_material.raw_material_id.split('-')[-1])
+                    new_num = last_num + 1
+                except (ValueError, IndexError):
+                    new_num = 1
+            else:
+                new_num = 1
+            
+            self.raw_material_id = f'RM-{year}-{new_num:04d}'
+        
+        super().save(*args, **kwargs)
+
     def __str__(self):
         raw_id = self.raw_material_id or "No ID"
         name = self.name or "No Name"
