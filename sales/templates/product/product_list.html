@@ -513,22 +513,15 @@
                     </select>
                 </div>
 
-                <div class="col-md-3 mb-3">
-                    <label for="application" class="form-label">کاربرد</label>
-                    <input type="text" 
-                           class="form-control" 
-                           id="application" 
-                           name="application" 
-                           value="{{ application_filter }}"
-                           placeholder="کاربرد محصول...">
-                </div>
-
-                <div class="col-md-2 mb-3">
-                    <label for="is_custom" class="form-label">نوع محصول</label>
-                    <select class="form-select" id="is_custom" name="is_custom">
-                        <option value="">همه</option>
-                        <option value="true" {% if custom_filter == 'true' %}selected{% endif %}>سفارشی</option>
-                        <option value="false" {% if custom_filter == 'false' %}selected{% endif %}>استاندارد</option>
+                <div class="col-md-4 mb-3">
+                    <label for="application" class="form-label">کاربرد محصول</label>
+                    <select class="form-select" id="application" name="application">
+                        <option value="">همه کاربردها</option>
+                        {% for app in applications %}
+                        <option value="{{ app.0 }}" {% if application_filter == app.0 %}selected{% endif %}>
+                            {{ app.1 }}
+                        </option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>

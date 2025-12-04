@@ -1,5 +1,6 @@
 from django.db import models
 from django_jalali.db import models as jmodels
+from core.WarehouseFolder.WarehouseModel import Warehouse
 
 
 class PhysicalShape(models.Model):
@@ -123,10 +124,12 @@ class Product(models.Model):
         verbose_name='ضریب تبدیل اصلی به فرعی'
     )
     
-    expiration_date = jmodels.jDateField(
+    expiration_date = models.CharField(
+        max_length=100,
         blank=True,
         null=True,
-        verbose_name='تاریخ انقضا'
+        verbose_name='مدت اعتبار',
+        help_text='مثال: 2 سال، 6 ماه، 18 ماه'
     )
     
     # فیلدهای اختیاری
@@ -155,6 +158,82 @@ class Product(models.Model):
         verbose_name='شرح محصول برای پیش فاکتور',
         null=True,
         blank=True
+    )
+    
+    # فیلدهای فروش و مالی
+    min_sales_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='حداقل مقدار سفارش (کیلوگرم)',
+        blank=True,
+        null=True,
+    )
+    
+    tax_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        verbose_name='درصد مالیات بر ارزش افزوده',
+        blank=True,
+        null=True,
+    )
+    
+    reserve_deposit = models.CharField(
+        max_length=255,
+        verbose_name='احتیاطی سپرده مربوط',
+        blank=True,
+        null=True,
+    )
+    
+    tax_code = models.CharField(
+        max_length=255,
+        verbose_name='کد مالیاتی ماده',
+        blank=True,
+        null=True,
+    )
+    
+    accounting_code = models.CharField(
+        max_length=255,
+        verbose_name='کد حسابداری',
+        blank=True,
+        null=True,
+    )
+    
+    min_inventory = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name='حداقل موجودی انبار (کیلوگرم)',
+        blank=True,
+        null=True,
+    )
+    
+    production_order_point = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name='نقطه سفارش تولید (کیلوگرم)'
+    )
+    
+    transport_conditions = models.TextField(
+        verbose_name='شرایط حمل',
+        blank=True,
+        null=True,
+    )
+    
+    default_warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name='انبار پیش فرض',
+        related_name='products',
+        help_text='انبار پیش‌فرض برای ذخیره این محصول'
+    )
+    
+    storage_conditions = models.TextField(
+        verbose_name='شرایط نگهداری',
+        blank=True,
+        null=True,
     )
     
     created_at = jmodels.jDateTimeField(

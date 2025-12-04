@@ -1,11 +1,10 @@
 from django import forms
-from django.forms import BaseFormSet, formset_factory, modelformset_factory
+from django.forms import BaseFormSet, formset_factory, modelformset_factory, inlineformset_factory
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
+from core.WarehouseFolder.WarehouseModel import Warehouse
 from django_jalali.db import models as jmodels
-from django_jalali.forms import jDateField
-from django_jalali.forms.widgets import jDateInput
 from core.helpers import check_field_access_prefer_edit
 
 
@@ -21,7 +20,10 @@ class CreateProductForm(forms.ModelForm):
             'main_application', 'is_custom', 'full_description', 'main_unit',
             'secondary_unit', 'conversion_coefficient', 'expiration_date',
             'pellet_granule_diameter', 'image', 'lab_analysis', 
-            'invoice_description'
+            'invoice_description', 'min_sales_amount', 'tax_percentage',
+            'reserve_deposit', 'tax_code', 'accounting_code', 'min_inventory',
+            'production_order_point', 'transport_conditions',
+            'default_warehouse', 'storage_conditions'
         ]
 
     def __init__(self, *args, **kwargs):
@@ -67,7 +69,7 @@ class CreateProductForm(forms.ModelForm):
         # تنظیم فیلدهای اجباری (فقط برای فیلدهایی که دسترسی دارند و هنوز در فرم هستند)
         required_fields = ['code', 'name', 'category', 'subcategory', 'grade', 
                           'physical_shape', 'main_application', 'full_description', 
-                          'main_unit', 'expiration_date']
+                          'main_unit']
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
@@ -75,7 +77,11 @@ class CreateProductForm(forms.ModelForm):
         # تنظیم فیلدهای اختیاری (فقط برای فیلدهایی که دسترسی دارند و هنوز در فرم هستند)
         optional_fields = ['secondary_unit', 'conversion_coefficient', 
                           'pellet_granule_diameter', 'image', 'lab_analysis', 
-                          'invoice_description', 'is_custom']
+                          'invoice_description', 'is_custom', 'expiration_date',
+                          'min_sales_amount', 'tax_percentage', 'reserve_deposit',
+                          'tax_code', 'accounting_code', 'min_inventory',
+                          'production_order_point', 'transport_conditions',
+                          'default_warehouse', 'storage_conditions']
         for field_name in optional_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = False
@@ -161,24 +167,40 @@ class CreateProductForm(forms.ModelForm):
         }),
     )
 
-    main_unit = forms.CharField(
-        max_length=50,
+    main_unit = forms.ChoiceField(
+        choices=[
+            ('', '-- انتخاب کنید --'),
+            ('کیلوگرم', 'کیلوگرم'),
+            ('گرم', 'گرم'),
+            ('تن', 'تن'),
+            ('عدد', 'عدد'),
+            ('بسته', 'بسته'),
+            ('کیسه', 'کیسه'),
+            ('لیتر', 'لیتر'),
+        ],
         required=True,
         label='واحد شمارش اصلی',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'مثال: کیلوگرم، تن، گرم'
+        widget=forms.Select(attrs={
+            'class': 'form-control'
         }),
         help_text='واحد اصلی برای اندازه‌گیری محصول'
     )
 
-    secondary_unit = forms.CharField(
-        max_length=50,
+    secondary_unit = forms.ChoiceField(
+        choices=[
+            ('', '-- انتخاب کنید --'),
+            ('کیلوگرم', 'کیلوگرم'),
+            ('گرم', 'گرم'),
+            ('تن', 'تن'),
+            ('عدد', 'عدد'),
+            ('بسته', 'بسته'),
+            ('کیسه', 'کیسه'),
+            ('لیتر', 'لیتر'),
+        ],
         required=False,
         label='واحد شمارش فرعی',
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'مثال: گرم (اختیاری)'
+        widget=forms.Select(attrs={
+            'class': 'form-control'
         }),
     )
 
@@ -194,14 +216,15 @@ class CreateProductForm(forms.ModelForm):
         }),
     )
 
-    expiration_date = jDateField(
-        required=True,
-        label='تاریخ انقضا (شمسی)',
-        widget=jDateInput(attrs={
-            'class': 'form-control jalali-date',
-            'placeholder': 'تاریخ انقضا',
-            'dir': 'ltr'
+    expiration_date = forms.CharField(
+        max_length=100,
+        required=False,
+        label='مدت اعتبار',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'مثال: 2 سال، 6 ماه، 18 ماه'
         }),
+        help_text='مدت زمان اعتبار محصول'
     )
 
     # فیلدهای اختیاری
@@ -243,6 +266,115 @@ class CreateProductForm(forms.ModelForm):
             'class': 'form-control',
             'rows': 2,
             'placeholder': 'شرح برای نمایش در پیش فاکتور'
+        }),
+    )
+    
+    # فیلدهای فروش و مالی
+    min_sales_amount = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        label='حداقل مقدار سفارش (کیلوگرم)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'حداقل مقدار سفارش'
+        }),
+    )
+    
+    tax_percentage = forms.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        required=False,
+        label='درصد مالیات بر ارزش افزوده',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'مثال: 9'
+        }),
+    )
+    
+    reserve_deposit = forms.CharField(
+        max_length=255,
+        required=False,
+        label='احتیاطی سپرده مربوط',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'احتیاطی سپرده'
+        }),
+    )
+    
+    tax_code = forms.CharField(
+        max_length=255,
+        required=False,
+        label='کد مالیاتی ماده',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کد مالیاتی'
+        }),
+    )
+    
+    accounting_code = forms.CharField(
+        max_length=255,
+        required=False,
+        label='کد حسابداری',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کد حسابداری'
+        }),
+    )
+    
+    min_inventory = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        label='حداقل موجودی انبار (کیلوگرم)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'حداقل موجودی'
+        }),
+    )
+    
+    production_order_point = forms.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        required=False,
+        label='نقطه سفارش تولید (کیلوگرم)',
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'placeholder': 'نقطه تولید'
+        }),
+    )
+    
+    transport_conditions = forms.CharField(
+        required=False,
+        label='شرایط حمل',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'شرایط حمل و نقل'
+        }),
+    )
+    
+    default_warehouse = forms.ModelChoiceField(
+        queryset=Warehouse.objects.all(),
+        required=False,
+        label='انبار پیش فرض',
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+        }),
+        help_text='انبار پیش‌فرض برای ذخیره این محصول'
+    )
+    
+    storage_conditions = forms.CharField(
+        required=False,
+        label='شرایط نگهداری',
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'شرایط نگهداری محصول'
         }),
     )
 
@@ -487,9 +619,11 @@ ProductionInfoFormSet = formset_factory(
     validate_min=False
 )
 
-# ایجاد formset برای BOM (برای ایجاد)
-BOMFormSet = formset_factory(
-    BOMForm,
+# ایجاد inlineformset برای BOM که به ProductionInfo لینک می‌شود
+BOMInlineFormSet = inlineformset_factory(
+    ProductionInfo,
+    BOM,
+    form=BOMForm,
     extra=1,
     can_delete=True,
     min_num=0,
@@ -548,6 +682,16 @@ def get_accessible_product_fields(user, product_form: CreateProductForm = None):
         'image': 'image',
         'lab_analysis': 'lab_analysis',
         'invoice_description': 'invoice_description',
+        'min_sales_amount': 'min_sales_amount',
+        'tax_percentage': 'tax_percentage',
+        'reserve_deposit': 'reserve_deposit',
+        'tax_code': 'tax_code',
+        'accounting_code': 'accounting_code',
+        'min_inventory': 'min_inventory',
+        'production_order_point': 'production_order_point',
+        'transport_conditions': 'transport_conditions',
+        'default_warehouse': 'default_warehouse',
+        'storage_conditions': 'storage_conditions',
     }
     
     # superuser به همه فیلدها دسترسی دارد

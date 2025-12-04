@@ -13,11 +13,11 @@ from django_tables2 import RequestConfig
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
+from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.RBACModel import user_has_task, TaskChoices
 from sales.forms.product_create_form import (
     CreateProductForm,
     ProductionInfoFormSet,
-    BOMFormSet,
     ProductionInfoModelFormSet,
     BOMModelFormSet,
     get_accessible_product_fields,
@@ -147,81 +147,111 @@ def create_product_view(request):
             prefix='production_info'
         )
         
-        # ایجاد formset برای BOM
-        bom_formset = BOMFormSet(
-            request.POST,
-            prefix='bom'
-        )
-        
-        if product_form.is_valid() and production_info_formset.is_valid() and bom_formset.is_valid():
+        if product_form.is_valid() and production_info_formset.is_valid():
             try:
+                # Parse کردن داده‌های BOM برای هر ProductionInfo
+                production_info_total_forms = int(request.POST.get('production_info-TOTAL_FORMS', 0))
+                production_bom_data = {}  # {production_index: [(raw_material_id, quantity), ...]}
+                
+                for prod_idx in range(production_info_total_forms):
+                    # بررسی اینکه آیا این ProductionInfo حذف شده یا نه
+                    is_deleted = request.POST.get(f'production_info-{prod_idx}-DELETE', 'off') == 'on'
+                    if is_deleted:
+                        continue
+                    
+                    # دریافت تعداد BOM های این ProductionInfo
+                    bom_total_forms = int(request.POST.get(f'bom_{prod_idx}_TOTAL_FORMS', 0))
+                    bom_items = []
+                    
+                    for bom_idx in range(bom_total_forms):
+                        # بررسی اینکه آیا این BOM حذف شده یا نه
+                        bom_is_deleted = request.POST.get(f'bom_{prod_idx}_{bom_idx}_DELETE', 'off') == 'on'
+                        if bom_is_deleted:
+                            continue
+                        
+                        raw_material_id = request.POST.get(f'bom_{prod_idx}_{bom_idx}_raw_material', '')
+                        quantity = request.POST.get(f'bom_{prod_idx}_{bom_idx}_quantity', '')
+                        
+                        if raw_material_id and quantity:
+                            try:
+                                bom_items.append((int(raw_material_id), float(quantity)))
+                            except (ValueError, TypeError):
+                                pass
+                    
+                    production_bom_data[prod_idx] = bom_items
+                
                 # بررسی اینکه حداقل یک ProductionInfo و BOM وجود دارد
-                production_info_count = 0
-                for production_info_form in production_info_formset:
-                    if production_info_form.cleaned_data and not production_info_form.cleaned_data.get('DELETE', False):
-                        # بررسی اینکه آیا همه فیلدهای اجباری پر شده‌اند
-                        if all([
-                            production_info_form.cleaned_data.get('formula_id'),
-                            production_info_form.cleaned_data.get('min_batch_production') is not None,
-                            production_info_form.cleaned_data.get('specific_production_instruction'),
-                        ]):
-                            production_info_count += 1
+                valid_production_count = 0
+                total_bom_count = 0
                 
-                bom_count = 0
-                for bom_form in bom_formset:
-                    if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
-                        # بررسی اینکه آیا همه فیلدهای اجباری پر شده‌اند
-                        if all([
-                            bom_form.cleaned_data.get('raw_material'),
-                            bom_form.cleaned_data.get('quantity') is not None,
-                        ]):
-                            bom_count += 1
+                for prod_idx, bom_items in production_bom_data.items():
+                    if len(bom_items) > 0:
+                        valid_production_count += 1
+                        total_bom_count += len(bom_items)
                 
-                if production_info_count == 0:
-                    messages.error(request, 'حداقل یک اطلاعات تولید کامل (شامل شناسه فرمول، حداقل بچ تولید و دستور العمل) الزامی است.')
-                elif bom_count == 0:
-                    messages.error(request, 'حداقل یک ماده اولیه کامل (شامل نام ماده اولیه و مقدار به کیلوگرم) در BOM الزامی است.')
+                if valid_production_count == 0:
+                    messages.error(request, 'حداقل یک فرمول تولید با مواد اولیه (BOM) الزامی است.')
+                elif total_bom_count == 0:
+                    messages.error(request, 'حداقل یک ماده اولیه در BOM الزامی است.')
                 else:
-                    with transaction.atomic():
-                        # ذخیره محصول اصلی
-                        product = product_form.save()
-                        
-                        # ذخیره اطلاعات تولید
-                        production_infos = []
-                        for production_info_form in production_info_formset:
-                            if production_info_form.cleaned_data and not production_info_form.cleaned_data.get('DELETE', False):
-                                # بررسی اینکه آیا همه فیلدهای اجباری پر شده‌اند
-                                if all([
-                                    production_info_form.cleaned_data.get('formula_id'),
-                                    production_info_form.cleaned_data.get('min_batch_production') is not None,
-                                    production_info_form.cleaned_data.get('specific_production_instruction'),
-                                ]):
-                                    production_info = production_info_form.save(commit=False)
-                                    production_info.product = product
-                                    production_info.save()
-                                    production_infos.append(production_info)
-                        
-                        # ذخیره BOM ها - لینک به اولین ProductionInfo
-                        if production_infos:
-                            first_production_info = production_infos[0]
-                            for bom_form in bom_formset:
-                                if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
+                    # بررسی تکراری نبودن مواد اولیه در هر فرمول
+                    has_error = False
+                    for prod_idx, bom_items in production_bom_data.items():
+                        raw_material_ids = [item[0] for item in bom_items]
+                        if len(raw_material_ids) != len(set(raw_material_ids)):
+                            # پیدا کردن ماده اولیه تکراری
+                            seen = set()
+                            for rm_id in raw_material_ids:
+                                if rm_id in seen:
+                                    try:
+                                        rm = RawMaterial.objects.get(id=rm_id)
+                                        messages.error(request, f'ماده اولیه "{rm.name}" در فرمول #{prod_idx + 1} تکراری است.')
+                                        has_error = True
+                                        break
+                                    except RawMaterial.DoesNotExist:
+                                        pass
+                                seen.add(rm_id)
+                            if has_error:
+                                break
+                    
+                    if not has_error:
+                        with transaction.atomic():
+                            # ذخیره محصول اصلی
+                            product = product_form.save()
+                            
+                            # ذخیره اطلاعات تولید و BOM های مربوطه
+                            for prod_idx, production_info_form in enumerate(production_info_formset):
+                                if production_info_form.cleaned_data and not production_info_form.cleaned_data.get('DELETE', False):
                                     # بررسی اینکه آیا همه فیلدهای اجباری پر شده‌اند
                                     if all([
-                                        bom_form.cleaned_data.get('raw_material'),
-                                        bom_form.cleaned_data.get('quantity') is not None,
+                                        production_info_form.cleaned_data.get('formula_id'),
+                                        production_info_form.cleaned_data.get('min_batch_production') is not None,
+                                        production_info_form.cleaned_data.get('specific_production_instruction'),
                                     ]):
-                                        bom = bom_form.save(commit=False)
-                                        bom.production_info = first_production_info
-                                        bom.save()
-                        
-                        audit_logger.info(f"محصول جدید با کد {product.code} توسط کاربر {request.user.username} ایجاد شد")
-                        messages.success(
-                            request,
-                            f'محصول "{product.name}" با کد "{product.code}" با موفقیت ایجاد شد.'
-                        )
-                        
-                        return redirect('sales:product_list')
+                                        production_info = production_info_form.save(commit=False)
+                                        production_info.product = product
+                                        production_info.save()
+                                        
+                                        # ذخیره BOM های مربوط به این ProductionInfo
+                                        if prod_idx in production_bom_data:
+                                            for raw_material_id, quantity in production_bom_data[prod_idx]:
+                                                try:
+                                                    raw_material = RawMaterial.objects.get(id=raw_material_id)
+                                                    BOM.objects.create(
+                                                        production_info=production_info,
+                                                        raw_material=raw_material,
+                                                        quantity=quantity
+                                                    )
+                                                except RawMaterial.DoesNotExist:
+                                                    bug_logger.warning(f"ماده اولیه با ID {raw_material_id} یافت نشد")
+                            
+                            audit_logger.info(f"محصول جدید با کد {product.code} توسط کاربر {request.user.username} ایجاد شد")
+                            messages.success(
+                                request,
+                                f'محصول "{product.name}" با کد "{product.code}" با موفقیت ایجاد شد.'
+                            )
+                            
+                            return redirect('sales:product_list')
                     
             except Exception as e:
                 bug_logger.error(f"خطا در ایجاد محصول: {str(e)}", exc_info=True)
@@ -242,12 +272,6 @@ def create_product_view(request):
                         for field, errors in form.errors.items():
                             for error in errors:
                                 messages.error(request, f'اطلاعات تولید: {field}: {error}')
-            if not bom_formset.is_valid():
-                for form in bom_formset:
-                    if form.errors:
-                        for field, errors in form.errors.items():
-                            for error in errors:
-                                messages.error(request, f'ماده اولیه: {field}: {error}')
     else:
         # تولید شناسه‌های پیشنهادی
         suggested_product_code = generate_suggested_product_code()
@@ -265,12 +289,10 @@ def create_product_view(request):
             prefix='production_info',
             initial=[{'formula_id': suggested_formula_id}]
         )
-        bom_formset = BOMFormSet(prefix='bom')
     
     context = {
         'product_form': product_form,
         'production_info_formset': production_info_formset,
-        'bom_formset': bom_formset,
         'accessible_fields': accessible_fields,
         'page_title': 'ایجاد محصول جدید',
         'submit_button_text': 'ثبت محصول',
@@ -329,10 +351,17 @@ def product_list_view(request):
     # مرتب‌سازی
     products = products.order_by('-created_at')
     
-    # دریافت لیست دسته‌بندی‌ها برای فیلتر
-    categories = Product.objects.values_list(
+    # دریافت لیست دسته‌بندی‌ها برای فیلتر (بدون مقادیر خالی و تکراری)
+    categories = Product.objects.exclude(
+        category__isnull=True
+    ).exclude(
+        category=''
+    ).values_list(
         'category', flat=True
-    ).distinct()
+    ).distinct().order_by('category')
+    
+    # دریافت لیست کاربردهای محصول از CHOICES
+    applications = Product.PRODUCT_APPLICATION_CHOICES
     
     # دریافت فیلدهای قابل دسترسی برای کاربر
     accessible_fields = get_accessible_product_fields_for_view(request.user)
@@ -349,6 +378,7 @@ def product_list_view(request):
         'table': table,
         'search_query': search_query,
         'categories': categories,
+        'applications': applications,
         'category_filter': category_filter,
         'application_filter': application_filter,
         'custom_filter': custom_filter,
@@ -463,16 +493,29 @@ def edit_product_view(request, product_id):
                             production_info_count += 1
                 
                 bom_count = 0
+                raw_materials_list = []
+                has_duplicate = False
+                duplicate_material = None
+                
                 for bom_form in bom_formset:
                     if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
                         if all([
                             bom_form.cleaned_data.get('raw_material'),
                             bom_form.cleaned_data.get('quantity') is not None,
                         ]):
+                            raw_material = bom_form.cleaned_data.get('raw_material')
+                            # بررسی تکراری نبودن ماده اولیه
+                            if raw_material in raw_materials_list:
+                                has_duplicate = True
+                                duplicate_material = raw_material
+                                break
+                            raw_materials_list.append(raw_material)
                             bom_count += 1
                 
                 if production_info_count == 0:
                     messages.error(request, 'حداقل یک اطلاعات تولید کامل (شامل شناسه فرمول، حداقل بچ تولید و دستور العمل) الزامی است.')
+                elif has_duplicate:
+                    messages.error(request, f'ماده اولیه "{duplicate_material.name}" تکراری است. هر ماده اولیه فقط یک بار قابل تعریف است.')
                 elif bom_count == 0:
                     messages.error(request, 'حداقل یک ماده اولیه کامل (شامل نام ماده اولیه و مقدار به کیلوگرم) در BOM الزامی است.')
                 else:
@@ -571,12 +614,6 @@ def edit_product_view(request, product_id):
                         for field, errors in form.errors.items():
                             for error in errors:
                                 messages.error(request, f'اطلاعات تولید: {field}: {error}')
-            if not bom_formset.is_valid():
-                for form in bom_formset:
-                    if form.errors:
-                        for field, errors in form.errors.items():
-                            for error in errors:
-                                messages.error(request, f'ماده اولیه: {field}: {error}')
     else:
         # ایجاد فرم با داده‌های موجود
         product_form = CreateProductForm(
@@ -730,6 +767,31 @@ def product_search_ajax(request):
         return JsonResponse({'results': results})
     
     audit_logger.alert("درخواست AJAX محصولات بدون هدر X-Requested-With")
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def get_raw_materials_ajax(request):
+    """
+    API برای دریافت لیست مواد اولیه برای استفاده در BOM
+    """
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            raw_materials = RawMaterial.objects.all().values('id', 'name', 'primary_unit')
+            raw_materials_list = [
+                {
+                    'id': rm['id'],
+                    'name': rm['name'],
+                    'unit': rm['primary_unit'] or 'کیلوگرم'
+                }
+                for rm in raw_materials
+            ]
+            return JsonResponse({'success': True, 'raw_materials': raw_materials_list})
+        except Exception as e:
+            bug_logger.error(f"خطا در دریافت لیست مواد اولیه: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    audit_logger.alert("درخواست AJAX مواد اولیه بدون هدر X-Requested-With")
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
