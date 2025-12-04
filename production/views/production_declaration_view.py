@@ -40,7 +40,6 @@ def get_accessible_production_program_fields(user):
     accessible_fields = {}
     accessible_fields['id'] = user_can_access_field(user, ProductionProgram, 'id', 'view')
     accessible_fields['program_id'] = user_can_access_field(user, ProductionProgram, 'program_id', 'view')
-    accessible_fields['execution_date'] = user_can_access_field(user, ProductionProgram, 'execution_date', 'view')
     accessible_fields['planned_weight_ton'] = user_can_access_field(user, ProductionProgram, 'planned_weight_ton', 'view')
     accessible_fields['produced_weight_ton'] = user_can_access_field(user, ProductionProgram, 'produced_weight_ton', 'view')
     accessible_fields['packaging_type'] = user_can_access_field(user, ProductionProgram, 'packaging_type', 'view')
@@ -63,7 +62,6 @@ def get_accessible_production_program_fields(user):
     # Edit permissions
     accessible_fields['id_edit'] = user_can_access_field(user, ProductionProgram, 'id', 'edit')
     accessible_fields['program_id_edit'] = user_can_access_field(user, ProductionProgram, 'program_id', 'edit')
-    accessible_fields['execution_date_edit'] = user_can_access_field(user, ProductionProgram, 'execution_date', 'edit')
     accessible_fields['planned_weight_ton_edit'] = user_can_access_field(user, ProductionProgram, 'planned_weight_ton', 'edit')
     accessible_fields['produced_weight_ton_edit'] = user_can_access_field(user, ProductionProgram, 'produced_weight_ton', 'edit')
     accessible_fields['packaging_type_edit'] = user_can_access_field(user, ProductionProgram, 'packaging_type', 'edit')
@@ -1665,7 +1663,7 @@ def archived_programs_view(request):
         programs = ProductionProgram.objects.filter(
             is_archived=True,
             status='completed'
-        ).select_related('product', 'production_info').order_by('-execution_date', '-id')
+        ).select_related('product', 'production_info').order_by('-created_at', '-id')
         
         bug_logger.debug(f"Number of archived programs: {programs.count()}")
         

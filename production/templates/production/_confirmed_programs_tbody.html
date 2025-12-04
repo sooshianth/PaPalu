@@ -12,9 +12,6 @@
     {% if accessible_production_program_fields.planned_weight_ton %}
     <td>{{ program.planned_weight_ton|default:"-" }}</td>
     {% endif %}
-    {% if accessible_production_program_fields.execution_date %}
-    <td>{{ program.execution_date|default:"-" }}</td>
-    {% endif %}
     {% if accessible_production_program_fields.packaging_type %}
     <td>{{ program.get_packaging_type_display|default:"-" }}</td>
     {% endif %}

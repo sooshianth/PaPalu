@@ -418,8 +418,6 @@
                 <div class="filter-group">
                     <label>مرتب‌سازی:</label>
                     <select id="sortSelect">
-                        <option value="execution_date_desc">تاریخ اجرا (جدیدترین)</option>
-                        <option value="execution_date_asc">تاریخ اجرا (قدیمی‌ترین)</option>
                         <option value="completed_at_desc">زمان تکمیل (جدیدترین)</option>
                         <option value="completed_at_asc">زمان تکمیل (قدیمی‌ترین)</option>
                         <option value="produced_weight_ton_desc">وزن تولید (بیشترین)</option>
@@ -449,7 +447,6 @@
                                 <th class="sortable" data-sort="id">شناسه</th>
                                 <th class="sortable" data-sort="program_id">کد برنامه</th>
                                 <th class="sortable" data-sort="product">محصول</th>
-                                <th class="sortable" data-sort="execution_date">تاریخ اجرا</th>
                                 <th class="sortable" data-sort="planned_weight_ton">تناژ برنامه</th>
                                 <th class="sortable" data-sort="produced_weight_ton">وزن تولید</th>
                                 <th class="sortable" data-sort="fulfillment">درصد تحقق</th>
@@ -463,7 +460,6 @@
                             <tr data-id="{{ program.id }}" 
                                 data-program-id="{{ program.program_id|default:'' }}" 
                                 data-product="{{ program.product.name|default:'' }}"
-                                data-execution-date="{{ program.execution_date|default:'' }}"
                                 data-planned-weight="{{ program.planned_weight_ton|default:'0' }}"
                                 data-produced-weight="{{ program.produced_weight_ton|default:'0' }}"
                                 data-fulfillment="{{ program.fulfillment_percentage|default:'0' }}"
@@ -471,7 +467,6 @@
                                 <td><strong>{{ program.id }}</strong></td>
                                 <td>{{ program.program_id|default:'-' }}</td>
                                 <td>{{ program.product.name|default:'-' }}</td>
-                                <td>{{ program.execution_date|default:'-' }}</td>
                                 <td>{{ program.planned_weight_ton|floatformat:2|default:'-' }} تن</td>
                                 <td>{{ program.produced_weight_ton|floatformat:2|default:'-' }} تن</td>
                                 <td>
@@ -546,7 +541,7 @@
 const searchInput = document.getElementById('searchInput');
 const tableBody = document.getElementById('tableBody');
 const allRows = tableBody ? Array.from(tableBody.querySelectorAll('tr')) : [];
-let currentSortColumn = 'execution_date';
+let currentSortColumn = 'completed_at';
 let currentSortDirection = 'desc';
 
 // Search function
@@ -559,12 +554,10 @@ if (searchInput) {
             const id = row.dataset.id.toLowerCase();
             const programId = row.dataset.programId.toLowerCase();
             const product = row.dataset.product.toLowerCase();
-            const executionDate = row.dataset.executionDate.toLowerCase();
             
             const matches = id.includes(searchTerm) || 
                           programId.includes(searchTerm) || 
-                          product.includes(searchTerm) ||
-                          executionDate.includes(searchTerm);
+                          product.includes(searchTerm);
             
             row.style.display = matches ? '' : 'none';
             if (matches) visibleCount++;
@@ -623,10 +616,6 @@ function sortTable(column, direction) {
                 aVal = a.dataset.product;
                 bVal = b.dataset.product;
                 break;
-            case 'execution_date':
-                aVal = a.dataset.executionDate;
-                bVal = b.dataset.executionDate;
-                break;
             case 'planned_weight_ton':
                 aVal = parseFloat(a.dataset.plannedWeight) || 0;
                 bVal = parseFloat(b.dataset.plannedWeight) || 0;
@@ -678,8 +667,8 @@ function unarchiveProgram(programId) {
 
 // Initialize default sort
 if (allRows.length > 0) {
-    sortTable('execution_date', 'desc');
-    const firstSortableHeader = document.querySelector('th[data-sort="execution_date"]');
+    sortTable('completed_at', 'desc');
+    const firstSortableHeader = document.querySelector('th[data-sort="completed_at"]');
     if (firstSortableHeader) {
         firstSortableHeader.classList.add('sorted-desc');
     }

@@ -157,6 +157,22 @@
         background: var(--gray-100);
     }
     
+    .btn-outline-primary {
+        padding: 8px 15px;
+        border-radius: 6px;
+        border: 1px solid var(--primary-green);
+        color: var(--primary-green);
+        background: white;
+        transition: all 0.3s;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    
+    .btn-outline-primary:hover {
+        background: var(--primary-green);
+        color: white;
+    }
+    
     .alert {
         padding: 15px;
         margin-bottom: 20px;
@@ -220,6 +236,70 @@
         color: var(--gray-800);
         margin-bottom: 10px;
         font-size: 0.95rem;
+    }
+    
+    .form-check-input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    #new_account_fields {
+        margin-top: 15px;
+        padding: 15px;
+        background: var(--gray-50);
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .modal-header h3 {
+        color: var(--primary-green);
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-check-input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    #new_account_fields {
+        margin-top: 15px;
+        padding: 15px;
+        background: var(--gray-50);
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
     }
 </style>
 {% endblock %}
@@ -380,7 +460,16 @@
             
             <div class="form-group">
                 <label for="{{ form.driver_account_number.id_for_label }}" class="required">شماره حساب راننده</label>
-                {{ form.driver_account_number }}
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <div style="flex: 1;">
+                        {{ form.driver_account_number }}
+                    </div>
+                    {% if transport.driver %}
+                    <button type="button" id="createAccountBtn" class="btn-outline-primary" style="white-space: nowrap;">
+                        ایجاد حساب جدید
+                    </button>
+                    {% endif %}
+                </div>
                 {% if form.driver_account_number.errors %}
                     <div class="alert alert-error">
                         {{ form.driver_account_number.errors }}
@@ -481,6 +570,67 @@
     </form>
 </div>
 
+<!-- مودال ایجاد حساب جدید (مستقل از فرم) -->
+{% if transport.driver %}
+<div id="createAccountModal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3>ایجاد حساب جدید</h3>
+        </div>
+        <form id="createAccountForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="new_account_number" class="required">شماره حساب</label>
+                <input type="text" 
+                       id="new_account_number" 
+                       name="account_number" 
+                       class="form-control" 
+                       placeholder="1234567890123456"
+                       pattern="[0-9]{16}"
+                       maxlength="16"
+                       required>
+                <small style="color: var(--gray-600); display: block; margin-top: 5px;">
+                    شماره حساب باید 16 رقم باشد
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="new_shaba_number">شماره شبا</label>
+                <input type="text" 
+                       id="new_shaba_number" 
+                       name="shaba_number" 
+                       class="form-control" 
+                       placeholder="IR123456789012345678901234"
+                       pattern="IR[0-9]{24}"
+                       maxlength="26">
+                <small style="color: var(--gray-600); display: block; margin-top: 5px;">
+                    فرمت: IR123456789012345678901234 (IR + 24 رقم)
+                </small>
+            </div>
+            
+            <div class="form-group">
+                <label for="new_bank_name" class="required">نام بانک</label>
+                <input type="text" 
+                       id="new_bank_name" 
+                       name="bank_name" 
+                       class="form-control" 
+                       placeholder="نام بانک"
+                       required>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-outline-primary" onclick="closeCreateAccountModal()">
+                    انصراف
+                </button>
+                <button type="submit" class="btn-success">
+                    ایجاد حساب
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
 <script>
     // محاسبه خودکار وزن خالص
     document.addEventListener('DOMContentLoaded', function() {
@@ -503,6 +653,150 @@
         emptyWeightInput.addEventListener('input', calculateNetWeight);
         grossWeightInput.addEventListener('input', calculateNetWeight);
         
+        // مدیریت مودال ایجاد حساب جدید
+        const createAccountBtn = document.getElementById('createAccountBtn');
+        const createAccountModal = document.getElementById('createAccountModal');
+        const createAccountForm = document.getElementById('createAccountForm');
+        const driverAccountNumberSelect = document.getElementById('{{ form.driver_account_number.id_for_label }}');
+        
+        // نمایش مودال
+        if (createAccountBtn && createAccountModal) {
+            createAccountBtn.addEventListener('click', function() {
+                createAccountModal.style.display = 'flex';
+            });
+        }
+        
+        // بستن مودال با کلیک روی پس‌زمینه
+        if (createAccountModal) {
+            createAccountModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeCreateAccountModal();
+                }
+            });
+        }
+        
+        // تابع بستن مودال
+        function closeCreateAccountModal() {
+            if (createAccountModal) {
+                createAccountModal.style.display = 'none';
+            }
+            if (createAccountForm) {
+                createAccountForm.reset();
+            }
+        }
+        
+        // فرمت خودکار شماره حساب (فقط اعداد، 16 رقم)
+        const accountNumberInput = document.getElementById('new_account_number');
+        if (accountNumberInput) {
+            accountNumberInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/[^0-9]/g, '');
+                // محدود کردن به 16 رقم
+                if (value.length > 16) {
+                    value = value.substring(0, 16);
+                }
+                e.target.value = value;
+            });
+        }
+        
+        // فرمت خودکار شماره شبا
+        const shabaInput = document.getElementById('new_shaba_number');
+        if (shabaInput) {
+            shabaInput.addEventListener('input', function(e) {
+                let value = e.target.value.toUpperCase().replace(/[^IR0-9]/g, '');
+                // اگر با IR شروع نشده، اضافه کن
+                if (value && !value.startsWith('IR')) {
+                    value = 'IR' + value.replace(/^IR/, '');
+                }
+                // محدود کردن به 26 کاراکتر (IR + 24 رقم)
+                if (value.length > 26) {
+                    value = value.substring(0, 26);
+                }
+                e.target.value = value;
+            });
+        }
+        
+        // ارسال فرم ایجاد حساب
+        if (createAccountForm) {
+            createAccountForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const accountNumber = document.getElementById('new_account_number').value.trim();
+                const shabaNumber = document.getElementById('new_shaba_number').value.trim();
+                const bankName = document.getElementById('new_bank_name').value.trim();
+                
+                if (!accountNumber || !bankName) {
+                    alert('شماره حساب و نام بانک الزامی است.');
+                    return;
+                }
+                
+                // اعتبارسنجی شماره حساب (16 رقم)
+                if (!/^\d{16}$/.test(accountNumber)) {
+                    alert('شماره حساب باید دقیقاً 16 رقم باشد.');
+                    return;
+                }
+                
+                // ارسال با AJAX
+                const formData = new FormData();
+                formData.append('account_number', accountNumber);
+                formData.append('shaba_number', shabaNumber);
+                formData.append('bank_name', bankName);
+                formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+                
+                fetch('{% url "distribution:create_bank_account_ajax" transport.waybill_number %}', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'خطا در ایجاد حساب');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // اضافه کردن حساب جدید به select
+                        if (driverAccountNumberSelect) {
+                            // بررسی اینکه آیا این حساب قبلاً وجود دارد
+                            let optionExists = false;
+                            for (let i = 0; i < driverAccountNumberSelect.options.length; i++) {
+                                if (driverAccountNumberSelect.options[i].value === data.account_number) {
+                                    optionExists = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!optionExists) {
+                                const option = document.createElement('option');
+                                option.value = data.account_number;
+                                option.textContent = data.account_display;
+                                driverAccountNumberSelect.appendChild(option);
+                            }
+                            
+                            // انتخاب حساب جدید
+                            driverAccountNumberSelect.value = data.account_number;
+                            
+                            // اگر select disabled بود، آن را فعال کن
+                            if (driverAccountNumberSelect.disabled) {
+                                driverAccountNumberSelect.disabled = false;
+                                driverAccountNumberSelect.required = true;
+                            }
+                        }
+                        
+                        alert('حساب با موفقیت ایجاد شد و انتخاب شد.');
+                        closeCreateAccountModal();
+                    } else {
+                        alert('خطا: ' + (data.error || 'خطای نامشخص'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('خطا در ایجاد حساب: ' + error.message);
+                });
+            });
+        }
+        
         // بررسی اعتبار فرم قبل از ارسال
         document.getElementById('loadingExitForm').addEventListener('submit', function(e) {
             const emptyWeight = parseFloat(emptyWeightInput.value) || 0;
@@ -512,6 +806,25 @@
                 e.preventDefault();
                 alert('وزن پر باید بیشتر یا مساوی وزن خالی باشد.');
                 return false;
+            }
+            
+            // بررسی شماره حساب
+            const createNewAccount = createNewAccountCheckbox && createNewAccountCheckbox.checked;
+            if (createNewAccount) {
+                const newAccountNumber = document.getElementById('new_account_number').value.trim();
+                const newBankName = document.getElementById('new_bank_name').value.trim();
+                if (!newAccountNumber || !newBankName) {
+                    e.preventDefault();
+                    alert('در صورت انتخاب ایجاد حساب جدید، شماره حساب و نام بانک الزامی است.');
+                    return false;
+                }
+            } else {
+                const driverAccountNumber = driverAccountNumberSelect.value;
+                if (!driverAccountNumber && driverAccountNumberSelect.required) {
+                    e.preventDefault();
+                    alert('انتخاب شماره حساب راننده الزامی است.');
+                    return false;
+                }
             }
         });
     });

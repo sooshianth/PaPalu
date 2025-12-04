@@ -204,6 +204,14 @@ class LoadingExitForm(forms.Form):
                 raise forms.ValidationError('شماره همراه باید با فرمت 09XXXXXXXXX باشد.')
         return driver_mobile
     
+    def clean_new_shaba_number(self):
+        shaba_number = self.cleaned_data.get('new_shaba_number', '').strip()
+        if shaba_number:
+            # فرمت شبا: IR + 24 رقم
+            if not re.match(r'^IR\d{24}$', shaba_number):
+                raise forms.ValidationError('شماره شبا باید با فرمت IR123456789012345678901234 باشد (IR + 24 رقم).')
+        return shaba_number
+    
     def clean(self):
         cleaned_data = super().clean()
         empty_weight = cleaned_data.get('empty_weight')
