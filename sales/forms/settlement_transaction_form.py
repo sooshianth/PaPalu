@@ -43,7 +43,9 @@ class SettlementTransactionForm(forms.ModelForm):
         ]
         widgets = {
             'discrepancy_type': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control',
+                'readonly': True,
+                'disabled': True
             }),
             'payment_type': forms.Select(attrs={
                 'class': 'form-control'
@@ -96,31 +98,71 @@ class SettlementTransactionForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
+        # دریافت difference_amount، customer و settled_amount از kwargs
+        difference_amount = kwargs.pop('difference_amount', None)
+        customer = kwargs.pop('customer', None)
+        settled_amount = kwargs.pop('settled_amount', None)
+        
         super().__init__(*args, **kwargs)
+        
+        # ذخیره مقادیر برای استفاده در clean
+        self.difference_amount = difference_amount
+        self.settled_amount = settled_amount or 0
+        
+        # تنظیم discrepancy_type به صورت read-only و بر اساس difference_amount
+        discrepancy_type_value = None
+        if difference_amount is not None:
+            if difference_amount > 0:
+                discrepancy_type_value = 'surplus'  # سرک
+            elif difference_amount < 0:
+                discrepancy_type_value = 'shortage'  # کسری
+        
+        if discrepancy_type_value:
+            self.fields['discrepancy_type'].initial = discrepancy_type_value
+            # غیرفعال کردن فیلد discrepancy_type (read-only)
+            self.fields['discrepancy_type'].widget.attrs['readonly'] = True
+            self.fields['discrepancy_type'].widget.attrs['disabled'] = True
+            self.fields['discrepancy_type'].required = False
         
         # دریافت یا ایجاد شرکت تامین نهاده سیمرغ
         company_name = 'تامین نهاده سیمرغ'
         company = Person.objects.filter(name=company_name).first()
         
-        if company:
-            # دریافت FinancialBanking شرکت
-            financial_banking = FinancialBanking.objects.filter(person=company).first()
-            
-            if financial_banking:
-                # فیلتر کردن حساب‌های بانکی فقط برای تامین نهاده سیمرغ
-                self.fields['source_account'].queryset = BankAccount.objects.filter(
-                    financial_banking=financial_banking
-                )
+        # تعیین نوع discrepancy
+        is_surplus = difference_amount and difference_amount > 0
+        is_shortage = difference_amount and difference_amount < 0
+        
+        # فیلتر کردن حساب‌های بانکی بر اساس نوع تسویه
+        if is_surplus:
+            # سرک: مشتری باید پول بزند - حساب مبدا از حساب‌های مشتری
+            if customer:
+                customer_financial_banking = FinancialBanking.objects.filter(person=customer).first()
+                if customer_financial_banking:
+                    self.fields['source_account'].queryset = BankAccount.objects.filter(
+                        financial_banking=customer_financial_banking
+                    )
+                else:
+                    self.fields['source_account'].queryset = BankAccount.objects.none()
             else:
-                # اگر FinancialBanking وجود نداشت، queryset خالی
+                self.fields['source_account'].queryset = BankAccount.objects.none()
+        elif is_shortage:
+            # کسری: ما باید پول بزنیم - حساب مبدا از حساب‌های تامین نهاده سیمرغ
+            if company:
+                company_financial_banking = FinancialBanking.objects.filter(person=company).first()
+                if company_financial_banking:
+                    self.fields['source_account'].queryset = BankAccount.objects.filter(
+                        financial_banking=company_financial_banking
+                    )
+                else:
+                    self.fields['source_account'].queryset = BankAccount.objects.none()
+            else:
                 self.fields['source_account'].queryset = BankAccount.objects.none()
         else:
-            # اگر شرکت پیدا نشد، queryset خالی
+            # اگر difference_amount صفر باشد
             self.fields['source_account'].queryset = BankAccount.objects.none()
         
         # تنظیم فیلدهای اجباری
         required_fields = [
-            'discrepancy_type',
             'payment_type',
             'document_amount',
             'due_date',
@@ -144,22 +186,64 @@ class SettlementTransactionForm(forms.ModelForm):
         self.fields['payment_type'].label = 'نوع تسویه'
         self.fields['document_amount'].label = 'مبلغ سند'
         self.fields['due_date'].label = 'تاریخ سررسید'
-        self.fields['source_account'].label = 'حساب مبدا'
+        if is_surplus:
+            self.fields['source_account'].label = 'حساب مبدا (حساب مشتری)'
+            self.fields['approval_account_number'].label = 'شماره حساب (حساب تامین نهاده سیمرغ)'
+        elif is_shortage:
+            self.fields['source_account'].label = 'حساب مبدا (حساب تامین نهاده سیمرغ)'
+            self.fields['approval_account_number'].label = 'شماره حساب (حساب مشتری)'
+        else:
+            self.fields['source_account'].label = 'حساب مبدا'
+            self.fields['approval_account_number'].label = 'شماره حساب'
         self.fields['document_attachment'].label = 'پیوست سند'
         self.fields['accounting_document_number'].label = 'شماره سند حسابداری'
         self.fields['tracking_number'].label = 'شماره پیگیری واریز'
         self.fields['source_bank'].label = 'بانک مقصد'
-        self.fields['approval_account_number'].label = 'شماره حساب'
         self.fields['shaba_number'].label = 'شماره شبا'
         self.fields['inquiry_name'].label = 'نام استعلام شده'
         self.fields['transfer_time'].label = 'ساعت واریز'
+    
+    def clean_discrepancy_type(self):
+        """بازیابی discrepancy_type از initial value اگر disabled باشد"""
+        # اگر فیلد disabled باشد، از initial value استفاده می‌کنیم
+        if 'discrepancy_type' not in self.cleaned_data or not self.cleaned_data.get('discrepancy_type'):
+            return self.fields['discrepancy_type'].initial
+        return self.cleaned_data.get('discrepancy_type')
     
     def clean_document_amount(self):
         """اعتبارسنجی مبلغ سند"""
         amount = self.cleaned_data.get('document_amount')
         if amount and amount <= 0:
             raise forms.ValidationError('مبلغ سند باید بیشتر از صفر باشد.')
+        
+        # بررسی اینکه مجموع مبالغ تسویه شده از مبلغ اختلاف بیشتر نشود
+        if self.difference_amount is not None and amount:
+            from decimal import Decimal
+            max_allowed = abs(Decimal(str(self.difference_amount)))
+            new_total = Decimal(str(self.settled_amount)) + Decimal(str(amount))
+            
+            if new_total > max_allowed:
+                remaining = max_allowed - Decimal(str(self.settled_amount))
+                raise forms.ValidationError(
+                    f'مجموع مبالغ تسویه شده نمی‌تواند از مبلغ اختلاف ({max_allowed:,.0f} ریال) بیشتر شود. '
+                    f'حداکثر مبلغ قابل ثبت: {remaining:,.0f} ریال'
+                )
+        
         return amount
+    
+    def clean_approval_account_number(self):
+        """اعتبارسنجی شماره حساب"""
+        account_number = self.cleaned_data.get('approval_account_number')
+        if account_number:
+            # حذف فاصله‌ها و خط تیره
+            account_number = account_number.replace(' ', '').replace('-', '').replace('_', '')
+            # بررسی طول
+            if len(account_number) != 16:
+                raise forms.ValidationError('شماره حساب باید 16 رقم باشد.')
+            # بررسی عددی بودن
+            if not account_number.isdigit():
+                raise forms.ValidationError('شماره حساب باید فقط شامل اعداد باشد.')
+        return account_number
     
     def clean_shaba_number(self):
         """اعتبارسنجی شماره شبا"""

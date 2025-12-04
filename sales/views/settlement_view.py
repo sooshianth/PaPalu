@@ -244,7 +244,13 @@ def settlement_detail_view(request, order_number):
         }
     
     if request.method == 'POST':
-        form = SettlementTransactionForm(request.POST, request.FILES)
+        form = SettlementTransactionForm(
+            request.POST, 
+            request.FILES,
+            difference_amount=difference_amount,
+            customer=customer,
+            settled_amount=settled_amount
+        )
         
         if form.is_valid():
             try:
@@ -253,12 +259,11 @@ def settlement_detail_view(request, order_number):
                     transaction_doc = form.save(commit=False)
                     transaction_doc.settlement = settlement
                     
-                    # اگر discrepancy_type تنظیم نشده باشد، از difference_amount استفاده کن
-                    if not transaction_doc.discrepancy_type:
-                        if difference_amount > 0:
-                            transaction_doc.discrepancy_type = 'surplus'  # سرک
-                        elif difference_amount < 0:
-                            transaction_doc.discrepancy_type = 'shortage'  # کسری
+                    # تنظیم discrepancy_type بر اساس difference_amount
+                    if difference_amount > 0:
+                        transaction_doc.discrepancy_type = 'surplus'  # سرک
+                    elif difference_amount < 0:
+                        transaction_doc.discrepancy_type = 'shortage'  # کسری
                     
                     # تولید شماره سند حسابداری
                     if not transaction_doc.accounting_document_number:
@@ -302,12 +307,11 @@ def settlement_detail_view(request, order_number):
                 for error in errors:
                     messages.error(request, f'{field}: {error}')
     else:
-        form = SettlementTransactionForm()
-        # تنظیم مقدار اولیه برای نوع تسویه (کسری/سرک)
-        if difference_amount > 0:
-            form.fields['discrepancy_type'].initial = 'surplus'  # سرک
-        elif difference_amount < 0:
-            form.fields['discrepancy_type'].initial = 'shortage'  # کسری
+        form = SettlementTransactionForm(
+            difference_amount=difference_amount,
+            customer=customer,
+            settled_amount=settled_amount
+        )
     
     context = {
         'form': form,
