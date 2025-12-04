@@ -847,7 +847,7 @@
                 {% else %}
                     <div style="width: 100%;">
                         {% if program and program.predicted_start_date and program.predicted_start_time %}
-                            {{ program.predicted_start_date.year }}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }} {{ program.predicted_start_time|time:"H:i" }}
+                            {{ program.predicted_start_date}}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }}
                         {% else %}-{% endif %}
                     </div>
                 {% endif %}
@@ -1470,10 +1470,18 @@ function showStartProductionModal() {
     
     // Initialize Jalali date picker for modal (date only, no time)
     if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
-        jQuery('#actualStartDate').persianDatepicker({
-            format: 'YYYY-MM-DD',
+        const $actualStartDate = jQuery('#actualStartDate');
+        
+        // The modal input will store Gregorian format internally but show Persian to user
+        // We'll handle conversion on submit
+        $actualStartDate.persianDatepicker({
+            format: 'YYYY/MM/DD',
+            calendarType: 'persian',
             observer: true,
-            autoClose: true
+            autoClose: true,
+            timePicker: {
+                enabled: false
+            }
         });
     }
 }
@@ -1601,7 +1609,7 @@ function showCompleteProductionModal() {
 }
 
 function confirmStartProduction() {
-    const startDate = document.getElementById('actualStartDate').value;
+    let startDate = document.getElementById('actualStartDate').value;
     const startTime = document.getElementById('actualStartTime').value;
     const productionWarehouse = document.getElementById('productionWarehouse').value;
     
@@ -1618,6 +1626,31 @@ function confirmStartProduction() {
     if (!productionWarehouse) {
         alert('لطفاً انبار تولید را انتخاب کنید.');
         return;
+    }
+    
+    // Convert Persian date to Gregorian if needed
+    if (startDate && typeof persianDate !== 'undefined') {
+        try {
+            // Check if date is in Persian format (contains /)
+            if (startDate.includes('/')) {
+                const persianDateParts = startDate.split('/');
+                if (persianDateParts.length === 3) {
+                    const pDate = new persianDate([
+                        parseInt(persianDateParts[0]),
+                        parseInt(persianDateParts[1]),
+                        parseInt(persianDateParts[2])
+                    ]);
+                    const gregorianDate = pDate.toCalendar('gregorian');
+                    startDate = gregorianDate.year + '-' + 
+                               String(gregorianDate.month).padStart(2, '0') + '-' + 
+                               String(gregorianDate.day).padStart(2, '0');
+                }
+            }
+        } catch (e) {
+            console.error('Error converting date:', e);
+            alert('خطا در تبدیل تاریخ. لطفاً مجدداً امتحان کنید.');
+            return;
+        }
     }
     
     // Validate warehouse distribution if section is visible
@@ -2042,20 +2075,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Initialize Persian datepickers for all jalali date inputs
-    if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
-        // Initialize all inputs with jalali-date-input class (date only)
-        jQuery('.jalali-date-input').persianDatepicker({
-            format: 'YYYY-MM-DD',
-            observer: true,
-            autoClose: true,
-            calendar: {
-                persian: {
-                    locale: 'fa'
-                }
-            }
-        });
-    }
+    // Note: Fields with class 'jalali-date' are handled by django-jalali backend
+    // We don't need to initialize Persian datepicker on those
+    // Only initialize on 'jalali-date-input' class if needed for custom fields
     
         // Combine date and time inputs into datetime fields before form submission
         function combineDateTimeFields() {
