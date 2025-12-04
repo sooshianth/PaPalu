@@ -2,8 +2,10 @@ from django import forms
 from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
 from core.ProductFolder.ProductModel import Product
 from django_jalali.forms.widgets import jDateTimeInput, jDateInput
-from django_jalali.forms import jDateField
+from django_jalali.forms import jDateField, jDateTimeField
 from core.helpers import check_field_access_prefer_edit
+from django.utils import timezone
+from datetime import timedelta
 import jdatetime
 
 
@@ -21,8 +23,8 @@ class ProductFinancialInfoForm(forms.ModelForm):
                 'step': '1',
                 'placeholder': 'قیمت به ریال'
             }),
-            'deadline': jDateInput(attrs={
-                'class': 'form-control',
+            'deadline': jDateTimeInput(attrs={
+                'class': 'form-control jalali-datetime',
                 'placeholder': 'مهلت اعتبار قیمت'
             }),
             'condition': forms.Textarea(attrs={
@@ -93,23 +95,37 @@ class ProductFinancialInfoForm(forms.ModelForm):
             for field_name in fields_to_remove:
                 del self.fields[field_name]
         
-        # تنظیم فیلد deadline به صورت jDateField با تقویم شمسی
+        # تنظیم فیلد deadline به صورت jDateTimeField با تقویم شمسی
         if 'deadline' in self.fields:
-            self.fields['deadline'] = jDateField(
+            self.fields['deadline'] = jDateTimeField(
                 required=True,
-                label='مهلت اعتبار قیمت',
-                widget=jDateInput(attrs={
-                    'class': 'form-control jalali-date',
+                label='مهلت اعتبار قیمت (تاریخ و ساعت)',
+                widget=jDateTimeInput(attrs={
+                    'class': 'form-control jalali-datetime',
                     'placeholder': 'مهلت اعتبار قیمت',
                     'dir': 'ltr'
                 })
             )
+            
+        # اضافه کردن فیلد مخفی برای تاریخ بینهایت
+        self.fields['infinite_deadline'] = forms.BooleanField(
+            required=False,
+            label='تاریخ بینهایت',
+            widget=forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'id': 'infinite_deadline_checkbox'
+            })
+        )
         
         # تنظیم فیلدهای اجباری
-        required_fields = ['product', 'price', 'deadline', 'condition', 'condition_description']
+        required_fields = ['product', 'price', 'condition', 'condition_description']
         for field_name in required_fields:
             if field_name in self.fields:
                 self.fields[field_name].required = True
+        
+        # deadline فقط زمانی اجباری است که infinite_deadline فعال نباشد
+        if 'deadline' in self.fields:
+            self.fields['deadline'].required = False  # چک می‌شود در clean
         
         # تنظیم فیلدهای اختیاری
         optional_fields = ['description', 'loading_date']
@@ -134,21 +150,44 @@ class ProductFinancialInfoForm(forms.ModelForm):
         return price
     
     def clean_deadline(self):
-        """اعتبارسنجی deadline - تاریخ شمسی"""
+        """اعتبارسنجی deadline - تاریخ و ساعت شمسی"""
         deadline = self.cleaned_data.get('deadline')
+        infinite_deadline = self.cleaned_data.get('infinite_deadline', False)
+        
+        # اگر تاریخ بینهایت انتخاب شده، تاریخ 99 سال بعد را ست می‌کنیم
+        if infinite_deadline:
+            # استفاده از timezone.now() برای گرفتن datetime با timezone
+            now = timezone.now()
+            # تبدیل به jdatetime
+            now_jalali = jdatetime.datetime.fromgregorian(datetime=now)
+            # تاریخ 99 سال بعد
+            infinite_jalali = jdatetime.datetime(now_jalali.year + 99, 12, 29, 23, 59, 59)
+            # تبدیل به gregorian datetime با timezone
+            infinite_gregorian = infinite_jalali.togregorian()
+            # اضافه کردن timezone
+            infinite_aware = timezone.make_aware(infinite_gregorian)
+            return infinite_aware
         
         if deadline:
-            # deadline از jDateField می‌آید و خودش jdatetime.date است
             try:
+                # deadline از jDateTimeField می‌آید
+                # تبدیل به timezone-aware datetime
+                if isinstance(deadline, jdatetime.datetime):
+                    # تبدیل jdatetime به datetime
+                    deadline_gregorian = deadline.togregorian()
+                    deadline = timezone.make_aware(deadline_gregorian)
+                elif not timezone.is_aware(deadline):
+                    deadline = timezone.make_aware(deadline)
+                
                 # بررسی اینکه تاریخ در گذشته نباشد
-                today = jdatetime.date.today()
-                if deadline < today:
+                now = timezone.now()
+                if deadline < now:
                     raise forms.ValidationError('تاریخ مهلت اعتبار نمی‌تواند در گذشته باشد. لطفاً تاریخ امروز یا آینده را انتخاب کنید.')
                 
-                # بررسی محدودیت منطقی (حداکثر 2 سال در آینده)
-                two_years_later = jdatetime.date(today.year + 2, today.month, today.day)
-                if deadline > two_years_later:
-                    raise forms.ValidationError('تاریخ مهلت اعتبار نمی‌تواند بیش از 2 سال در آینده باشد.')
+                # بررسی محدودیت منطقی (حداکثر 10 سال در آینده برای تاریخ های عادی)
+                ten_years_later = now + timedelta(days=365 * 10)
+                if deadline > ten_years_later:
+                    raise forms.ValidationError('تاریخ مهلت اعتبار نمی‌تواند بیش از 10 سال در آینده باشد. برای تاریخ بینهایت از گزینه مربوطه استفاده کنید.')
                 
                 return deadline
             except forms.ValidationError:
@@ -196,8 +235,15 @@ class ProductFinancialInfoForm(forms.ModelForm):
             except (ValueError, TypeError):
                 self.add_error('product', 'شناسه محصول معتبر نیست.')
         
-        # بررسی اینکه همه فیلدهای اجباری پر شده‌اند
-        required_fields = ['price', 'deadline', 'condition', 'condition_description']
+        # بررسی deadline یا infinite_deadline
+        infinite_deadline = cleaned_data.get('infinite_deadline', False)
+        deadline = cleaned_data.get('deadline')
+        
+        if not infinite_deadline and not deadline:
+            self.add_error('deadline', 'لطفاً تاریخ مهلت اعتبار را وارد کنید یا گزینه "بینهایت" را انتخاب کنید.')
+        
+        # بررسی اینکه سایر فیلدهای اجباری پر شده‌اند
+        required_fields = ['price', 'condition', 'condition_description']
         for field_name in required_fields:
             if field_name not in cleaned_data or not cleaned_data.get(field_name):
                 if field_name in self.fields:
@@ -213,17 +259,10 @@ class ProductFinancialInfoForm(forms.ModelForm):
         if hasattr(self, '_product'):
             instance.product = self._product
         
-        # deadline از jDateField مستقیماً jdatetime.date است، نیازی به تبدیل نیست
-        # اما برای اطمینان بررسی می‌کنیم
+        # deadline از clean_deadline به صورت timezone-aware datetime برمی‌گردد
+        # Django ORM به صورت خودکار آن را ذخیره می‌کند
         if 'deadline' in self.cleaned_data and self.cleaned_data['deadline']:
-            deadline = self.cleaned_data['deadline']
-            # اگر deadline یک jdatetime.date است، مستقیماً استفاده می‌کنیم
-            if isinstance(deadline, jdatetime.date):
-                instance.deadline = deadline
-            elif hasattr(deadline, 'date'):  # اگر datetime باشد
-                # تبدیل از datetime به jdatetime.date
-                jdate = jdatetime.date.fromgregorian(date=deadline.date())
-                instance.deadline = jdate
+            instance.deadline = self.cleaned_data['deadline']
         
         if commit:
             instance.save()

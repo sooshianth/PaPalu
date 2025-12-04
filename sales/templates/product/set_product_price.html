@@ -303,8 +303,27 @@
 
                 {% if accessible_fields.deadline and 'deadline' in financial_info_form.fields %}
                 <div class="col-md-6 mb-3">
-                    <label class="form-label required-field">{{ financial_info_form.deadline.label }}</label>
-                    {{ financial_info_form.deadline }}
+                    <label class="form-label">{{ financial_info_form.deadline.label }}</label>
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <div style="flex: 1; position: relative;">
+                            {{ financial_info_form.deadline }}
+                        </div>
+                        <button type="button" 
+                                class="btn btn-sm btn-outline-secondary" 
+                                id="toggle-infinite-deadline"
+                                title="تاریخ بینهایت"
+                                style="white-space: nowrap;">
+                            <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-left: 5px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M3 12C3 12 5.5 7 12 7C18.5 7 21 12 21 12C21 12 18.5 17 12 17C5.5 17 3 12 3 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                            بینهایت
+                        </button>
+                    </div>
+                    <div style="display: none;">
+                        {{ financial_info_form.infinite_deadline }}
+                    </div>
                     {% if financial_info_form.deadline.errors %}
                         <div class="text-danger">{{ financial_info_form.deadline.errors.0 }}</div>
                     {% endif %}
@@ -400,19 +419,30 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let searchTimeout;
         
+        // نمایش همه محصولات هنگام focus (اگر query خالی باشد)
+        productInput.addEventListener('focus', function() {
+            const query = this.value.trim();
+            
+            // اگر هیچ چیزی تایپ نشده، همه محصولات را نمایش بده
+            if (!query) {
+                fetch('{% url "sales:product_search_api" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        productSuggestions = data.results || [];
+                        displaySuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در دریافت لیست محصولات:', error);
+                    });
+            }
+        });
+        
         productInput.addEventListener('input', function() {
             const query = this.value.trim();
             
             clearTimeout(searchTimeout);
             
-            if (query.length < 1) {
-                suggestionsContainer.style.display = 'none';
-                productSuggestions = [];
-                selectedProductId = null;
-                if (productIdInput) productIdInput.value = '';
-                return;
-            }
-            
+            // جستجو حتی با query خالی
             searchTimeout = setTimeout(function() {
                 fetch('{% url "sales:product_search_api" %}?q=' + encodeURIComponent(query))
                     .then(response => response.json())
@@ -503,8 +533,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 $(document).ready(function() {
-    // تبدیل فیلد تاریخ مهلت اعتبار به تقویم شمسی
+    // تبدیل فیلد تاریخ مهلت اعتبار به تقویم شمسی با ساعت
     var deadlineInput = $('#id_deadline');
+    var infiniteCheckbox = $('#id_infinite_deadline');
+    var infiniteButton = $('#toggle-infinite-deadline');
+    var isInfinite = false;
     
     if (deadlineInput.length) {
         // تبدیل type='date' به text برای استفاده از تقویم شمسی
@@ -522,7 +555,7 @@ $(document).ready(function() {
             if (parts.length === 3) {
                 var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
                 var pDate = persianDate.fromGregorian(gregorianDate);
-                persianDateValue = pDate.format('YYYY/MM/DD');
+                persianDateValue = pDate.format('YYYY/MM/DD HH:mm');
                 deadlineInput.val(persianDateValue);
             }
         }
@@ -538,29 +571,36 @@ $(document).ready(function() {
         }
         deadlineInput.after(hiddenInput);
         
-        // راه‌اندازی تقویم شمسی
+        // راه‌اندازی تقویم شمسی با ساعت
         deadlineInput.pDatepicker({
             observer: true,
-            format: 'YYYY/MM/DD',
+            format: 'YYYY/MM/DD HH:mm',
             altField: '#id_deadline_hidden',
-            altFormat: 'YYYY-MM-DD',
+            altFormat: 'YYYY-MM-DD HH:mm:ss',
             calendarType: 'persian',
             initialValue: persianDateValue || false,
             timePicker: {
-                enabled: false
+                enabled: true,
+                meridiem: {
+                    enabled: false
+                }
             },
             onSelect: function() {
                 // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
                 var selectedDate = deadlineInput.val();
                 if (selectedDate) {
                     try {
-                        var persianDateParts = selectedDate.split('/');
+                        var parts = selectedDate.split(' ');
+                        var datePart = parts[0];
+                        var timePart = parts[1] || '23:59';
+                        
+                        var persianDateParts = datePart.split('/');
                         if (persianDateParts.length === 3) {
-                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                            var persianDateObj = persianDate.fromString(datePart, 'YYYY/MM/DD');
                             var gregorianDate = persianDateObj.toCalendar('gregorian');
                             var formattedDate = gregorianDate.year + '-' + 
                                                String(gregorianDate.month).padStart(2, '0') + '-' + 
-                                               String(gregorianDate.day).padStart(2, '0');
+                                               String(gregorianDate.day).padStart(2, '0') + ' ' + timePart + ':00';
                             
                             hiddenInput.val(formattedDate);
                         }
@@ -571,11 +611,37 @@ $(document).ready(function() {
             }
         });
         
+        // مدیریت دکمه بینهایت
+        infiniteButton.on('click', function() {
+            isInfinite = !isInfinite;
+            
+            if (isInfinite) {
+                // فعال کردن حالت بینهایت
+                deadlineInput.prop('disabled', true);
+                deadlineInput.css('background-color', '#e9ecef');
+                deadlineInput.css('color', '#6c757d');
+                deadlineInput.val('تاریخ بینهایت (99 سال)');
+                infiniteCheckbox.prop('checked', true);
+                infiniteButton.addClass('btn-primary').removeClass('btn-outline-secondary');
+                
+                // پاک کردن hidden input چون از infinite_deadline استفاده می‌شود
+                hiddenInput.val('');
+            } else {
+                // غیرفعال کردن حالت بینهایت
+                deadlineInput.prop('disabled', false);
+                deadlineInput.css('background-color', '');
+                deadlineInput.css('color', '');
+                deadlineInput.val('');
+                infiniteCheckbox.prop('checked', false);
+                infiniteButton.removeClass('btn-primary').addClass('btn-outline-secondary');
+            }
+        });
+        
         // اضافه کردن آیکون تقویم
         if (!deadlineInput.parent().find('.p-datepicker-trigger').length) {
             var iconSpan = $('<span>', {
                 class: 'p-datepicker-trigger',
-                html: '📅',
+                html: '📅🕐',
                 css: {
                     'position': 'absolute',
                     'right': '10px',

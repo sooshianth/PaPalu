@@ -20,7 +20,7 @@ class ProductFinancialInfo(models.Model):
         verbose_name='قیمت'
     )
     
-    deadline = jmodels.jDateField(
+    deadline = jmodels.jDateTimeField(
         verbose_name='مهلت اعتبار قیمت',
         null=False,
         blank=False

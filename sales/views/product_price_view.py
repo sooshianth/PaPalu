@@ -6,6 +6,7 @@ from django.core.paginator import Paginator
 from django.db.models import Q
 import logging
 import jdatetime
+from django.utils import timezone
 from core.logging_levels import *
 import django_tables2 as tables
 from django_tables2 import RequestConfig
@@ -97,8 +98,8 @@ def product_price_list_view(request):
     product_filter = request.GET.get('product', '')
     
     # حذف خودکار قیمت‌گذاری‌های منقضی شده
-    today = jdatetime.date.today()
-    expired_prices = ProductFinancialInfo.objects.filter(deadline__lt=today)
+    now = timezone.now()
+    expired_prices = ProductFinancialInfo.objects.filter(deadline__lt=now)
     expired_count = expired_prices.count()
     if expired_count > 0:
         expired_prices.delete()
@@ -244,17 +245,19 @@ def set_product_price_view(request, product_id=None):
 def product_search_api(request):
     """
     API endpoint برای جستجوی محصولات
+    اگر query خالی باشد، همه محصولات را برمی‌گرداند
     """
     query = request.GET.get('q', '').strip()
     
+    # اگر query خالی باشد، همه محصولات را برگردان
     if not query:
-        return JsonResponse({'results': []})
-    
-    # فیلتر کردن محصولات
-    products = Product.objects.filter(
-        Q(name__icontains=query) |
-        Q(code__icontains=query)
-    ).order_by('code')[:20]
+        products = Product.objects.all().order_by('code')[:50]  # حداکثر 50 محصول اول
+    else:
+        # فیلتر کردن محصولات بر اساس query
+        products = Product.objects.filter(
+            Q(name__icontains=query) |
+            Q(code__icontains=query)
+        ).order_by('code')[:20]
     
     results = []
     for product in products:
