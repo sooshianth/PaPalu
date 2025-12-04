@@ -182,6 +182,80 @@ document.addEventListener('DOMContentLoaded', function() {
     // اعمال به تمام فرم‌های موجود
     document.querySelectorAll('.item-form-row').forEach(setupBagWeightToggle);
     
+    // تابع برای ایجاد/حذف dropdown قیمت
+    function createPriceDropdown(formRow, prices, unitPriceInput) {
+        // حذف dropdown قبلی اگر وجود داشته باشد
+        const existingDropdown = formRow.querySelector('.price-dropdown-container');
+        if (existingDropdown) {
+            existingDropdown.remove();
+        }
+        
+        if (!prices || prices.length === 0) {
+            return;
+        }
+        
+        // پیدا کردن container فیلد unit_price
+        const unitPriceContainer = unitPriceInput.closest('.col-md-3');
+        if (!unitPriceContainer) {
+            return;
+        }
+        
+        // اگر فقط یک قیمت وجود دارد، مستقیماً در input قرار بده
+        if (prices.length === 1) {
+            unitPriceInput.value = prices[0].price;
+            return;
+        }
+        
+        // ایجاد dropdown برای چندین قیمت
+        const dropdownContainer = document.createElement('div');
+        dropdownContainer.className = 'price-dropdown-container mb-2';
+        
+        const dropdownLabel = document.createElement('label');
+        dropdownLabel.className = 'form-label';
+        dropdownLabel.textContent = 'انتخاب قیمت:';
+        dropdownLabel.style.fontSize = '0.875rem';
+        dropdownLabel.style.color = '#6c757d';
+        
+        const dropdown = document.createElement('select');
+        dropdown.className = 'form-control form-control-sm price-select-dropdown';
+        dropdown.style.marginBottom = '5px';
+        
+        // گزینه پیش‌فرض
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- انتخاب قیمت --';
+        dropdown.appendChild(defaultOption);
+        
+        // اضافه کردن گزینه‌های قیمت
+        prices.forEach(function(price) {
+            const option = document.createElement('option');
+            option.value = price.price;
+            option.textContent = price.display;
+            option.dataset.priceId = price.id;
+            dropdown.appendChild(option);
+        });
+        
+        // رویداد تغییر dropdown
+        dropdown.addEventListener('change', function() {
+            if (this.value) {
+                unitPriceInput.value = this.value;
+            } else {
+                unitPriceInput.value = '';
+            }
+        });
+        
+        dropdownContainer.appendChild(dropdownLabel);
+        dropdownContainer.appendChild(dropdown);
+        
+        // قرار دادن dropdown بعد از label و قبل از input
+        const labelElement = unitPriceContainer.querySelector('label');
+        if (labelElement && labelElement.nextSibling) {
+            unitPriceContainer.insertBefore(dropdownContainer, labelElement.nextSibling);
+        } else {
+            unitPriceContainer.insertBefore(dropdownContainer, unitPriceInput);
+        }
+    }
+    
     // تابع برای پر کردن خودکار واحد و قیمت هنگام انتخاب محصول
     function setupProductAutoFill(formRow) {
         const productSelect = formRow.querySelector('select[name*="-product"]');
@@ -196,6 +270,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     // اگر محصول انتخاب نشده، فیلدها را خالی کن
                     weightUnitSelect.value = 'kg';
                     unitPriceInput.value = '';
+                    // حذف dropdown قیمت
+                    const existingDropdown = formRow.querySelector('.price-dropdown-container');
+                    if (existingDropdown) {
+                        existingDropdown.remove();
+                    }
                     return;
                 }
                 
@@ -218,9 +297,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             weightUnitSelect.dispatchEvent(event);
                         }
                         
-                        // پر کردن قیمت واحد
-                        if (data.has_price && data.unit_price && unitPriceInput) {
-                            unitPriceInput.value = data.unit_price;
+                        // مدیریت قیمت‌ها
+                        if (data.has_price && data.prices) {
+                            // ایجاد dropdown برای انتخاب قیمت
+                            createPriceDropdown(formRow, data.prices, unitPriceInput);
+                            
+                            // اگر فقط یک قیمت وجود دارد، مستقیماً در input قرار بده
+                            if (data.prices.length === 1 && unitPriceInput) {
+                                unitPriceInput.value = data.prices[0].price;
+                            }
+                        } else {
+                            // حذف dropdown قیمت اگر قیمتی وجود نداشت
+                            const existingDropdown = formRow.querySelector('.price-dropdown-container');
+                            if (existingDropdown) {
+                                existingDropdown.remove();
+                            }
+                            if (unitPriceInput) {
+                                unitPriceInput.value = '';
+                            }
                         }
                     })
                     .catch(error => {
