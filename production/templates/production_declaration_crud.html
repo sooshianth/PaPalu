@@ -1472,11 +1472,16 @@ function showStartProductionModal() {
     if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
         const $actualStartDate = jQuery('#actualStartDate');
         
-        // The modal input will store Gregorian format internally but show Persian to user
-        // We'll handle conversion on submit
+        // Destroy existing datepicker if any
+        if ($actualStartDate.data('persianDatepicker')) {
+            $actualStartDate.persianDatepicker('destroy');
+        }
+        
+        // Django-jalali uses Jalali dates directly, no conversion needed
         $actualStartDate.persianDatepicker({
-            format: 'YYYY/MM/DD',
+            format: 'YYYY-MM-DD',
             calendarType: 'persian',
+            initialValueType: 'persian',
             observer: true,
             autoClose: true,
             timePicker: {
@@ -1628,30 +1633,6 @@ function confirmStartProduction() {
         return;
     }
     
-    // Convert Persian date to Gregorian if needed
-    if (startDate && typeof persianDate !== 'undefined') {
-        try {
-            // Check if date is in Persian format (contains /)
-            if (startDate.includes('/')) {
-                const persianDateParts = startDate.split('/');
-                if (persianDateParts.length === 3) {
-                    const pDate = new persianDate([
-                        parseInt(persianDateParts[0]),
-                        parseInt(persianDateParts[1]),
-                        parseInt(persianDateParts[2])
-                    ]);
-                    const gregorianDate = pDate.toCalendar('gregorian');
-                    startDate = gregorianDate.year + '-' + 
-                               String(gregorianDate.month).padStart(2, '0') + '-' + 
-                               String(gregorianDate.day).padStart(2, '0');
-                }
-            }
-        } catch (e) {
-            console.error('Error converting date:', e);
-            alert('خطا در تبدیل تاریخ. لطفاً مجدداً امتحان کنید.');
-            return;
-        }
-    }
     
     // Validate warehouse distribution if section is visible
     const warehouseSection = document.getElementById('warehouseDistributionSection');
@@ -2075,10 +2056,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Note: Fields with class 'jalali-date' are handled by django-jalali backend
-    // We don't need to initialize Persian datepicker on those
-    // Only initialize on 'jalali-date-input' class if needed for custom fields
-    
         // Combine date and time inputs into datetime fields before form submission
         function combineDateTimeFields() {
             // For predicted_start: combine execution_date + predicted_start_time
@@ -2186,6 +2163,42 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             });
+        }
+        
+        // Initialize Persian datepicker for jalali-date fields (same as program_form.html)
+        if (window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker) {
+            // Support both jalali-date and jalali-date-input classes
+            jQuery('.jalali-date, .jalali-date-input').each(function() {
+                const $el = jQuery(this);
+                // Skip if already initialized
+                if ($el.data('persianDatepicker')) return;
+                $el.attr('dir', 'ltr');
+                
+                // Django-jalali uses Jalali dates directly, no conversion needed
+                $el.persianDatepicker({
+                    format: 'YYYY-MM-DD',
+                    calendarType: 'persian',
+                    initialValueType: 'persian',
+                    observer: true,
+                    autoClose: true
+                });
+            });
+            jQuery('.jalali-datetime').each(function() {
+                const $el = jQuery(this);
+                // Skip if already initialized
+                if ($el.data('persianDatepicker')) return;
+                $el.attr('dir', 'ltr');
+                $el.persianDatepicker({
+                    format: 'YYYY-MM-DD HH:mm',
+                    calendarType: 'persian',
+                    initialValueType: 'persian',
+                    observer: true,
+                    timePicker: { enabled: true, second: {enabled: false} },
+                    autoClose: true
+                });
+            });
+        } else {
+            console.error('jQuery or persianDatepicker not loaded');
         }
 });
 
