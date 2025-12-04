@@ -9,6 +9,32 @@ from typing import Optional, Dict
 from core.OrderFolder.OrderModel import Order
 
 
+def convert_to_persian_numbers(text):
+    """تبدیل اعداد انگلیسی به فارسی"""
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    translation_table = str.maketrans(english_digits, persian_digits)
+    return str(text).translate(translation_table)
+
+
+def format_number_persian(number, decimal_places=0):
+    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    if number is None:
+        return '-'
+    try:
+        # تبدیل به float
+        num_float = float(number)
+        # فرمت با کاما
+        if decimal_places > 0:
+            formatted = f"{num_float:,.{decimal_places}f}"
+        else:
+            formatted = f"{num_float:,.0f}"
+        # تبدیل به فارسی
+        return convert_to_persian_numbers(formatted)
+    except (ValueError, TypeError):
+        return str(number)
+
+
 class CustomerTable(tables.Table):
     """جدول لیست مشتریان با استفاده از django-tables2"""
     
@@ -846,7 +872,15 @@ class ProductTable(tables.Table):
     def render_created_at(self, value, record):
         """نمایش تاریخ ایجاد"""
         if value:
-            return value.strftime('%Y/%m/%d')
+            try:
+                # اگر فیلد datetime باشد، ساعت را هم نمایش بده
+                if hasattr(value, 'hour'):
+                    formatted_date = value.strftime('%Y/%m/%d %H:%M')
+                else:
+                    formatted_date = value.strftime('%Y/%m/%d')
+                return convert_to_persian_numbers(formatted_date)
+            except (AttributeError, TypeError):
+                return str(value)
         return '-'
     
     def render_actions(self, record):
@@ -1080,12 +1114,12 @@ class ProductPriceTable(tables.Table):
     def render_price(self, value, record):
         """نمایش قیمت"""
         if value:
-            # تبدیل به float برای فرمت کردن
-            price_float = float(value)
+            # فرمت با اعداد فارسی و کاما
+            price_formatted = format_number_persian(value, decimal_places=0)
             return format_html(
                 '<strong style="color: var(--primary-green);">{}</strong>'
                 '<span style="color: var(--gray-600); font-size: 0.85rem;"> ریال</span>',
-                f"{price_float:,.0f}"
+                price_formatted
             )
         return '-'
     
@@ -1093,8 +1127,12 @@ class ProductPriceTable(tables.Table):
         """نمایش مهلت اعتبار"""
         if value:
             try:
-                # برای jDateField از strftime استفاده می‌کنیم
-                return value.strftime('%Y/%m/%d')
+                # برای jDateTimeField از strftime استفاده می‌کنیم - با ساعت
+                if hasattr(value, 'hour'):
+                    formatted_date = value.strftime('%Y/%m/%d %H:%M')
+                else:
+                    formatted_date = value.strftime('%Y/%m/%d')
+                return convert_to_persian_numbers(formatted_date)
             except (AttributeError, TypeError):
                 # اگر strftime کار نکرد، از str استفاده می‌کنیم
                 return str(value)
@@ -1122,8 +1160,12 @@ class ProductPriceTable(tables.Table):
         """نمایش تاریخ ایجاد"""
         if value:
             try:
-                # برای jDateTimeField از strftime استفاده می‌کنیم
-                return value.strftime('%Y/%m/%d %H:%M')
+                # برای jDateTimeField از strftime استفاده می‌کنیم - با ساعت
+                if hasattr(value, 'hour'):
+                    formatted_date = value.strftime('%Y/%m/%d %H:%M')
+                else:
+                    formatted_date = value.strftime('%Y/%m/%d')
+                return convert_to_persian_numbers(formatted_date)
             except (AttributeError, TypeError):
                 # اگر strftime کار نکرد، از str استفاده می‌کنیم
                 return str(value)
