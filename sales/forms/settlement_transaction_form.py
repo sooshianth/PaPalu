@@ -1,6 +1,8 @@
 from django import forms
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
 from core.PersonFolder.BankAccountModel import BankAccount
+from core.PersonFolder.PersonModel import Person
+from core.PersonFolder.FinancialBankingModel import FinancialBanking
 
 
 class SettlementTransactionForm(forms.ModelForm):
@@ -95,6 +97,26 @@ class SettlementTransactionForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # دریافت یا ایجاد شرکت تامین نهاده سیمرغ
+        company_name = 'تامین نهاده سیمرغ'
+        company = Person.objects.filter(name=company_name).first()
+        
+        if company:
+            # دریافت FinancialBanking شرکت
+            financial_banking = FinancialBanking.objects.filter(person=company).first()
+            
+            if financial_banking:
+                # فیلتر کردن حساب‌های بانکی فقط برای تامین نهاده سیمرغ
+                self.fields['source_account'].queryset = BankAccount.objects.filter(
+                    financial_banking=financial_banking
+                )
+            else:
+                # اگر FinancialBanking وجود نداشت، queryset خالی
+                self.fields['source_account'].queryset = BankAccount.objects.none()
+        else:
+            # اگر شرکت پیدا نشد، queryset خالی
+            self.fields['source_account'].queryset = BankAccount.objects.none()
         
         # تنظیم فیلدهای اجباری
         required_fields = [
