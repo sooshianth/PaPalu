@@ -514,17 +514,180 @@
 						</div>
 					</div>
 					
-					<!-- BOM Details Section (shown when production_info is selected) -->
-					<div class="bom-details-section section" style="display: none;">
-						<div class="section-title">جزئیات فرمول (BOM)</div>
-						<div class="card">
-							<div class="card-body">
-								<div class="bom-details-content">
-									<!-- BOM details will be loaded here dynamically -->
+				<!-- BOM Details Section (shown when production_info is selected) -->
+				<div class="bom-details-section section" style="display: none;">
+					<div style="display: flex; gap: 24px; align-items: flex-start;">
+						<!-- BOM Table (left, 70%) -->
+						<div style="flex: 1;">
+							<div class="section-title">جزئیات فرمول (BOM)</div>
+							<div class="card">
+								<div class="card-body">
+									<div class="bom-details-content">
+										<!-- BOM details will be loaded here dynamically -->
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- موجودی مواد اولیه (راست، 30%) - sticky -->
+						<div class="section" style="flex: 0 0 30%; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto;" id="raw-materials-sidebar">
+							<div class="section-title">
+								<span>موجودی مواد اولیه</span>
+								<span class="section-badge">{{ raw_materials_inventory|length }}</span>
+							</div>
+							
+							<div class="card">
+								<div class="card-body">
+									{% if raw_materials_inventory %}
+									<style>
+										.material-row {
+											cursor: pointer;
+											transition: all 0.2s ease;
+											background: white;
+										}
+										
+										.material-row:hover {
+											background: #f0f7ff !important;
+										}
+										
+										.material-row.expanded {
+											background: #e3f2fd !important;
+											font-weight: 600;
+										}
+										
+										.expand-icon {
+											display: inline-block;
+											transition: transform 0.3s ease;
+											margin-left: 8px;
+											font-size: 0.8rem;
+											color: var(--primary-green);
+										}
+										
+										.material-row.expanded .expand-icon {
+											transform: rotate(90deg);
+										}
+										
+										.warehouse-row {
+											background: #f8fafb !important;
+											border-left: 3px solid var(--primary-green);
+											font-size: 0.85rem;
+										}
+										
+										.warehouse-row td {
+											padding: 8px 12px !important;
+											color: #5a6c7d;
+										}
+										
+										.warehouse-row td:first-child {
+											padding-right: 32px !important;
+										}
+										
+										.warehouse-indent {
+											display: inline-block;
+											margin-left: 16px;
+											color: #6c757d;
+										}
+										
+										.total-badge {
+											display: inline-block;
+											background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+											color: white;
+											padding: 2px 8px;
+											border-radius: 10px;
+											font-size: 0.75rem;
+											font-weight: 600;
+											margin-right: 6px;
+										}
+										
+										.section-badge {
+											background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+											color: white;
+											padding: 4px 12px;
+											border-radius: 20px;
+											font-size: 0.85rem;
+											font-weight: 600;
+											margin-right: 10px;
+										}
+									</style>
+									<div class="table-wrap">
+										<table class="data-table">
+											<thead>
+												<tr>
+													{% if accessible_raw_material_fields.raw_material_id %}
+													<th>کد</th>
+													{% endif %}
+													{% if accessible_raw_material_fields.name %}
+													<th>نام ماده</th>
+													{% endif %}
+													<th>موجودی کل</th>
+													<th>واحد</th>
+												</tr>
+											</thead>
+											<tbody>
+												{% for item in raw_materials_inventory %}
+												<tr class="material-row" onclick="toggleWarehouses('rm-{{ forloop.counter }}', this)" data-rm-id="{{ item.raw_material_id }}">
+													{% if accessible_raw_material_fields.raw_material_id %}
+													<td>
+														<span class="expand-icon">▶</span>
+														{{ item.raw_material_id }}
+													</td>
+													{% endif %}
+													{% if accessible_raw_material_fields.name %}
+													<td>{{ item.name }}</td>
+													{% endif %}
+													<td><span class="total-badge">{{ item.total_quantity|floatformat:2 }}</span></td>
+													<td>{{ item.unit }}</td>
+												</tr>
+												{% for warehouse in item.warehouses %}
+												<tr class="warehouse-row" id="rm-{{ forloop.parentloop.counter }}-wh-{{ forloop.counter }}" style="display: none;">
+													<td {% if accessible_raw_material_fields.raw_material_id and accessible_raw_material_fields.name %}colspan="2"{% endif %}>
+														<span class="warehouse-indent">📦 {{ warehouse.warehouse_name }} ({{ warehouse.warehouse_id }})</span>
+													</td>
+													<td>{{ warehouse.quantity|floatformat:2 }}</td>
+													<td>{{ item.unit }}</td>
+												</tr>
+												{% endfor %}
+												{% endfor %}
+											</tbody>
+										</table>
+									</div>
+									
+									<script>
+									function toggleWarehouses(rmId, row) {
+										// Find all warehouse rows for this material
+										const warehouseRows = document.querySelectorAll(`[id^="${rmId}-wh-"]`);
+										const isExpanded = row.classList.contains('expanded');
+										
+										if (isExpanded) {
+											// Collapse
+											warehouseRows.forEach(whRow => {
+												whRow.style.display = 'none';
+											});
+											row.classList.remove('expanded');
+										} else {
+											// Expand
+											warehouseRows.forEach(whRow => {
+												whRow.style.display = 'table-row';
+											});
+											row.classList.add('expanded');
+										}
+									}
+									</script>
+									{% else %}
+									<div class="empty-state">
+										<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+											<rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+											<path d="M3 9H21" stroke="currentColor" stroke-width="2"/>
+											<path d="M9 21V9" stroke="currentColor" stroke-width="2"/>
+										</svg>
+										<p>هیچ موجودی ماده اولیه‌ای یافت نشد</p>
+									</div>
+									{% endif %}
 								</div>
 							</div>
 						</div>
 					</div>
+				</div>
 					
 					<!-- Hidden fields -->
 					<div style="display:none">{{ form.status }}{{ form.produced_weight_ton }}</div>
@@ -537,201 +700,9 @@
 				</form>
 			</template>
 
-		<!-- Dashboard Tables Section -->
-		<div style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px;">
-			<!-- Main tables section (left, 70%) -->
-			<div class="section" style="flex: 1;">
-				<div class="section-title">جدول ۱: موجودی مواد اولیه</div>
-				<div class="card">
-					<div class="card-body">
-						<div class="table-wrap">
-							<table id="inventoryTable" class="data-table">
-								<thead>
-									<tr>
-										<th>کد ماده اولیه</th>
-										<th>نام ماده اولیه</th>
-										<th>موجودی فعلی</th>
-										<th>واحد</th>
-									</tr>
-								</thead>
-								<tbody>
-									{% for item in raw_material_inventory %}
-									<tr>
-										<td>{{ item.raw_material_id }}</td>
-										<td>{{ item.raw_material }}</td>
-										<td>{{ item.current_inventory }}</td>
-										<td>{{ item.unit_used }}</td>
-									</tr>
-									{% empty %}
-									<tr><td colspan="4"><div class="empty-state">داده‌ای موجود نیست.</div></td></tr>
-									{% endfor %}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				</div>
-			</div>
-			
-			<!-- موجودی مواد اولیه (راست، 30%) - sticky -->
-			<div class="section" style="flex: 0 0 30%; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto;" id="raw-materials-sidebar">
-				<div class="section-title">
-					<span>موجودی مواد اولیه</span>
-					<span class="section-badge">{{ raw_materials_inventory|length }}</span>
-				</div>
-				
-				<div class="card">
-					<div class="card-body">
-						{% if raw_materials_inventory %}
-						<style>
-							.material-row {
-								cursor: pointer;
-								transition: all 0.2s ease;
-								background: white;
-							}
-							
-							.material-row:hover {
-								background: #f0f7ff !important;
-							}
-							
-							.material-row.expanded {
-								background: #e3f2fd !important;
-								font-weight: 600;
-							}
-							
-							.expand-icon {
-								display: inline-block;
-								transition: transform 0.3s ease;
-								margin-left: 8px;
-								font-size: 0.8rem;
-								color: var(--primary-green);
-							}
-							
-							.material-row.expanded .expand-icon {
-								transform: rotate(90deg);
-							}
-							
-							.warehouse-row {
-								background: #f8fafb !important;
-								border-left: 3px solid var(--primary-green);
-								font-size: 0.85rem;
-							}
-							
-							.warehouse-row td {
-								padding: 8px 12px !important;
-								color: #5a6c7d;
-							}
-							
-							.warehouse-row td:first-child {
-								padding-right: 32px !important;
-							}
-							
-							.warehouse-indent {
-								display: inline-block;
-								margin-left: 16px;
-								color: #6c757d;
-							}
-							
-							.total-badge {
-								display: inline-block;
-								background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
-								color: white;
-								padding: 2px 8px;
-								border-radius: 10px;
-								font-size: 0.75rem;
-								font-weight: 600;
-								margin-right: 6px;
-							}
-							
-							.section-badge {
-								background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
-								color: white;
-								padding: 4px 12px;
-								border-radius: 20px;
-								font-size: 0.85rem;
-								font-weight: 600;
-								margin-right: 10px;
-							}
-						</style>
-						<div class="table-wrap">
-							<table class="data-table">
-								<thead>
-									<tr>
-										{% if accessible_raw_material_fields.raw_material_id %}
-										<th>کد</th>
-										{% endif %}
-										{% if accessible_raw_material_fields.name %}
-										<th>نام ماده</th>
-										{% endif %}
-										<th>موجودی کل</th>
-										<th>واحد</th>
-									</tr>
-								</thead>
-								<tbody>
-									{% for item in raw_materials_inventory %}
-									<tr class="material-row" onclick="toggleWarehouses('rm-{{ forloop.counter }}', this)" data-rm-id="{{ item.raw_material_id }}">
-										{% if accessible_raw_material_fields.raw_material_id %}
-										<td>
-											<span class="expand-icon">▶</span>
-											{{ item.raw_material_id }}
-										</td>
-										{% endif %}
-										{% if accessible_raw_material_fields.name %}
-										<td>{{ item.name }}</td>
-										{% endif %}
-										<td><span class="total-badge">{{ item.total_quantity|floatformat:2 }}</span></td>
-										<td>{{ item.unit }}</td>
-									</tr>
-									{% for warehouse in item.warehouses %}
-									<tr class="warehouse-row" id="rm-{{ forloop.parentloop.counter }}-wh-{{ forloop.counter }}" style="display: none;">
-										<td {% if accessible_raw_material_fields.raw_material_id and accessible_raw_material_fields.name %}colspan="2"{% endif %}>
-											<span class="warehouse-indent">📦 {{ warehouse.warehouse_name }} ({{ warehouse.warehouse_id }})</span>
-										</td>
-										<td>{{ warehouse.quantity|floatformat:2 }}</td>
-										<td>{{ item.unit }}</td>
-									</tr>
-									{% endfor %}
-									{% endfor %}
-								</tbody>
-							</table>
-						</div>
-						
-						<script>
-						function toggleWarehouses(rmId, row) {
-							// Find all warehouse rows for this material
-							const warehouseRows = document.querySelectorAll(`[id^="${rmId}-wh-"]`);
-							const isExpanded = row.classList.contains('expanded');
-							
-							if (isExpanded) {
-								// Collapse
-								warehouseRows.forEach(whRow => {
-									whRow.style.display = 'none';
-								});
-								row.classList.remove('expanded');
-							} else {
-								// Expand
-								warehouseRows.forEach(whRow => {
-									whRow.style.display = 'table-row';
-								});
-								row.classList.add('expanded');
-							}
-						}
-						</script>
-						{% else %}
-						<div class="empty-state">
-							<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-								<rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
-								<path d="M3 9H21" stroke="currentColor" stroke-width="2"/>
-								<path d="M9 21V9" stroke="currentColor" stroke-width="2"/>
-							</svg>
-							<p>هیچ موجودی ماده اولیه‌ای یافت نشد</p>
-						</div>
-						{% endif %}
-					</div>
-				</div>
-			</div>
-		</div>
 
 		<div class="section">
+			<br>
 			<div class="section-title">جدول ۲: نمای کلی جریان محصولات</div>
 			<div class="card">
 				<div class="card-body">
@@ -865,67 +836,23 @@
 		if (!(window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker)) return;
 		jQuery(rootEl).find('.jalali-date').each(function(){
 			const $el = jQuery(this);
-			const fieldName = $el.attr('name');
 			$el.attr('dir','ltr');
 			
-			// Create hidden input for Gregorian date (what gets submitted)
-			const hiddenId = 'hidden_' + fieldName + '_' + Math.random().toString(36).substr(2, 9);
-			const $hidden = jQuery('<input>', {
-				type: 'hidden',
-				id: hiddenId,
-				name: fieldName,
-				class: 'jalali-date' // Keep the class so collectGregorianConversions still works as fallback
-			});
-			
-			// Get initial value (Gregorian from server)
-			const initialGregorian = $el.val();
-			if (initialGregorian) {
-				$hidden.val(initialGregorian);
-			}
-			
-			// Insert hidden field after visible field
-			$el.after($hidden);
-			
-			// Remove name from visible field so it doesn't get submitted
-			$el.removeAttr('name');
-			
-			// Convert initial Gregorian to Persian for display
-			let persianDateValue = '';
-			if (initialGregorian) {
-				try {
-					const parts = initialGregorian.split('-');
-					if (parts.length === 3) {
-						const gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-						if (typeof persianDate !== 'undefined') {
-							const pDate = persianDate.fromGregorian(gregorianDate);
-							persianDateValue = pDate.format('YYYY/MM/DD');
-							$el.val(persianDateValue);
-						}
-					}
-				} catch(e) {
-					console.error('Error converting initial date:', e);
-				}
-			}
-			
+			// Django-jalali uses Jalali dates directly, no conversion needed
 			$el.persianDatepicker({
-				format: 'YYYY/MM/DD',
-				altField: '#' + hiddenId,
-				altFormat: 'YYYY-MM-DD',
+				format: 'YYYY-MM-DD',
 				calendarType: 'persian',
-				initialValue: persianDateValue || false,
-				autoClose: true,
-				onSelect: function() {
-					// Persian datepicker automatically updates altField with altFormat
-					console.log('Date selected:', $el.val(), '-> Hidden field:', $hidden.val());
-				}
+				initialValueType: 'persian',
+				observer: true,
+				autoClose: true
 			});
 		});
 		jQuery(rootEl).find('.jalali-datetime').each(function(){
 			const $el = jQuery(this);
 			$el.attr('dir','ltr');
 			$el.persianDatepicker({
-				format: 'YYYY/MM/DD HH:mm',
-				initialValueType: 'gregorian',
+				format: 'YYYY-MM-DD HH:mm',
+				calendarType: 'persian',
 				timePicker: { enabled: true, second: {enabled: false} },
 				autoClose: true
 			});
@@ -1131,30 +1058,15 @@
 		// Set today's Jalali date as default for date fields if they're empty
 		// Note: After initJalaliPickers, the visible fields no longer have name attributes
 		// The name is on the hidden fields. We need to find the visible jalali-date inputs
-		if (typeof persianDate !== 'undefined') {
-			const today = new persianDate();
-			const todayJalali = today.format('YYYY/MM/DD');
-			const todayGregorian = today.toCalendar('gregorian');
-			const todayGregorianStr = todayGregorian.year + '-' + 
-				String(todayGregorian.month).padStart(2, '0') + '-' + 
-				String(todayGregorian.day).padStart(2, '0');
-			
-			// Find visible date inputs (they have class jalali-date but no name attribute after init)
-			const visibleDateInputs = pane.querySelectorAll('input.jalali-date:not([name])');
-			visibleDateInputs.forEach(visibleInput => {
-				if (!visibleInput.value) {
-					// Set Persian date in visible field
-					jQuery(visibleInput).val(todayJalali);
-					// Trigger datepicker's onSelect to update hidden field
-					jQuery(visibleInput).trigger('change');
-					// Also manually update the hidden field as backup
-					const hiddenField = jQuery(visibleInput).next('input[type="hidden"]');
-					if (hiddenField.length && !hiddenField.val()) {
-						hiddenField.val(todayGregorianStr);
-					}
-				}
-			});
-		}
+		// Find visible date inputs (they have class jalali-date but no name attribute after init)
+		const visibleDateInputs = pane.querySelectorAll('input.jalali-date:not([name])');
+		visibleDateInputs.forEach(visibleInput => {
+			if (!visibleInput.value) {
+				// Let datepicker handle the default value - it will use initialValueType: 'gregorian'
+				// and automatically set today's date in Persian format
+				jQuery(visibleInput).trigger('change');
+			}
+		});
 		
 		// Setup product-production_info filtering
 		setupProductionInfoFiltering(pane);
@@ -1183,59 +1095,6 @@
 		form.reset();
 	}
 
-	function collectGregorianConversions(root){
-		function pad(n){ return (n<10? '0':'') + n; }
-		// Convert Persian/Arabic-Indic numerals to ASCII
-		function normalizeDigits(str){
-			const persianDigits = ['۰','۱','۲','۳','۴','۵','۶','۷','۸','۹'];
-			const arabicDigits = ['٠','١','٢','٣','٤','٥','٦','٧','٨','٩'];
-			let result = str;
-			for(let i=0; i<10; i++){
-				result = result.replace(new RegExp(persianDigits[i], 'g'), i.toString());
-				result = result.replace(new RegExp(arabicDigits[i], 'g'), i.toString());
-			}
-			return result;
-		}
-		
-		root.querySelectorAll('.jalali-date').forEach(function(inp){
-			let val = inp.value && inp.value.trim();
-			if (!val) { inp.value = ''; return; }
-			val = normalizeDigits(val);
-			// Support both YYYY/MM/DD and YYYY-MM-DD formats
-			const m = val.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
-			if (!m) { console.warn('Invalid jalali date format:', val); return; }
-			const jy = parseInt(m[1]);
-			const jm = parseInt(m[2]);
-			const jd = parseInt(m[3]);
-			try { 
-				const g = jalaali.toGregorian(jy, jm, jd); 
-				inp.value = `${g.gy}-${pad(g.gm)}-${pad(g.gd)}`; 
-				console.log(`Converted ${val} to ${inp.value}`);
-			} catch(e) { 
-				console.error('Jalali conversion error:', e, val); 
-				inp.value = ''; 
-			}
-		});
-		root.querySelectorAll('.jalali-datetime').forEach(function(inp){
-			let val = inp.value && inp.value.trim();
-			if (!val) { inp.value = ''; return; }
-			val = normalizeDigits(val);
-			const m = val.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})$/);
-			if (!m) { console.warn('Invalid jalali datetime format:', val); return; }
-			const jy = parseInt(m[1]);
-			const jm = parseInt(m[2]);
-			const jd = parseInt(m[3]);
-			const hh = pad(parseInt(m[4]));
-			const mm = pad(parseInt(m[5]));
-			try { 
-				const g = jalaali.toGregorian(jy, jm, jd); 
-				inp.value = `${g.gy}-${pad(g.gm)}-${pad(g.gd)} ${hh}:${mm}`; 
-			} catch(e) { 
-				console.error('Jalali conversion error:', e); 
-				inp.value = ''; 
-			}
-		});
-	}
 
 	async function sendForm(pane, action){
 		const form = pane.querySelector('form');
@@ -1403,8 +1262,6 @@
 <!-- Persian Date libraries -->
 <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
-<!-- Jalaali conversion helper -->
-<script src="https://cdn.jsdelivr.net/npm/jalaali-js@1.1.0/dist/jalaali.min.js"></script>
 <script>
 	// Jalali helpers are initialized per-tab by initJalaliPickers()
 </script>

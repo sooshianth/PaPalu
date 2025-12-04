@@ -847,7 +847,7 @@
                 {% else %}
                     <div style="width: 100%;">
                         {% if program and program.predicted_start_date and program.predicted_start_time %}
-                            {{ program.predicted_start_date.year }}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }} {{ program.predicted_start_time|time:"H:i" }}
+                            {{ program.predicted_start_date}}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }}
                         {% else %}-{% endif %}
                     </div>
                 {% endif %}
@@ -1470,10 +1470,23 @@ function showStartProductionModal() {
     
     // Initialize Jalali date picker for modal (date only, no time)
     if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
-        jQuery('#actualStartDate').persianDatepicker({
+        const $actualStartDate = jQuery('#actualStartDate');
+        
+        // Destroy existing datepicker if any
+        if ($actualStartDate.data('persianDatepicker')) {
+            $actualStartDate.persianDatepicker('destroy');
+        }
+        
+        // Django-jalali uses Jalali dates directly, no conversion needed
+        $actualStartDate.persianDatepicker({
             format: 'YYYY-MM-DD',
+            calendarType: 'persian',
+            initialValueType: 'persian',
             observer: true,
-            autoClose: true
+            autoClose: true,
+            timePicker: {
+                enabled: false
+            }
         });
     }
 }
@@ -1601,7 +1614,7 @@ function showCompleteProductionModal() {
 }
 
 function confirmStartProduction() {
-    const startDate = document.getElementById('actualStartDate').value;
+    let startDate = document.getElementById('actualStartDate').value;
     const startTime = document.getElementById('actualStartTime').value;
     const productionWarehouse = document.getElementById('productionWarehouse').value;
     
@@ -1619,6 +1632,7 @@ function confirmStartProduction() {
         alert('لطفاً انبار تولید را انتخاب کنید.');
         return;
     }
+    
     
     // Validate warehouse distribution if section is visible
     const warehouseSection = document.getElementById('warehouseDistributionSection');
@@ -2042,21 +2056,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Initialize Persian datepickers for all jalali date inputs
-    if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
-        // Initialize all inputs with jalali-date-input class (date only)
-        jQuery('.jalali-date-input').persianDatepicker({
-            format: 'YYYY-MM-DD',
-            observer: true,
-            autoClose: true,
-            calendar: {
-                persian: {
-                    locale: 'fa'
-                }
-            }
-        });
-    }
-    
         // Combine date and time inputs into datetime fields before form submission
         function combineDateTimeFields() {
             // For predicted_start: combine execution_date + predicted_start_time
@@ -2164,6 +2163,42 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             });
+        }
+        
+        // Initialize Persian datepicker for jalali-date fields (same as program_form.html)
+        if (window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker) {
+            // Support both jalali-date and jalali-date-input classes
+            jQuery('.jalali-date, .jalali-date-input').each(function() {
+                const $el = jQuery(this);
+                // Skip if already initialized
+                if ($el.data('persianDatepicker')) return;
+                $el.attr('dir', 'ltr');
+                
+                // Django-jalali uses Jalali dates directly, no conversion needed
+                $el.persianDatepicker({
+                    format: 'YYYY-MM-DD',
+                    calendarType: 'persian',
+                    initialValueType: 'persian',
+                    observer: true,
+                    autoClose: true
+                });
+            });
+            jQuery('.jalali-datetime').each(function() {
+                const $el = jQuery(this);
+                // Skip if already initialized
+                if ($el.data('persianDatepicker')) return;
+                $el.attr('dir', 'ltr');
+                $el.persianDatepicker({
+                    format: 'YYYY-MM-DD HH:mm',
+                    calendarType: 'persian',
+                    initialValueType: 'persian',
+                    observer: true,
+                    timePicker: { enabled: true, second: {enabled: false} },
+                    autoClose: true
+                });
+            });
+        } else {
+            console.error('jQuery or persianDatepicker not loaded');
         }
 });
 
