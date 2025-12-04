@@ -1,18 +1,19 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import HttpResponseForbidden, HttpResponse
+from django.http import HttpResponseForbidden, HttpResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 import logging
+import os
 from core.logging_levels import *
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.TransportFolder.TransportModel import Transport
 from core.TransportFolder.TruckInfoModel import TruckInfo
 from core.TransportFolder.ProductInfoModel import ProductInfo
+from core.TransportFolder.TransportAttachmentModel import TransportAttachment
 from core.AllocationFolder.AllocationModel import Allocation
-from django.template.loader import render_to_string
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -86,92 +87,69 @@ def exit_list_view(request):
 @login_required
 def print_waybill_pdf_view(request, waybill_number):
     """
-    چاپ PDF بارنامه
+    دانلود فایل پیوست بارنامه
     """
-    audit_logger.info(f"درخواست چاپ PDF بارنامه برای حمل {waybill_number}")
+    audit_logger.info(f"درخواست دانلود فایل بارنامه برای حمل {waybill_number}")
     
     if not user_has_task(request.user, TaskChoices.DISTRIBUTION_PRINT_WAYBILL_PDF.value):
-        audit_logger.activity("تلاش برای چاپ PDF بارنامه بدون دسترسی")
-        messages.error(request, 'شما دسترسی به چاپ PDF بارنامه را ندارید.')
+        audit_logger.activity("تلاش برای دانلود فایل بارنامه بدون دسترسی")
+        messages.error(request, 'شما دسترسی به دانلود فایل بارنامه را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     transport = get_object_or_404(Transport, waybill_number=waybill_number)
     
     if transport.status != 'pending_exit':
-        messages.error(request, 'این حمل در وضعیت مناسب برای چاپ بارنامه نیست.')
+        messages.error(request, 'این حمل در وضعیت مناسب برای دانلود بارنامه نیست.')
         return redirect('distribution:exit_list')
     
     try:
-        from weasyprint import HTML, CSS
-        from weasyprint.text.fonts import FontConfiguration
-    except ImportError:
-        messages.error(request, "خطا: پکیج WeasyPrint به درستی نصب نشده است. لطفاً با مدیر سیستم تماس بگیرید.")
-        return redirect('distribution:exit_list')
-    
-    try:
-        bug_logger.debug(f"تولید PDF برای بارنامه {waybill_number}")
+        # جستجوی فایل پیوست بارنامه
+        waybill_attachment = transport.attachments.filter(
+            attachment_type='official_gazette'
+        ).first()
         
-        # دریافت اطلاعات کامل
-        truck_info = transport.truck_infos.first()
-        product_info = transport.product_infos.first()
-        allocation = None
-        order = None
-        if transport.allocation:
-            allocation = transport.allocation
-            if allocation:
-                order = allocation.order
+        if not waybill_attachment or not waybill_attachment.file:
+            messages.error(request, 'فایل بارنامه برای این حمل یافت نشد.')
+            bug_logger.warning(f"فایل بارنامه برای حمل {waybill_number} یافت نشد")
+            return redirect('distribution:exit_list')
         
-        # آماده‌سازی اطلاعات برای PDF
-        context = {
-            'transport': transport,
-            'truck_info': truck_info,
-            'product_info': product_info,
-            'allocation': allocation,
-            'order': order,
-        }
+        # بررسی وجود فایل در سیستم فایل
+        if not os.path.exists(waybill_attachment.file.path):
+            messages.error(request, 'فایل بارنامه در سیستم فایل یافت نشد.')
+            bug_logger.error(f"فایل بارنامه در مسیر {waybill_attachment.file.path} یافت نشد")
+            return redirect('distribution:exit_list')
         
-        # رندر HTML
-        html_string = render_to_string('distribution/waybill_pdf_template.html', context)
+        # استخراج پسوند فایل اصلی
+        original_filename = os.path.basename(waybill_attachment.file.name)
+        file_extension = os.path.splitext(original_filename)[1] or '.pdf'  # پیش‌فرض .pdf اگر پسوند نداشت
         
-        # تبدیل به PDF
-        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        # ساخت نام فایل بر اساس شماره بارنامه
+        filename = f"waybill_{waybill_number}{file_extension}"
         
-        # کانفیگ فونت برای فارسی
-        font_config = FontConfiguration()
+        # تعیین نوع محتوا بر اساس پسوند فایل
+        content_type = 'application/pdf'  # پیش‌فرض
+        if file_extension.lower() == '.pdf':
+            content_type = 'application/pdf'
+        elif file_extension.lower() in ('.jpg', '.jpeg'):
+            content_type = 'image/jpeg'
+        elif file_extension.lower() == '.png':
+            content_type = 'image/png'
         
-        # CSS برای فونت وزیر
-        css = CSS(string='''
-            @font-face {
-                font-family: 'Vazir';
-                src: url('/static/fonts/Vazir-Regular.ttf') format('truetype');
-            }
-            @font-face {
-                font-family: 'Vazir';
-                font-weight: bold;
-                src: url('/static/fonts/Vazir-Bold.ttf') format('truetype');
-            }
-            body {
-                font-family: 'Vazir', Arial, sans-serif;
-                direction: rtl;
-                text-align: right;
-            }
-        ''', font_config=font_config)
+        # باز کردن فایل و ارسال آن
+        file_response = FileResponse(
+            waybill_attachment.file.open('rb'),
+            content_type=content_type
+        )
+        file_response['Content-Disposition'] = f'attachment; filename="{filename}"'
         
-        # تولید PDF
-        pdf_file = html.write_pdf(stylesheets=[css], font_config=font_config)
+        bug_logger.info(f"فایل بارنامه {waybill_number} با موفقیت دانلود شد")
+        audit_logger.activity(f"فایل بارنامه {waybill_number} توسط کاربر {request.user.username} دانلود شد")
         
-        # پاسخ HTTP
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="waybill_{waybill_number}.pdf"'
-        
-        bug_logger.info(f"PDF بارنامه {waybill_number} با موفقیت تولید شد")
-        audit_logger.activity(f"PDF بارنامه {waybill_number} توسط کاربر {request.user.username} چاپ شد")
-        
-        return response
+        return file_response
         
     except Exception as e:
-        bug_logger.error(f"خطا در تولید PDF بارنامه: {str(e)}")
-        messages.error(request, f'خطا در تولید PDF بارنامه: {str(e)}')
+        bug_logger.error(f"خطا در دانلود فایل بارنامه: {str(e)}")
+        messages.error(request, f'خطا در دانلود فایل بارنامه: {str(e)}')
         return redirect('distribution:exit_list')
 
 
@@ -203,50 +181,42 @@ def mark_vehicle_exited_view(request, waybill_number):
             # بررسی تغییر وضعیت تخصیص
             if transport.allocation:
                 allocation = transport.allocation
-                if allocation and allocation.allocation_status == 'pending_loading_completion':
-                    # بررسی اینکه آیا همه حمل‌های تخصیص به completed یا loaded رسیدند
-                    all_transports = Transport.objects.filter(allocation=allocation)
-                    all_transports_count = all_transports.count()
-                    completed_or_loaded_transports = all_transports.filter(
-                        status__in=['completed', 'loaded']
-                    )
-                    completed_or_loaded_count = completed_or_loaded_transports.count()
-                    
-                    # اگر همه حمل‌ها به completed یا loaded رسیدند، تخصیص را به completed ببر
-                    if all_transports_count > 0 and all_transports_count == completed_or_loaded_count:
+                # بررسی اینکه آیا همه حمل‌های تخصیص به completed رسیدند
+                all_transports = Transport.objects.filter(allocation=allocation)
+                all_transports_count = all_transports.count()
+                completed_transports = all_transports.filter(status='completed')
+                completed_count = completed_transports.count()
+                
+                # اگر همه حمل‌ها به completed رسیدند و تخصیص هنوز completed نیست، آن را به completed ببر
+                if all_transports_count > 0 and all_transports_count == completed_count:
+                    if allocation.allocation_status != 'completed':
                         allocation.allocation_status = 'completed'
                         allocation.save(update_fields=['allocation_status'])
                         bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'تکمیل شده' تغییر کرد")
+                        audit_logger.activity(f"وضعیت تخصیص {allocation.allocation_number} به 'تکمیل شده' تغییر کرد")
+                    
+                    # بررسی تغییر وضعیت سفارش
+                    if allocation.order:
+                        order = allocation.order
+                        # دریافت همه تخصیص‌های مرتبط سفارش (تخصیص‌هایی که در فرآیند هستند)
+                        relevant_allocations = Allocation.objects.filter(
+                            order=order
+                        ).exclude(
+                            allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
+                        )
                         
-                        # بررسی تغییر وضعیت سفارش
-                        if allocation.order:
-                            order = allocation.order
-                            # دریافت همه تخصیص‌های سفارش
-                            relevant_allocations = Allocation.objects.filter(
-                                order=order
-                            ).exclude(
-                                allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
+                        # بررسی اینکه آیا همه تخصیص‌های مرتبط به completed رسیدند
+                        if relevant_allocations.exists():
+                            all_completed = all(
+                                alloc.allocation_status == 'completed' 
+                                for alloc in relevant_allocations
                             )
                             
-                            # فقط تخصیص‌هایی که حداقل یک حمل دارند را بررسی می‌کنیم
-                            allocations_with_transports = []
-                            for alloc in relevant_allocations:
-                                alloc_transports = Transport.objects.filter(allocation=alloc)
-                                if alloc_transports.exists():
-                                    allocations_with_transports.append(alloc)
-                            
-                            # بررسی اینکه آیا همه تخصیص‌های دارای حمل به completed رسیدند
-                            if allocations_with_transports:
-                                all_completed = all(
-                                    alloc.allocation_status == 'completed' 
-                                    for alloc in allocations_with_transports
-                                )
-                                
-                                if all_completed:
-                                    order.status = 'pending_unloading_approval'
-                                    order.save(update_fields=['status'])
-                                    bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تخلیه' تغییر کرد")
-                                    audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تخلیه' تغییر کرد")
+                            if all_completed:
+                                order.status = 'pending_unloading_approval'
+                                order.save(update_fields=['status'])
+                                bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تسویه' تغییر کرد")
+                                audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تسویه' تغییر کرد")
             
             bug_logger.info(f"خروج خودرو برای حمل {waybill_number} ثبت شد")
             messages.success(request, f'خروج خودرو برای حمل {waybill_number} با موفقیت ثبت شد.')
