@@ -32,6 +32,30 @@ import jdatetime
 from decimal import Decimal
 
 
+def can_edit_order(order):
+    """
+    بررسی اینکه آیا سفارش قابل ویرایش است یا نه
+    بعد از وضعیت 'pending_transaction_receipt_upload' دیگر قابل ویرایش نیست
+    """
+    if not order or not order.status:
+        return True  # اگر وضعیت ندارد، قابل ویرایش است
+    
+    # وضعیت‌هایی که بعد از آن‌ها دیگر قابل ویرایش نیست
+    non_editable_statuses = [
+        'pending_accounting_approval',
+        'pending_allocation',
+        'pending_allocation_approval',
+        'pending_factory',
+        'pending_unloading_approval',
+        'pending_settlement',
+        'pending_settlement_approval',
+        'cancelled',
+        'archived',
+    ]
+    
+    return order.status not in non_editable_statuses
+
+
 @login_required
 def create_order_view(request):
     """
@@ -429,8 +453,9 @@ def order_detail_view(request, order_number):
     # محاسبه وزن به تن برای نمایش
     total_weight_ton = total_weight / 1000 if total_weight >= 1000 else None
     
-    # بررسی دسترسی ویرایش
-    can_edit = user_has_task(request.user, TaskChoices.SALES_EDIT_ORDER.value)
+    # بررسی دسترسی ویرایش (هم دسترسی کاربر و هم وضعیت سفارش)
+    has_permission = user_has_task(request.user, TaskChoices.SALES_EDIT_ORDER.value)
+    can_edit = has_permission and can_edit_order(order)
     
     context = {
         'order': order,
@@ -458,6 +483,12 @@ def edit_order_view(request, order_number):
         audit_logger.activity("تلاش برای ویرایش سفارش بدون دسترسی")
         messages.error(request, 'شما دسترسی به ویرایش سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # بررسی اینکه آیا سفارش قابل ویرایش است یا نه
+    if not can_edit_order(order):
+        audit_logger.activity(f"تلاش برای ویرایش سفارش {order_number} که در وضعیت {order.status} است و قابل ویرایش نیست")
+        messages.error(request, 'این سفارش در وضعیت فعلی قابل ویرایش نیست.')
+        return redirect('sales:order_detail', order_number=order_number)
     
     # دریافت سفارش
     try:

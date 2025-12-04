@@ -117,6 +117,15 @@ class TransactionApprovalForm(forms.ModelForm):
             self.fields['bank_account'].queryset = BankAccount.objects.none()
             self.fields['inquiry_name'].choices = [('', 'لطفاً مشتری را انتخاب کنید')]
 
+        # تنظیم مقدار اولیه inquiry_amount از document_amount
+        if self.document and self.document.document_amount:
+            # اگر inquiry_amount از قبل وجود ندارد یا خالی است، از document_amount استفاده کن
+            if not self.document.inquiry_amount:
+                self.fields['inquiry_amount'].initial = self.document.document_amount
+            else:
+                # اگر inquiry_amount از قبل وجود دارد، همان را استفاده کن
+                self.fields['inquiry_amount'].initial = self.document.inquiry_amount
+        
         # حذف فیلدهای قدیمی source_bank, approval_account_number, shaba_number
         # چون از bank_account استفاده می‌کنیم
         if 'source_bank' in self.fields:

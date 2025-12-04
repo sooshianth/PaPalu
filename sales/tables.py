@@ -532,6 +532,7 @@ class OrderTable(tables.Table):
         """نمایش دکمه‌های عملیات"""
         from django.urls import reverse
         from core.RBACModel import user_has_task, TaskChoices
+        from sales.views.order_views import can_edit_order
         
         buttons = []
         
@@ -544,9 +545,11 @@ class OrderTable(tables.Table):
             )
         )
         
-        # دکمه ویرایش (فقط اگر کاربر دسترسی داشته باشد)
+        # دکمه ویرایش (فقط اگر کاربر دسترسی داشته باشد و سفارش قابل ویرایش باشد)
         if hasattr(self, 'user') and self.user:
-            if user_has_task(self.user, TaskChoices.SALES_EDIT_ORDER.value):
+            has_permission = user_has_task(self.user, TaskChoices.SALES_EDIT_ORDER.value)
+            is_editable = can_edit_order(record)
+            if has_permission and is_editable:
                 edit_url = reverse('sales:order_edit', args=[record.order_number])
                 buttons.append(
                     format_html(
@@ -555,7 +558,11 @@ class OrderTable(tables.Table):
                     )
                 )
         
-        return format_html(''.join(buttons))
+        # استفاده از btn-group برای نمایش دکمه‌ها کنار هم
+        return format_html(
+            '<div class="btn-group">{}</div>',
+            mark_safe(''.join(buttons))
+        )
 
 
 class ProductTable(tables.Table):
