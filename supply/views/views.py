@@ -183,6 +183,7 @@ class SupplierPersonForm(ModelForm):
 		self.fields['national_id'].required = True
 		self.fields['name'].required = True
 		self.fields['nature'].required = True
+		self.fields['phone_number'].required = True
 
 	def clean_national_id(self):
 		"""اعتبارسنجی کد ملی"""
@@ -207,44 +208,40 @@ class SupplierPersonForm(ModelForm):
 		return national_id
 
 	def clean_phone_number(self):
-		"""اعتبارسنجی و فرمت‌دهی شماره تلفن"""
+		"""اعتبارسنجی و فرمت‌دهی چند شماره تلفن (کاما جدا)."""
 		import re
-		phone = self.cleaned_data.get('phone_number')
-		
-		if not phone:
-			return phone
-		
-		# حذف تمام کاراکترهای غیر عددی
-		digits_only = re.sub(r'\D', '', phone)
-		
-		# بررسی که فقط شامل اعداد باشد (بعد از حذف جداکننده‌ها)
-		if not digits_only:
-			raise forms.ValidationError('شماره تلفن باید شامل اعداد باشد.')
-		
-		# بررسی فرمت‌های مجاز
-		if len(digits_only) == 11 and digits_only.startswith('09'):
-			# موبایل: 09123456789 -> 0912-345-6789
-			# اعتبارسنجی: باید با 09 شروع شود و 11 رقم باشد
-			if not re.match(r'^09\d{9}$', digits_only):
-				raise forms.ValidationError('شماره موبایل نامعتبر است. فرمت صحیح: 0912-345-6789')
-			return f"{digits_only[:4]}-{digits_only[4:7]}-{digits_only[7:]}"
-		elif len(digits_only) == 11 and digits_only.startswith('0'):
-			# تلفن ثابت با کد شهر 3 رقمی: 02112345678 -> 021-1234-5678
-			if not re.match(r'^0\d{10}$', digits_only):
-				raise forms.ValidationError('شماره تلفن ثابت نامعتبر است. فرمت صحیح: 021-1234-5678')
-			return f"{digits_only[:3]}-{digits_only[3:7]}-{digits_only[7:]}"
-		elif len(digits_only) == 10:
-			# تلفن ثابت بدون صفر اول: 2112345678 -> 021-1234-5678
-			if not digits_only.isdigit():
-				raise forms.ValidationError('شماره تلفن باید فقط شامل اعداد باشد.')
-			return f"0{digits_only[:2]}-{digits_only[2:6]}-{digits_only[6:]}"
-		elif len(digits_only) == 8:
-			# فقط شماره محلی (فرض تهران): 12345678 -> 021-1234-5678
-			if not digits_only.isdigit():
-				raise forms.ValidationError('شماره تلفن باید فقط شامل اعداد باشد.')
-			return f"021-{digits_only[:4]}-{digits_only[4:]}"
-		else:
-			raise forms.ValidationError('فرمت شماره تلفن نامعتبر است. باید 11 رقم (مثل 09123456789 یا 02112345678) یا 10 رقم (بدون صفر اول) یا 8 رقم (شماره محلی) باشد.')
+		raw = self.cleaned_data.get('phone_number')
+		if not raw:
+			raise forms.ValidationError('حداقل یک شماره تلفن الزامی است.')
+		# اجازه چند شماره با جداکننده کاما
+		numbers = [s.strip() for s in str(raw).split(',') if s and s.strip()]
+		if not numbers:
+			raise forms.ValidationError('حداقل یک شماره تلفن معتبر وارد کنید.')
+		formatted = []
+		for phone in numbers:
+			digits_only = re.sub(r'\D', '', phone)
+			if not digits_only:
+				raise forms.ValidationError('شماره تلفن باید شامل اعداد باشد.')
+			if len(digits_only) == 11 and digits_only.startswith('09'):
+				if not re.match(r'^09\d{9}$', digits_only):
+					raise forms.ValidationError('شماره موبایل نامعتبر است. فرمت صحیح: 0912-345-6789')
+				formatted.append(f"{digits_only[:4]}-{digits_only[4:7]}-{digits_only[7:]}")
+			elif len(digits_only) == 11 and digits_only.startswith('0'):
+				if not re.match(r'^0\d{10}$', digits_only):
+					raise forms.ValidationError('شماره تلفن ثابت نامعتبر است. فرمت صحیح: 021-1234-5678')
+				formatted.append(f"{digits_only[:3]}-{digits_only[3:7]}-{digits_only[7:]}")
+			elif len(digits_only) == 10:
+				if not digits_only.isdigit():
+					raise forms.ValidationError('شماره تلفن باید فقط شامل اعداد باشد.')
+				formatted.append(f"0{digits_only[:2]}-{digits_only[2:6]}-{digits_only[6:]}")
+			elif len(digits_only) == 8:
+				if not digits_only.isdigit():
+					raise forms.ValidationError('شماره تلفن باید فقط شامل اعداد باشد.')
+				formatted.append(f"021-{digits_only[:4]}-{digits_only[4:]}")
+			else:
+				raise forms.ValidationError('فرمت شماره تلفن نامعتبر است. هر شماره باید معتبر باشد.')
+		# برگرداندن به صورت کاما جدا
+		return ','.join(formatted)
 
 
 class FinancialBankingForm(ModelForm):
@@ -547,6 +544,7 @@ def supplier_list_view(request):
 				return redirect(reverse('supply:supplier_list'))
 			else:
 				bug_logger.warning(f"Supplier form invalid person={person_form.errors} fb={fb_form.errors}")
+				messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
 				# Re-bind formsets to show errors
 				rep_fs = RepresentativeFormSet(request.POST, request.FILES, prefix='rep')
 				ba_fs = BankAccountFormSet(request.POST, prefix='ba')
@@ -567,6 +565,9 @@ def supplier_list_view(request):
 		table = SupplierTable(suppliers)
 		RequestConfig(request, paginate={'per_page': 25}).configure(table)
 		
+		# Add flag to indicate form should be visible (when there are errors)
+		form_has_errors = request.method == 'POST' and (not person_form.is_valid() or not fb_form.is_valid())
+		
 		context = {
 			'table': table,
 			'person_form': person_form,
@@ -576,6 +577,7 @@ def supplier_list_view(request):
 			'pay_formset': pay_fs,
 			'sn_formset': sn_fs,
 			'att_formset': att_fs,
+			'form_has_errors': form_has_errors,
 		}
 		return render(request, 'supply_supplier_list.html', context)
 	except Exception as e:
@@ -730,6 +732,7 @@ def define_basic_material_view(request):
 				return redirect(reverse('supply:define_basic_material'))
 			else:
 				bug_logger.warning(f"فرم تعریف ماده اولیه نامعتبر است. rm_errors={rm_form.errors} pi_errors={pi_form.errors}")
+				messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
 		else:
 			rm_form = RawMaterialDefineForm()
 			pi_form = PurchaseInfoInlineForm()
@@ -739,10 +742,14 @@ def define_basic_material_view(request):
 		table = RawMaterialTable(materials)
 		RequestConfig(request, paginate={'per_page': 25}).configure(table)
 		
+		# Add flag to indicate form should be visible (when there are errors)
+		form_has_errors = request.method == 'POST' and (not rm_form.is_valid() or not pi_form.is_valid())
+		
 		context = {
 			'rm_form': rm_form,
 			'pi_form': pi_form,
 			'table': table,
+			'form_has_errors': form_has_errors,
 		}
 		return render(request, 'supply_define_basic_material.html', context)
 	except Exception as e:

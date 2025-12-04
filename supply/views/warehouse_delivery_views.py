@@ -121,15 +121,20 @@ class WarehouseDeliveryForm(forms.Form):
         gross = cleaned_data.get('gross_weight')
         tare = cleaned_data.get('tare_weight')
         
+        bug_logger.debug(f"Form validation - gross_weight: {gross}, tare_weight: {tare}")
+        
         # وزن پر باید بزرگتر از وزن خالی باشد
         if gross and tare:
             if gross <= tare:
+                bug_logger.warning(f"Invalid weights - gross ({gross}) <= tare ({tare})")
                 raise forms.ValidationError(
                     'وزن پر باید همیشه بزرگ‌تر از وزن خالی باشد.'
                 )
             
             net_weight = gross - tare
+            bug_logger.debug(f"Calculated net_weight: {net_weight}")
             if net_weight <= 0:
+                bug_logger.warning(f"Invalid net_weight: {net_weight}")
                 raise forms.ValidationError(
                     'مقدار تحویلی (وزن پر − وزن خالی) نامعقول است.'
                 )
@@ -228,10 +233,14 @@ def warehouse_delivery_list_view(request):
             status=PurchaseTransport.STATUS_AWAITING_UNLOADING
         ).select_related('purchase_order', 'driver').order_by('-created_at')
         
+        bug_logger.debug(f"Found {transports_unloading_qs.count()} transports awaiting unloading")
+        
         # حمل‌های در انتظار تایید خروج توسط نگهبان (awaiting_wh_reconciliation)
         transports_guard_qs = PurchaseTransport.objects.filter(
             status=PurchaseTransport.STATUS_AWAITING_WH_RECONCILIATION
         ).select_related('purchase_order', 'driver').order_by('-created_at')
+        
+        bug_logger.debug(f"Found {transports_guard_qs.count()} transports awaiting guard reconciliation")
 
         # Ensure transport_number is populated for all records
         transports_unloading = []
@@ -285,9 +294,12 @@ def warehouse_delivery_detail_view(request, transport_number):
     # Support both transport_number and numeric transport_id as identifier
     try:
         if transport_number and str(transport_number).isdigit():
+            bug_logger.debug(f"Fetching transport by transport_id: {transport_number}")
             pt = get_object_or_404(PurchaseTransport, transport_id=int(transport_number))
         else:
+            bug_logger.debug(f"Fetching transport by transport_number: {transport_number}")
             pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
+        bug_logger.debug(f"Transport found - ID: {pt.transport_id}, Status: {pt.status}, Order: {pt.purchase_order.order_number if pt.purchase_order else 'N/A'}")
     except Exception as e:
         bug_logger.error(f"Warehouse delivery detail fetch error for identifier={transport_number}: {e}")
         messages.error(request, 'شناسه حمل نامعتبر است یا یافت نشد.')
@@ -302,6 +314,7 @@ def warehouse_delivery_detail_view(request, transport_number):
     # Only allow editing if status is awaiting_unloading
     if pt.status != PurchaseTransport.STATUS_AWAITING_UNLOADING:
         # Read-only mode for awaiting_wh_reconciliation
+        bug_logger.debug(f"Loading read-only form for transport {transport_number} - status: {pt.status}")
         initial = {
             'gross_weight': pt.gross_weight,
             'tare_weight': pt.tare_weight,
@@ -338,6 +351,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                     tare = data.get('tare_weight')
                     net_weight = gross - tare if gross and tare else None
                     warehouse_id = data.get('warehouse_identifier')
+                    
+                    bug_logger.debug(f"Saving unloading data - Transport: {transport_number}, Gross: {gross}, Tare: {tare}, Net: {net_weight}, Warehouse: {warehouse_id}")
                     
                     # به‌روزرسانی فیلدهای حمل
                     pt.gross_weight = gross
@@ -405,6 +420,7 @@ def warehouse_delivery_detail_view(request, transport_number):
             audit_logger.activity(f"فرم نامعتبر برای ثبت تخلیه حمل {transport_number}")
     else:
         # پیش‌پر کردن فرم با داده‌های موجود
+        bug_logger.debug(f"Initializing edit form for transport {transport_number} with existing data")
         initial = {
             'gross_weight': pt.gross_weight,
             'tare_weight': pt.tare_weight,
@@ -439,9 +455,12 @@ def guard_vehicle_exit_view(request, transport_number):
     # Get transport
     try:
         if transport_number and str(transport_number).isdigit():
+            bug_logger.debug(f"Guard fetching transport by transport_id: {transport_number}")
             pt = get_object_or_404(PurchaseTransport, transport_id=int(transport_number))
         else:
+            bug_logger.debug(f"Guard fetching transport by transport_number: {transport_number}")
             pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
+        bug_logger.debug(f"Guard access - Transport: {pt.transport_id}, Status: {pt.status}, Net weight: {pt.net_weight}")
     except Exception as e:
         bug_logger.error(f"Guard exit fetch error for identifier={transport_number}: {e}")
         messages.error(request, 'شناسه حمل نامعتبر است یا یافت نشد.')
@@ -455,9 +474,11 @@ def guard_vehicle_exit_view(request, transport_number):
     
     if request.method == 'POST':
         # Confirm vehicle exit
+        bug_logger.debug(f"Guard confirming vehicle exit for transport {transport_number}")
         try:
             with transaction.atomic():
                 # Transition to awaiting_settlement
+                bug_logger.debug(f"Transitioning transport {transport_number} to awaiting_settlement")
                 pt.transition(
                     PurchaseTransport.STATUS_AWAITING_SETTLEMENT,
                     user=request.user,

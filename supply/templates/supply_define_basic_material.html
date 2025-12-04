@@ -406,7 +406,6 @@
 {% block content %}
 <div class="page-header">
     <h1>تعریف مواد اولیه</h1>
-    <a href="{% url 'supply:home' %}" class="btn btn-secondary">دامنه تامین</a>
 </div>
 
 {% if messages %}
@@ -424,24 +423,64 @@
             <form method="post" action="" novalidate enctype="multipart/form-data">
               {% csrf_token %}
               
+              {% if rm_form.errors or pi_form.errors %}
+              <div class="alert alert-error" style="margin-bottom: 20px;">
+                <strong>خطاهای فرم:</strong>
+                <ul style="margin: 10px 0 0 20px;">
+                  {% for field, errors in rm_form.errors.items %}
+                    {% for error in errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                  {% for field, errors in pi_form.errors.items %}
+                    {% for error in errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                  {% if rm_form.non_field_errors %}
+                    {% for error in rm_form.non_field_errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endif %}
+                  {% if pi_form.non_field_errors %}
+                    {% for error in pi_form.non_field_errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endif %}
+                </ul>
+              </div>
+              {% endif %}
+              
               <div class="detail-grid">
                 <div class="detail-card">
                   <div class="detail-card-title">اطلاعات پایه</div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.name.label }}:{% if rm_form.name.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ rm_form.name }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.name }}
+                      {% if rm_form.name.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.name.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.physical_form.label }}:{% if rm_form.physical_form.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ rm_form.physical_form }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.physical_form }}
+                      {% if rm_form.physical_form.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.physical_form.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.status.label }}:{% if rm_form.status.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ rm_form.status }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.status }}
+                      {% if rm_form.status.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.status.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.main_supplier.label }}:</span>
-                    <span class="detail-value">{{ rm_form.main_supplier }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.main_supplier }}
+                      {% if rm_form.main_supplier.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.main_supplier.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                 </div>
                 
@@ -449,15 +488,24 @@
                   <div class="detail-card-title">واحدها و تبدیل</div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.primary_unit.label }}:{% if rm_form.primary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ rm_form.primary_unit }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.primary_unit }}
+                      {% if rm_form.primary_unit.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.primary_unit.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.secondary_unit.label }}:{% if rm_form.secondary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ rm_form.secondary_unit }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.secondary_unit }}
+                      {% if rm_form.secondary_unit.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.secondary_unit.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.conversion_factor.label }}:{% if rm_form.conversion_factor.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ rm_form.conversion_factor }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.conversion_factor }}
+                      {% if rm_form.conversion_factor.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.conversion_factor.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                 </div>
                 
@@ -465,11 +513,17 @@
                   <div class="detail-card-title">شرایط نگهداری و حمل</div>
                   <div class="detail-row">
                     <span class="detail-label">{{ pi_form.transportation_conditions.label }}:{% if pi_form.transportation_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ pi_form.transportation_conditions }}</span>
+                    <span class="detail-value">
+                      {{ pi_form.transportation_conditions }}
+                      {% if pi_form.transportation_conditions.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ pi_form.transportation_conditions.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                   <div class="detail-row">
                     <span class="detail-label">{{ pi_form.storage_conditions.label }}:{% if pi_form.storage_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ pi_form.storage_conditions }}</span>
+                    <span class="detail-value">
+                      {{ pi_form.storage_conditions }}
+                      {% if pi_form.storage_conditions.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ pi_form.storage_conditions.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                 </div>
                 
@@ -477,7 +531,10 @@
                   <div class="detail-card-title">توضیحات فنی</div>
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.technical_description.label }}:{% if rm_form.technical_description.field.required %}<span class="required-marker">*</span>{% endif %}</span>
-                    <span class="detail-value">{{ rm_form.technical_description }}</span>
+                    <span class="detail-value">
+                      {{ rm_form.technical_description }}
+                      {% if rm_form.technical_description.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.technical_description.errors.0 }}</div>{% endif %}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -554,6 +611,20 @@
         const formWrapper = document.getElementById('formWrapper');
         
         if (toggleFormBtn && formWrapper) {
+          // Check if form has errors from server-side validation
+          const formHasErrors = {{ form_has_errors|lower|default:'false' }};
+          
+          // If form has errors, automatically open it
+          if (formHasErrors) {
+            formWrapper.classList.add('active');
+            toggleFormBtn.innerHTML = '<span>-</span> بستن فرم';
+            toggleFormBtn.setAttribute('aria-expanded', 'true');
+            // Scroll to form to show errors
+            setTimeout(function() {
+              formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }
+          
           // Initialize button label to "+" when form hidden
           if (!formWrapper.classList.contains('active')) {
             toggleFormBtn.innerHTML = '<span>+</span> تعریف ماده اولیه جدید';

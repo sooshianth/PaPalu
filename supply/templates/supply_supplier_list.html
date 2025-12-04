@@ -247,6 +247,21 @@
         background-color: #ffc107 !important;
         color: #212529 !important;
     }
+
+    /* Red delete buttons (filled by default, white text) */
+    .btn-outline-danger {
+      color: #fff !important;
+      border-color: #dc3545 !important;
+      background-color: #dc3545 !important;
+      box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+    }
+    .btn-outline-danger:hover,
+    .btn-outline-danger:focus {
+      background-color: #b02a37 !important; /* slightly darker on hover */
+      border-color: #b02a37 !important;
+      color: #fff !important;
+      box-shadow: 0 2px 10px rgba(176, 42, 55, 0.25);
+    }
     
     .alert {
         border-radius: 8px;
@@ -409,6 +424,34 @@
             <form method="post" enctype="multipart/form-data" novalidate>
               {% csrf_token %}
               
+              {% if person_form.errors or fb_form.errors %}
+              <div class="alert alert-danger" style="margin-bottom: 20px;">
+                <strong>خطاهای فرم:</strong>
+                <ul style="margin: 10px 0 0 20px;">
+                  {% for field, errors in person_form.errors.items %}
+                    {% for error in errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                  {% for field, errors in fb_form.errors.items %}
+                    {% for error in errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endfor %}
+                  {% if person_form.non_field_errors %}
+                    {% for error in person_form.non_field_errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endif %}
+                  {% if fb_form.non_field_errors %}
+                    {% for error in fb_form.non_field_errors %}
+                      <li>{{ error }}</li>
+                    {% endfor %}
+                  {% endif %}
+                </ul>
+              </div>
+              {% endif %}
+              
               <div class="detail-grid">
                 {% include 'supply_create_supplier_form_content.html' %}
               </div>
@@ -438,6 +481,19 @@
     const formWrapper = document.getElementById('createFormWrapper');
     
     if (toggleFormBtn && formWrapper) {
+      // Check if form has errors from server-side validation
+      const formHasErrors = {{ form_has_errors|lower|default:'false' }};
+      
+      // If form has errors, automatically open it
+      if (formHasErrors) {
+        formWrapper.style.display = 'block';
+        toggleFormBtn.innerHTML = '<span>-</span> بستن فرم';
+        // Scroll to form to show errors
+        setTimeout(function() {
+          formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+      
       toggleFormBtn.addEventListener('click', function() {
         if (formWrapper.style.display === 'none') {
           formWrapper.style.display = 'block';
@@ -539,6 +595,210 @@
           }
         });
       });
+    });
+    
+    // Formset management - add new rows dynamically
+    window.addFormsetRow = function(prefix) {
+      var container = document.getElementById(prefix + '-formset-container');
+      var totalFormsInput = document.querySelector('[name="' + prefix + '-TOTAL_FORMS"]');
+      if (!container || !totalFormsInput) {
+        console.error('Formset container or TOTAL_FORMS not found for prefix:', prefix);
+        return;
+      }
+      
+      var currentTotal = parseInt(totalFormsInput.value);
+      var lastForm = container.querySelector('.formset-form[data-index="' + (currentTotal - 1) + '"]');
+      
+      if (!lastForm) {
+        console.error('Last form not found for cloning');
+        return;
+      }
+      
+      // Clone the last form
+      var newForm = lastForm.cloneNode(true);
+      newForm.setAttribute('data-index', currentTotal);
+      
+      // Update form index in all input names and IDs
+      var inputs = newForm.querySelectorAll('input, select, textarea');
+      inputs.forEach(function(input) {
+        if (input.name) {
+          input.name = input.name.replace('-' + (currentTotal - 1) + '-', '-' + currentTotal + '-');
+        }
+        if (input.id) {
+          input.id = input.id.replace('-' + (currentTotal - 1) + '-', '-' + currentTotal + '-');
+        }
+        // Clear the value for new form
+        if (input.type === 'checkbox' || input.type === 'radio') {
+          input.checked = false;
+        } else if (input.type !== 'hidden' || !input.name.endsWith('-id')) {
+          input.value = '';
+        }
+      });
+      
+      // Update labels' for attributes
+      var labels = newForm.querySelectorAll('label');
+      labels.forEach(function(label) {
+        if (label.htmlFor) {
+          label.htmlFor = label.htmlFor.replace('-' + (currentTotal - 1) + '-', '-' + currentTotal + '-');
+        }
+      });
+      
+      // Add divider before new form
+      var divider = document.createElement('div');
+      divider.style.cssText = 'border-top:1px dashed #dee2e6;margin:12px 0;';
+      container.appendChild(divider);
+      
+      // Append the new form
+      container.appendChild(newForm);
+      
+      // Update TOTAL_FORMS
+      totalFormsInput.value = currentTotal + 1;
+      
+      // Re-initialize Jalali date pickers for new form
+      initJalali();
+      
+      console.log('Added new form for', prefix, '- Total forms now:', currentTotal + 1);
+    };
+
+    // Formset management - remove rows
+    window.removeFormsetRow = function(prefix, btnEl) {
+      var container = document.getElementById(prefix + '-formset-container');
+      var totalFormsInput = document.querySelector('[name="' + prefix + '-TOTAL_FORMS"]');
+      if (!container || !totalFormsInput) {
+        console.error('Formset container or TOTAL_FORMS not found for prefix:', prefix);
+        return;
+      }
+
+      // Find the form element for this button
+      var formEl = btnEl.closest('.formset-form');
+      if (!formEl) return;
+
+      // If this form has a DELETE checkbox (existing instance), check it and hide
+      var deleteCheckbox = formEl.querySelector('input[type="checkbox"][name$="-DELETE"]');
+      if (deleteCheckbox) {
+        deleteCheckbox.checked = true;
+        formEl.style.display = 'none';
+        return; // Do not change TOTAL_FORMS for existing rows
+      }
+
+      // Otherwise, this is a newly added (unsaved) row: remove from DOM and reindex
+      formEl.remove();
+
+      // Remove the preceding divider if present
+      var dividers = container.querySelectorAll('div[style*="border-top"]');
+      if (dividers.length) {
+        // Clean up extra dividers: optional simplification
+      }
+
+      // Reindex remaining forms to keep names/ids contiguous and update TOTAL_FORMS
+      var forms = container.querySelectorAll('.formset-form');
+      forms.forEach(function(fEl, newIdx) {
+        var oldIdx = fEl.getAttribute('data-index');
+        if (oldIdx === null) oldIdx = newIdx;
+        // Update dataset
+        fEl.setAttribute('data-index', newIdx);
+        // Update inputs
+        var inputs = fEl.querySelectorAll('input, select, textarea, label');
+        inputs.forEach(function(node) {
+          if (node.name) {
+            node.name = node.name.replace(new RegExp(prefix + '-\\d+-'), prefix + '-' + newIdx + '-');
+          }
+          if (node.id) {
+            node.id = node.id.replace(new RegExp(prefix + '-\\d+-'), prefix + '-' + newIdx + '-');
+          }
+          if (node.htmlFor) {
+            node.htmlFor = node.htmlFor.replace(new RegExp(prefix + '-\\d+-'), prefix + '-' + newIdx + '-');
+          }
+        });
+      });
+
+      totalFormsInput.value = forms.length;
+    };
+
+    // Multi phone numbers - add/remove and serialize
+    window.addPhoneItem = function() {
+      var list = document.getElementById('person-phone-list');
+      if (!list) return;
+      var item = document.createElement('div');
+      item.className = 'phone-item';
+      item.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:8px;';
+      item.innerHTML = '<input type="text" class="form-control phone-input" placeholder="021-12345678 یا 09123456789" dir="ltr" />' +
+                       '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removePhoneItem(this)">حذف</button>';
+      list.appendChild(item);
+    };
+
+    window.removePhoneItem = function(btn) {
+      var list = document.getElementById('person-phone-list');
+      if (!list) return;
+      var min = parseInt(list.getAttribute('data-min') || '1');
+      var items = list.querySelectorAll('.phone-item');
+      if (items.length <= min) {
+        // Show a gentle warning
+        var globalErr = document.querySelector('.phone-error-global');
+        if (globalErr) {
+          globalErr.textContent = 'حداقل یک شماره تلفن باید باقی بماند.';
+          globalErr.style.display = 'block';
+          setTimeout(function(){ globalErr.style.display = 'none'; }, 2500);
+        }
+        return;
+      }
+      var item = btn.closest('.phone-item');
+      if (item) item.remove();
+    };
+
+    // Before submit: serialize phone items to hidden input
+    document.addEventListener('submit', function(e) {
+      var phoneHidden = document.getElementById('person-phone-hidden');
+      var list = document.getElementById('person-phone-list');
+      if (!phoneHidden || !list) return;
+      var values = [];
+      var validAll = true;
+      list.querySelectorAll('.phone-item input').forEach(function(inp){
+        var val = (inp.value || '').trim();
+        if (val) {
+          // Reuse formatPhoneNumber and validatePhoneNumber utilities if present
+          try {
+            var rawDigits = val.replace(/\D/g, '');
+            if (!validatePhoneNumber(rawDigits)) validAll = false;
+          } catch(err) {}
+          values.push(val);
+        }
+      });
+      if (values.length === 0) {
+        validAll = false;
+      }
+      if (!validAll) {
+        var globalErr = document.querySelector('.phone-error-global');
+        if (globalErr) {
+          globalErr.textContent = 'لطفاً حداقل یک شماره معتبر وارد کنید.';
+          globalErr.style.display = 'block';
+        }
+        // Prevent submit
+        e.preventDefault();
+        return false;
+      }
+      phoneHidden.value = values.join(',');
+    }, true);
+
+    // Initialize phone list from server value, if any
+    document.addEventListener('DOMContentLoaded', function(){
+      var hiddenFieldInForm = document.querySelector('input[name="phone_number"]');
+      var list = document.getElementById('person-phone-list');
+      var firstItemInput = list ? list.querySelector('.phone-item input') : null;
+      if (!list || !firstItemInput) return;
+      var serverVal = hiddenFieldInForm && hiddenFieldInForm.value ? hiddenFieldInForm.value : '';
+      if (serverVal) {
+        var parts = serverVal.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+        if (parts.length) {
+          // Fill first, then add others
+          firstItemInput.value = parts[0];
+          for (var i = 1; i < parts.length; i++) {
+            addPhoneItem();
+            var items = list.querySelectorAll('.phone-item input');
+            items[items.length - 1].value = parts[i];
+          }
+        }
+      }
     });
   })();
 </script>
