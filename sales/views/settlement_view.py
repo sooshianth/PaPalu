@@ -214,6 +214,12 @@ def settlement_detail_view(request, order_number):
     # بررسی اتمام تسویه
     settlement_completed = remaining_amount <= 0
     
+    # بررسی اینکه آیا مبلغ اختلاف صفر است (با توجه به خطای محاسباتی)
+    has_no_difference = abs(difference_amount) < Decimal('0.01')
+    
+    # لاگ برای دیباگ
+    bug_logger.debug(f"سفارش {order_number}: difference_amount={difference_amount}, has_no_difference={has_no_difference}, settlement_completed={settlement_completed}")
+    
     # دریافت اطلاعات مشتری
     customer = order.customer
     customer_info = None
@@ -314,9 +320,104 @@ def settlement_detail_view(request, order_number):
         'settled_amount': settled_amount,
         'remaining_amount': remaining_amount,
         'settlement_completed': settlement_completed,
+        'has_no_difference': has_no_difference,
         'transactions': transactions,
         'customer_info': customer_info,
         'page_title': f'تسویه سفارش - {order.order_number}',
     }
     return render(request, 'settlement/settlement_detail.html', context)
+
+
+@login_required
+def skip_settlement_view(request, order_number):
+    """
+    رد کردن تسویه و انتقال مستقیم به مرحله تایید تسویه کامل
+    زمانی که مبلغ اختلاف صفر است
+    """
+    audit_logger.info(f"درخواست رد کردن تسویه برای سفارش {order_number}")
+    
+    # بررسی دسترسی
+    if not user_has_task(request.user, TaskChoices.SALES_SETTLEMENT.value):
+        audit_logger.activity(f"تلاش برای رد کردن تسویه سفارش {order_number} بدون دسترسی")
+        messages.error(request, 'شما دسترسی به تسویه سفارش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    if order.status != 'pending_settlement':
+        bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_settlement می‌رود")
+        messages.error(request, 'این سفارش در وضعیت مناسب برای رد کردن تسویه نیست.')
+        return redirect('sales:settlement_list')
+    
+    try:
+        with transaction.atomic():
+            # محاسبه مبلغ اختلاف برای بررسی
+            order_weight = Decimal('0')
+            for item in order.order_items.all():
+                weight_kg = item.get_weight_in_kg()
+                order_weight += Decimal(str(weight_kg))
+            
+            allocations = Allocation.objects.filter(order=order)
+            transports = Transport.objects.filter(allocation__in=allocations)
+            delivered_weight = sum(
+                Decimal(str(t.net_weight or 0)) for t in transports
+            )
+            
+            weight_difference = delivered_weight - order_weight
+            
+            # محاسبه میانگین وزن‌دار فی فروش
+            total_price = Decimal('0')
+            total_weight_for_avg = Decimal('0')
+            
+            for item in order.order_items.all():
+                if item.unit_price and item.quantity:
+                    item_weight = Decimal(str(item.get_weight_in_kg()))
+                    item_price = Decimal(str(item.unit_price))
+                    total_price += item_weight * item_price
+                    total_weight_for_avg += item_weight
+            
+            if total_weight_for_avg > 0:
+                weighted_avg_price = total_price / total_weight_for_avg
+            else:
+                weighted_avg_price = Decimal('0')
+            
+            difference_amount = weight_difference * weighted_avg_price
+            
+            # بررسی اینکه مبلغ اختلاف صفر است
+            if abs(difference_amount) > Decimal('0.01'):  # با توجه به خطای محاسباتی
+                messages.error(request, 'امکان رد کردن تسویه فقط زمانی وجود دارد که مبلغ اختلاف صفر باشد.')
+                return redirect('sales:settlement_detail', order_number=order_number)
+            
+            # تغییر وضعیت سفارش به pending_settlement_approval
+            order.status = 'pending_settlement_approval'
+            order.save(update_fields=['status'])
+            
+            # به‌روزرسانی Settlement (اگر وجود دارد)
+            settlement, created = Settlement.objects.get_or_create(
+                order=order,
+                settlement_type='weight_discrepancy',
+                defaults={
+                    'debtor_person': order.customer,
+                    'original_document_amount': Decimal('0'),
+                    'settled_amount': Decimal('0'),
+                    'settlement_status': 'completed',
+                }
+            )
+            
+            if not created:
+                settlement.settlement_status = 'completed'
+                settlement.original_document_amount = Decimal('0')
+                settlement.settled_amount = Decimal('0')
+                settlement.save(update_fields=['settlement_status', 'original_document_amount', 'settled_amount'])
+            
+            bug_logger.info(f"تسویه سفارش {order_number} رد شد و به وضعیت 'در انتظار تایید تسویه کامل' منتقل شد")
+            audit_logger.activity(f"تسویه سفارش {order_number} رد شد و به وضعیت 'در انتظار تایید تسویه کامل' منتقل شد توسط کاربر {request.user.username}")
+            messages.success(request, f'سفارش {order_number} به وضعیت "در انتظار تایید تسویه کامل" منتقل شد.')
+            
+            return redirect('sales:settlement_list')
+            
+    except Exception as e:
+        bug_logger.error(f"خطا در رد کردن تسویه: {str(e)}")
+        messages.error(request, f'خطا در رد کردن تسویه: {str(e)}')
+        return redirect('sales:settlement_detail', order_number=order_number)
 

@@ -90,6 +90,7 @@ urlpatterns = [
     # مسیرهای تسویه
     path('settlement/list/', settlement_view.settlement_list_view, name='settlement_list'),
     path('settlement/<str:order_number>/', settlement_view.settlement_detail_view, name='settlement_detail'),
+    path('settlement/<str:order_number>/skip/', settlement_view.skip_settlement_view, name='skip_settlement'),
     
     # مسیرهای تایید تسویه کامل
     path('settlement-approval/list/', settlement_approval_view.settlement_approval_list_view, name='settlement_approval_list'),

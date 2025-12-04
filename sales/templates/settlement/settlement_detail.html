@@ -353,7 +353,17 @@
 {% block content %}
 <div class="page-header">
     <h2>{{ page_title }}</h2>
-    <a href="{% url 'sales:settlement_list' %}" class="btn-secondary">بازگشت به لیست</a>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        {% if has_no_difference %}
+        <form method="post" action="{% url 'sales:skip_settlement' order.order_number %}" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary" onclick="return confirm('آیا مطمئن هستید که می‌خواهید تسویه این سفارش را به اتمام برسانید و آن را به مرحله «در انتظار تایید تسویه کامل» منتقل کنید؟');">
+                ✓ اتمام تسویه
+            </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'sales:settlement_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
+    </div>
 </div>
 
 {% if messages %}
@@ -415,7 +425,11 @@
             </div>
         </div>
         
-        {% if remaining_amount > 0 and not settlement_completed %}
+        {% if has_no_difference %}
+        <div class="alert alert-info">
+            <strong>ℹ️ توجه:</strong> مبلغ اختلاف صفر است. نیازی به ثبت تراکنش نیست. می‌توانید با استفاده از دکمه "اتمام تسویه" در بالای صفحه، تسویه را به اتمام برسانید.
+        </div>
+        {% elif remaining_amount > 0 and not settlement_completed %}
         <div class="alert-warning">
             <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} ریال باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
         </div>
@@ -484,8 +498,9 @@
 </div>
 {% endif %}
 
+
 <!-- فرم ثبت تراکنش -->
-{% if not settlement_completed %}
+{% if not settlement_completed and not has_no_difference %}
 <div class="form-section">
     <div class="form-section-header">
         ثبت تراکنش جدید
