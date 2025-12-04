@@ -101,6 +101,11 @@ class ProductionForm(forms.ModelForm):
         label='زمان شروع واقعی',
         widget=forms.TimeInput(attrs={'class': 'form-control time-picker-input', 'type': 'text', 'placeholder': 'HH:MM'})
     )
+    actual_end_date = jDateField(
+        required=False,
+        label='تاریخ پایان واقعی',
+        widget=forms.TextInput(attrs={'class': 'form-control jalali-date-input', 'dir': 'ltr', 'placeholder': '1403-08-29'})
+    )
     completed_at = forms.TimeField(
         required=False,
         label='زمان تکمیل',
@@ -115,7 +120,7 @@ class ProductionForm(forms.ModelForm):
             'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
             'packaging_type', 'extra_description',
             'inventory_snapshot', 'net_unplanned_requirement', 'produced_weight_ton',
-            'actual_start_date', 'started_at', 'completed_at', 'status'
+            'actual_start_date', 'started_at', 'actual_end_date', 'completed_at', 'status'
         ]
     
     def __init__(self, *args, **kwargs):
@@ -139,6 +144,7 @@ class ProductionForm(forms.ModelForm):
             # Hide actual date/time fields in draft
             self.fields['actual_start_date'].widget = forms.HiddenInput()
             self.fields['started_at'].widget = forms.HiddenInput()
+            self.fields['actual_end_date'].widget = forms.HiddenInput()
             self.fields['completed_at'].widget = forms.HiddenInput()
 
         # Lock/hide main fields when status is confirmed or higher
@@ -149,7 +155,7 @@ class ProductionForm(forms.ModelForm):
                     self.fields[name].widget.attrs['readonly'] = True
                     self.fields[name].widget.attrs['disabled'] = True
             # For actual date/time fields, only use readonly (no disabled) so values get sent in POST
-            for name in ['actual_start_date', 'started_at', 'completed_at']:
+            for name in ['actual_start_date', 'started_at', 'actual_end_date', 'completed_at']:
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
                     # Do NOT set disabled for these fields
@@ -165,9 +171,11 @@ class ProductionForm(forms.ModelForm):
             self.fields['actual_start_date'].widget.attrs.pop('readonly', None)
             self.fields['started_at'].widget.attrs.pop('disabled', None)
             self.fields['started_at'].widget.attrs.pop('readonly', None)
-            # Lock completed_at (readonly but not disabled)
+            # Lock completed_at and actual_end_date (readonly but not disabled)
             self.fields['completed_at'].widget.attrs['readonly'] = True
             self.fields['completed_at'].widget.attrs.pop('disabled', None)
+            self.fields['actual_end_date'].widget.attrs['readonly'] = True
+            self.fields['actual_end_date'].widget.attrs.pop('disabled', None)
 
         elif status == ProductionProgram.Status.COMPLETED:
             # Lock main planning fields
@@ -175,9 +183,11 @@ class ProductionForm(forms.ModelForm):
                 if name in self.fields:
                     self.fields[name].widget.attrs['readonly'] = True
                     self.fields[name].widget.attrs['disabled'] = True
-            # Can edit produced_weight_ton and completed_at
+            # Can edit produced_weight_ton, actual_end_date and completed_at
             self.fields['produced_weight_ton'].widget.attrs.pop('disabled', None)
             self.fields['produced_weight_ton'].widget.attrs.pop('readonly', None)
+            self.fields['actual_end_date'].widget.attrs.pop('disabled', None)
+            self.fields['actual_end_date'].widget.attrs.pop('readonly', None)
             self.fields['completed_at'].widget.attrs.pop('disabled', None)
             self.fields['completed_at'].widget.attrs.pop('readonly', None)
             # Lock actual_start_date and started_at but show them (readonly but not disabled)
@@ -310,8 +320,10 @@ class ProductionForm(forms.ModelForm):
                 if not instance.started_at:
                     instance.started_at = getattr(orig, 'started_at')
             
-            # Also preserve completed_at when not COMPLETED
+            # Also preserve actual_end_date and completed_at when not COMPLETED
             if instance.status != ProductionProgram.Status.COMPLETED:
+                if not instance.actual_end_date:
+                    instance.actual_end_date = getattr(orig, 'actual_end_date', None)
                 if not instance.completed_at:
                     instance.completed_at = getattr(orig, 'completed_at')
         

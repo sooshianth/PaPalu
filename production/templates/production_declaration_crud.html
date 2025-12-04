@@ -723,6 +723,7 @@
             <input type="hidden" name="started_at" id="startedAtField">
             <input type="hidden" name="production_warehouse" id="productionWarehouseField">
             <input type="hidden" name="produced_weight_ton" id="producedWeightField">
+            <input type="hidden" name="actual_end_date" id="actualEndDateField">
             <input type="hidden" name="completed_at" id="completedAtField">
             <input type="hidden" name="product_warehouse" id="productWarehouseField">
 
@@ -847,7 +848,7 @@
                 {% else %}
                     <div style="width: 100%;">
                         {% if program and program.predicted_start_date and program.predicted_start_time %}
-                            {{ program.predicted_start_date}}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }}
+                            {{ program.predicted_start_date.year }}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }} {{ program.predicted_start_time|time:"H:i" }}
                         {% else %}-{% endif %}
                     </div>
                 {% endif %}
@@ -869,6 +870,70 @@
                     </div>
                 {% endif %}
             </div>
+            {% endif %}
+            
+            <!-- تاریخ و زمان شروع واقعی (visible when in_progress or completed) -->
+            {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
+            {% if accessible_production_program_fields.actual_start_date %}
+            <div class="detail-row" style="flex-direction: column; gap: 8px;">
+                <span class="detail-label">{{ form.actual_start_date.label }}:</span>
+                <div style="width: 100%;">
+                    {% if accessible_production_program_fields.actual_start_date_edit %}
+                        {{ form.actual_start_date }}
+                    {% else %}
+                        {% if program and program.actual_start_date %}
+                            {{ program.actual_start_date.year }}-{{ program.actual_start_date.month|stringformat:"02d" }}-{{ program.actual_start_date.day|stringformat:"02d" }}
+                        {% else %}-{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% if accessible_production_program_fields.started_at %}
+            <div class="detail-row" style="flex-direction: column; gap: 8px;">
+                <span class="detail-label">{{ form.started_at.label }}:</span>
+                <div style="width: 100%;">
+                    {% if accessible_production_program_fields.started_at_edit %}
+                        {{ form.started_at }}
+                    {% else %}
+                        {% if program and program.started_at %}
+                            {{ program.started_at|time:"H:i" }}
+                        {% else %}-{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+            
+            <!-- تاریخ و زمان پایان واقعی (visible only when completed) -->
+            {% if not is_create and program and program.status == 'completed' %}
+            {% if accessible_production_program_fields.actual_end_date %}
+            <div class="detail-row" style="flex-direction: column; gap: 8px;">
+                <span class="detail-label">{{ form.actual_end_date.label }}:</span>
+                <div style="width: 100%;">
+                    {% if accessible_production_program_fields.actual_end_date_edit %}
+                        {{ form.actual_end_date }}
+                    {% else %}
+                        {% if program and program.actual_end_date %}
+                            {{ program.actual_end_date.year }}-{{ program.actual_end_date.month|stringformat:"02d" }}-{{ program.actual_end_date.day|stringformat:"02d" }}
+                        {% else %}-{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% if accessible_production_program_fields.completed_at %}
+            <div class="detail-row" style="flex-direction: column; gap: 8px;">
+                <span class="detail-label">{{ form.completed_at.label }}:</span>
+                <div style="width: 100%;">
+                    {% if accessible_production_program_fields.completed_at_edit %}
+                        {{ form.completed_at }}
+                    {% else %}
+                        {% if program and program.completed_at %}
+                            {{ program.completed_at|time:"H:i" }}
+                        {% else %}-{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
             {% endif %}
         </div>
         
@@ -906,38 +971,9 @@
             </div>
             {% endif %}
             {% endif %}
-            <!-- زمان شروع واقعی (visible when in_progress or completed) -->
-            {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
-            {% if accessible_production_program_fields.started_at %}
-            <div class="detail-row">
-                <span class="detail-label">{{ form.started_at.label }}:</span>
-                <span class="detail-value">
-                    {% if accessible_production_program_fields.started_at_edit %}
-                        {{ form.started_at }}
-                    {% else %}
-                        {{ program.started_at|default:"-" }}
-                    {% endif %}
-                </span>
-            </div>
-            {% endif %}
-            {% endif %}
-            
-            <!-- زمان تکمیل (visible only when completed) -->
-            {% if not is_create and program and program.status == 'completed' %}
-            {% if accessible_production_program_fields.completed_at %}
-            <div class="detail-row">
-                <span class="detail-label">{{ form.completed_at.label }}:</span>
-                <span class="detail-value">
-                    {% if accessible_production_program_fields.completed_at_edit %}
-                        {{ form.completed_at }}
-                    {% else %}
-                        {{ program.completed_at|default:"-" }}
-                    {% endif %}
-                </span>
-            </div>
-            {% endif %}
             
             <!-- انبار محصول نهایی (visible only when completed) -->
+            {% if not is_create and program and program.status == 'completed' %}
             {% if accessible_production_program_fields.product_warehouse %}
             <div class="detail-row">
                 <span class="detail-label">انبار محصول نهایی:</span>
@@ -1095,6 +1131,11 @@
             <div class="modal-form-field">
                 <label for="producedWeight">وزن تولید شده (تن): <span style="color: red;">*</span></label>
                 <input type="number" id="producedWeight" class="form-control" step="0.001" min="0" required>
+            </div>
+            
+            <div class="modal-form-field">
+                <label for="completionDate">تاریخ پایان واقعی: <span style="color: red;">*</span></label>
+                <input type="text" id="completionDate" class="form-control jalali-date-input" dir="ltr" placeholder="1403-08-29" required>
             </div>
             
             <div class="modal-form-field">
@@ -1492,6 +1533,27 @@ function showStartProductionModal() {
 }
 
 function showCompleteProductionModal() {
+    // Initialize Persian datepicker for completion date
+    if (window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker) {
+        const $completionDate = jQuery('#completionDate');
+        if ($completionDate.length) {
+            // Destroy existing datepicker if any
+            if ($completionDate.data('persianDatepicker')) {
+                $completionDate.persianDatepicker('destroy');
+            }
+            $completionDate.persianDatepicker({
+                format: 'YYYY-MM-DD',
+                calendarType: 'persian',
+                initialValueType: 'persian',
+                observer: true,
+                autoClose: true,
+                timePicker: {
+                    enabled: false
+                }
+            });
+        }
+    }
+    
     // Get current production info ID
     const productionInfoSelect = document.querySelector('#id_production_info');
     // Fallback: If no select exists or is disabled, use program.production_info if available
@@ -1705,10 +1767,16 @@ function confirmStartProduction() {
 
 function confirmCompleteProduction() {
     const weight = document.getElementById('producedWeight').value;
+    const completionDate = document.getElementById('completionDate').value;
     const completionTime = document.getElementById('completionTime').value;
     
     if (!weight || weight <= 0) {
         alert('لطفاً وزن تولید شده را وارد کنید.');
+        return;
+    }
+    
+    if (!completionDate) {
+        alert('لطفاً تاریخ پایان واقعی را وارد کنید.');
         return;
     }
     
@@ -1763,6 +1831,7 @@ function confirmCompleteProduction() {
     
     // Set hidden field values
     document.getElementById('producedWeightField').value = weight;
+    document.getElementById('actualEndDateField').value = completionDate;
     document.getElementById('completedAtField').value = completionTime;
     document.getElementById('productWarehouseField').value = productWarehouse;
     

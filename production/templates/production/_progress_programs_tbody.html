@@ -12,11 +12,19 @@
     {% if accessible_production_program_fields.planned_weight_ton %}
     <td>{{ program.planned_weight_ton|default:"-" }}</td>
     {% endif %}
-    {% if accessible_production_program_fields.predicted_start_time %}
-    <td>{{ program.predicted_start_time|date:"H:i"|default:"-" }}</td>
+    {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
+    <td>
+        {% if program.actual_start_date and program.started_at %}
+            {{ program.actual_start_date|date:"Y/m/d" }} {{ program.started_at|date:"H:i" }}
+        {% else %}-{% endif %}
+    </td>
     {% endif %}
-    {% if accessible_production_program_fields.predicted_end_time %}
-    <td>{{ program.predicted_end_time|date:"H:i"|default:"-" }}</td>
+    {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
+    <td>
+        {% if program.predicted_end_date and program.predicted_end_time %}
+            {{ program.predicted_end_date|date:"Y/m/d" }} {{ program.predicted_end_time|date:"H:i" }}
+        {% else %}-{% endif %}
+    </td>
     {% endif %}
     {% if accessible_production_program_fields.status %}
     <td><span class="status-badge status-in-progress">{{ program.get_status_display }}</span></td>

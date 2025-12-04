@@ -450,7 +450,8 @@
                                 <th class="sortable" data-sort="planned_weight_ton">تناژ برنامه</th>
                                 <th class="sortable" data-sort="produced_weight_ton">وزن تولید</th>
                                 <th class="sortable" data-sort="fulfillment">درصد تحقق</th>
-                                <th class="sortable" data-sort="completed_at">زمان تکمیل</th>
+                                <th class="sortable" data-sort="started_at">شروع واقعی</th>
+                                <th class="sortable" data-sort="completed_at">پایان واقعی</th>
                                 <th>وضعیت</th>
                                 <th>عملیات</th>
                             </tr>
@@ -463,7 +464,8 @@
                                 data-planned-weight="{{ program.planned_weight_ton|default:'0' }}"
                                 data-produced-weight="{{ program.produced_weight_ton|default:'0' }}"
                                 data-fulfillment="{{ program.fulfillment_percentage|default:'0' }}"
-                                data-completed-at="{{ program.completed_at|default:'' }}">
+                                data-started-at="{% if program.actual_start_date and program.started_at %}{{ program.actual_start_date|date:'Y-m-d' }} {{ program.started_at|date:'H:i' }}{% endif %}"
+                                data-completed-at="{% if program.actual_end_date and program.completed_at %}{{ program.actual_end_date|date:'Y-m-d' }} {{ program.completed_at|date:'H:i' }}{% endif %}">
                                 <td><strong>{{ program.id }}</strong></td>
                                 <td>{{ program.program_id|default:'-' }}</td>
                                 <td>{{ program.product.name|default:'-' }}</td>
@@ -478,7 +480,16 @@
                                         -
                                     {% endif %}
                                 </td>
-                                <td>{{ program.completed_at|date:"Y/m/d H:i"|default:'-' }}</td>
+                                <td>
+                                    {% if program.actual_start_date and program.started_at %}
+                                        {{ program.actual_start_date|date:"Y/m/d" }} {{ program.started_at|date:"H:i" }}
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td>
+                                    {% if program.actual_end_date and program.completed_at %}
+                                        {{ program.actual_end_date|date:"Y/m/d" }} {{ program.completed_at|date:"H:i" }}
+                                    {% else %}-{% endif %}
+                                </td>
                                 <td>
                                     <span class="status-badge status-archived">
                                         آرشیو شده
@@ -628,9 +639,13 @@ function sortTable(column, direction) {
                 aVal = parseFloat(a.dataset.fulfillment) || 0;
                 bVal = parseFloat(b.dataset.fulfillment) || 0;
                 break;
+            case 'started_at':
+                aVal = a.dataset.startedAt || '';
+                bVal = b.dataset.startedAt || '';
+                break;
             case 'completed_at':
-                aVal = a.dataset.completedAt;
-                bVal = b.dataset.completedAt;
+                aVal = a.dataset.completedAt || '';
+                bVal = b.dataset.completedAt || '';
                 break;
             default:
                 return 0;

@@ -43,7 +43,9 @@ def get_accessible_production_program_fields(user):
     accessible_fields['planned_weight_ton'] = user_can_access_field(user, ProductionProgram, 'planned_weight_ton', 'view')
     accessible_fields['produced_weight_ton'] = user_can_access_field(user, ProductionProgram, 'produced_weight_ton', 'view')
     accessible_fields['packaging_type'] = user_can_access_field(user, ProductionProgram, 'packaging_type', 'view')
+    accessible_fields['predicted_start_date'] = user_can_access_field(user, ProductionProgram, 'predicted_start_date', 'view')
     accessible_fields['predicted_start_time'] = user_can_access_field(user, ProductionProgram, 'predicted_start_time', 'view')
+    accessible_fields['predicted_end_date'] = user_can_access_field(user, ProductionProgram, 'predicted_end_date', 'view')
     accessible_fields['predicted_end_time'] = user_can_access_field(user, ProductionProgram, 'predicted_end_time', 'view')
     accessible_fields['started_at'] = user_can_access_field(user, ProductionProgram, 'started_at', 'view')
     accessible_fields['completed_at'] = user_can_access_field(user, ProductionProgram, 'completed_at', 'view')
@@ -58,6 +60,10 @@ def get_accessible_production_program_fields(user):
     accessible_fields['priority_index'] = user_can_access_field(user, ProductionProgram, 'priority_index', 'view')
     accessible_fields['fulfillment_percentage'] = user_can_access_field(user, ProductionProgram, 'fulfillment_percentage', 'view')
     accessible_fields['actual_start_date'] = user_can_access_field(user, ProductionProgram, 'actual_start_date', 'view')
+    accessible_fields['actual_end_date'] = user_can_access_field(user, ProductionProgram, 'actual_end_date', 'view')
+    
+    # Edit permissions for actual_end_date
+    accessible_fields['actual_end_date_edit'] = user_can_access_field(user, ProductionProgram, 'actual_end_date', 'edit')
     
     # Edit permissions
     accessible_fields['id_edit'] = user_can_access_field(user, ProductionProgram, 'id', 'edit')
@@ -647,7 +653,7 @@ def production_declaration_view(request):
         sort_dir_completed = request.GET.get('dir_completed', 'desc')
         
         # Validate sort columns
-        allowed_sorts = ['id', 'program_id', 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time', 'planned_weight_ton', 'status', 'started_at', 'completed_at', 'actual_start_date']
+        allowed_sorts = ['id', 'program_id', 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time', 'planned_weight_ton', 'status', 'started_at', 'completed_at', 'actual_start_date', 'actual_end_date']
         
         if sort_by_confirmed not in allowed_sorts:
             sort_by_confirmed = 'predicted_start_date'
@@ -656,10 +662,26 @@ def production_declaration_view(request):
         if sort_by_completed not in allowed_sorts:
             sort_by_completed = 'predicted_start_date'
         
-        # Build order_by strings
-        order_by_confirmed = f'-{sort_by_confirmed}' if sort_dir_confirmed == 'desc' else sort_by_confirmed
-        order_by_progress = f'-{sort_by_progress}' if sort_dir_progress == 'desc' else sort_by_progress
-        order_by_completed = f'-{sort_by_completed}' if sort_dir_completed == 'desc' else sort_by_completed
+        # Build order_by strings with datetime support (date + time)
+        def build_order_by(sort_by, sort_dir):
+            """Build order_by list for datetime fields (date + time)"""
+            prefix = '-' if sort_dir == 'desc' else ''
+            
+            # For datetime fields, sort by date first, then time
+            if sort_by == 'predicted_start_date':
+                return [f'{prefix}predicted_start_date', f'{prefix}predicted_start_time']
+            elif sort_by == 'predicted_end_date':
+                return [f'{prefix}predicted_end_date', f'{prefix}predicted_end_time']
+            elif sort_by == 'actual_start_date':
+                return [f'{prefix}actual_start_date', f'{prefix}started_at']
+            elif sort_by == 'actual_end_date':
+                return [f'{prefix}actual_end_date', f'{prefix}completed_at']
+            else:
+                return [f'{prefix}{sort_by}']
+        
+        order_by_confirmed = build_order_by(sort_by_confirmed, sort_dir_confirmed) + ['id']
+        order_by_progress = build_order_by(sort_by_progress, sort_dir_progress) + ['id']
+        order_by_completed = build_order_by(sort_by_completed, sort_dir_completed) + ['id']
         
         # دریافت برنامه‌های تولید بر اساس وضعیت
         try:
@@ -677,7 +699,7 @@ def production_declaration_view(request):
                 )
             
             # Apply sorting for confirmed table
-            confirmed_programs = confirmed_programs.order_by(order_by_confirmed, 'id')
+            confirmed_programs = confirmed_programs.order_by(*order_by_confirmed)
             bug_logger.debug(f"Number of confirmed programs: {confirmed_programs.count()}")
         except Exception as e:
             bug_logger.warning(f"Error loading confirmed programs: {str(e)}")
@@ -698,7 +720,7 @@ def production_declaration_view(request):
                 )
             
             # Apply sorting for in-progress table
-            in_progress_programs = in_progress_programs.order_by(order_by_progress, 'id')
+            in_progress_programs = in_progress_programs.order_by(*order_by_progress)
             bug_logger.debug(f"Number of in-progress programs: {in_progress_programs.count()}")
         except Exception as e:
             bug_logger.warning(f"Error loading in-progress programs: {str(e)}")
@@ -720,7 +742,7 @@ def production_declaration_view(request):
                 )
             
             # Apply sorting for completed table
-            completed_programs_qs = completed_programs_qs.order_by(order_by_completed, 'id')
+            completed_programs_qs = completed_programs_qs.order_by(*order_by_completed)
             
             bug_logger.debug(f"Total number of completed programs: {completed_programs_qs.count()}")
             
@@ -1101,6 +1123,7 @@ def production_program_crud_view(request, program_id=None):
                         instance.status = ProductionProgram.Status.COMPLETED
                         # Handle popup data for complete action
                         produced_weight_str = request.POST.get('produced_weight_ton')
+                        actual_end_date_str = request.POST.get('actual_end_date')
                         completed_at_str = request.POST.get('completed_at')
                         product_warehouse_id = request.POST.get('product_warehouse')
                         
@@ -1110,6 +1133,11 @@ def production_program_crud_view(request, program_id=None):
                                 bug_logger.debug(f"Produced weight received from popup: {instance.produced_weight_ton}")
                             except (ValueError, TypeError) as e:
                                 bug_logger.warning(f"Error converting produced weight: {str(e)}")
+                        
+                        # Set actual_end_date (Jalali date from form will be converted automatically)
+                        if actual_end_date_str:
+                            instance.actual_end_date = actual_end_date_str
+                            bug_logger.debug(f"Actual end date received from popup: {instance.actual_end_date}")
                         
                         # Set completed_at (time only)
                         if completed_at_str:

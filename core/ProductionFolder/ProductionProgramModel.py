@@ -198,6 +198,7 @@ class ProductionProgram(models.Model):
     # Actual execution date and times (separate fields)
     actual_start_date = jmodels.jDateField(blank=True, null=True, verbose_name='تاریخ شروع واقعی')
     started_at = models.TimeField(blank=True, null=True, verbose_name='زمان شروع واقعی')
+    actual_end_date = jmodels.jDateField(blank=True, null=True, verbose_name='تاریخ پایان واقعی')
     completed_at = models.TimeField(blank=True, null=True, verbose_name='زمان تکمیل')
 
     class Meta:

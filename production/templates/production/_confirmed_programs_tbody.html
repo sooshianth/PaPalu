@@ -12,6 +12,20 @@
     {% if accessible_production_program_fields.planned_weight_ton %}
     <td>{{ program.planned_weight_ton|default:"-" }}</td>
     {% endif %}
+    {% if accessible_production_program_fields.predicted_start_date and accessible_production_program_fields.predicted_start_time %}
+    <td>
+        {% if program.predicted_start_date and program.predicted_start_time %}
+            {{ program.predicted_start_date|date:"Y/m/d" }} {{ program.predicted_start_time|date:"H:i" }}
+        {% else %}-{% endif %}
+    </td>
+    {% endif %}
+    {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
+    <td>
+        {% if program.predicted_end_date and program.predicted_end_time %}
+            {{ program.predicted_end_date|date:"Y/m/d" }} {{ program.predicted_end_time|date:"H:i" }}
+        {% else %}-{% endif %}
+    </td>
+    {% endif %}
     {% if accessible_production_program_fields.packaging_type %}
     <td>{{ program.get_packaging_type_display|default:"-" }}</td>
     {% endif %}

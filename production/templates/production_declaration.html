@@ -712,6 +712,18 @@
                                 تناژ برنامه‌ریزی شده (تن)
                             </th>
                             {% endif %}
+                            {% if accessible_production_program_fields.predicted_start_date and accessible_production_program_fields.predicted_start_time %}
+                            <th class="sortable {% if sort_by_confirmed == 'predicted_start_date' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
+                                onclick="sortTable('predicted_start_date', 'confirmed')">
+                                شروع پیشبینی شده
+                            </th>
+                            {% endif %}
+                            {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
+                            <th class="sortable {% if sort_by_confirmed == 'predicted_end_date' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
+                                onclick="sortTable('predicted_end_date', 'confirmed')">
+                                پایان پیشبینی شده
+                            </th>
+                            {% endif %}
                             {% if accessible_production_program_fields.packaging_type %}
                             <th>نوع بسته‌بندی</th>
                             {% endif %}
@@ -738,6 +750,20 @@
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.predicted_start_date and accessible_production_program_fields.predicted_start_time %}
+                            <td>
+                                {% if program.predicted_start_date and program.predicted_start_time %}
+                                    {{ program.predicted_start_date|date:"Y/m/d" }} {{ program.predicted_start_time|date:"H:i" }}
+                                {% else %}-{% endif %}
+                            </td>
+                            {% endif %}
+                            {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
+                            <td>
+                                {% if program.predicted_end_date and program.predicted_end_time %}
+                                    {{ program.predicted_end_date|date:"Y/m/d" }} {{ program.predicted_end_time|date:"H:i" }}
+                                {% else %}-{% endif %}
+                            </td>
                             {% endif %}
                             {% if accessible_production_program_fields.packaging_type %}
                             <td>{{ program.get_packaging_type_display|default:"-" }}</td>
@@ -964,16 +990,16 @@
                                 تناژ برنامه‌ریزی شده (تن)
                             </th>
                             {% endif %}
-                            {% if accessible_production_program_fields.predicted_start_time %}
-                            <th class="sortable {% if sort_by_progress == 'predicted_start_time' %}sorted-{{ sort_dir_progress }}{% endif %}" 
-                                onclick="sortTable('predicted_start_time', 'progress')">
-                                ساعت شروع پیش‌بینی
+                            {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
+                            <th class="sortable {% if sort_by_progress == 'actual_start_date' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('actual_start_date', 'progress')">
+                                شروع واقعی
                             </th>
                             {% endif %}
-                            {% if accessible_production_program_fields.predicted_end_time %}
-                            <th class="sortable {% if sort_by_progress == 'predicted_end_time' %}sorted-{{ sort_dir_progress }}{% endif %}" 
-                                onclick="sortTable('predicted_end_time', 'progress')">
-                                ساعت پایان پیش‌بینی
+                            {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
+                            <th class="sortable {% if sort_by_progress == 'predicted_end_date' %}sorted-{{ sort_dir_progress }}{% endif %}" 
+                                onclick="sortTable('predicted_end_date', 'progress')">
+                                پایان پیشبینی شده
                             </th>
                             {% endif %}
                             {% if accessible_production_program_fields.status %}
@@ -1000,11 +1026,19 @@
                             {% if accessible_production_program_fields.planned_weight_ton %}
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
                             {% endif %}
-                            {% if accessible_production_program_fields.predicted_start_time %}
-                            <td>{{ program.predicted_start_time|date:"H:i"|default:"-" }}</td>
+                            {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
+                            <td>
+                                {% if program.actual_start_date and program.started_at %}
+                                    {{ program.actual_start_date|date:"Y/m/d" }} {{ program.started_at|date:"H:i" }}
+                                {% else %}-{% endif %}
+                            </td>
                             {% endif %}
-                            {% if accessible_production_program_fields.predicted_end_time %}
-                            <td>{{ program.predicted_end_time|date:"H:i"|default:"-" }}</td>
+                            {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
+                            <td>
+                                {% if program.predicted_end_date and program.predicted_end_time %}
+                                    {{ program.predicted_end_date|date:"Y/m/d" }} {{ program.predicted_end_time|date:"H:i" }}
+                                {% else %}-{% endif %}
+                            </td>
                             {% endif %}
                             {% if accessible_production_program_fields.status %}
                             <td><span class="status-badge status-in-progress">{{ program.get_status_display }}</span></td>
@@ -1100,16 +1134,16 @@
                                 {% if accessible_production_program_fields.product_warehouse %}
                                 <th>انبار محصول</th>
                                 {% endif %}
-                                {% if accessible_production_program_fields.started_at %}
+                                {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
                                 <th class="sortable {% if sort_by_completed == 'started_at' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('started_at', 'completed')">
-                                    زمان شروع واقعی
+                                    شروع واقعی
                                 </th>
                                 {% endif %}
-                                {% if accessible_production_program_fields.completed_at %}
+                                {% if accessible_production_program_fields.actual_end_date and accessible_production_program_fields.completed_at %}
                                 <th class="sortable {% if sort_by_completed == 'completed_at' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('completed_at', 'completed')">
-                                    زمان پایان واقعی
+                                    پایان واقعی
                                 </th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.status %}
@@ -1157,11 +1191,19 @@
                                     {% endif %}
                                 </td>
                                 {% endif %}
-                                {% if accessible_production_program_fields.started_at %}
-                                <td>{{ program.started_at|date:"Y/m/d H:i"|default:"-" }}</td>
+                                {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
+                                <td>
+                                    {% if program.actual_start_date and program.started_at %}
+                                        {{ program.actual_start_date|date:"Y/m/d" }} {{ program.started_at|date:"H:i" }}
+                                    {% else %}-{% endif %}
+                                </td>
                                 {% endif %}
-                                {% if accessible_production_program_fields.completed_at %}
-                                <td>{{ program.completed_at|date:"Y/m/d H:i"|default:"-" }}</td>
+                                {% if accessible_production_program_fields.actual_end_date and accessible_production_program_fields.completed_at %}
+                                <td>
+                                    {% if program.actual_end_date and program.completed_at %}
+                                        {{ program.actual_end_date|date:"Y/m/d" }} {{ program.completed_at|date:"H:i" }}
+                                    {% else %}-{% endif %}
+                                </td>
                                 {% endif %}
                                 {% if accessible_production_program_fields.status %}
                                 <td><span class="status-badge status-completed">{{ program.get_status_display }}</span></td>
