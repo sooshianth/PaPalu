@@ -536,8 +536,19 @@ class PurchaseTransportTable(tables.Table):
         )
     
     def render_plate_number(self, value):
-        """نمایش پلاک"""
-        return value or '—'
+        """نمایش پلاک با ترتیب معکوس 67 | الف | 12345 و سبک badge"""
+        if not value:
+            return '—'
+        try:
+            parts = str(value).split('-')
+            if len(parts) == 3:
+                first, letter, last = parts
+                display = f"{last} | {letter} | {first}"
+            else:
+                display = value
+            return format_html('<span class="plate-badge"><span class="ir-flag"></span><span class="seg">{}</span></span>', display)
+        except Exception:
+            return value
     
     def render_expected_arrival_date(self, value):
         """نمایش تاریخ پیش‌بینی"""
@@ -950,8 +961,19 @@ class LogisticConfirmationTable(tables.Table):
         return record.get_vehicle_type_display() if record.vehicle_type else '—'
     
     def render_plate_number(self, value):
-        """نمایش پلاک"""
-        return value or '—'
+        """نمایش پلاک با ترتیب معکوس 67 | الف | 12345 و سبک badge"""
+        if not value:
+            return '—'
+        try:
+            parts = str(value).split('-')
+            if len(parts) == 3:
+                first, letter, last = parts
+                display = f"{last} | {letter} | {first}"
+            else:
+                display = value
+            return format_html('<span class="plate-badge"><span class="ir-flag"></span><span class="seg">{}</span></span>', display)
+        except Exception:
+            return value
     
     def render_driver(self, value):
         """نمایش راننده"""
