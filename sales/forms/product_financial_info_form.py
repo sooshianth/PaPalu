@@ -18,8 +18,8 @@ class ProductFinancialInfoForm(forms.ModelForm):
         widgets = {
             'price': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
-                'placeholder': 'قیمت محصول'
+                'step': '1',
+                'placeholder': 'قیمت به ریال'
             }),
             'deadline': jDateInput(attrs={
                 'class': 'form-control',
@@ -44,6 +44,14 @@ class ProductFinancialInfoForm(forms.ModelForm):
                 'rows': 2,
                 'placeholder': 'توضیحات (اختیاری)'
             }),
+        }
+        labels = {
+            'price': 'قیمت فی (ریال)',
+            'deadline': 'مهلت اعتبار قیمت',
+            'condition': 'شرط',
+            'loading_date': 'مدت زمان بارگیری',
+            'condition_description': 'توضیحات شرایط',
+            'description': 'توضیحات',
         }
     
     def __init__(self, *args, **kwargs):
@@ -119,6 +127,10 @@ class ProductFinancialInfoForm(forms.ModelForm):
         if price <= 0:
             raise forms.ValidationError('قیمت باید بزرگتر از صفر باشد.')
         
+        # بررسی محدودیت منطقی قیمت (حداکثر 10 میلیارد ریال)
+        if price > 10000000000:
+            raise forms.ValidationError('قیمت وارد شده بیش از حد مجاز است. لطفاً قیمت معتبر وارد کنید.')
+        
         return price
     
     def clean_deadline(self):
@@ -127,11 +139,20 @@ class ProductFinancialInfoForm(forms.ModelForm):
         
         if deadline:
             # deadline از jDateField می‌آید و خودش jdatetime.date است
-            # بررسی اینکه تاریخ در گذشته نباشد (اختیاری - می‌توانید حذف کنید)
-            # یا می‌توانید بررسی کنید که تاریخ از امروز کمتر نباشد
             try:
-                # اگر نیاز به اعتبارسنجی خاصی دارید، اینجا اضافه کنید
+                # بررسی اینکه تاریخ در گذشته نباشد
+                today = jdatetime.date.today()
+                if deadline < today:
+                    raise forms.ValidationError('تاریخ مهلت اعتبار نمی‌تواند در گذشته باشد. لطفاً تاریخ امروز یا آینده را انتخاب کنید.')
+                
+                # بررسی محدودیت منطقی (حداکثر 2 سال در آینده)
+                two_years_later = jdatetime.date(today.year + 2, today.month, today.day)
+                if deadline > two_years_later:
+                    raise forms.ValidationError('تاریخ مهلت اعتبار نمی‌تواند بیش از 2 سال در آینده باشد.')
+                
                 return deadline
+            except forms.ValidationError:
+                raise
             except Exception as e:
                 raise forms.ValidationError(f'خطا در اعتبارسنجی تاریخ: {str(e)}')
         

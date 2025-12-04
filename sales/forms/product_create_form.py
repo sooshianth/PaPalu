@@ -4,6 +4,8 @@ from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.BOMModel import BOM
 from django_jalali.db import models as jmodels
+from django_jalali.forms import jDateField
+from django_jalali.forms.widgets import jDateInput
 from core.helpers import check_field_access_prefer_edit
 
 
@@ -165,8 +167,9 @@ class CreateProductForm(forms.ModelForm):
         label='واحد شمارش اصلی',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'مثال: کیلوگرم'
+            'placeholder': 'مثال: کیلوگرم، تن، گرم'
         }),
+        help_text='واحد اصلی برای اندازه‌گیری محصول'
     )
 
     secondary_unit = forms.CharField(
@@ -191,12 +194,13 @@ class CreateProductForm(forms.ModelForm):
         }),
     )
 
-    expiration_date = forms.DateField(
+    expiration_date = jDateField(
         required=True,
-        label='تاریخ انقضا',
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date'
+        label='تاریخ انقضا (شمسی)',
+        widget=jDateInput(attrs={
+            'class': 'form-control jalali-date',
+            'placeholder': 'تاریخ انقضا',
+            'dir': 'ltr'
         }),
     )
 
@@ -205,12 +209,13 @@ class CreateProductForm(forms.ModelForm):
         max_digits=10,
         decimal_places=2,
         required=False,
-        label='قطر پلت یا کرامبل',
+        label='قطر پلت یا کرامبل (میلی‌متر)',
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',
-            'placeholder': 'به میلی‌متر'
+            'placeholder': 'مثال: 3.5'
         }),
+        help_text='قطر به میلی‌متر'
     )
 
     image = forms.ImageField(
@@ -247,11 +252,19 @@ class CreateProductForm(forms.ModelForm):
 
         if not code:
             raise forms.ValidationError('شناسه محصول الزامی است.')
+        
+        # بررسی طول کد
+        if len(code.strip()) < 3:
+            raise forms.ValidationError('شناسه محصول باید حداقل 3 کاراکتر باشد.')
 
         # بررسی تکراری نبودن کد (در صورت ایجاد محصول جدید)
         if not self.instance.pk:
             if Product.objects.filter(code=code).exists():
-                raise forms.ValidationError('این کد محصول قبلاً ثبت شده است.')
+                raise forms.ValidationError('این کد محصول قبلاً ثبت شده است. لطفاً کد دیگری انتخاب کنید.')
+        else:
+            # در حالت ویرایش، بررسی کنیم که کد جدید با کد محصول دیگری تداخل نداشته باشد
+            if Product.objects.filter(code=code).exclude(pk=self.instance.pk).exists():
+                raise forms.ValidationError('این کد محصول قبلاً برای محصول دیگری ثبت شده است.')
         
         return code.strip()
 
@@ -261,6 +274,10 @@ class CreateProductForm(forms.ModelForm):
 
         if not name:
             raise forms.ValidationError('نام محصول الزامی است.')
+        
+        # بررسی طول نام
+        if len(name.strip()) < 3:
+            raise forms.ValidationError('نام محصول باید حداقل 3 کاراکتر باشد.')
 
         return name.strip()
 
@@ -349,13 +366,18 @@ class ProductionInfoForm(forms.ModelForm):
             'min_batch_production': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'placeholder': 'حداقل بچ تولید'
+                'placeholder': 'حداقل بچ تولید (کیلوگرم)'
             }),
             'specific_production_instruction': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
                 'placeholder': 'دستور العمل خاص تولید'
             }),
+        }
+        labels = {
+            'formula_id': 'شناسه فرمول',
+            'min_batch_production': 'حداقل بچ تولید (کیلوگرم)',
+            'specific_production_instruction': 'دستور العمل خاص تولید',
         }
 
     def __init__(self, *args, **kwargs):
@@ -412,9 +434,13 @@ class BOMForm(forms.ModelForm):
             }),
             'quantity': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.0001',
-                'placeholder': 'مقدار ماده اولیه'
+                'step': '0.001',
+                'placeholder': 'مقدار (کیلوگرم)'
             }),
+        }
+        labels = {
+            'raw_material': 'ماده اولیه',
+            'quantity': 'مقدار ماده اولیه (کیلوگرم)',
         }
 
     def __init__(self, *args, **kwargs):

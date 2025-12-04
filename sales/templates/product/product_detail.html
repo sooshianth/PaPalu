@@ -349,8 +349,8 @@
         
         {% if accessible_fields.pellet_granule_diameter %}
         <div class="detail-row">
-            <div class="detail-label">قطر پلت یا گرانول:</div>
-            <div class="detail-value">{{ product.pellet_granule_diameter|default:"-" }}</div>
+            <div class="detail-label">قطر پلت یا گرانول (میلی‌متر):</div>
+            <div class="detail-value">{% if product.pellet_granule_diameter %}{{ product.pellet_granule_diameter }} میلی‌متر{% else %}-{% endif %}</div>
         </div>
         {% endif %}
         
@@ -391,8 +391,8 @@
             </div>
             
             <div class="detail-row">
-                <div class="detail-label">حداقل بچ تولید:</div>
-                <div class="detail-value">{{ production_info.min_batch_production|default:"-" }}</div>
+                <div class="detail-label">حداقل بچ تولید (کیلوگرم):</div>
+                <div class="detail-value">{% if production_info.min_batch_production %}{{ production_info.min_batch_production }} کیلوگرم{% else %}-{% endif %}</div>
             </div>
             
             <div class="detail-row">
@@ -410,7 +410,7 @@
                             <th>شناسه ماده اولیه</th>
                             <th>ماده اولیه</th>
                             <th>واحد به کار رفته</th>
-                            <th>مقدار</th>
+                            <th>مقدار (کیلوگرم)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -419,7 +419,7 @@
                             <td><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ bom.raw_material.raw_material_id|default:"-" }}</code></td>
                             <td>{{ bom.raw_material.name|default:"-" }}</td>
                             <td>{{ bom.raw_material.primary_unit|default:"-" }}</td>
-                            <td>{{ bom.quantity|default:"-" }}</td>
+                            <td>{% if bom.quantity %}{{ bom.quantity }} کیلوگرم{% else %}-{% endif %}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

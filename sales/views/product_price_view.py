@@ -84,7 +84,7 @@ def product_price_list_view(request):
     - کنترل دسترسی فیلدها با FieldPermission
     - قابلیت جستجو و فیلتر
     """
-    audit_logger.info("درخواست مشاهده لیست قیمت‌گذاری‌های محصولات")
+    audit_logger.info(f"درخواست مشاهده لیست قیمت‌گذاری‌های محصولات توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_SET_PRODUCT_PRICE.value):
@@ -153,9 +153,9 @@ def set_product_price_view(request, product_id=None):
     - product_id اختیاری است - اگر نباشد، کاربر می‌تواند از فرم انتخاب کند
     """
     if product_id:
-        audit_logger.info(f"درخواست قیمت‌گذاری محصول با شناسه {product_id}")
+        audit_logger.info(f"درخواست قیمت‌گذاری محصول با شناسه {product_id} توسط کاربر {request.user.username}")
     else:
-        audit_logger.info("درخواست قیمت‌گذاری محصول (بدون شناسه)")
+        audit_logger.info(f"درخواست قیمت‌گذاری محصول (بدون شناسه) توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_SET_PRODUCT_PRICE.value):
@@ -184,7 +184,7 @@ def set_product_price_view(request, product_id=None):
                 financial_info = financial_info_form.save()
                 
                 product = financial_info.product
-                bug_logger.info(f"قیمت محصول {product.code} با موفقیت ثبت شد")
+                audit_logger.info(f"قیمت محصول {product.code} توسط کاربر {request.user.username} ثبت شد - قیمت: {financial_info.price} ریال")
                 messages.success(
                     request,
                     f'قیمت محصول "{product.name}" با کد "{product.code}" با موفقیت ثبت شد.'

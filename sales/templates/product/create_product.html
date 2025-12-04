@@ -86,6 +86,17 @@
         display: block;
     }
     
+    .form-text {
+        color: #6c757d;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .text-muted {
+        color: #6c757d !important;
+    }
+    
     .form-actions {
         display: flex;
         justify-content: center;
@@ -245,7 +256,17 @@
                 {% if accessible_fields.code and 'code' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.code.label }}</label>
-                    {{ product_form.code }}
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            {{ product_form.code }}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="generate-product-code-btn" title="تولید شناسه جدید">
+                            <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
                     {% if product_form.code.errors %}
                         <div class="text-danger">{{ product_form.code.errors.0 }}</div>
                     {% endif %}
@@ -384,6 +405,9 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ product_form.pellet_granule_diameter.label }}</label>
                     {{ product_form.pellet_granule_diameter }}
+                    {% if product_form.pellet_granule_diameter.help_text %}
+                        <small class="form-text text-muted">{{ product_form.pellet_granule_diameter.help_text }}</small>
+                    {% endif %}
                     {% if product_form.pellet_granule_diameter.errors %}
                         <div class="text-danger">{{ product_form.pellet_granule_diameter.errors.0 }}</div>
                     {% endif %}
@@ -432,7 +456,17 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label required-field">{{ form.formula_id.label }}</label>
-                            {{ form.formula_id }}
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <div style="flex: 1;">
+                                    {{ form.formula_id }}
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary generate-formula-id-btn" data-form-index="{{ forloop.counter0 }}" title="تولید شناسه فرمول جدید">
+                                    <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                        <path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </button>
+                            </div>
                             {% if form.formula_id.errors %}
                                 <div class="text-danger">{{ form.formula_id.errors.0 }}</div>
                             {% endif %}
@@ -526,30 +560,39 @@
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
 <script>
 $(document).ready(function() {
-    // افزودن فرم جدید برای ProductionInfo
-    $('#add-production-info').click(function() {
-        var formCount = $('#id_production_info-TOTAL_FORMS').val();
-        var formHtml = $('#production-info-formset .formset-row').first().clone();
-        formHtml.find(':input').each(function() {
-            var name = $(this).attr('name');
-            if (name) {
-                $(this).attr('name', name.replace('-0-', '-' + formCount + '-'));
-                $(this).attr('id', 'id_' + name.replace('-0-', '-' + formCount + '-'));
+    // راه‌اندازی تقویم شمسی برای فیلد تاریخ انقضا
+    var expirationDateInput = $('#id_expiration_date');
+    
+    if (expirationDateInput.length) {
+        expirationDateInput.attr('type', 'text');
+        expirationDateInput.attr('readonly', 'readonly');
+        expirationDateInput.css('cursor', 'pointer');
+        
+        // دریافت مقدار اولیه (اگر وجود داشته باشد)
+        var initialValue = expirationDateInput.val();
+        
+        // راه‌اندازی تقویم شمسی
+        expirationDateInput.pDatepicker({
+            observer: true,
+            format: 'YYYY/MM/DD',
+            altField: '#id_expiration_date',
+            altFormat: 'YYYY-MM-DD',
+            calendarType: 'persian',
+            initialValue: initialValue || false,
+            timePicker: {
+                enabled: false
             }
         });
-        formHtml.find('label').each(function() {
-            var forAttr = $(this).attr('for');
-            if (forAttr) {
-                $(this).attr('for', forAttr.replace('-0-', '-' + formCount + '-'));
-            }
-        });
-        formHtml.find('[name*="-DELETE"]').prop('checked', false);
-        formHtml.find('input, textarea, select').val('');
-        $('#production-info-formset').append(formHtml);
-        $('#id_production_info-TOTAL_FORMS').val(parseInt(formCount) + 1);
-    });
+    }
+    
+
 
     // افزودن فرم جدید برای BOM
     $('#add-bom').click(function() {
@@ -572,6 +615,109 @@ $(document).ready(function() {
         formHtml.find('input, textarea, select').val('');
         $('#bom-formset').append(formHtml);
         $('#id_bom-TOTAL_FORMS').val(parseInt(formCount) + 1);
+        
+        // اضافه کردن event handler برای دکمه تولید شناسه فرمول در فرم جدید
+        formHtml.find('.generate-formula-id-btn').off('click').on('click', function() {
+            var formIndex = $(this).data('form-index');
+            generateFormulaId(formIndex);
+        });
+    });
+    
+    // تولید شناسه محصول جدید
+    $('#generate-product-code-btn').click(function() {
+        var btn = $(this);
+        btn.prop('disabled', true);
+        btn.html('<span style="font-size: 12px;">...</span>');
+        
+        $.ajax({
+            url: '{% url "sales:generate_product_code_ajax" %}',
+            type: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(data) {
+                if (data.success) {
+                    $('#id_code').val(data.code);
+                } else {
+                    alert('خطا در تولید شناسه محصول: ' + (data.error || 'خطای نامشخص'));
+                }
+            },
+            error: function() {
+                alert('خطا در ارتباط با سرور');
+            },
+            complete: function() {
+                btn.prop('disabled', false);
+                btn.html('<svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+            }
+        });
+    });
+    
+    // تابع تولید شناسه فرمول
+    function generateFormulaId(formIndex) {
+        var btn = $('.generate-formula-id-btn[data-form-index="' + formIndex + '"]');
+        btn.prop('disabled', true);
+        btn.html('<span style="font-size: 12px;">...</span>');
+        
+        $.ajax({
+            url: '{% url "sales:generate_formula_id_ajax" %}',
+            type: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(data) {
+                if (data.success) {
+                    $('#id_production_info-' + formIndex + '-formula_id').val(data.formula_id);
+                } else {
+                    alert('خطا در تولید شناسه فرمول: ' + (data.error || 'خطای نامشخص'));
+                }
+            },
+            error: function() {
+                alert('خطا در ارتباط با سرور');
+            },
+            complete: function() {
+                btn.prop('disabled', false);
+                btn.html('<svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+            }
+        });
+    }
+    
+    // اضافه کردن event handler برای دکمه‌های تولید شناسه فرمول موجود
+    $('.generate-formula-id-btn').click(function() {
+        var formIndex = $(this).data('form-index');
+        generateFormulaId(formIndex);
+    });
+    
+    // هنگام افزودن فرم جدید ProductionInfo، دکمه تولید شناسه را اضافه می‌کنیم
+    $('#add-production-info').off('click').on('click', function() {
+        var formCount = $('#id_production_info-TOTAL_FORMS').val();
+        var formHtml = $('#production-info-formset .formset-row').first().clone();
+        formHtml.find(':input').each(function() {
+            var name = $(this).attr('name');
+            if (name) {
+                $(this).attr('name', name.replace('-0-', '-' + formCount + '-'));
+                $(this).attr('id', 'id_' + name.replace('-0-', '-' + formCount + '-'));
+            }
+        });
+        formHtml.find('label').each(function() {
+            var forAttr = $(this).attr('for');
+            if (forAttr) {
+                $(this).attr('for', forAttr.replace('-0-', '-' + formCount + '-'));
+            }
+        });
+        formHtml.find('[name*="-DELETE"]').prop('checked', false);
+        formHtml.find('input, textarea, select').val('');
+        
+        // به‌روزرسانی data-form-index برای دکمه تولید شناسه
+        formHtml.find('.generate-formula-id-btn').attr('data-form-index', formCount);
+        
+        $('#production-info-formset').append(formHtml);
+        $('#id_production_info-TOTAL_FORMS').val(parseInt(formCount) + 1);
+        
+        // اضافه کردن event handler برای دکمه تولید شناسه فرمول در فرم جدید
+        formHtml.find('.generate-formula-id-btn').off('click').on('click', function() {
+            var formIndex = $(this).data('form-index');
+            generateFormulaId(formIndex);
+        });
     });
 });
 </script>

@@ -37,9 +37,11 @@ INSTALLED_APPS = [
     'django_jalali',
     'django_tables2',
     
-    # Local apps
+    # Apps with migration
+    'data_exflow.apps.DataExflowConfig',
     'core.apps.CoreConfig',
     'authentication.apps.AuthenticationConfig',
+    # Other apps
     'perm_manager.apps.PermManagerConfig',
     'accounting.apps.AccountingConfig',
     'distribution.apps.DistributionConfig',

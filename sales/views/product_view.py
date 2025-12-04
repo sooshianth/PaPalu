@@ -29,6 +29,91 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 
+def generate_suggested_product_code():
+    """
+    تولید شناسه محصول پیشنهادی به صورت خودکار
+    الگو: PRD-001, PRD-002, ...
+    """
+    try:
+        # دریافت آخرین محصول بر اساس کد که با PRD- شروع می‌شود
+        last_product = Product.objects.filter(code__startswith='PRD-').order_by('-code').first()
+        
+        if last_product and last_product.code:
+            # استخراج عدد از آخرین کد
+            try:
+                # اگر کد به صورت PRD-001 باشد
+                parts = last_product.code.split('-')
+                if len(parts) == 2 and parts[0] == 'PRD':
+                    last_number = int(parts[1])
+                    new_number = last_number + 1
+                    # بررسی اینکه آیا این کد جدید تکراری نیست
+                    new_code = f"PRD-{new_number:03d}"
+                    if not Product.objects.filter(code=new_code).exists():
+                        return new_code
+                    # اگر تکراری بود، به دنبال کد بعدی می‌گردیم
+                    while Product.objects.filter(code=new_code).exists():
+                        new_number += 1
+                        new_code = f"PRD-{new_number:03d}"
+                    return new_code
+            except (ValueError, IndexError):
+                pass
+    except Exception as e:
+        bug_logger.warning(f"خطا در تولید شناسه محصول پیشنهادی: {str(e)}")
+    
+    # اگر محصولی وجود نداشت یا خطا رخ داد، از 001 شروع می‌کنیم
+    # اما ابتدا بررسی می‌کنیم که آیا PRD-001 تکراری است یا نه
+    suggested_code = "PRD-001"
+    counter = 1
+    while Product.objects.filter(code=suggested_code).exists():
+        counter += 1
+        suggested_code = f"PRD-{counter:03d}"
+    
+    return suggested_code
+
+
+def generate_suggested_formula_id():
+    """
+    تولید شناسه فرمول پیشنهادی به صورت خودکار
+    الگو: FML-001, FML-002, ...
+    """
+    from core.ProductFolder.ProductionInfoModel import ProductionInfo
+    
+    try:
+        # دریافت آخرین فرمول بر اساس شناسه که با FML- شروع می‌شود
+        last_formula = ProductionInfo.objects.filter(formula_id__startswith='FML-').exclude(formula_id__isnull=True).exclude(formula_id='').order_by('-formula_id').first()
+        
+        if last_formula and last_formula.formula_id:
+            # استخراج عدد از آخرین شناسه
+            try:
+                parts = last_formula.formula_id.split('-')
+                if len(parts) == 2 and parts[0] == 'FML':
+                    last_number = int(parts[1])
+                    new_number = last_number + 1
+                    # بررسی اینکه آیا این شناسه جدید تکراری نیست
+                    new_formula_id = f"FML-{new_number:03d}"
+                    if not ProductionInfo.objects.filter(formula_id=new_formula_id).exists():
+                        return new_formula_id
+                    # اگر تکراری بود، به دنبال شناسه بعدی می‌گردیم
+                    while ProductionInfo.objects.filter(formula_id=new_formula_id).exists():
+                        new_number += 1
+                        new_formula_id = f"FML-{new_number:03d}"
+                    return new_formula_id
+            except (ValueError, IndexError):
+                pass
+    except Exception as e:
+        bug_logger.warning(f"خطا در تولید شناسه فرمول پیشنهادی: {str(e)}")
+    
+    # اگر فرمولی وجود نداشت یا خطا رخ داد، از 001 شروع می‌کنیم
+    # اما ابتدا بررسی می‌کنیم که آیا FML-001 تکراری است یا نه
+    suggested_formula_id = "FML-001"
+    counter = 1
+    while ProductionInfo.objects.filter(formula_id=suggested_formula_id).exists():
+        counter += 1
+        suggested_formula_id = f"FML-{counter:03d}"
+    
+    return suggested_formula_id
+
+
 @login_required
 def create_product_view(request):
     """
@@ -36,7 +121,7 @@ def create_product_view(request):
     - بررسی دسترسی با TaskPermission
     - بررسی دسترسی فیلدها با FieldAccessRule
     """
-    audit_logger.info("درخواست ایجاد محصول جدید")
+    audit_logger.info(f"درخواست ایجاد محصول جدید توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_CREATE_PRODUCT.value):
@@ -93,9 +178,9 @@ def create_product_view(request):
                             bom_count += 1
                 
                 if production_info_count == 0:
-                    messages.error(request, 'حداقل یک اطلاعات تولید با تمام فیلدهای اجباری الزامی است.')
+                    messages.error(request, 'حداقل یک اطلاعات تولید کامل (شامل شناسه فرمول، حداقل بچ تولید و دستور العمل) الزامی است.')
                 elif bom_count == 0:
-                    messages.error(request, 'حداقل یک ماده اولیه (BOM) با تمام فیلدهای اجباری الزامی است.')
+                    messages.error(request, 'حداقل یک ماده اولیه کامل (شامل نام ماده اولیه و مقدار به کیلوگرم) در BOM الزامی است.')
                 else:
                     with transaction.atomic():
                         # ذخیره محصول اصلی
@@ -130,7 +215,7 @@ def create_product_view(request):
                                         bom.production_info = first_production_info
                                         bom.save()
                         
-                        bug_logger.info(f"محصول جدید با کد {product.code} ایجاد شد")
+                        audit_logger.info(f"محصول جدید با کد {product.code} توسط کاربر {request.user.username} ایجاد شد")
                         messages.success(
                             request,
                             f'محصول "{product.name}" با کد "{product.code}" با موفقیت ایجاد شد.'
@@ -164,14 +249,22 @@ def create_product_view(request):
                             for error in errors:
                                 messages.error(request, f'ماده اولیه: {field}: {error}')
     else:
-        # ایجاد فرم خالی
+        # تولید شناسه‌های پیشنهادی
+        suggested_product_code = generate_suggested_product_code()
+        suggested_formula_id = generate_suggested_formula_id()
+        
+        # ایجاد فرم خالی با شناسه پیشنهادی
         product_form = CreateProductForm(
             user=request.user,
-            accessible_fields=accessible_fields
+            accessible_fields=accessible_fields,
+            initial={'code': suggested_product_code}
         )
         
-        # ایجاد formset خالی
-        production_info_formset = ProductionInfoFormSet(prefix='production_info')
+        # ایجاد formset خالی با شناسه فرمول پیشنهادی
+        production_info_formset = ProductionInfoFormSet(
+            prefix='production_info',
+            initial=[{'formula_id': suggested_formula_id}]
+        )
         bom_formset = BOMFormSet(prefix='bom')
     
     context = {
@@ -193,7 +286,7 @@ def product_list_view(request):
     - بررسی دسترسی با TaskPermission
     - استفاده از django-tables2 برای نمایش جدول
     """
-    audit_logger.info("درخواست مشاهده لیست محصولات")
+    audit_logger.info(f"درخواست مشاهده لیست محصولات توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_VIEW_PRODUCT_LIST.value):
@@ -272,7 +365,7 @@ def product_detail_view(request, product_id):
     ویو نمایش جزئیات محصول
     - بررسی دسترسی با TaskPermission
     """
-    audit_logger.info(f"درخواست مشاهده جزئیات محصول {product_id}")
+    audit_logger.info(f"درخواست مشاهده جزئیات محصول {product_id} توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_VIEW_PRODUCT_DETAIL.value):
@@ -314,7 +407,7 @@ def edit_product_view(request, product_id):
     - بررسی دسترسی با TaskPermission
     - بررسی دسترسی فیلدها با FieldAccessRule
     """
-    audit_logger.info(f"درخواست ویرایش محصول {product_id}")
+    audit_logger.info(f"درخواست ویرایش محصول {product_id} توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_EDIT_PRODUCT.value):
@@ -379,9 +472,9 @@ def edit_product_view(request, product_id):
                             bom_count += 1
                 
                 if production_info_count == 0:
-                    messages.error(request, 'حداقل یک اطلاعات تولید با تمام فیلدهای اجباری الزامی است.')
+                    messages.error(request, 'حداقل یک اطلاعات تولید کامل (شامل شناسه فرمول، حداقل بچ تولید و دستور العمل) الزامی است.')
                 elif bom_count == 0:
-                    messages.error(request, 'حداقل یک ماده اولیه (BOM) با تمام فیلدهای اجباری الزامی است.')
+                    messages.error(request, 'حداقل یک ماده اولیه کامل (شامل نام ماده اولیه و مقدار به کیلوگرم) در BOM الزامی است.')
                 else:
                     with transaction.atomic():
                         # ذخیره تغییرات محصول
@@ -451,7 +544,7 @@ def edit_product_view(request, product_id):
                                 if bom_form.instance and bom_form.instance.pk:
                                     bom_form.instance.delete()
                         
-                        bug_logger.info(f"محصول {product.code} با موفقیت ویرایش شد")
+                        audit_logger.info(f"محصول {product.code} توسط کاربر {request.user.username} ویرایش شد")
                         messages.success(
                             request,
                             f'محصول "{product.name}" با موفقیت ویرایش شد.'
@@ -529,7 +622,7 @@ def delete_product_view(request, product_id):
     ویو حذف محصول
     - بررسی دسترسی با TaskPermission
     """
-    audit_logger.info(f"درخواست حذف محصول {product_id}")
+    audit_logger.info(f"درخواست حذف محصول {product_id} توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
     if not user_has_task(request.user, TaskChoices.SALES_DELETE_PRODUCT.value):
@@ -545,7 +638,7 @@ def delete_product_view(request, product_id):
             product_code = product.code
             product.delete()
             
-            bug_logger.info(f"محصول {product_code} با موفقیت حذف شد")
+            audit_logger.info(f"محصول {product_code} توسط کاربر {request.user.username} حذف شد")
             messages.success(
                 request,
                 f'محصول "{product_name}" با موفقیت حذف شد.'
@@ -569,6 +662,38 @@ def delete_product_view(request, product_id):
     }
     
     return render(request, 'product/delete_product_confirm.html', context)
+
+
+@login_required
+def generate_product_code_ajax(request):
+    """
+    تولید شناسه محصول جدید به صورت AJAX
+    """
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            suggested_code = generate_suggested_product_code()
+            return JsonResponse({'success': True, 'code': suggested_code})
+        except Exception as e:
+            bug_logger.error(f"خطا در تولید شناسه محصول: {str(e)}", exc_info=True)
+            return JsonResponse({'success': False, 'error': 'خطا در تولید شناسه محصول'}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
+
+@login_required
+def generate_formula_id_ajax(request):
+    """
+    تولید شناسه فرمول جدید به صورت AJAX
+    """
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        try:
+            suggested_formula_id = generate_suggested_formula_id()
+            return JsonResponse({'success': True, 'formula_id': suggested_formula_id})
+        except Exception as e:
+            bug_logger.error(f"خطا در تولید شناسه فرمول: {str(e)}", exc_info=True)
+            return JsonResponse({'success': False, 'error': 'خطا در تولید شناسه فرمول'}, status=500)
+    
+    return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
 @login_required

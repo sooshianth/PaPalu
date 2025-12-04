@@ -118,4 +118,8 @@ urlpatterns = [
     
     # جستجوی AJAX
     path('search/ajax/', product_view.product_search_ajax, name='product_search_ajax'),
+    
+    # تولید شناسه‌های پیشنهادی AJAX
+    path('api/generate-product-code/', product_view.generate_product_code_ajax, name='generate_product_code_ajax'),
+    path('api/generate-formula-id/', product_view.generate_formula_id_ajax, name='generate_formula_id_ajax'),
 ]

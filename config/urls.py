@@ -21,6 +21,7 @@ def home_view(request):
         
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('data-exflow/', include('data_exflow.urls')),
     path('permissions/', include('perm_manager.urls')),
     path('authentication/', include('authentication.urls')),
     path('home/', home_view, name='home'),
