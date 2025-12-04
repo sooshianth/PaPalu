@@ -56,7 +56,7 @@ class Person(models.Model):
 
     # فیلدهای پایه
     national_id = models.CharField(
-        max_length=10,
+        max_length=11,
         verbose_name='کد ملی')
         
     type = models.CharField(

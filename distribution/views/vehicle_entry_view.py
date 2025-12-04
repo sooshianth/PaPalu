@@ -16,7 +16,7 @@ from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.AllocationFolder.AllocationModel import Allocation
 from django.contrib.contenttypes.models import ContentType
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 import re
 
 bug_logger = logging.getLogger("bugs")

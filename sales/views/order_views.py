@@ -26,7 +26,7 @@ from core.OrderFolder.OrderItemModel import OrderItem
 from core.PersonFolder.PersonModel import Person
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 from sales.tables import OrderTable
 import jdatetime
 from decimal import Decimal
@@ -535,7 +535,7 @@ def edit_order_view(request, order_number):
                                 item.unit_price = unit_price
                                 item.discount = form.cleaned_data.get('discount') or Decimal('0')
                                 item.additional_charges = form.cleaned_data.get('additional_charges') or Decimal('0')
-                                item.vat = form.cleaned_data.get('vat') or Decimal('0')
+                                item.vat_percent = form.cleaned_data.get('vat_percent') or Decimal('0')
                                 item.save()
                                 items_saved += 1
                             except OrderItem.DoesNotExist:
@@ -611,7 +611,7 @@ def edit_order_view(request, order_number):
             formset_data[f'{prefix}-unit_price'] = item.unit_price or ''
             formset_data[f'{prefix}-discount'] = item.discount or '0'
             formset_data[f'{prefix}-additional_charges'] = item.additional_charges or '0'
-            formset_data[f'{prefix}-vat'] = item.vat or '0'
+            formset_data[f'{prefix}-vat_percent'] = item.vat_percent or '0'
             formset_data[f'{prefix}-DELETE'] = False
         
         item_formset = ItemFormSet(formset_data, form_kwargs={'accessible_fields': access_item})

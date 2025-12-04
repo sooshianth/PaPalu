@@ -397,6 +397,25 @@
                 </select>
             </div>
             
+            <!-- اطلاعات وزن تخصیص -->
+            <div class="form-group" id="weight-info-container" style="display: none;">
+                <label>اطلاعات وزن تخصیص</label>
+                <div style="border: 1px solid var(--gray-300); border-radius: 6px; padding: 15px; background: #e7f3ff;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: 600; color: var(--gray-800);">وزن کل تخصیص:</span>
+                        <span id="total-allocation-weight" style="color: var(--gray-700);">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: 600; color: var(--gray-800);">وزن حمل‌های موجود:</span>
+                        <span id="total-transports-weight" style="color: var(--gray-700);">-</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--gray-300); padding-top: 8px; margin-top: 8px;">
+                        <span style="font-weight: 600; color: var(--primary-green);">وزن باقیمانده:</span>
+                        <span id="remaining-weight" style="color: var(--primary-green); font-weight: 600;">-</span>
+                    </div>
+                </div>
+            </div>
+            
             <!-- بخش محصولات -->
             <div class="form-group">
                 <label class="required">محصولات</label>
@@ -411,7 +430,13 @@
                        name="driver_national_id" 
                        id="driver_national_id" 
                        class="form-control" 
-                       maxlength="10">
+                       maxlength="10"
+                       pattern="[0-9]{10}"
+                       title="شماره ملی باید دقیقاً 10 رقم باشد"
+                       oninput="validateNationalId(this)">
+                <small style="color: var(--gray-600); font-size: 0.85rem; display: block; margin-top: 5px;">
+                    شماره ملی باید دقیقاً 10 رقم باشد (اختیاری)
+                </small>
             </div>
             
             <div class="form-group">
@@ -427,7 +452,14 @@
                 <input type="tel" 
                        name="driver_mobile" 
                        id="driver_mobile" 
-                       class="form-control">
+                       class="form-control"
+                       pattern="09[0-9]{9}"
+                       title="شماره همراه باید با 09 شروع شود و 11 رقم باشد"
+                       maxlength="11"
+                       oninput="validateMobile(this)">
+                <small style="color: var(--gray-600); font-size: 0.85rem; display: block; margin-top: 5px;">
+                    شماره همراه باید با 09 شروع شود و 11 رقم باشد (اختیاری)
+                </small>
             </div>
             
             <div class="form-group">
@@ -501,6 +533,15 @@
         .then(data => {
             allocationProducts = data.products || [];
             renderProducts();
+            
+            // نمایش اطلاعات وزن
+            if (data.weight_info) {
+                const weightInfo = data.weight_info;
+                document.getElementById('total-allocation-weight').textContent = weightInfo.total_allocation_weight.toFixed(3) + ' کیلوگرم';
+                document.getElementById('total-transports-weight').textContent = weightInfo.total_transports_weight.toFixed(3) + ' کیلوگرم';
+                document.getElementById('remaining-weight').textContent = weightInfo.remaining_weight.toFixed(3) + ' کیلوگرم';
+                document.getElementById('weight-info-container').style.display = 'block';
+            }
         })
         .catch(error => {
             console.error('خطا در بارگذاری محصولات:', error);
@@ -571,12 +612,43 @@
     }
     
     
+    // اعتبارسنجی شماره ملی
+    function validateNationalId(input) {
+        const value = input.value.replace(/\D/g, ''); // حذف کاراکترهای غیر عددی
+        input.value = value;
+        
+        if (value.length > 0 && value.length !== 10) {
+            input.setCustomValidity('شماره ملی باید دقیقاً 10 رقم باشد');
+        } else {
+            input.setCustomValidity('');
+        }
+    }
+    
+    // اعتبارسنجی شماره همراه
+    function validateMobile(input) {
+        const value = input.value.replace(/\D/g, ''); // حذف کاراکترهای غیر عددی
+        input.value = value;
+        
+        if (value.length > 0) {
+            if (!value.startsWith('09')) {
+                input.setCustomValidity('شماره همراه باید با 09 شروع شود');
+            } else if (value.length !== 11) {
+                input.setCustomValidity('شماره همراه باید 11 رقم باشد');
+            } else {
+                input.setCustomValidity('');
+            }
+        } else {
+            input.setCustomValidity('');
+        }
+    }
+    
     // بستن مودال
     function closeCreateTransportModal() {
         document.getElementById('createTransportModal').classList.remove('active');
         document.getElementById('createTransportForm').reset();
         allocationProducts = [];
         document.getElementById('products-container').innerHTML = '<p style="color: var(--gray-600); margin: 0;">در حال بارگذاری محصولات...</p>';
+        document.getElementById('weight-info-container').style.display = 'none';
     }
     
     // بستن مودال با کلیک روی پس‌زمینه

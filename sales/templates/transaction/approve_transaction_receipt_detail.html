@@ -243,7 +243,7 @@
                     </thead>
                     <tbody>
                     {% for doc in documents %}
-                        <tr {% if doc.inquiry_amount %}style="background-color: #d4edda;"{% endif %}>
+                        <tr {% if doc.approval_status == 'rejected' %}style="background-color: #f8d7da;"{% elif doc.inquiry_amount %}style="background-color: #d4edda;"{% endif %}>
                             <td>{{ doc.accounting_document_number|default:"-" }}</td>
                             <td>{{ doc.get_payment_type_display }}</td>
                             <td><strong>{{ doc.document_amount|floatformat:0 }}</strong></td>
@@ -259,14 +259,23 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if doc.inquiry_amount %}
+                                {% if doc.approval_status == 'approved' %}
                                     <span style="color: var(--primary-green); font-weight: 600;">✓ تأیید شده</span>
+                                {% elif doc.approval_status == 'rejected' %}
+                                    <span style="color: #dc3545; font-weight: 600;">✗ رد شده</span>
+                                    {% if doc.rejection_reason %}
+                                        <br><small style="color: #721c24;">دلیل: {{ doc.get_rejection_reason_display }}</small>
+                                    {% endif %}
                                 {% else %}
                                     <span style="color: #ffc107; font-weight: 600;">⏳ در انتظار تأیید</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if not doc.inquiry_amount %}
+                                {% if doc.approval_status == 'rejected' %}
+                                    <span style="color: #dc3545; font-weight: 600; font-size: 0.85rem;">⚠️ باید ویرایش شود</span>
+                                {% elif doc.approval_status == 'approved' %}
+                                    <span style="color: var(--primary-green); font-weight: 600; font-size: 0.85rem;">✓ تایید شده</span>
+                                {% elif not doc.inquiry_amount %}
                                     <a href="?document_id={{ doc.id }}" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">تأیید</a>
                                 {% else %}
                                     <a href="?document_id={{ doc.id }}" class="btn btn-sm btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">ویرایش تأیید</a>
@@ -375,22 +384,19 @@
                     <small style="color: var(--gray-600); margin-top: 0.25rem;">در چک، شماره صیادی آن چک است</small>
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.source_bank.id_for_label }}">بانک مبدا <span style="color: #dc3545;">*</span></label>
-                    {{ form.source_bank }}
-                    {{ form.source_bank.errors }}
+                    <label for="{{ form.bank_account.id_for_label }}">حساب بانکی <span style="color: #dc3545;">*</span></label>
+                    {{ form.bank_account }}
+                    {{ form.bank_account.errors }}
+                    <small style="color: var(--gray-600); margin-top: 0.25rem;">حساب بانکی را از لیست انتخاب کنید</small>
                 </div>
             </div>
             
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="{{ form.approval_account_number.id_for_label }}">شماره حساب <span style="color: #dc3545;">*</span></label>
-                    {{ form.approval_account_number }}
-                    {{ form.approval_account_number.errors }}
-                </div>
-                <div class="form-group">
-                    <label for="{{ form.shaba_number.id_for_label }}">شماره شبا <span style="color: #dc3545;">*</span></label>
-                    {{ form.shaba_number }}
-                    {{ form.shaba_number.errors }}
+                    <label>اطلاعات حساب بانکی انتخاب شده:</label>
+                    <div id="bank-account-info" style="padding: 0.75rem; background: #f8f9fa; border-radius: 8px; margin-top: 0.5rem; min-height: 60px;">
+                        <p style="margin: 0; color: var(--gray-600);">لطفاً یک حساب بانکی را انتخاب کنید</p>
+                    </div>
                 </div>
             </div>
             
@@ -399,6 +405,11 @@
                     <label for="{{ form.inquiry_name.id_for_label }}">نام استعلام شده <span style="color: #dc3545;">*</span></label>
                     {{ form.inquiry_name }}
                     {{ form.inquiry_name.errors }}
+                    <div id="inquiry_name_other_container" style="margin-top: 0.5rem; display: none;">
+                        <label for="{{ form.inquiry_name_other.id_for_label }}" style="font-size: 0.9rem; color: var(--gray-600);">نام استعلام گرفته شده (سایر):</label>
+                        {{ form.inquiry_name_other }}
+                        {{ form.inquiry_name_other.errors }}
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="{{ form.transfer_time.id_for_label }}">ساعت واریز <span style="color: #dc3545;">*</span></label>
@@ -408,13 +419,127 @@
             </div>
 
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary">{% if selected_document.inquiry_amount %}به‌روزرسانی تأیید{% else %}ثبت تأیید{% endif %}</button>
+                {% if selected_document.approval_status == 'rejected' %}
+                    <div style="background: #f8d7da; color: #721c24; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-right: 4px solid #dc3545;">
+                        <strong>⚠️ توجه:</strong> این تراکنش رد شده است. لطفاً ابتدا تراکنش را ویرایش کنید و سپس دوباره تایید کنید.
+                        <br><small>دلیل رد: {{ selected_document.get_rejection_reason_display|default:"-" }}</small>
+                    </div>
+                    <button type="button" class="btn btn-secondary" disabled>تراکنش رد شده - باید ویرایش شود</button>
+                {% elif selected_document.approval_status == 'approved' %}
+                    <div style="background: #d4edda; color: #155724; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-right: 4px solid #28a745;">
+                        <strong>✓ این تراکنش تایید شده است.</strong>
+                    </div>
+                    <button type="button" class="btn btn-secondary" disabled>تراکنش تایید شده - قابل ویرایش نیست</button>
+                {% else %}
+                    <button type="submit" name="action" value="approve" class="btn btn-primary">{% if selected_document.inquiry_amount %}به‌روزرسانی تأیید{% else %}ثبت تأیید{% endif %}</button>
+                    {% if rejection_form %}
+                    <button type="button" class="btn btn-danger" onclick="openRejectModal()">رد تراکنش</button>
+                    {% endif %}
+                {% endif %}
                 <a href="{% url 'sales:approve_transaction_receipt_detail' order.order_number %}" class="btn btn-secondary">لغو</a>
                 <a href="{% url 'sales:approve_transaction_receipt_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
             </div>
         </form>
     </div>
 </div>
+
+{# Modal برای رد تراکنش #}
+{% if rejection_form %}
+<div id="rejectModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 2rem; border-radius: 12px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
+        <h3 style="margin-top: 0; margin-bottom: 1.5rem;">رد تراکنش</h3>
+        <form method="post" id="rejectForm">
+            {% csrf_token %}
+            <input type="hidden" name="document_id" value="{{ selected_document.id }}">
+            <input type="hidden" name="action" value="reject">
+            
+            <div class="form-group">
+                <label for="{{ rejection_form.rejection_reason.id_for_label }}">دلیل رد <span style="color: #dc3545;">*</span></label>
+                {{ rejection_form.rejection_reason }}
+                {{ rejection_form.rejection_reason.errors }}
+            </div>
+            
+            <div class="btn-group" style="margin-top: 1.5rem;">
+                <button type="submit" class="btn btn-danger">رد تراکنش</button>
+                <button type="button" class="btn btn-secondary" onclick="closeRejectModal()">لغو</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function openRejectModal() {
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+
+function closeRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
+
+// بستن modal با کلیک روی پس‌زمینه
+document.getElementById('rejectModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeRejectModal();
+    }
+});
+
+// نمایش اطلاعات حساب بانکی انتخاب شده
+document.getElementById('{{ form.bank_account.id_for_label }}').addEventListener('change', function() {
+    var select = this;
+    var infoDiv = document.getElementById('bank-account-info');
+    var selectedOption = select.options[select.selectedIndex];
+    
+    if (selectedOption.value) {
+        // اطلاعات حساب بانکی از option text
+        var text = selectedOption.text;
+        infoDiv.innerHTML = '<p style="margin: 0; color: var(--gray-800);"><strong>حساب انتخاب شده:</strong> ' + text + '</p>';
+    } else {
+        infoDiv.innerHTML = '<p style="margin: 0; color: var(--gray-600);">لطفاً یک حساب بانکی را انتخاب کنید</p>';
+    }
+});
+
+// اگر حساب بانکی از قبل انتخاب شده، اطلاعات را نمایش بده
+window.addEventListener('DOMContentLoaded', function() {
+    var bankAccountSelect = document.getElementById('{{ form.bank_account.id_for_label }}');
+    if (bankAccountSelect && bankAccountSelect.value) {
+        bankAccountSelect.dispatchEvent(new Event('change'));
+    }
+    
+    // مدیریت نمایش/مخفی کردن فیلد inquiry_name_other
+    var inquiryNameSelect = document.getElementById('id_inquiry_name_select');
+    var inquiryNameOtherContainer = document.getElementById('inquiry_name_other_container');
+    var inquiryNameOtherInput = document.getElementById('id_inquiry_name_other');
+    
+    function toggleInquiryNameOther() {
+        if (inquiryNameSelect && inquiryNameOtherContainer && inquiryNameOtherInput) {
+            if (inquiryNameSelect.value === 'other') {
+                inquiryNameOtherContainer.style.display = 'block';
+                if (inquiryNameOtherInput) {
+                    inquiryNameOtherInput.style.display = 'block';
+                    inquiryNameOtherInput.required = true;
+                }
+            } else {
+                inquiryNameOtherContainer.style.display = 'none';
+                if (inquiryNameOtherInput) {
+                    inquiryNameOtherInput.style.display = 'none';
+                    inquiryNameOtherInput.required = false;
+                    // فقط اگر "سایر" انتخاب نشده، مقدار را پاک کن
+                    if (inquiryNameSelect.value !== 'other') {
+                        inquiryNameOtherInput.value = '';
+                    }
+                }
+            }
+        }
+    }
+    
+    if (inquiryNameSelect) {
+        inquiryNameSelect.addEventListener('change', toggleInquiryNameOther);
+        // بررسی مقدار اولیه
+        toggleInquiryNameOther();
+    }
+});
+</script>
 {% elif not selected_document %}
 <div class="info-card">
     <div class="info-card-header">

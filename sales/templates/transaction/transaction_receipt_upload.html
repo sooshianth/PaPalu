@@ -304,11 +304,19 @@
             </div>
         </div>
         {% if remaining_amount <= 0 and settlement.original_document_amount %}
-        <div class="info-row" style="margin-top: 1rem;">
-            <div style="background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
-                ✓ تسویه کامل شده است! پس از ثبت آخرین سند، وضعیت سفارش به «در انتظار تایید تراکنش فروش» تغییر می‌کند.
+            {% if all_approved %}
+            <div class="info-row" style="margin-top: 1rem;">
+                <div style="background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
+                    ✓ تسویه کامل شده و همه تراکنش‌ها تایید شدند! وضعیت سفارش به «در انتظار تایید حسابداری» تغییر می‌کند.
+                </div>
             </div>
-        </div>
+            {% else %}
+            <div class="info-row" style="margin-top: 1rem;">
+                <div style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; border-right: 4px solid #ffc107; font-weight: 500;">
+                    <strong>⚠️ توجه:</strong> مبلغ کل رسیده است اما هنوز همه تراکنش‌ها تایید نشده‌اند. لطفاً همه تراکنش‌ها را تایید کنید.
+                </div>
+            </div>
+            {% endif %}
         {% elif remaining_amount > 0 %}
         <div class="info-row" style="margin-top: 1rem;">
             <div style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; border-right: 4px solid #ffc107; font-weight: 500;">
@@ -338,7 +346,10 @@
                             <th>حساب مقصد</th>
                             <th>وضعیت وصول</th>
                             <th>تاریخ وصول</th>
+                            <th>وضعیت تایید</th>
+                            <th>دلیل رد</th>
                             <th>پیوست</th>
+                            <th>عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -353,11 +364,38 @@
                             <td>{{ doc.get_payment_status_display|default:"-" }}</td>
                             <td>{{ doc.check_receipt_date|default:"-" }}</td>
                             <td>
+                                {% if doc.approval_status == 'approved' %}
+                                    <span style="background: var(--primary-green); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">✓ تایید شده</span>
+                                {% elif doc.approval_status == 'rejected' %}
+                                    <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">✗ رد شده</span>
+                                {% else %}
+                                    <span style="background: #ffc107; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">⏳ در انتظار</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if doc.approval_status == 'rejected' and doc.rejection_reason %}
+                                    <span style="color: #dc3545; font-weight: 600; font-size: 0.85rem;">
+                                        {{ doc.get_rejection_reason_display }}
+                                    </span>
+                                {% else %}
+                                    <span style="color: var(--gray-500);">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 {% if doc.document_attachment %}
                                     <a href="{{ doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
                                 {% else %}
                                     -
                                 {% endif %}
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    {% if doc.approval_status != 'approved' %}
+                                        <a href="{% url 'sales:transaction_receipt_edit' order.order_number doc.id %}" class="btn btn-sm" style="background: #17a2b8; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.85rem;">ویرایش</a>
+                                    {% else %}
+                                        <span style="color: var(--gray-500); font-size: 0.85rem;">-</span>
+                                    {% endif %}
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}

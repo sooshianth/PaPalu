@@ -865,11 +865,59 @@
 		if (!(window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker)) return;
 		jQuery(rootEl).find('.jalali-date').each(function(){
 			const $el = jQuery(this);
+			const fieldName = $el.attr('name');
 			$el.attr('dir','ltr');
+			
+			// Create hidden input for Gregorian date (what gets submitted)
+			const hiddenId = 'hidden_' + fieldName + '_' + Math.random().toString(36).substr(2, 9);
+			const $hidden = jQuery('<input>', {
+				type: 'hidden',
+				id: hiddenId,
+				name: fieldName,
+				class: 'jalali-date' // Keep the class so collectGregorianConversions still works as fallback
+			});
+			
+			// Get initial value (Gregorian from server)
+			const initialGregorian = $el.val();
+			if (initialGregorian) {
+				$hidden.val(initialGregorian);
+			}
+			
+			// Insert hidden field after visible field
+			$el.after($hidden);
+			
+			// Remove name from visible field so it doesn't get submitted
+			$el.removeAttr('name');
+			
+			// Convert initial Gregorian to Persian for display
+			let persianDateValue = '';
+			if (initialGregorian) {
+				try {
+					const parts = initialGregorian.split('-');
+					if (parts.length === 3) {
+						const gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+						if (typeof persianDate !== 'undefined') {
+							const pDate = persianDate.fromGregorian(gregorianDate);
+							persianDateValue = pDate.format('YYYY/MM/DD');
+							$el.val(persianDateValue);
+						}
+					}
+				} catch(e) {
+					console.error('Error converting initial date:', e);
+				}
+			}
+			
 			$el.persianDatepicker({
 				format: 'YYYY/MM/DD',
-				initialValueType: 'gregorian',
-				autoClose: true
+				altField: '#' + hiddenId,
+				altFormat: 'YYYY-MM-DD',
+				calendarType: 'persian',
+				initialValue: persianDateValue || false,
+				autoClose: true,
+				onSelect: function() {
+					// Persian datepicker automatically updates altField with altFormat
+					console.log('Date selected:', $el.val(), '-> Hidden field:', $hidden.val());
+				}
 			});
 		});
 		jQuery(rootEl).find('.jalali-datetime').each(function(){
@@ -1079,6 +1127,35 @@
 		document.getElementById('tabContents').appendChild(pane);
 		// Init Jalali for this pane
 		initJalaliPickers(pane);
+		
+		// Set today's Jalali date as default for date fields if they're empty
+		// Note: After initJalaliPickers, the visible fields no longer have name attributes
+		// The name is on the hidden fields. We need to find the visible jalali-date inputs
+		if (typeof persianDate !== 'undefined') {
+			const today = new persianDate();
+			const todayJalali = today.format('YYYY/MM/DD');
+			const todayGregorian = today.toCalendar('gregorian');
+			const todayGregorianStr = todayGregorian.year + '-' + 
+				String(todayGregorian.month).padStart(2, '0') + '-' + 
+				String(todayGregorian.day).padStart(2, '0');
+			
+			// Find visible date inputs (they have class jalali-date but no name attribute after init)
+			const visibleDateInputs = pane.querySelectorAll('input.jalali-date:not([name])');
+			visibleDateInputs.forEach(visibleInput => {
+				if (!visibleInput.value) {
+					// Set Persian date in visible field
+					jQuery(visibleInput).val(todayJalali);
+					// Trigger datepicker's onSelect to update hidden field
+					jQuery(visibleInput).trigger('change');
+					// Also manually update the hidden field as backup
+					const hiddenField = jQuery(visibleInput).next('input[type="hidden"]');
+					if (hiddenField.length && !hiddenField.val()) {
+						hiddenField.val(todayGregorianStr);
+					}
+				}
+			});
+		}
+		
 		// Setup product-production_info filtering
 		setupProductionInfoFiltering(pane);
 		// Optional section toggle binding
@@ -1124,7 +1201,8 @@
 			let val = inp.value && inp.value.trim();
 			if (!val) { inp.value = ''; return; }
 			val = normalizeDigits(val);
-			const m = val.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+			// Support both YYYY/MM/DD and YYYY-MM-DD formats
+			const m = val.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
 			if (!m) { console.warn('Invalid jalali date format:', val); return; }
 			const jy = parseInt(m[1]);
 			const jm = parseInt(m[2]);
@@ -1132,8 +1210,9 @@
 			try { 
 				const g = jalaali.toGregorian(jy, jm, jd); 
 				inp.value = `${g.gy}-${pad(g.gm)}-${pad(g.gd)}`; 
+				console.log(`Converted ${val} to ${inp.value}`);
 			} catch(e) { 
-				console.error('Jalali conversion error:', e); 
+				console.error('Jalali conversion error:', e, val); 
 				inp.value = ''; 
 			}
 		});
@@ -1163,18 +1242,13 @@
 		if (!form) return;
 		// Clear previous errors
 		clearErrors(pane);
-		// Log date values BEFORE conversion
-		const startBefore = form.querySelector('[name="predicted_start_time"]')?.value;
-		const endBefore = form.querySelector('[name="predicted_end_time"]')?.value;
-		const execBefore = form.querySelector('[name="execution_date"]')?.value;
-		console.log('Dates BEFORE conversion:', {start: startBefore, end: endBefore, exec: execBefore});
-		// Convert jalali values to gregorian before creating FormData
-		collectGregorianConversions(form);
-		// Log date values AFTER conversion
-		const startAfter = form.querySelector('[name="predicted_start_time"]')?.value;
-		const endAfter = form.querySelector('[name="predicted_end_time"]')?.value;
-		const execAfter = form.querySelector('[name="execution_date"]')?.value;
-		console.log('Dates AFTER conversion:', {start: startAfter, end: endAfter, exec: execAfter});
+		// Log date values (now from hidden fields that have Gregorian dates)
+		const startDate = form.querySelector('[name="predicted_start_date"]')?.value;
+		const startTime = form.querySelector('[name="predicted_start_time"]')?.value;
+		const endDate = form.querySelector('[name="predicted_end_date"]')?.value;
+		const endTime = form.querySelector('[name="predicted_end_time"]')?.value;
+		console.log('Date fields being submitted:', {startDate, startTime, endDate, endTime});
+		// No need to call collectGregorianConversions - altField handles conversion automatically
 		const data = new FormData(form);
 		data.set('action', action);
 		const csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;

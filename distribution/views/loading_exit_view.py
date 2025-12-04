@@ -19,7 +19,7 @@ from core.PersonFolder.FinancialBankingModel import FinancialBanking
 from core.AllocationFolder.AllocationModel import Allocation
 from core.WarehouseFolder.WarehouseModel import Warehouse
 from django.contrib.contenttypes.models import ContentType
-from access.helpers import check_field_access_prefer_edit
+from core.helpers import check_field_access_prefer_edit
 from distribution.forms.loading_exit_form import LoadingExitForm
 from core.StockEntryFolder.StockEntryModel import StockEntry
 from core.StockEntryFolder.SourceStockModel import SourceStock

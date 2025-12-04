@@ -25,6 +25,12 @@ class TransactionDocument(models.Model):
         ('surplus', 'سرک'),
     ]
 
+    APPROVAL_STATUS_CHOICES = [
+        ('pending', 'در انتظار'),
+        ('approved', 'تایید شده'),
+        ('rejected', 'رد شده'),
+    ]
+
     # شناسه یکتا (Primary Key)
     id = models.AutoField(
         primary_key=True,
@@ -128,6 +134,16 @@ class TransactionDocument(models.Model):
         blank=True
     )
 
+    # وضعیت تایید تراکنش
+    approval_status = models.CharField(
+        max_length=20,
+        choices=APPROVAL_STATUS_CHOICES,
+        default='pending',
+        verbose_name='وضعیت تایید',
+        null=True,
+        blank=True
+    )
+
     # ========== فیلدهای تأیید تراکنش (override در مرحله تأیید) ==========
     
     # مبلغ استعلام گرفته شده
@@ -195,6 +211,21 @@ class TransactionDocument(models.Model):
         null=True,
         blank=True,
         help_text='نوع تسویه: کسری (مبلغ منفی) یا سرک (مبلغ مثبت)'
+    )
+
+    # دلیل رد تراکنش
+    REJECTION_REASON_CHOICES = [
+        ('name_mismatch', 'عدم تطابق نام'),
+        ('amount_mismatch', 'عدم تطابق مبلغ'),
+        ('account_mismatch', 'عدم تطابق حساب'),
+    ]
+
+    rejection_reason = models.CharField(
+        max_length=50,
+        choices=REJECTION_REASON_CHOICES,
+        verbose_name='دلیل رد',
+        null=True,
+        blank=True
     )
 
     class Meta:
