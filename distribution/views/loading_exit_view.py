@@ -93,6 +93,10 @@ def loading_exit_list_view(request):
             plate_number = truck_info.plate_number
             vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
         
+        # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
+        if not vehicle_type and transport.vehicle_type_official:
+            vehicle_type = transport.get_vehicle_type_official_display()
+        
         # دریافت اطلاعات محصول از ProductInfo یا Allocation
         product_name = None
         allocated_quantity = None
@@ -235,14 +239,118 @@ def register_loading_exit_view(request, waybill_number):
                     origin_warehouse = origin_warehouse_obj.name if origin_warehouse_obj else ''
                     destination_warehouse = destination_warehouse_obj.name if destination_warehouse_obj else ''
                     
-                    # بررسی اینکه اگر راننده وجود دارد، باید حساب بانکی داشته باشد
-                    if transport.driver and not driver_account_number:
+                    # بررسی validation شماره حساب
+                    # اگر راننده وجود دارد، باید حساب بانکی داشته باشد
+                    if transport.driver:
                         financial_banking = FinancialBanking.objects.filter(person=transport.driver).first()
                         if financial_banking:
                             bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking)
+                            # اگر حساب موجود است اما انتخاب نشده
                             if bank_accounts.exists() and not driver_account_number:
+                                # دریافت مجدد driver_account_choices برای نمایش فرم
+                                driver_account_choices = []
+                                for account in bank_accounts:
+                                    account_display = f"{account.account_number}"
+                                    if account.bank_name:
+                                        account_display += f" ({account.bank_name})"
+                                    driver_account_choices.append((account.account_number, account_display))
                                 messages.error(request, 'انتخاب شماره حساب راننده الزامی است.')
-                                return redirect('distribution:loading_exit_list')
+                                # نمایش مجدد فرم با خطا
+                                form.add_error('driver_account_number', 'انتخاب شماره حساب راننده الزامی است.')
+                                # تنظیم مجدد queryset و choices
+                                if customer_warehouse:
+                                    form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                                        pk=customer_warehouse.pk
+                                    )
+                                else:
+                                    form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
+                                        warehouse_type='consumer'
+                                    )
+                                if driver_account_choices:
+                                    form.fields['driver_account_number'].choices = driver_account_choices
+                                    form.fields['driver_account_number'].required = True
+                                else:
+                                    form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
+                                    form.fields['driver_account_number'].required = False
+                                # آماده‌سازی context برای نمایش مجدد فرم با خطا
+                                driver_name = None
+                                driver_national_id = None
+                                driver_mobile = None
+                                if transport.driver:
+                                    driver_name = transport.driver.name
+                                    driver_national_id = transport.driver.national_id
+                                    person_content_type = ContentType.objects.get_for_model(Person)
+                                    mobile_phone = PhoneNumber.objects.filter(
+                                        content_type=person_content_type,
+                                        object_id=transport.driver.national_id,
+                                        phone_type='mobile'
+                                    ).first()
+                                    if mobile_phone:
+                                        driver_mobile = mobile_phone.number
+                                
+                                truck_info = transport.truck_infos.first()
+                                plate_number = None
+                                vehicle_type = None
+                                if truck_info:
+                                    plate_number = truck_info.plate_number
+                                    vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
+                                
+                                if not vehicle_type and transport.vehicle_type_official:
+                                    vehicle_type = transport.get_vehicle_type_official_display()
+                                
+                                product_infos = transport.product_infos.all()
+                                product_info_list = []
+                                product_name = None
+                                
+                                for product_info in product_infos:
+                                    item_name = None
+                                    item_type_display = None
+                                    
+                                    if product_info.product:
+                                        item_name = product_info.product.name
+                                        item_type_display = 'محصول'
+                                    elif product_info.raw_material:
+                                        item_name = product_info.raw_material.name
+                                        item_type_display = 'مواد اولیه'
+                                    
+                                    if item_name:
+                                        packaging_type_display = product_info.get_packaging_type_display() if product_info.packaging_type else None
+                                        product_info_list.append({
+                                            'name': item_name,
+                                            'weight': product_info.weight,
+                                            'packaging_type': packaging_type_display,
+                                            'item_type': item_type_display,
+                                            'unit': 'کیلوگرم',
+                                        })
+                                
+                                if product_info_list:
+                                    product_name = product_info_list[0]['name']
+                                elif product_infos.exists():
+                                    product_name = 'نامشخص'
+                                
+                                order_number = None
+                                if transport.allocation:
+                                    allocation = transport.allocation
+                                    if allocation and allocation.order:
+                                        order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+                                
+                                accessible_person_fields = get_accessible_person_fields(request.user)
+                                
+                                context = {
+                                    'form': form,
+                                    'transport': transport,
+                                    'driver_name': driver_name,
+                                    'driver_national_id': driver_national_id,
+                                    'driver_mobile': driver_mobile,
+                                    'plate_number': plate_number,
+                                    'vehicle_type': vehicle_type,
+                                    'product_name': product_name or 'نامشخص',
+                                    'product_info_list': product_info_list,
+                                    'order_number': order_number or 'نامشخص',
+                                    'accessible_person_fields': accessible_person_fields,
+                                    'page_title': f'ثبت خروج کالا - {transport.waybill_number}',
+                                }
+                                return render(request, 'distribution/loading_exit_detail.html', context)
                     
                     # اطلاعات اختیاری راننده
                     driver_national_id = form.cleaned_data.get('driver_national_id', '').strip()
@@ -292,22 +400,24 @@ def register_loading_exit_view(request, waybill_number):
                         transport.driver = driver_person
                     
                     # اگر راننده وجود دارد، از حساب بانکی موجود استفاده می‌کنیم
-                    # driver_account_number در فرم از ChoiceField است و شماره حساب انتخاب شده را برمی‌گرداند
-                    # نیازی به ایجاد حساب جدید نیست، فقط بررسی می‌کنیم که حساب وجود دارد
-                    if transport.driver:
-                        financial_banking = FinancialBanking.objects.filter(person=transport.driver).first()
-                        if financial_banking:
-                            bank_account = BankAccount.objects.filter(
+                    if transport.driver and driver_account_number:
+                        financial_banking, created = FinancialBanking.objects.get_or_create(
+                            person=transport.driver
+                        )
+                        
+                        # بررسی وجود حساب
+                        bank_account = BankAccount.objects.filter(
+                            financial_banking=financial_banking,
+                            account_number=driver_account_number
+                        ).first()
+                        
+                        if not bank_account:
+                            # اگر حساب پیدا نشد، یک حساب جدید ایجاد می‌کنیم
+                            BankAccount.objects.create(
                                 financial_banking=financial_banking,
-                                account_number=driver_account_number
-                            ).first()
-                            if not bank_account:
-                                # اگر حساب پیدا نشد، یک حساب جدید ایجاد می‌کنیم
-                                BankAccount.objects.create(
-                                    financial_banking=financial_banking,
-                                    account_number=driver_account_number,
-                                    bank_name='نامشخص'
-                                )
+                                account_number=driver_account_number,
+                                bank_name='نامشخص'
+                            )
                     
                     # اگر اطلاعات کامیون ناقص است، تکمیل می‌کنیم
                     if plate_part1 and plate_part2 and plate_part3:
@@ -315,21 +425,14 @@ def register_loading_exit_view(request, waybill_number):
                         
                         existing_truck = transport.truck_infos.first()
                         if existing_truck:
-                            if existing_truck.plate_number != plate_number:
-                                existing_truck.delete()
-                                truck_info = TruckInfo.objects.create(
-                                    plate_number=plate_number,
-                                    transport=transport,
-                                    vehicle_type=vehicle_type or None,
-                                    loading_type=loading_type or None,
-                                )
-                            else:
-                                truck_info = existing_truck
-                                if vehicle_type:
-                                    truck_info.vehicle_type = vehicle_type
-                                if loading_type:
-                                    truck_info.loading_type = loading_type
-                                truck_info.save()
+                            # به‌روزرسانی اطلاعات موجود
+                            existing_truck.plate_number = plate_number
+                            if vehicle_type:
+                                existing_truck.vehicle_type = vehicle_type
+                            if loading_type:
+                                existing_truck.loading_type = loading_type
+                            existing_truck.save()
+                            truck_info = existing_truck
                         else:
                             truck_info = TruckInfo.objects.create(
                                 plate_number=plate_number,
@@ -679,6 +782,10 @@ def register_loading_exit_view(request, waybill_number):
         plate_number = truck_info.plate_number
         vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
     
+    # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
+    if not vehicle_type and transport.vehicle_type_official:
+        vehicle_type = transport.get_vehicle_type_official_display()
+    
     # دریافت اطلاعات محصول - همه ProductInfoها
     product_infos = transport.product_infos.all()
     product_info_list = []
@@ -737,4 +844,78 @@ def register_loading_exit_view(request, waybill_number):
         'page_title': f'ثبت خروج کالا - {transport.waybill_number}',
     }
     return render(request, 'distribution/loading_exit_detail.html', context)
+
+
+@login_required
+def create_bank_account_ajax_view(request, waybill_number):
+    """
+    ایجاد حساب بانکی جدید با AJAX
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'فقط POST مجاز است'}, status=405)
+    
+    transport = get_object_or_404(Transport, waybill_number=waybill_number)
+    
+    if not transport.driver:
+        return JsonResponse({'success': False, 'error': 'راننده برای این حمل تعریف نشده است'}, status=400)
+    
+    account_number = request.POST.get('account_number', '').strip()
+    shaba_number = request.POST.get('shaba_number', '').strip()
+    bank_name = request.POST.get('bank_name', '').strip()
+    
+    # اعتبارسنجی
+    if not account_number:
+        return JsonResponse({'success': False, 'error': 'شماره حساب الزامی است'}, status=400)
+    
+    # اعتبارسنجی شماره حساب (16 رقم)
+    if not re.match(r'^\d{16}$', account_number):
+        return JsonResponse({'success': False, 'error': 'شماره حساب باید دقیقاً 16 رقم باشد'}, status=400)
+    
+    if not bank_name:
+        return JsonResponse({'success': False, 'error': 'نام بانک الزامی است'}, status=400)
+    
+    # اعتبارسنجی شماره شبا
+    if shaba_number:
+        if not re.match(r'^IR\d{24}$', shaba_number):
+            return JsonResponse({'success': False, 'error': 'شماره شبا باید با فرمت IR123456789012345678901234 باشد (IR + 24 رقم)'}, status=400)
+    
+    try:
+        with transaction.atomic():
+            # دریافت یا ایجاد FinancialBanking
+            financial_banking, created = FinancialBanking.objects.get_or_create(
+                person=transport.driver
+            )
+            
+            # بررسی تکراری نبودن شماره حساب
+            existing_account = BankAccount.objects.filter(
+                financial_banking=financial_banking,
+                account_number=account_number
+            ).first()
+            
+            if existing_account:
+                return JsonResponse({'success': False, 'error': 'این شماره حساب قبلاً ثبت شده است'}, status=400)
+            
+            # ایجاد حساب جدید
+            bank_account = BankAccount.objects.create(
+                financial_banking=financial_banking,
+                account_number=account_number,
+                shaba_number=shaba_number or None,
+                bank_name=bank_name
+            )
+            
+            # آماده‌سازی پاسخ
+            account_display = f"{bank_account.account_number}"
+            if bank_account.bank_name:
+                account_display += f" ({bank_account.bank_name})"
+            
+            return JsonResponse({
+                'success': True,
+                'account_number': bank_account.account_number,
+                'account_display': account_display,
+                'message': 'حساب با موفقیت ایجاد شد'
+            })
+            
+    except Exception as e:
+        bug_logger.error(f"خطا در ایجاد حساب بانکی: {str(e)}")
+        return JsonResponse({'success': False, 'error': f'خطا در ایجاد حساب: {str(e)}'}, status=500)
 

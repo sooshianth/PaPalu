@@ -98,6 +98,10 @@ def vehicle_entry_list_view(request):
             vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
             loading_type = truck_info.get_loading_type_display() if truck_info.loading_type else None
         
+        # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
+        if not vehicle_type and transport.vehicle_type_official:
+            vehicle_type = transport.get_vehicle_type_official_display()
+        
         # بررسی کامل بودن اطلاعات
         is_complete = bool(
             driver_national_id and 
@@ -249,34 +253,18 @@ def register_vehicle_entry_view(request, waybill_number):
                 transport.driver = driver_person
                 transport.save()
                 
-                # بررسی تکراری نبودن پلاک برای حمل‌های دیگر
-                existing_truck_other = TruckInfo.objects.filter(plate_number=plate_number).exclude(transport=transport).first()
-                if existing_truck_other:
-                    messages.error(request, 'این پلاک قبلاً برای حمل دیگری ثبت شده است.')
-                    return redirect('distribution:vehicle_entry_list')
-                
                 # ایجاد یا به‌روزرسانی TruckInfo
-                # چون plate_number primary key است، باید بررسی کنیم که آیا برای این transport وجود دارد
                 existing_truck_for_transport = TruckInfo.objects.filter(transport=transport).first()
                 
                 if existing_truck_for_transport:
-                    # اگر پلاک متفاوت است، باید پلاک قبلی را حذف کنیم و پلاک جدید را ایجاد کنیم
-                    if existing_truck_for_transport.plate_number != plate_number:
-                        existing_truck_for_transport.delete()
-                        truck_info = TruckInfo.objects.create(
-                            plate_number=plate_number,
-                            transport=transport,
-                            vehicle_type=vehicle_type or None,
-                            loading_type=loading_type or None,
-                        )
-                    else:
-                        # به‌روزرسانی اطلاعات موجود
-                        truck_info = existing_truck_for_transport
-                        if vehicle_type:
-                            truck_info.vehicle_type = vehicle_type
-                        if loading_type:
-                            truck_info.loading_type = loading_type
-                        truck_info.save()
+                    # به‌روزرسانی اطلاعات موجود
+                    existing_truck_for_transport.plate_number = plate_number
+                    if vehicle_type:
+                        existing_truck_for_transport.vehicle_type = vehicle_type
+                    if loading_type:
+                        existing_truck_for_transport.loading_type = loading_type
+                    existing_truck_for_transport.save()
+                    truck_info = existing_truck_for_transport
                 else:
                     # ایجاد TruckInfo جدید
                     truck_info = TruckInfo.objects.create(

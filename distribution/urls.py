@@ -15,7 +15,8 @@ from distribution.views.vehicle_entry_view import (
 )
 from distribution.views.loading_exit_view import (
     loading_exit_list_view,
-    register_loading_exit_view
+    register_loading_exit_view,
+    create_bank_account_ajax_view
 )
 from distribution.views.waybill_registration_view import (
     waybill_list_view,
@@ -40,6 +41,7 @@ urlpatterns = [
     path('vehicle-entry/<str:waybill_number>/register/', register_vehicle_entry_view, name='register_vehicle_entry'),
     path('loading-exit/', loading_exit_list_view, name='loading_exit_list'),
     path('loading-exit/<str:waybill_number>/register/', register_loading_exit_view, name='register_loading_exit'),
+    path('loading-exit/<str:waybill_number>/create-account/', create_bank_account_ajax_view, name='create_bank_account_ajax'),
     path('waybill/', waybill_list_view, name='waybill_list'),
     path('waybill/<str:waybill_number>/register/', register_waybill_view, name='register_waybill'),
     path('exit/', exit_list_view, name='exit_list'),
