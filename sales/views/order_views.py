@@ -302,7 +302,7 @@ def customer_search_api(request):
 @require_http_methods(["GET"])
 def product_info_api(request, product_id):
     """
-    API endpoint برای دریافت اطلاعات محصول شامل واحد و آخرین قیمت
+    API endpoint برای دریافت اطلاعات محصول شامل واحد و همه قیمت‌های معتبر
     """
     if not product_id:
         audit_logger.alert("درخواست API اطلاعات محصول بدون product_id")
@@ -313,12 +313,12 @@ def product_info_api(request, product_id):
     try:
         product = Product.objects.get(id=product_id)
         
-        # دریافت آخرین قیمت معتبر (deadline >= today)
+        # دریافت همه قیمت‌های معتبر (deadline >= today)
         today = jdatetime.date.today()
-        latest_price = ProductFinancialInfo.objects.filter(
+        valid_prices = ProductFinancialInfo.objects.filter(
             product=product,
             deadline__gte=today
-        ).order_by('-created_at').first()
+        ).order_by('-created_at')
         
         # تبدیل main_unit به weight_unit
         # mapping: kg -> kg, ton -> ton, bag -> bag, piece -> piece
@@ -342,17 +342,39 @@ def product_info_api(request, product_id):
         
         weight_unit = weight_unit_mapping.get(main_unit_lower, 'kg')  # پیش‌فرض kg
         
+        # ساخت لیست قیمت‌ها
+        prices_list = []
+        for price_info in valid_prices:
+            # ساخت متن نمایشی برای هر قیمت
+            price_value = float(price_info.price)
+            price_display = f"{price_value:,.0f} ریال"
+            if price_info.condition:
+                condition_short = price_info.condition[:50] + ('...' if len(price_info.condition) > 50 else '')
+                price_display += f" - {condition_short}"
+            if price_info.deadline:
+                price_display += f" (اعتبار تا {price_info.deadline.strftime('%Y/%m/%d')})"
+            
+            prices_list.append({
+                'id': price_info.id,
+                'price': str(price_info.price),
+                'display': price_display,
+                'deadline': price_info.deadline.strftime('%Y/%m/%d') if price_info.deadline else '',
+                'condition': price_info.condition[:100] if price_info.condition else '',
+            })
+        
         # اطلاعات پاسخ
         data = {
             'main_unit': product.main_unit or '',
             'weight_unit': weight_unit,
-            'unit_price': None,
-            'has_price': False,
+            'prices': prices_list,
+            'prices_count': len(prices_list),
+            'has_price': len(prices_list) > 0,
         }
         
-        if latest_price:
+        # برای سازگاری با کد قدیمی، آخرین قیمت را هم اضافه می‌کنیم
+        if prices_list:
+            latest_price = valid_prices.first()
             data['unit_price'] = str(latest_price.price)
-            data['has_price'] = True
         
         return JsonResponse(data)
     except Product.DoesNotExist:
