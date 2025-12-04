@@ -12,9 +12,6 @@
     {% if accessible_production_program_fields.planned_weight_ton %}
     <td>{{ program.planned_weight_ton|default:"-" }}</td>
     {% endif %}
-    {% if accessible_production_program_fields.execution_date %}
-    <td>{{ program.execution_date|default:"-" }}</td>
-    {% endif %}
     {% if accessible_production_program_fields.predicted_start_time %}
     <td>{{ program.predicted_start_time|date:"H:i"|default:"-" }}</td>
     {% endif %}

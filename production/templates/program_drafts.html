@@ -29,7 +29,6 @@
             <th>محصول</th>
             <th>فرمول</th>
             <th>تناژ برنامه</th>
-            <th>تاریخ اجرا</th>
             <th>وضعیت</th>
             <th>عملیات</th>
           </tr>
@@ -41,14 +40,13 @@
             <td>{{ p.product }}</td>
             <td>{{ p.production_info }}</td>
             <td>{{ p.planned_weight_ton }}</td>
-            <td>{{ p.execution_date }}</td>
             <td><span class="status-chip">پیش‌نویس</span></td>
             <td>
               <a class="btn btn-secondary btn-sm" href="{% url 'production:program_edit' p.id %}">ویرایش</a>
             </td>
           </tr>
           {% empty %}
-          <tr><td colspan="7">پیش‌نویسی موجود نیست.</td></tr>
+          <tr><td colspan="6">پیش‌نویسی موجود نیست.</td></tr>
           {% endfor %}
         </tbody>
       </table>

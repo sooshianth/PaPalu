@@ -28,7 +28,7 @@ class ProductionProgramForm(forms.ModelForm):
 
     قوانین اعتبارسنجی (خلاصه):
       - در وضعیت های غیر Draft فیلدهای الزامی باید پر باشند: program_id, product, planned_weight_ton,
-        predicted_start_time, predicted_end_time (end > start), execution_date, packaging_type.
+        predicted_start_date, predicted_start_time, predicted_end_date, predicted_end_time (end > start), packaging_type.
       - planned_weight_ton > 0 ، produced_weight_ton در صورت ورود >0.
       - پس از تایید (confirmed) فیلدهای اصلی غیر قابل ویرایش می شوند (به جز produced_weight_ton برای بروزرسانی تحقق).
     """
@@ -125,7 +125,7 @@ class ProductionProgramForm(forms.ModelForm):
         if instance and instance.pk and instance.status != ProductionProgram.Status.DRAFT:
             lock_names = [
                 'production_info', 'product', 'program_id', 'planned_weight_ton',
-                'predicted_start_time', 'predicted_end_time', 'execution_date', 'packaging_type',
+                'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time', 'packaging_type',
                 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
             ]
             for name in lock_names:

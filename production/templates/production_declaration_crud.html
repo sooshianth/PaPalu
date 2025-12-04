@@ -2058,8 +2058,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
         // Combine date and time inputs into datetime fields before form submission
         function combineDateTimeFields() {
-            // For predicted_start: combine execution_date + predicted_start_time
-            const startDateField = document.getElementById('id_execution_date');
+            // For predicted_start: combine predicted_start_date + predicted_start_time
+            const startDateField = document.getElementById('id_predicted_start_date');
             const startTimeField = document.getElementById('id_predicted_start_time');
             const startCombinedField = document.querySelector('input[name="predicted_start_datetime"]');
             
@@ -2111,7 +2111,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const errors = [];
                     
                     // Check datetime fields (date + time combinations)
-                    const startDateField = document.getElementById('id_execution_date');
+                    const startDateField = document.getElementById('id_predicted_start_date');
                     const startTimeField = document.getElementById('id_predicted_start_time');
                     if (startDateField && startTimeField && startDateField.offsetParent !== null && !startDateField.disabled) {
                         if (!startDateField.value.trim() || !startTimeField.value.trim()) {

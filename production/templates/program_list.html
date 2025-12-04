@@ -31,7 +31,6 @@
                         <th>محصول</th>
                         <th>فرمول</th>
                         <th>تناژ برنامه</th>
-                        <th>تاریخ اجرا</th>
                         <th>وضعیت</th>
                         <th>عملیات</th>
                     </tr>
@@ -43,7 +42,6 @@
                         <td>{{ p.product }}</td>
                         <td>{{ p.production_info }}</td>
                         <td>{{ p.planned_weight_ton }}</td>
-                        <td>{{ p.execution_date }}</td>
                         <td>
                             {% if p.status == p.Status.CONFIRMED %}<span class="status-chip">تأیید شده</span>{% else %}{{ p.get_status_display }}{% endif %}
                         </td>
@@ -52,7 +50,7 @@
                         </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7">برنامه‌ای موجود نیست.</td></tr>
+                    <tr><td colspan="6">برنامه‌ای موجود نیست.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>

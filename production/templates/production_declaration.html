@@ -712,12 +712,6 @@
                                 تناژ برنامه‌ریزی شده (تن)
                             </th>
                             {% endif %}
-                            {% if accessible_production_program_fields.execution_date %}
-                            <th class="sortable {% if sort_by_confirmed == 'execution_date' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
-                                onclick="sortTable('execution_date', 'confirmed')">
-                                تاریخ اجرا
-                            </th>
-                            {% endif %}
                             {% if accessible_production_program_fields.packaging_type %}
                             <th>نوع بسته‌بندی</th>
                             {% endif %}
@@ -744,9 +738,6 @@
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
-                            {% endif %}
-                            {% if accessible_production_program_fields.execution_date %}
-                            <td>{{ program.execution_date|default:"-" }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.packaging_type %}
                             <td>{{ program.get_packaging_type_display|default:"-" }}</td>
@@ -973,12 +964,6 @@
                                 تناژ برنامه‌ریزی شده (تن)
                             </th>
                             {% endif %}
-                            {% if accessible_production_program_fields.execution_date %}
-                            <th class="sortable {% if sort_by_progress == 'execution_date' %}sorted-{{ sort_dir_progress }}{% endif %}" 
-                                onclick="sortTable('execution_date', 'progress')">
-                                تاریخ اجرا
-                            </th>
-                            {% endif %}
                             {% if accessible_production_program_fields.predicted_start_time %}
                             <th class="sortable {% if sort_by_progress == 'predicted_start_time' %}sorted-{{ sort_dir_progress }}{% endif %}" 
                                 onclick="sortTable('predicted_start_time', 'progress')">
@@ -1014,9 +999,6 @@
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
                             <td>{{ program.planned_weight_ton|default:"-" }}</td>
-                            {% endif %}
-                            {% if accessible_production_program_fields.execution_date %}
-                            <td>{{ program.execution_date|default:"-" }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.predicted_start_time %}
                             <td>{{ program.predicted_start_time|date:"H:i"|default:"-" }}</td>
@@ -1357,15 +1339,15 @@ let searchTimers = {
 // Track current sort state for each table
 let sortState = {
     confirmed: {
-        column: '{{ sort_by_confirmed|default:"execution_date" }}',
-        direction: '{{ sort_dir_confirmed|default:"asc" }}'
+        column: '{{ sort_by_confirmed|default:"id" }}',
+        direction: '{{ sort_dir_confirmed|default:"desc" }}'
     },
     progress: {
-        column: '{{ sort_by_progress|default:"execution_date" }}',
-        direction: '{{ sort_dir_progress|default:"asc" }}'
+        column: '{{ sort_by_progress|default:"id" }}',
+        direction: '{{ sort_dir_progress|default:"desc" }}'
     },
     completed: {
-        column: '{{ sort_by_completed|default:"execution_date" }}',
+        column: '{{ sort_by_completed|default:"id" }}',
         direction: '{{ sort_dir_completed|default:"desc" }}'
     }
 };
