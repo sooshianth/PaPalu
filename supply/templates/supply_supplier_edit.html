@@ -367,7 +367,51 @@
         } catch (e) {}
       });
     }
-    document.addEventListener('DOMContentLoaded', initJalali);
+    
+    // Auto-fill representative phone from main phone field
+    function autoFillRepPhone() {
+      var mainPhoneField = document.querySelector('input[name="phone_number"]');
+      var firstRepPhoneField = document.querySelector('input[id$="-0-phone_number"]');
+      var firstRepMobileField = document.querySelector('input[id$="-0-mobile_number"]');
+      
+      if (mainPhoneField && (firstRepPhoneField || firstRepMobileField)) {
+        // Function to copy phone to representative
+        function copyPhoneToRep() {
+          var phoneValue = mainPhoneField.value;
+          if (phoneValue) {
+            // Split by comma and get first phone
+            var phones = phoneValue.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+            if (phones.length > 0) {
+              var firstPhone = phones[0];
+              // Check if it's mobile (starts with 09) or landline
+              var digitsOnly = firstPhone.replace(/\D/g, '');
+              if (digitsOnly.startsWith('09')) {
+                // It's mobile - put in mobile_number field
+                if (firstRepMobileField && !firstRepMobileField.value) {
+                  firstRepMobileField.value = firstPhone;
+                }
+              } else {
+                // It's landline - put in phone_number field
+                if (firstRepPhoneField && !firstRepPhoneField.value) {
+                  firstRepPhoneField.value = firstPhone;
+                }
+              }
+            }
+          }
+        }
+        
+        // Copy on blur and change
+        mainPhoneField.addEventListener('blur', copyPhoneToRep);
+        mainPhoneField.addEventListener('change', copyPhoneToRep);
+        // Also run once on page load
+        copyPhoneToRep();
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      initJalali();
+      autoFillRepPhone();
+    });
   })();
 </script>
 {% endblock %}

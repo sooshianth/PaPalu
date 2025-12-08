@@ -1,14 +1,21 @@
+"""
+URL Configuration for Supply Domain
+ساختار ماژولار برای مدیریت بهتر URL ها در دامنه تامین
+"""
 from django.urls import path
-from .views.views import (
+
+# Import all views from modular structure
+from .views import (
+    # Supplier Views
     supply_home_view,
-    define_basic_material_view,
-    price_inquiry_modal_view,
     create_supplier_view,
     supplier_list_view,
     supplier_detail_view,
     supplier_edit_view,
-)
-from .views.purchase_order_views import (
+    # Raw Material Views
+    define_basic_material_view,
+    price_inquiry_modal_view,
+    # Purchase Order Views
     purchase_order_management_view,
     create_procurement_purchase_order_view,
     procurement_purchase_order_detail_view,
@@ -16,8 +23,7 @@ from .views.purchase_order_views import (
     delete_procurement_purchase_order_view,
     transition_procurement_purchase_order_status_view,
     confirm_procurement_purchase_order_payment_view,
-)
-from .views.purchase_transport_views import (
+    # Purchase Transport Views
     purchase_transport_list_view,
     create_purchase_transport_view,
     purchase_transport_detail_view,
@@ -25,25 +31,21 @@ from .views.purchase_transport_views import (
     delete_purchase_transport_view,
     transition_purchase_transport_status_view,
     get_purchase_order_info_api,
-)
-from .views.carentrance_views import (
+    # Car Entrance Views
     car_entrance_list_view,
     register_driver_for_transport_view,
     mark_vehicle_entered_view,
     driver_lookup_api,
     car_exit_list_view,
     mark_vehicle_exited_view,
-)
-from .views.warehouse_delivery_views import (
+    # Warehouse Delivery Views
     warehouse_delivery_list_view,
     warehouse_delivery_detail_view,
     guard_vehicle_exit_view,
-)
-from .views.logistic_confirmation_views import (
+    # Logistic Confirmation Views
     logistic_confirmation_list_view,
     logistic_confirmation_detail_view,
-)
-from .views.upload_fare_payment_docs_views import (
+    # Upload Fare Payment Documents Views
     upload_fare_payment_docs_list_view,
     upload_fare_payment_docs_detail_view,
 )

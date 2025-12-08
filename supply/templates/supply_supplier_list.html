@@ -800,6 +800,53 @@
         }
       }
     });
+
+    // Auto-fill representative phone from main phone field
+    document.addEventListener('DOMContentLoaded', function() {
+      var mainPhoneHidden = document.querySelector('input[name="phone_number"]');
+      var firstRepPhoneField = document.querySelector('input[id$="-0-phone_number"]');
+      var firstRepMobileField = document.querySelector('input[id$="-0-mobile_number"]');
+      
+      if (mainPhoneHidden && (firstRepPhoneField || firstRepMobileField)) {
+        // Function to copy phone to representative
+        function copyPhoneToRep() {
+          var phoneValue = mainPhoneHidden.value;
+          if (phoneValue) {
+            // Split by comma and get first phone
+            var phones = phoneValue.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+            if (phones.length > 0) {
+              var firstPhone = phones[0];
+              // Check if it's mobile (starts with 09) or landline
+              if (firstPhone.replace(/\D/g, '').startsWith('09')) {
+                // It's mobile - put in mobile_number field
+                if (firstRepMobileField && !firstRepMobileField.value) {
+                  firstRepMobileField.value = firstPhone;
+                }
+              } else {
+                // It's landline - put in phone_number field
+                if (firstRepPhoneField && !firstRepPhoneField.value) {
+                  firstRepPhoneField.value = firstPhone;
+                }
+              }
+            }
+          }
+        }
+        
+        // Copy on page load if rep field is empty
+        copyPhoneToRep();
+        
+        // Also watch for changes in main phone field
+        mainPhoneHidden.addEventListener('change', copyPhoneToRep);
+        
+        // Watch for changes in the phone list UI
+        var phoneList = document.getElementById('person-phone-list');
+        if (phoneList) {
+          phoneList.addEventListener('input', function() {
+            setTimeout(copyPhoneToRep, 100); // Small delay to let hidden field update
+          });
+        }
+      }
+    });
   })();
 </script>
 {% endblock %}
