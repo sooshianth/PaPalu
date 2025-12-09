@@ -17,7 +17,25 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-3vlymx-erfjbe&*g(z)8)q1o*!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS','localhost').split(',')
+# ALLOWED_HOSTS configuration
+# Get from environment or use default
+ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.100.34')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
+
+# Always add common development hosts
+ALLOWED_HOSTS.extend(['localhost', '127.0.0.1', '0.0.0.0'])
+
+# Remove duplicates while preserving order
+ALLOWED_HOSTS = list(dict.fromkeys(ALLOWED_HOSTS))
+
+# For development (DEBUG=True), allow all hosts for convenience
+# WARNING: Only use '*' in development, never in production!
+if DEBUG:
+    ALLOWED_HOSTS = ['*']
+else:
+    # In production, make sure 192.168.100.34 is included
+    if '192.168.100.34' not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append('192.168.100.34')
 
 # Session timeout configuration
 SESSION_COOKIE_AGE = 1200  # 20 minutes in seconds

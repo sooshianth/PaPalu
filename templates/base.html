@@ -1,4 +1,5 @@
 {% load static %}
+{% load rbac_tags %}
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -573,56 +574,48 @@
             font-size: 0.85rem;
         }
         
-        /* Mobile Navigation - Hidden by default */
-        .mobile-nav {
+        /* Mobile Sidebar Overlay */
+        .mobile-sidebar-overlay {
             display: none;
             position: fixed;
-            bottom: 0;
+            top: 0;
             left: 0;
             right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity var(--transition-speed), visibility var(--transition-speed);
+        }
+        
+        .mobile-sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Mobile Sidebar */
+        .sidebar.mobile-sidebar {
+            display: none;
+            position: fixed;
+            top: var(--header-height);
+            right: -100%;
+            width: 280px;
+            max-width: 85vw;
+            height: calc(100vh - var(--header-height));
             background-color: var(--white);
-            border-top: 2px solid var(--primary-green);
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            z-index: 1000;
+            border-left: 2px solid var(--gray-200);
+            box-shadow: -2px 0 10px rgba(0,0,0,0.15);
+            transition: right var(--transition-speed) ease;
+            z-index: 999;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
         
-        .mobile-nav-list {
-            display: flex;
-            justify-content: space-around;
-            list-style: none;
-            padding: 10px 0;
+        .sidebar.mobile-sidebar.active {
+            right: 0;
         }
         
-        .mobile-nav-item {
-            flex: 1;
-        }
-        
-        .mobile-nav-link {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 5px;
-            color: var(--gray-600);
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-        
-        .mobile-nav-link:hover,
-        .mobile-nav-link.active {
-            color: var(--primary-green);
-        }
-        
-        .mobile-nav-icon {
-            width: 28px;
-            height: 28px;
-            margin-bottom: 5px;
-        }
-        
-        .mobile-nav-text {
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
         
         /* Tablet Breakpoint (768px - 1024px) */
         @media (max-width: 1024px) and (min-width: 769px) {
@@ -647,8 +640,18 @@
         /* Mobile Breakpoint (max-width: 768px) */
         @media (max-width: 768px) {
             /* Hide desktop sidebar */
-            .sidebar {
+            .sidebar:not(.mobile-sidebar) {
                 display: none;
+            }
+            
+            /* Show mobile sidebar */
+            .sidebar.mobile-sidebar {
+                display: block;
+            }
+            
+            /* Show mobile sidebar overlay */
+            .mobile-sidebar-overlay {
+                display: block;
             }
             
             /* Show menu toggle */
@@ -659,7 +662,7 @@
             /* Adjust main content */
             .main-content {
                 margin-right: 0;
-                margin-bottom: var(--mobile-nav-height);
+                margin-bottom: 0;
                 padding: 20px 15px;
             }
             
@@ -668,43 +671,128 @@
                 display: none;
             }
             
-            /* Show mobile navigation */
-            .mobile-nav {
-                display: block;
-                height: var(--mobile-nav-height);
-            }
-            
             /* Adjust header for mobile */
             .header-content {
-                padding: 0 15px;
+                padding: 0 12px;
             }
             
             .logo h1 {
-                font-size: 1.2rem;
+                font-size: 1.1rem;
             }
             
             .user-greeting {
                 display: none;
+            }
+            
+            /* User menu adjustments */
+            .user-name {
+                display: none;
+            }
+            
+            .user-avatar {
+                width: 32px;
+                height: 32px;
+            }
+            
+            .user-avatar svg {
+                width: 18px;
+                height: 18px;
+            }
+            
+            /* Mobile sidebar specific styles */
+            .sidebar.mobile-sidebar .nav-link {
+                padding: 14px 18px;
+                font-size: 0.95rem;
+            }
+            
+            .sidebar.mobile-sidebar .submenu-link {
+                padding-right: 45px;
+                padding-left: 18px;
+                font-size: 0.85rem;
+            }
+            
+            .sidebar.mobile-sidebar .nav-icon {
+                width: 22px;
+                height: 22px;
+                margin-left: 12px;
+            }
+            
+            /* Submenu on mobile */
+            .sidebar.mobile-sidebar .submenu {
+                max-height: 0;
+            }
+            
+            .sidebar.mobile-sidebar .nav-item.has-submenu.expanded .submenu {
+                max-height: 500px;
+            }
+            
+            /* Better touch targets */
+            .nav-link,
+            .submenu-link {
+                min-height: 44px;
+                -webkit-tap-highlight-color: rgba(40, 167, 69, 0.2);
+            }
+            
+            /* Prevent text selection on mobile */
+            .nav-link,
+            .submenu-link,
+            .menu-toggle {
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            
+            /* Improve button touch targets */
+            .menu-toggle {
+                min-width: 44px;
+                min-height: 44px;
+                padding: 10px;
+            }
+            
+            /* User menu on mobile */
+            .user-menu-toggle {
+                min-width: 44px;
+                min-height: 44px;
+                padding: 6px;
             }
         }
         
         /* Very Small Mobile (max-width: 480px) */
         @media (max-width: 480px) {
             .logo h1 {
-                font-size: 1rem;
+                font-size: 0.95rem;
             }
             
             .main-content {
                 padding: 15px 10px;
             }
             
-            .mobile-nav-text {
-                font-size: 0.7rem;
+            .header-content {
+                padding: 0 10px;
             }
             
-            .mobile-nav-icon {
-                width: 24px;
-                height: 24px;
+            .sidebar.mobile-sidebar {
+                width: 260px;
+                max-width: 90vw;
+            }
+            
+            .sidebar.mobile-sidebar .nav-link {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .sidebar.mobile-sidebar .submenu-link {
+                padding-right: 40px;
+                padding-left: 15px;
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* Extra Small Mobile (max-width: 360px) */
+        @media (max-width: 360px) {
+            .logo h1 {
+                font-size: 0.85rem;
             }
         }
         
@@ -720,7 +808,6 @@
             .header,
             .sidebar,
             .footer,
-            .mobile-nav,
             .menu-toggle {
                 display: none;
             }
@@ -733,7 +820,6 @@
         
         /* Accessibility */
         .nav-link:focus,
-        .mobile-nav-link:focus,
         .menu-toggle:focus {
             outline: 2px solid var(--primary-green);
             outline-offset: 2px;
@@ -863,7 +949,10 @@
         </div>
     </header>
 
-    <!-- Desktop/Tablet Sidebar -->
+    <!-- Mobile Sidebar Overlay -->
+    <div class="mobile-sidebar-overlay" id="mobileSidebarOverlay"></div>
+    
+    <!-- Desktop/Tablet/Mobile Sidebar -->
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul class="nav-list">
@@ -887,6 +976,7 @@
                         </svg>
                     </a>
                     <ul class="submenu">
+                        {% if user|has_task:'sales.create_customer' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:customer_list' %}" class="nav-link submenu-link" title="مشتریان">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -896,6 +986,8 @@
                                 <span class="nav-text">مشتریان</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.view_order_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:order_list' %}" class="nav-link submenu-link" title="سفارش ها">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -904,6 +996,8 @@
                                 <span class="nav-text">سفارش ها</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.view_product_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:product_list' %}" class="nav-link submenu-link" title="محصولات">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -912,6 +1006,8 @@
                                 <span class="nav-text">محصولات</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.product_price_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:product_price_list' %}" class="nav-link submenu-link" title="قیمت‌گذاری محصولات">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -921,6 +1017,8 @@
                                 <span class="nav-text">قیمت‌گذاری محصولات</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.issue_proforma' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:proforma_list' %}" class="nav-link submenu-link" title="پیش فاکتورها">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -930,6 +1028,8 @@
                                 <span class="nav-text">پیش فاکتورها</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.approve_proforma' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:approve_proforma_list' %}" class="nav-link submenu-link" title="تأیید پیش فاکتورها">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -939,6 +1039,8 @@
                                 <span class="nav-text">تأیید پیش فاکتورها</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.issue_invoice' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:invoice_list' %}" class="nav-link submenu-link" title="فاکتورها">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -951,6 +1053,8 @@
                                 <span class="nav-text">فاکتورها</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.transaction_receipt' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:transaction_receipt_order_list' %}" class="nav-link submenu-link" title="رسیدهای تراکنش فروش">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -960,15 +1064,8 @@
                                 <span class="nav-text">رسیدهای تراکنش فروش</span>
                             </a>
                         </li>
-                        <li class="submenu-item">
-                            <a href="{% url 'sales:approve_transaction_receipt_list' %}" class="nav-link submenu-link" title="تأیید تراکنش فروش">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="nav-text">تأیید تراکنش فروش</span>
-                            </a>
-                        </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.allocation' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:allocation_list' %}" class="nav-link submenu-link" title="تخصیص">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -977,6 +1074,8 @@
                                 <span class="nav-text">تخصیص</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.approve_allocation' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:approve_allocation_list' %}" class="nav-link submenu-link" title="تأیید تخصیص">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -985,6 +1084,8 @@
                                 <span class="nav-text">تأیید تخصیص</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'sales.approve_unload' %}
                         <li class="submenu-item">
                             <a href="{% url 'sales:unload_approval_list' %}" class="nav-link submenu-link" title="تأیید تخلیه">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -994,23 +1095,7 @@
                                 <span class="nav-text">تأیید تخلیه</span>
                             </a>
                         </li>
-                        <li class="submenu-item">
-                            <a href="{% url 'sales:settlement_list' %}" class="nav-link submenu-link" title="تسویه">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="nav-text">تسویه</span>
-                            </a>
-                        </li>
-                        <li class="submenu-item">
-                            <a href="{% url 'sales:settlement_approval_list' %}" class="nav-link submenu-link" title="تایید تسویه کامل">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="nav-text">تایید تسویه کامل</span>
-                            </a>
-                        </li>
+                        {% endif %}
                     </ul>
                 </li>
                 <li class="nav-item has-submenu" id="supplySubmenu">
@@ -1025,6 +1110,7 @@
                         </svg>
                     </a>
                     <ul class="submenu">
+                        {% if user|has_task:'supply.define_raw_material' %}
                         <li class="submenu-item">
                             <a href="{% url 'supply:define_basic_material' %}" class="nav-link submenu-link" title="تعریف مواد اولیه">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1034,6 +1120,8 @@
                                 <span class="nav-text">تعریف مواد اولیه</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'supply.create_supplier' %}
                         <li class="submenu-item">
                             <a href="{% url 'supply:supplier_list' %}" class="nav-link submenu-link" title="لیست تأمین‌کنندگان">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1042,6 +1130,8 @@
                                 <span class="nav-text">لیست تأمین‌کنندگان</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'supply.create_order' %}
                         <li class="submenu-item">
                             <a href="{% url 'supply:purchase_order_management' %}" class="nav-link submenu-link" title="مدیریت سفارش‌های خرید">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1050,6 +1140,8 @@
                                 <span class="nav-text"> سفارش‌های خرید</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'supply.define_transportation' %}
                         <li class="submenu-item">
                             <a href="{% url 'supply:purchase_transport_list' %}" class="nav-link submenu-link" title=" حمل‌های خرید">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1060,6 +1152,8 @@
                                 <span class="nav-text"> حمل‌های خرید</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'supply.register_driver' %}
                         <li class="submenu-item">
                             <a href="{% url 'supply:carentrance' %}" class="nav-link submenu-link" title="ورود خودرو (نگهبان)">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1071,6 +1165,8 @@
                                 <span class="nav-text">ورود خودرو</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'supply.warehouse_delivery' %}
                         <li class="submenu-item">
                             <a href="{% url 'supply:warehouse_delivery' %}" class="nav-link submenu-link" title="تحویل انبار">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1080,6 +1176,8 @@
                                 <span class="nav-text">تحویل انبار</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'supply.logistic_confirmation' %}
                         <li class="submenu-item">
                             <a href="{% url 'supply:logistic_confirmation_list' %}" class="nav-link submenu-link" title="تایید لجستیک">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1089,17 +1187,7 @@
                                 <span class="nav-text">تایید لجستیک</span>
                             </a>
                         </li>
-                        <li class="submenu-item">
-                            <a href="{% url 'supply:upload_fare_payment_docs_list' %}" class="nav-link submenu-link" title="بارگذاری اسناد پرداخت کرایه">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M7 18C7 19.1046 7.89543 20 9 20H15C16.1046 20 17 19.1046 17 18V9H7V18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M14 4H10V7H14V4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M3 7H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                    <path d="M10 11V16M14 11V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="nav-text"> اسناد پرداخت کرایه</span>
-                            </a>
-                        </li>
+                        {% endif %}
                     </ul>
                 </li>
                 <li class="nav-item has-submenu" id="productionSubmenu">
@@ -1115,6 +1203,7 @@
                         </svg>
                     </a>
                     <ul class="submenu">
+                        {% if user|has_task:'production.submit_report' %}
                         <li class="submenu-item">
                             <a href="{% url 'production:production_declaration' %}" class="nav-link submenu-link" title="اعلام تولید">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1123,6 +1212,8 @@
                                 <span class="nav-text">اعلام تولید</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'production.approve_report' %}
                         <li class="submenu-item">
                             <a href="{% url 'production:warehouse_production_list' %}" class="nav-link submenu-link" title="اظهار تولید (انبار)">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1133,6 +1224,8 @@
                                 <span class="nav-text">اظهار تولید (انبار)</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'production.register_new_schedule' %}
                         <li class="submenu-item">
                             <a href="{% url 'production:program_list' %}" class="nav-link submenu-link" title="لیست برنامه‌ها">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1141,6 +1234,7 @@
                                 <span class="nav-text">لیست برنامه‌ها</span>
                             </a>
                         </li>
+                        {% endif %}
                     </ul>
                 </li>
                 <li class="nav-item has-submenu" id="distributionSubmenu">
@@ -1156,6 +1250,7 @@
                         </svg>
                     </a>
                     <ul class="submenu">
+                        {% if user|has_task:'distribution.view_shipping_announcement_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'distribution:shipping_announcement_list' %}" class="nav-link submenu-link" title="اعلام بار">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1167,6 +1262,8 @@
                                 <span class="nav-text">اعلام بار</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'distribution.view_vehicle_recruitment_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'distribution:vehicle_recruitment_list' %}" class="nav-link submenu-link" title="جذب خودرو">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1175,6 +1272,8 @@
                                 <span class="nav-text">جذب خودرو</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'distribution.view_vehicle_entry_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'distribution:vehicle_entry_list' %}" class="nav-link submenu-link" title="ثبت ورود خودرو">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1184,6 +1283,8 @@
                                 <span class="nav-text">ثبت ورود خودرو</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'distribution.view_loading_exit_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'distribution:loading_exit_list' %}" class="nav-link submenu-link" title="خروج کالا">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1194,6 +1295,8 @@
                                 <span class="nav-text">خروج کالا</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'distribution.view_waybill_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'distribution:waybill_list' %}" class="nav-link submenu-link" title="ثبت بارنامه">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1206,6 +1309,8 @@
                                 <span class="nav-text">ثبت بارنامه</span>
                             </a>
                         </li>
+                        {% endif %}
+                        {% if user|has_task:'distribution.view_exit_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'distribution:exit_list' %}" class="nav-link submenu-link" title="خروج خودرو">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1215,6 +1320,65 @@
                                 </svg>
                                 <span class="nav-text">خروج خودرو</span>
                             </a>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </li>
+                <li class="nav-item has-submenu" id="accountingSubmenu">
+                    <a href="#" class="nav-link" title="حسابداری" id="accountingMainLink">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 7H6C4.89543 7 4 7.89543 4 9V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V9C20 7.89543 19.1046 7 18 7H15M9 7C9 8.10457 9.89543 9 11 9H13C14.1046 9 15 8.10457 15 7M9 7C9 5.89543 9.89543 5 11 5H13C14.1046 5 15 5.89543 15 7M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <span class="nav-text">حسابداری</span>
+                        <svg class="submenu-toggle" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; margin-right: auto;">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            {% if user|has_task:'sales.approve_transaction' %}
+                            <a href="{% url 'sales:approve_transaction_receipt_list' %}" class="nav-link submenu-link" title="تأیید تراکنش فروش">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">تأیید تراکنش فروش</span>
+                            </a>
+                            {% endif %}
+                        </li>
+                        <li class="submenu-item">
+                            {% if user|has_task:'sales.settlement' %}
+                            <a href="{% url 'sales:settlement_list' %}" class="nav-link submenu-link" title="پرداخت کسری">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">پرداخت کسری</span>
+                            </a>
+                            {% endif %}
+                        </li>
+                        {% if user|has_task:'sales.approve_settlement' %}
+                        <li class="submenu-item">
+                            <a href="{% url 'sales:settlement_approval_list' %}" class="nav-link submenu-link" title="تایید تسویه کامل">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">تایید تسویه کامل</span>
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="submenu-item">
+                            {% if user|has_task:'supply.upload_freight_payment_docs' %}
+                            <a href="{% url 'supply:upload_fare_payment_docs_list' %}" class="nav-link submenu-link" title="اسناد پرداخت کرایه">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M7 18C7 19.1046 7.89543 20 9 20H15C16.1046 20 17 19.1046 17 18V9H7V18Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M14 4H10V7H14V4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M3 7H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M10 11V16M14 11V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">اسناد پرداخت کرایه</span>
+                            </a>
+                            {% endif %}
                         </li>
                     </ul>
                 </li>
@@ -1309,120 +1473,6 @@
         </div>
     </footer> {% endcomment %}
 
-    <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-nav">
-        <ul class="mobile-nav-list">
-            <li class="mobile-nav-item">
-                <a href="#" class="mobile-nav-link" title="پروفایل">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">پروفایل</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'sales:customer_list' %}" class="mobile-nav-link" title="مشتریان">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">مشتریان</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'sales:order_list' %}" class="mobile-nav-link" title="سفارش ها">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">سفارش ها</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'sales:product_list' %}" class="mobile-nav-link" title="محصولات">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.70711 15.2929C4.07714 15.9229 4.52331 17 5.41421 17H17M17 17C15.8954 17 15 17.8954 15 19C15 20.1046 15.8954 21 17 21C18.1046 21 19 20.1046 19 19C19 17.8954 18.1046 17 17 17ZM9 19C9 20.1046 8.10457 21 7 21C5.89543 21 5 20.1046 5 19C5 17.8954 5.89543 17 7 17C8.10457 17 9 17.8954 9 19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">محصولات</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'sales:product_price_list' %}" class="mobile-nav-link" title="قیمت‌گذاری محصولات">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M7 10L12 15L17 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">قیمت‌گذاری</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="#" class="mobile-nav-link" title="تامین">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">تامین</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'production:production_declaration' %}" class="mobile-nav-link" title="تولید">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">تولید</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'distribution:shipping_announcement_list' %}" class="mobile-nav-link" title="اعلام بار">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16 3H5C3.89 3 3 3.9 3 5V19C3 20.1 3.89 21 5 21H19C20.1 21 21 20.1 21 19V8L16 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M15 3V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M7 12H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M7 16H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">اعلام بار</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'distribution:vehicle_recruitment_list' %}" class="mobile-nav-link" title="جذب خودرو">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M5 17H4C2.89543 17 2 16.1046 2 15V11C2 9.89543 2.89543 9 4 9H5M5 17L19 17M5 17V13M19 17H20C21.1046 17 22 16.1046 22 15V11C22 9.89543 21.1046 9 20 9H19M19 17V13M5 9V13M19 9V13M9 13H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">جذب خودرو</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'distribution:vehicle_entry_list' %}" class="mobile-nav-link" title="ثبت ورود خودرو">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">ثبت ورود</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'distribution:loading_exit_list' %}" class="mobile-nav-link" title="خروج کالا">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M9 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">خروج کالا</span>
-                </a>
-            </li>
-            <li class="mobile-nav-item">
-                <a href="{% url 'permission_manager:home' %}" class="mobile-nav-link" title="دسترسی‌ها">
-                    <svg class="mobile-nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="mobile-nav-text">دسترسی‌ها</span>
-                </a>
-            </li>
-        </ul>
-    </nav>
 
     <script>
         // Base.js - Handles sidebar toggle and navigation functionality
@@ -1432,11 +1482,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.querySelector('.main-content');
+    const mobileSidebarOverlay = document.getElementById('mobileSidebarOverlay');
+    
+    // Check if mobile
+    const isMobile = window.innerWidth <= 768;
     
     // Initialize
     initSidebar();
     initNavigation();
     initUserMenu();
+    
+    // بستن همه زیرمنوها در موبایل هنگام بارگذاری
+    if (isMobile) {
+        const allSubmenus = document.querySelectorAll('.nav-item.has-submenu');
+        allSubmenus.forEach(submenu => {
+            submenu.classList.remove('expanded');
+        });
+    }
+    
     initSubmenu();
     
     /**
@@ -1445,23 +1508,108 @@ document.addEventListener('DOMContentLoaded', function() {
     function initSidebar() {
         if (!menuToggle || !sidebar) return;
         
-        // Load saved sidebar state from localStorage
-        const sidebarState = localStorage.getItem('sidebarCollapsed');
-        if (sidebarState === 'true') {
-            sidebar.classList.add('collapsed');
+        // Add mobile-sidebar class on mobile
+        if (isMobile) {
+            sidebar.classList.add('mobile-sidebar');
+        }
+        
+        // Load saved sidebar state from localStorage (only for desktop)
+        if (!isMobile) {
+            const sidebarState = localStorage.getItem('sidebarCollapsed');
+            if (sidebarState === 'true') {
+                sidebar.classList.add('collapsed');
+            }
         }
         
         // Toggle sidebar on button click
-        menuToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('collapsed');
+        menuToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
             
-            // Save state to localStorage
-            const isCollapsed = sidebar.classList.contains('collapsed');
-            localStorage.setItem('sidebarCollapsed', isCollapsed);
-            
-            // Animate hamburger icon
-            animateHamburger(isCollapsed);
+            if (isMobile) {
+                // Mobile: toggle mobile sidebar with overlay
+                toggleMobileSidebar();
+            } else {
+                // Desktop: toggle collapsed state
+                sidebar.classList.toggle('collapsed');
+                
+                // Save state to localStorage
+                const isCollapsed = sidebar.classList.contains('collapsed');
+                localStorage.setItem('sidebarCollapsed', isCollapsed);
+                
+                // Animate hamburger icon
+                animateHamburger(isCollapsed);
+            }
         });
+        
+        // Close mobile sidebar when clicking overlay
+        if (mobileSidebarOverlay) {
+            mobileSidebarOverlay.addEventListener('click', function() {
+                closeMobileSidebar();
+            });
+        }
+        
+        // Close mobile sidebar when clicking outside (on mobile)
+        if (isMobile) {
+            document.addEventListener('click', function(e) {
+                if (sidebar.classList.contains('active') && 
+                    !sidebar.contains(e.target) && 
+                    !menuToggle.contains(e.target)) {
+                    closeMobileSidebar();
+                }
+            });
+        }
+    }
+    
+    /**
+     * Toggle mobile sidebar
+     */
+    function toggleMobileSidebar() {
+        if (!sidebar || !mobileSidebarOverlay) return;
+        
+        const isActive = sidebar.classList.contains('active');
+        
+        if (isActive) {
+            closeMobileSidebar();
+        } else {
+            openMobileSidebar();
+        }
+    }
+    
+    /**
+     * Open mobile sidebar
+     */
+    function openMobileSidebar() {
+        if (!sidebar || !mobileSidebarOverlay) return;
+        
+        sidebar.classList.add('active');
+        mobileSidebarOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent body scroll
+        
+        // بستن همه زیرمنوها هنگام باز شدن sidebar در موبایل
+        const allSubmenus = document.querySelectorAll('.nav-item.has-submenu');
+        allSubmenus.forEach(submenu => {
+            submenu.classList.remove('expanded');
+        });
+    }
+    
+    /**
+     * Close mobile sidebar
+     */
+    function closeMobileSidebar() {
+        if (!sidebar || !mobileSidebarOverlay) return;
+        
+        sidebar.classList.remove('active');
+        mobileSidebarOverlay.classList.remove('active');
+        document.body.style.overflow = ''; // Restore body scroll
+        
+        // در موبایل، وقتی sidebar بسته می‌شود، همه زیرمنوها را ببند
+        const checkIsMobile = () => window.innerWidth <= 768;
+        if (checkIsMobile()) {
+            const allSubmenus = document.querySelectorAll('.nav-item.has-submenu');
+            allSubmenus.forEach(submenu => {
+                submenu.classList.remove('expanded');
+            });
+        }
     }
     
     /**
@@ -1484,9 +1632,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function initNavigation() {
         // Get current page path
         const currentPath = window.location.pathname;
+        const isMobile = window.innerWidth <= 768;
         
         // Highlight active navigation items (both desktop and mobile)
-        const navLinks = document.querySelectorAll('.nav-link, .mobile-nav-link');
+        const navLinks = document.querySelectorAll('.nav-link');
         navLinks.forEach(link => {
             const href = link.getAttribute('href');
             
@@ -1494,10 +1643,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (href && href !== '#' && currentPath.includes(href)) {
                 link.classList.add('active');
                 
-                // If it's a submenu link, expand the parent submenu
-                const submenuItem = link.closest('.nav-item.has-submenu');
-                if (submenuItem) {
-                    submenuItem.classList.add('expanded');
+                // If it's a submenu link, expand the parent submenu (only on desktop)
+                if (!isMobile) {
+                    const submenuItem = link.closest('.nav-item.has-submenu');
+                    if (submenuItem) {
+                        submenuItem.classList.add('expanded');
+                    }
                 }
             }
             
@@ -1541,111 +1692,175 @@ document.addEventListener('DOMContentLoaded', function() {
         const supplySubmenu = document.getElementById('supplySubmenu');
         const supplyMainLink = document.getElementById('supplyMainLink');
         
-        // Check if current page is in sales, production, distribution or supply section
+        // Accounting submenu
+        const accountingSubmenu = document.getElementById('accountingSubmenu');
+        const accountingMainLink = document.getElementById('accountingMainLink');
+        
+        // Check if current page is in sales, production, distribution, supply or accounting section
         const currentPath = window.location.pathname;
-        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/invoice/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/approve-transaction-receipt/', '/sales/unload-approval/', '/sales/settlement/', '/sales/settlement-approval/'];
+        const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/invoice/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/unload-approval/'];
         const productionPaths = ['/production/'];
         const distributionPaths = ['/distribution/'];
         const supplyPaths = ['/supply/'];
+        const accountingPaths = ['/sales/approve-transaction-receipt/', '/sales/settlement/', '/sales/settlement-approval/', '/supply/upload-fare-payment-docs/'];
         const isSalesPage = salesPaths.some(path => currentPath.includes(path));
         const isProductionPage = productionPaths.some(path => currentPath.includes(path));
         const isDistributionPage = distributionPaths.some(path => currentPath.includes(path));
         const isSupplyPage = supplyPaths.some(path => currentPath.includes(path));
+        const isAccountingPage = accountingPaths.some(path => currentPath.includes(path));
         
         // Setup sales submenu
         if (salesSubmenu && salesMainLink) {
-            // Auto-expand if on sales page
-            if (isSalesPage) {
-                salesSubmenu.classList.add('expanded');
+            // در موبایل، فقط اگر در صفحه فروش هستیم، منو را باز کن
+            // در دسکتاپ، از localStorage استفاده کن
+            const checkIsMobile = () => window.innerWidth <= 768;
+            
+            if (!checkIsMobile()) {
+                // Desktop behavior
+                if (isSalesPage) {
+                    salesSubmenu.classList.add('expanded');
+                } else {
+                    // Load saved state from localStorage
+                    const savedState = localStorage.getItem('salesSubmenuExpanded');
+                    if (savedState === 'true') {
+                        salesSubmenu.classList.add('expanded');
+                    }
+                }
+            } else {
+                // Mobile behavior - همیشه بسته شروع کن
+                salesSubmenu.classList.remove('expanded');
             }
             
             // Toggle submenu on main link click
             salesMainLink.addEventListener('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
+                
+                // فقط در موبایل toggle کن، در دسکتاپ هم toggle کن
                 salesSubmenu.classList.toggle('expanded');
                 
-                // Save state to localStorage
-                const isExpanded = salesSubmenu.classList.contains('expanded');
-                localStorage.setItem('salesSubmenuExpanded', isExpanded);
+                // Save state to localStorage only on desktop
+                if (!checkIsMobile()) {
+                    const isExpanded = salesSubmenu.classList.contains('expanded');
+                    localStorage.setItem('salesSubmenuExpanded', isExpanded);
+                }
             });
-            
-            // Load saved state from localStorage
-            const savedState = localStorage.getItem('salesSubmenuExpanded');
-            if (savedState === 'true' && !isSalesPage) {
-                salesSubmenu.classList.add('expanded');
-            }
         }
         
         // Setup production submenu
         if (productionSubmenu && productionMainLink) {
-            // Auto-expand if on production page
-            if (isProductionPage) {
-                productionSubmenu.classList.add('expanded');
+            const checkIsMobile = () => window.innerWidth <= 768;
+            
+            if (!checkIsMobile()) {
+                if (isProductionPage) {
+                    productionSubmenu.classList.add('expanded');
+                } else {
+                    const savedState = localStorage.getItem('productionSubmenuExpanded');
+                    if (savedState === 'true') {
+                        productionSubmenu.classList.add('expanded');
+                    }
+                }
+            } else {
+                productionSubmenu.classList.remove('expanded');
             }
             
-            // Toggle submenu on main link click
             productionMainLink.addEventListener('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 productionSubmenu.classList.toggle('expanded');
                 
-                // Save state to localStorage
-                const isExpanded = productionSubmenu.classList.contains('expanded');
-                localStorage.setItem('productionSubmenuExpanded', isExpanded);
+                if (!checkIsMobile()) {
+                    const isExpanded = productionSubmenu.classList.contains('expanded');
+                    localStorage.setItem('productionSubmenuExpanded', isExpanded);
+                }
             });
-            
-            // Load saved state from localStorage
-            const savedState = localStorage.getItem('productionSubmenuExpanded');
-            if (savedState === 'true' && !isProductionPage) {
-                productionSubmenu.classList.add('expanded');
-            }
         }
         
         // Setup distribution submenu
         if (distributionSubmenu && distributionMainLink) {
-            // Auto-expand if on distribution page
-            if (isDistributionPage) {
-                distributionSubmenu.classList.add('expanded');
+            const checkIsMobile = () => window.innerWidth <= 768;
+            
+            if (!checkIsMobile()) {
+                if (isDistributionPage) {
+                    distributionSubmenu.classList.add('expanded');
+                } else {
+                    const savedState = localStorage.getItem('distributionSubmenuExpanded');
+                    if (savedState === 'true') {
+                        distributionSubmenu.classList.add('expanded');
+                    }
+                }
+            } else {
+                distributionSubmenu.classList.remove('expanded');
             }
             
-            // Toggle submenu on main link click
             distributionMainLink.addEventListener('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 distributionSubmenu.classList.toggle('expanded');
                 
-                // Save state to localStorage
-                const isExpanded = distributionSubmenu.classList.contains('expanded');
-                localStorage.setItem('distributionSubmenuExpanded', isExpanded);
+                if (!checkIsMobile()) {
+                    const isExpanded = distributionSubmenu.classList.contains('expanded');
+                    localStorage.setItem('distributionSubmenuExpanded', isExpanded);
+                }
             });
-            
-            // Load saved state from localStorage
-            const savedState = localStorage.getItem('distributionSubmenuExpanded');
-            if (savedState === 'true' && !isDistributionPage) {
-                distributionSubmenu.classList.add('expanded');
-            }
         }
         
         // Setup supply submenu
         if (supplySubmenu && supplyMainLink) {
-            // Auto-expand only when on a supply page
-            if (isSupplyPage) {
-                supplySubmenu.classList.add('expanded');
+            const checkIsMobile = () => window.innerWidth <= 768;
+            
+            if (!checkIsMobile()) {
+                if (isSupplyPage) {
+                    supplySubmenu.classList.add('expanded');
+                } else {
+                    const savedState = localStorage.getItem('supplySubmenuExpanded');
+                    if (savedState === 'true') {
+                        supplySubmenu.classList.add('expanded');
+                    }
+                }
+            } else {
+                supplySubmenu.classList.remove('expanded');
             }
 
-            // Toggle submenu on main link click
             supplyMainLink.addEventListener('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 supplySubmenu.classList.toggle('expanded');
 
-                // Save state to localStorage
-                const isExpanded = supplySubmenu.classList.contains('expanded');
-                localStorage.setItem('supplySubmenuExpanded', isExpanded);
+                if (!checkIsMobile()) {
+                    const isExpanded = supplySubmenu.classList.contains('expanded');
+                    localStorage.setItem('supplySubmenuExpanded', isExpanded);
+                }
             });
-
-            // Do NOT auto-expand from saved state when not on supply page
-            const savedState = localStorage.getItem('supplySubmenuExpanded');
-            if (savedState === 'true' && isSupplyPage) {
-                supplySubmenu.classList.add('expanded');
+        }
+        
+        // Setup accounting submenu
+        if (accountingSubmenu && accountingMainLink) {
+            const checkIsMobile = () => window.innerWidth <= 768;
+            
+            if (!checkIsMobile()) {
+                if (isAccountingPage) {
+                    accountingSubmenu.classList.add('expanded');
+                } else {
+                    const savedState = localStorage.getItem('accountingSubmenuExpanded');
+                    if (savedState === 'true') {
+                        accountingSubmenu.classList.add('expanded');
+                    }
+                }
+            } else {
+                accountingSubmenu.classList.remove('expanded');
             }
+            
+            accountingMainLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                accountingSubmenu.classList.toggle('expanded');
+                
+                if (!checkIsMobile()) {
+                    const isExpanded = accountingSubmenu.classList.contains('expanded');
+                    localStorage.setItem('accountingSubmenuExpanded', isExpanded);
+                }
+            });
         }
     }
     
@@ -1665,9 +1880,94 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function handleResponsive() {
         const width = window.innerWidth;
+        const wasMobile = sidebar.classList.contains('mobile-sidebar');
+        const isNowMobile = width <= 768;
+        
+        if (isNowMobile && !wasMobile) {
+            // Switched to mobile
+            sidebar.classList.add('mobile-sidebar');
+            closeMobileSidebar();
+            
+            // بستن همه زیرمنوها در موبایل
+            const allSubmenus = document.querySelectorAll('.nav-item.has-submenu');
+            allSubmenus.forEach(submenu => {
+                submenu.classList.remove('expanded');
+            });
+        } else if (!isNowMobile && wasMobile) {
+            // Switched to desktop
+            sidebar.classList.remove('mobile-sidebar');
+            sidebar.classList.remove('active');
+            if (mobileSidebarOverlay) {
+                mobileSidebarOverlay.classList.remove('active');
+            }
+            document.body.style.overflow = '';
+            
+            // Restore desktop collapsed state
+            const sidebarState = localStorage.getItem('sidebarCollapsed');
+            if (sidebarState === 'true') {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+            
+            // بازگرداندن وضعیت زیرمنوها از localStorage برای دسکتاپ
+            const currentPath = window.location.pathname;
+            const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/invoice/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/unload-approval/'];
+            const productionPaths = ['/production/'];
+            const distributionPaths = ['/distribution/'];
+            const supplyPaths = ['/supply/'];
+            const accountingPaths = ['/sales/approve-transaction-receipt/', '/sales/settlement/', '/sales/settlement-approval/', '/supply/upload-fare-payment-docs/'];
+            
+            const isSalesPage = salesPaths.some(path => currentPath.includes(path));
+            const isProductionPage = productionPaths.some(path => currentPath.includes(path));
+            const isDistributionPage = distributionPaths.some(path => currentPath.includes(path));
+            const isSupplyPage = supplyPaths.some(path => currentPath.includes(path));
+            const isAccountingPage = accountingPaths.some(path => currentPath.includes(path));
+            
+            // بازگرداندن وضعیت هر زیرمنو
+            const salesSubmenu = document.getElementById('salesSubmenu');
+            if (salesSubmenu) {
+                salesSubmenu.classList.remove('expanded');
+                if (isSalesPage || localStorage.getItem('salesSubmenuExpanded') === 'true') {
+                    salesSubmenu.classList.add('expanded');
+                }
+            }
+            
+            const productionSubmenu = document.getElementById('productionSubmenu');
+            if (productionSubmenu) {
+                productionSubmenu.classList.remove('expanded');
+                if (isProductionPage || localStorage.getItem('productionSubmenuExpanded') === 'true') {
+                    productionSubmenu.classList.add('expanded');
+                }
+            }
+            
+            const distributionSubmenu = document.getElementById('distributionSubmenu');
+            if (distributionSubmenu) {
+                distributionSubmenu.classList.remove('expanded');
+                if (isDistributionPage || localStorage.getItem('distributionSubmenuExpanded') === 'true') {
+                    distributionSubmenu.classList.add('expanded');
+                }
+            }
+            
+            const supplySubmenu = document.getElementById('supplySubmenu');
+            if (supplySubmenu) {
+                supplySubmenu.classList.remove('expanded');
+                if (isSupplyPage || localStorage.getItem('supplySubmenuExpanded') === 'true') {
+                    supplySubmenu.classList.add('expanded');
+                }
+            }
+            
+            const accountingSubmenu = document.getElementById('accountingSubmenu');
+            if (accountingSubmenu) {
+                accountingSubmenu.classList.remove('expanded');
+                if (isAccountingPage || localStorage.getItem('accountingSubmenuExpanded') === 'true') {
+                    accountingSubmenu.classList.add('expanded');
+                }
+            }
+        }
         
         // Tablet breakpoint: auto-collapse sidebar
-        if (width >= 769 && width <= 1024) {
+        if (width >= 769 && width <= 1024 && !isNowMobile) {
             if (!sidebar.classList.contains('collapsed')) {
                 sidebar.classList.add('collapsed');
                 localStorage.setItem('sidebarCollapsed', 'true');
@@ -1731,7 +2031,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Add ripple effect to navigation links
-    const allNavLinks = document.querySelectorAll('.nav-link, .mobile-nav-link');
+    const allNavLinks = document.querySelectorAll('.nav-link');
     allNavLinks.forEach(link => {
         link.addEventListener('click', function(e) {
             addRippleEffect(this, e);
@@ -1768,36 +2068,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    /**
-     * Handle mobile menu behavior
-     */
-    if (window.innerWidth <= 768) {
-        // Hide mobile nav on scroll down, show on scroll up
-        let lastScrollTop = 0;
-        const mobileNav = document.querySelector('.mobile-nav');
-        
-        window.addEventListener('scroll', function() {
-            if (!mobileNav) return;
-            
-            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            
-            if (scrollTop > lastScrollTop && scrollTop > 100) {
-                // Scrolling down
-                mobileNav.style.transform = 'translateY(100%)';
-            } else {
-                // Scrolling up
-                mobileNav.style.transform = 'translateY(0)';
-            }
-            
-            lastScrollTop = scrollTop;
-        });
-    }
 });
 
 // Add CSS for ripple effect dynamically
 const style = document.createElement('style');
 style.textContent = `
-    .nav-link, .mobile-nav-link {
+    .nav-link {
         position: relative;
         overflow: hidden;
     }
