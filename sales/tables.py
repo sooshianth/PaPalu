@@ -261,15 +261,15 @@ class CustomerTable(tables.Table):
         """نمایش دکمه‌های عملیات"""
         try:
             edit_url = reverse('sales:edit_customer', args=[record.national_id])
-            # برای جزئیات از همان صفحه ویرایش استفاده می‌کنیم
-            detail_url = reverse('sales:edit_customer', args=[record.national_id])
+            detail_url = reverse('sales:customer_detail', args=[record.national_id])
             
             html = format_html(
                 '<div class="btn-group">'
-                '<a href="{}" class="btn-outline-info" title="جزئیات">جزئیات</a>'
+                '<a href="{}" class="btn-outline-info customer-detail-link" data-customer-id="{}" title="جزئیات">جزئیات</a>'
                 '<a href="{}" class="btn-outline-warning" title="ویرایش" style="margin-right: 5px;">ویرایش</a>'
                 '</div>',
                 detail_url,
+                record.national_id,
                 edit_url
             )
             return html

@@ -26,8 +26,8 @@ class CreateOrderForm(forms.ModelForm):
         ]
         widgets = {
             'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr', 'readonly': True}),
-            'order_type': forms.Select(attrs={'class': 'form-control'}),
-            'registration_source': forms.Select(attrs={'class': 'form-control'}),
+            'order_type': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
+            'registration_source': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
             'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
             'freight_payment_type': forms.Select(attrs={'class': 'form-control'}),
         }

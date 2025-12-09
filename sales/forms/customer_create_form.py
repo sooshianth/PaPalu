@@ -316,13 +316,14 @@ class CreateCustomerForm(forms.Form):
     
     # فیلدهای اجباری
     national_id = forms.CharField(
-        max_length=10,
+        max_length=11,
         required=True,
         label='شناسه ملی/کد ملی شخص',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'مثال: 1234567890',
-            'dir': 'ltr'
+            'placeholder': 'مثال: 1234567890 (حقیقی) یا 12345678901 (حقوقی)',
+            'dir': 'ltr',
+            'maxlength': '11'
         })
     )
     
@@ -359,7 +360,7 @@ class CreateCustomerForm(forms.Form):
     
     # فیلدهای اختیاری - اطلاعات پایه
     registration_number = forms.CharField(
-        max_length=50,
+        max_length=10,
         required=False,
         label='شماره ثبت شرکت شخص',
         widget=forms.TextInput(attrs={
@@ -464,19 +465,38 @@ class CreateCustomerForm(forms.Form):
     
     
     def clean_national_id(self):
-        """اعتبارسنجی کد ملی"""
+        """اعتبارسنجی کد ملی بر اساس نوع شخص (حقیقی/حقوقی)"""
         national_id = self.cleaned_data.get('national_id')
         
         if not national_id:
             raise forms.ValidationError('کد ملی الزامی است.')
         
-        # بررسی طول
-        if len(national_id) != 10:
-            raise forms.ValidationError('کد ملی باید 10 رقم باشد.')
-        
         # بررسی عددی بودن
         if not national_id.isdigit():
             raise forms.ValidationError('کد ملی باید فقط شامل اعداد باشد.')
+        
+        # دریافت nature از cleaned_data یا data (اگر هنوز clean نشده)
+        nature = self.cleaned_data.get('nature')
+        if not nature and hasattr(self, 'data'):
+            nature = self.data.get('nature')
+        
+        # اگر nature هنوز مشخص نیست، از instance استفاده کن
+        if not nature and self.instance:
+            nature = self.instance.nature
+        
+        # بررسی طول بر اساس نوع شخص
+        if nature == 'natural':
+            # برای شخص حقیقی: 10 رقم
+            if len(national_id) != 10:
+                raise forms.ValidationError('کد ملی برای شخص حقیقی باید 10 رقم باشد.')
+        elif nature == 'legal':
+            # برای شخص حقوقی: 11 رقم
+            if len(national_id) != 11:
+                raise forms.ValidationError('کد ملی برای شخص حقوقی باید 11 رقم باشد.')
+        else:
+            # اگر nature مشخص نیست، بررسی کن که آیا 10 یا 11 رقم است
+            if len(national_id) not in [10, 11]:
+                raise forms.ValidationError('کد ملی باید 10 رقم (برای حقیقی) یا 11 رقم (برای حقوقی) باشد.')
         
         # بررسی تکراری نبودن (فقط در صورت ایجاد جدید)
         if not self.instance:

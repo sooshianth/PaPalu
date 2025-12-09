@@ -680,6 +680,83 @@ def customer_list_view(request):
 
 
 @login_required
+def customer_detail_view(request, national_id):
+    """
+    ویو برای نمایش جزئیات مشتری (فقط نمایشی - read-only)
+    - نمایش اطلاعات در popup
+    - پشتیبانی از AJAX
+    """
+    audit_logger.info(f"درخواست مشاهده جزئیات مشتری با کد ملی {national_id}")
+    
+    # بررسی دسترسی TaskPermission
+    if not user_has_task(request.user, TaskChoices.SALES_CREATE_CUSTOMER.value):
+        audit_logger.activity("تلاش برای مشاهده جزئیات مشتری بدون دسترسی")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            from django.http import JsonResponse
+            return JsonResponse({'error': 'شما دسترسی به این بخش ندارید.'}, status=403)
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت مشتری
+    person = get_object_or_404(Person, national_id=national_id, type='customer')
+    
+    # بررسی دسترسی: فقط superuser یا کارشناس فروش خود مشتری می‌تواند مشاهده کند
+    if not request.user.is_superuser and person.sales_expert != request.user:
+        audit_logger.activity(f"تلاش برای مشاهده جزئیات مشتری {national_id} متعلق به کاربر دیگر")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            from django.http import JsonResponse
+            return JsonResponse({'error': 'شما دسترسی به این بخش ندارید.'}, status=403)
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت اطلاعات مرتبط
+    person_content_type = ContentType.objects.get_for_model(Person)
+    try:
+        person_national_id_int = int(person.national_id)
+    except (ValueError, TypeError):
+        person_national_id_int = person.national_id
+    
+    person_phones = PhoneNumber.objects.filter(
+        content_type=person_content_type,
+        object_id=person_national_id_int
+    )
+    mobile_number = person_phones.filter(phone_type='mobile', is_primary=True).first()
+    landline_number = person_phones.filter(phone_type='landline').first()
+    
+    # دریافت FinancialBanking
+    financial_banking = None
+    try:
+        financial_banking = person.financial_banking.first()
+    except:
+        pass
+    
+    # دریافت آدرس‌های تحویل
+    delivery_addresses = person.delivery_addresses.all()
+    
+    # دریافت نمایندگان
+    representatives = person.representatives.all()
+    
+    # دریافت حساب‌های بانکی
+    bank_accounts = []
+    if financial_banking:
+        bank_accounts = financial_banking.bank_accounts.all()
+    
+    # محاسبه فیلدهای قابل دسترسی برای نمایش
+    accessible_fields = get_accessible_customer_fields(request.user)
+    
+    context = {
+        'person': person,
+        'mobile_number': mobile_number,
+        'landline_number': landline_number,
+        'financial_banking': financial_banking,
+        'delivery_addresses': delivery_addresses,
+        'representatives': representatives,
+        'bank_accounts': bank_accounts,
+        'accessible_fields': accessible_fields,
+    }
+    
+    return render(request, 'customer/customer_detail_popup.html', context)
+
+
+@login_required
 def edit_customer_view(request, national_id):
     """
     ویو برای ویرایش مشتری موجود

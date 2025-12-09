@@ -634,6 +634,81 @@
             });
         }
     })();
+    
+    // مدیریت popup جزئیات مشتری
+    (function() {
+        let popupContainer = null;
+        
+        // ایجاد container برای popup
+        function createPopupContainer() {
+            if (!popupContainer) {
+                popupContainer = document.createElement('div');
+                popupContainer.id = 'customerDetailPopupContainer';
+                document.body.appendChild(popupContainer);
+            }
+            return popupContainer;
+        }
+        
+        // باز کردن popup
+        function openCustomerDetailPopup(customerId) {
+            const container = createPopupContainer();
+            
+            // نمایش loading
+            container.innerHTML = '<div style="text-align: center; padding: 50px;">در حال بارگذاری...</div>';
+            
+            // درخواست AJAX
+            fetch(`/sales/customer/${customerId}/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('خطا در دریافت اطلاعات');
+                }
+                return response.text();
+            })
+            .then(html => {
+                container.innerHTML = html;
+                const popup = document.getElementById('customerDetailPopup');
+                if (popup) {
+                    popup.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            })
+            .catch(error => {
+                console.error('خطا:', error);
+                container.innerHTML = '<div style="text-align: center; padding: 50px; color: red;">خطا در بارگذاری اطلاعات</div>';
+            });
+        }
+        
+        // بستن popup
+        window.closeCustomerDetailPopup = function() {
+            const popup = document.getElementById('customerDetailPopup');
+            if (popup) {
+                popup.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        };
+        
+        // اضافه کردن event listener به لینک‌های جزئیات
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('customer-detail-link')) {
+                e.preventDefault();
+                const customerId = e.target.getAttribute('data-customer-id');
+                if (customerId) {
+                    openCustomerDetailPopup(customerId);
+                }
+            }
+        });
+        
+        // بستن با کلید Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                window.closeCustomerDetailPopup();
+            }
+        });
+    })();
 </script>
 {% endblock %}
 

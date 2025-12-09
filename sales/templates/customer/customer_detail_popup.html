@@ -1,0 +1,331 @@
+{% load static %}
+<div class="customer-detail-popup" id="customerDetailPopup">
+    <div class="popup-overlay" onclick="closeCustomerDetailPopup()"></div>
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3>جزئیات مشتری</h3>
+            <button class="popup-close" onclick="closeCustomerDetailPopup()" aria-label="بستن">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="popup-body">
+            <!-- اطلاعات اصلی -->
+            <div class="detail-section">
+                <h4>اطلاعات اصلی</h4>
+                <div class="detail-grid">
+                    {% if accessible_fields.national_id %}
+                    <div class="detail-item">
+                        <span class="detail-label">کد ملی:</span>
+                        <span class="detail-value">{{ person.national_id }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if accessible_fields.name %}
+                    <div class="detail-item">
+                        <span class="detail-label">نام:</span>
+                        <span class="detail-value">{{ person.name }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if accessible_fields.nature %}
+                    <div class="detail-item">
+                        <span class="detail-label">نوع:</span>
+                        <span class="detail-value">{{ person.get_nature_display }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if mobile_number %}
+                    <div class="detail-item">
+                        <span class="detail-label">شماره همراه:</span>
+                        <span class="detail-value">{{ mobile_number.number }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if landline_number %}
+                    <div class="detail-item">
+                        <span class="detail-label">شماره ثابت:</span>
+                        <span class="detail-value">{{ landline_number.number }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if person.registration_number %}
+                    <div class="detail-item">
+                        <span class="detail-label">شماره ثبت:</span>
+                        <span class="detail-value">{{ person.registration_number }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- اطلاعات مالیاتی -->
+            {% if financial_banking %}
+            <div class="detail-section">
+                <h4>اطلاعات مالیاتی</h4>
+                <div class="detail-grid">
+                    {% if financial_banking.economic_code %}
+                    <div class="detail-item">
+                        <span class="detail-label">کد اقتصادی:</span>
+                        <span class="detail-value">{{ financial_banking.economic_code }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if financial_banking.tax_postal_code %}
+                    <div class="detail-item">
+                        <span class="detail-label">کد پستی مالیاتی:</span>
+                        <span class="detail-value">{{ financial_banking.tax_postal_code }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if financial_banking.tax_province %}
+                    <div class="detail-item">
+                        <span class="detail-label">استان مالیاتی:</span>
+                        <span class="detail-value">{{ financial_banking.tax_province }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if financial_banking.tax_city %}
+                    <div class="detail-item">
+                        <span class="detail-label">شهر مالیاتی:</span>
+                        <span class="detail-value">{{ financial_banking.tax_city }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- حساب‌های بانکی -->
+            {% if bank_accounts %}
+            <div class="detail-section">
+                <h4>حساب‌های بانکی ({{ bank_accounts|length }})</h4>
+                <div class="detail-list">
+                    {% for bank in bank_accounts %}
+                    <div class="detail-item">
+                        <span class="detail-label">{{ bank.bank_name|default:"بانک" }}:</span>
+                        <span class="detail-value">{{ bank.account_number }}</span>
+                        {% if bank.shaba_number %}
+                        <span class="detail-value-small">(شبا: {{ bank.shaba_number }})</span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- آدرس‌های تحویل -->
+            {% if delivery_addresses %}
+            <div class="detail-section">
+                <h4>آدرس‌های تحویل ({{ delivery_addresses|length }})</h4>
+                <div class="detail-list">
+                    {% for addr in delivery_addresses %}
+                    <div class="detail-item">
+                        <span class="detail-label">{{ addr.city }}، {{ addr.province }}:</span>
+                        <span class="detail-value">{{ addr.address|truncatewords:10 }}</span>
+                        <span class="detail-value-small">({{ addr.postal_code }})</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- نمایندگان -->
+            {% if representatives %}
+            <div class="detail-section">
+                <h4>نمایندگان ({{ representatives|length }})</h4>
+                <div class="detail-list">
+                    {% for rep in representatives %}
+                    <div class="detail-item">
+                        <span class="detail-label">{{ rep.name }}:</span>
+                        <span class="detail-value">{{ rep.position|default:"-" }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="popup-footer">
+            <a href="{% url 'sales:edit_customer' person.national_id %}" class="btn btn-primary">ویرایش</a>
+            <button class="btn btn-secondary" onclick="closeCustomerDetailPopup()">بستن</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .customer-detail-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .customer-detail-popup.active {
+        display: flex;
+    }
+    
+    .popup-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(2px);
+    }
+    
+    .popup-content {
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 600px;
+        width: 90%;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        z-index: 10001;
+    }
+    
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .popup-header h3 {
+        margin: 0;
+        color: var(--primary-green);
+        font-size: 1.3rem;
+    }
+    
+    .popup-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        color: var(--gray-600);
+        transition: color 0.3s;
+    }
+    
+    .popup-close:hover {
+        color: var(--gray-800);
+    }
+    
+    .popup-close svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .popup-body {
+        padding: 25px;
+        overflow-y: auto;
+        flex: 1;
+    }
+    
+    .detail-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .detail-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .detail-section h4 {
+        color: var(--primary-green);
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+    }
+    
+    .detail-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .detail-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        min-width: 120px;
+    }
+    
+    .detail-value {
+        color: var(--gray-800);
+        flex: 1;
+    }
+    
+    .detail-value-small {
+        color: var(--gray-600);
+        font-size: 0.9rem;
+        margin-right: 5px;
+    }
+    
+    .popup-footer {
+        padding: 20px 25px;
+        border-top: 2px solid var(--gray-200);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .popup-content {
+            width: 95%;
+            max-height: 95vh;
+        }
+        
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .popup-header,
+        .popup-body,
+        .popup-footer {
+            padding: 15px;
+        }
+    }
+</style>
+
+<script>
+    function closeCustomerDetailPopup() {
+        const popup = document.getElementById('customerDetailPopup');
+        if (popup) {
+            popup.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+    
+    // بستن با کلید Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeCustomerDetailPopup();
+        }
+    });
+</script>
+

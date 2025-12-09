@@ -28,19 +28,59 @@
     
     .form-section {
         background: var(--gray-100);
-        padding: 25px;
+        padding: 0;
         border-radius: 10px;
         margin-bottom: 25px;
         border-right: 4px solid var(--primary-green);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
     }
     
     .form-section h5 {
         color: var(--primary-green);
         font-size: 1.2rem;
         font-weight: 600;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--light-green);
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-content {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    
+    .form-section.collapsed .form-section-content {
+        max-height: 0;
+        padding: 0 25px;
     }
     
     .form-label {
@@ -217,8 +257,17 @@
             padding: 20px;
         }
         
-        .form-section {
-            padding: 15px;
+        .form-section-header {
+            padding: 18px 20px;
+            min-height: 50px;
+        }
+        
+        .form-section-content {
+            padding: 0 20px 20px 20px;
+        }
+        
+        .form-section.collapsed .form-section-content {
+            padding: 0 20px;
         }
         
         .form-actions {
@@ -251,8 +300,14 @@
         
         <!-- اطلاعات اجباری محصول -->
         <div class="form-section">
-            <h5>اطلاعات اجباری محصول</h5>
-            <div class="row">
+            <div class="form-section-header">
+                <h5>اطلاعات اجباری محصول</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
                 {% if accessible_fields.code and 'code' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.code.label }}</label>
@@ -397,13 +452,20 @@
                     {% endif %}
                 </div>
                 {% endif %}
+                </div>
             </div>
         </div>
 
         <!-- اطلاعات اختیاری محصول -->
         <div class="form-section">
-            <h5>اطلاعات اختیاری محصول</h5>
-            <div class="row">
+            <div class="form-section-header">
+                <h5>اطلاعات اختیاری محصول</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
                 {% if accessible_fields.pellet_granule_diameter and 'pellet_granule_diameter' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ product_form.pellet_granule_diameter.label }}</label>
@@ -446,13 +508,20 @@
                     {% endif %}
                 </div>
                 {% endif %}
+                </div>
             </div>
         </div>
 
         <!-- اطلاعات فروش و مالی -->
         <div class="form-section">
-            <h5>اطلاعات فروش و مالی (اختیاری)</h5>
-            <div class="row">
+            <div class="form-section-header">
+                <h5>اطلاعات فروش و مالی </h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
                 {% if accessible_fields.min_sales_amount and 'min_sales_amount' in product_form.fields %}
                 <div class="col-md-4 mb-3">
                     <label class="form-label">{{ product_form.min_sales_amount.label }}</label>
@@ -555,12 +624,19 @@
                     {% endif %}
                 </div>
                 {% endif %}
+                </div>
             </div>
         </div>
 
         <!-- اطلاعات تولید و BOM (فرمول و مواد اولیه به هم وصل) -->
         <div class="form-section">
-            <h5>فرمول‌های تولید و مواد اولیه (BOM)</h5>
+            <div class="form-section-header">
+                <h5>فرمول‌های تولید و مواد اولیه (BOM)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
             <div id="production-formset-container">
                 {{ production_info_formset.management_form }}
                 {% for prod_form in production_info_formset %}
@@ -670,6 +746,7 @@
                 </svg>
                 افزودن فرمول تولید جدید
             </button>
+            </div>
         </div>
 
         <!-- دکمه‌های ارسال و لغو -->
@@ -988,6 +1065,14 @@ $(document).ready(function() {
                 btn.prop('disabled', false);
                 btn.html('<svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
             }
+        });
+    });
+    
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const section = this.closest('.form-section');
+            section.classList.toggle('collapsed');
         });
     });
 });

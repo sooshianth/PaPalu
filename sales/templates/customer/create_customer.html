@@ -28,19 +28,59 @@
     
     .form-section {
         background: var(--gray-100);
-        padding: 25px;
+        padding: 0;
         border-radius: 10px;
         margin-bottom: 25px;
         border-right: 4px solid var(--primary-green);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
     }
     
     .form-section h5 {
         color: var(--primary-green);
         font-size: 1.2rem;
         font-weight: 600;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--light-green);
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-content {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    
+    .form-section.collapsed .form-section-content {
+        max-height: 0;
+        padding: 0 25px;
     }
     
     .form-label {
@@ -147,8 +187,17 @@
             padding: 20px;
         }
         
-        .form-section {
-            padding: 15px;
+        .form-section-header {
+            padding: 18px 20px;
+            min-height: 50px;
+        }
+        
+        .form-section-content {
+            padding: 0 20px 20px 20px;
+        }
+        
+        .form-section.collapsed .form-section-content {
+            padding: 0 20px;
         }
         
         .form-actions {
@@ -449,6 +498,14 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     }
+    
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const section = this.closest('.form-section');
+            section.classList.toggle('collapsed');
+        });
+    });
 });
 </script>
 {% endblock %}
@@ -472,8 +529,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             <!-- بخش اطلاعات اجباری -->
                             <div class="form-section">
-                                <h5>اطلاعات اجباری</h5>
-                                <div class="row">
+                                <div class="form-section-header">
+                                    <h5>اطلاعات اجباری</h5>
+                                    <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="form-section-content">
+                                    <div class="row">
                                     {% if accessible_fields.national_id %}
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label required-field">{{ form.national_id.label }}</label>
@@ -513,13 +576,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% endif %}
                                     </div>
                                     {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             
                             <!-- بخش اطلاعات پایه -->
                             <div class="form-section">
-                                <h5>اطلاعات پایه (اختیاری)</h5>
-                                <div class="row">
+                                <div class="form-section-header">
+                                    <h5>اطلاعات پایه </h5>
+                                    <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="form-section-content">
+                                    <div class="row">
                                     {% if accessible_fields.registration_number %}
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">{{ form.registration_number.label }}</label>
@@ -584,13 +654,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% endif %}
                                     </div>
                                     {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             
                             <!-- بخش اطلاعات مالیاتی -->
                             <div class="form-section">
-                                <h5>اطلاعات مالیاتی (اختیاری)</h5>
-                                <div class="row">
+                                <div class="form-section-header">
+                                    <h5>اطلاعات مالیاتی </h5>
+                                    <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
+                                </div>
+                                <div class="form-section-content">
+                                    <div class="row">
                                     {% if accessible_fields.economic_code %}
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">{{ form.economic_code.label }}</label>
@@ -640,16 +717,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {% endif %}
                                     </div>
                                     {% endif %}
-                                </div>
-                                
-                                <!-- حساب‌های بانکی -->
-                                <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid var(--light-green);">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                        <h6 style="margin: 0; color: var(--primary-green); font-size: 1.1rem;">حساب‌های بانکی (اختیاری)</h6>
-                                        <button type="button" id="add-bank-btn" class="btn btn-success" style="padding: 8px 16px;">
-                                            <span>+ افزودن حساب بانکی</span>
-                                        </button>
                                     </div>
+                                
+                                    <!-- حساب‌های بانکی -->
+                                    <div style="margin-top: 25px; padding-top: 20px; border-top: 2px solid var(--light-green);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                            <h6 style="margin: 0; color: var(--primary-green); font-size: 1.1rem;">حساب‌های بانکی </h6>
+                                            <button type="button" id="add-bank-btn" class="btn btn-success" style="padding: 8px 16px;">
+                                                <span>+ افزودن حساب بانکی</span>
+                                            </button>
+                                        </div>
 
                                     {{ bank_formset.management_form }}
                                     <div id="bank-container">
@@ -706,17 +783,25 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <div class="text-danger">{{ err }}</div>
                                         {% endfor %}
                                     {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             
                             <!-- بخش آدرس تحویل -->
                             <div class="form-section">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                    <h5 style="margin: 0;">آدرس تحویل (اختیاری)</h5>
-                                    <button type="button" id="add-delivery-btn" class="btn btn-success" style="padding: 8px 16px;">
-                                        <span>+ افزودن آدرس تحویل</span>
-                                    </button>
+                                <div class="form-section-header">
+                                    <h5>آدرس تحویل </h5>
+                                    <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
                                 </div>
+                                <div class="form-section-content">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                        <div></div>
+                                        <button type="button" id="add-delivery-btn" class="btn btn-success" style="padding: 8px 16px;">
+                                            <span>+ افزودن آدرس تحویل</span>
+                                        </button>
+                                    </div>
 
                                 {{ delivery_formset.management_form }}
                                 <div id="delivery-container">
@@ -853,16 +938,24 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <div class="text-danger">{{ err }}</div>
                                     {% endfor %}
                                 {% endif %}
+                                </div>
                             </div>
                             
                             <!-- بخش نماینده -->
                             <div class="form-section">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                    <h5 style="margin: 0;">اطلاعات نماینده (اختیاری)</h5>
-                                    <button type="button" id="add-rep-btn" class="btn btn-success" style="padding: 8px 16px;">
-                                        <span>+ افزودن نماینده</span>
-                                    </button>
+                                <div class="form-section-header">
+                                    <h5>اطلاعات نماینده </h5>
+                                    <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    </svg>
                                 </div>
+                                <div class="form-section-content">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                        <div></div>
+                                        <button type="button" id="add-rep-btn" class="btn btn-success" style="padding: 8px 16px;">
+                                            <span>+ افزودن نماینده</span>
+                                        </button>
+                                    </div>
 
                                 {{ rep_formset.management_form }}
                                 <div id="rep-container">
@@ -939,6 +1032,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <div class="text-danger">{{ err }}</div>
                                     {% endfor %}
                                 {% endif %}
+                                </div>
                             </div>
                             
                             <!-- دکمه‌های ارسال و لغو -->

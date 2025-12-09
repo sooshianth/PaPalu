@@ -28,19 +28,59 @@
     
     .form-section {
         background: var(--gray-100);
-        padding: 25px;
+        padding: 0;
         border-radius: 10px;
         margin-bottom: 25px;
         border-right: 4px solid var(--primary-green);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
     }
     
     .form-section h5 {
         color: var(--primary-green);
         font-size: 1.2rem;
         font-weight: 600;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--light-green);
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-content {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    
+    .form-section.collapsed .form-section-content {
+        max-height: 0;
+        padding: 0 25px;
     }
     
     .form-label {
@@ -129,7 +169,16 @@
             max-width: 100%;
         }
         .form-card { padding: 20px; }
-        .form-section { padding: 15px; }
+        .form-section-header {
+            padding: 18px 20px;
+            min-height: 50px;
+        }
+        .form-section-content {
+            padding: 0 20px 20px 20px;
+        }
+        .form-section.collapsed .form-section-content {
+            padding: 0 20px;
+        }
         .form-actions { flex-direction: column; }
         .btn { width: 100%; }
     }
@@ -510,6 +559,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const section = this.closest('.form-section');
+            section.classList.toggle('collapsed');
+        });
+    });
 });
 </script>
 {% endblock %}
@@ -533,8 +590,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <!-- بخش اطلاعات اجباری -->
         <div class="form-section">
-            <h5>اطلاعات اجباری</h5>
-            <div class="row">
+            <div class="form-section-header">
+                <h5>اطلاعات اجباری</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
                 {% if accessible_fields_main.order_number %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.order_number.label }}</label>
@@ -565,13 +628,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endif %}
                 </div>
                 {% endif %}
+                </div>
             </div>
         </div>
 
         <!-- بخش اطلاعات اختیاری -->
         <div class="form-section">
-            <h5>اطلاعات اختیاری</h5>
-            <div class="row">
+            <div class="form-section-header">
+                <h5>اطلاعات اختیاری</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
                 {% if accessible_fields_main.order_type %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ form.order_type.label }}</label>
@@ -591,17 +661,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endif %}
                 </div>
                 {% endif %}
+                </div>
             </div>
         </div>
 
         <!-- بخش اقلام سفارش -->
         <div class="form-section">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h5 style="margin: 0;">اقلام سفارش</h5>
-                <button type="button" id="add-item-btn" class="btn btn-success" style="padding: 8px 16px;">
-                    <span>+ افزودن قلم جدید</span>
-                </button>
+            <div class="form-section-header">
+                <h5>اقلام سفارش</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
             </div>
+            <div class="form-section-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div></div>
+                    <button type="button" id="add-item-btn" class="btn btn-success" style="padding: 8px 16px;">
+                        <span>+ افزودن قلم جدید</span>
+                    </button>
+                </div>
 
             {{ item_formset.management_form }}
             <div id="items-container">
@@ -713,6 +791,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="text-danger">{{ err }}</div>
                 {% endfor %}
             {% endif %}
+            </div>
         </div>
 
         <!-- دکمه‌ها -->
@@ -723,8 +802,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         <!-- تسک بعد -->
         <div class="form-section" style="margin-top: 25px;">
-            <h5>تسک بعد</h5>
-            <div>{{ next_task_label|default:"صدور پیش فاکتور" }}</div>
+            <div class="form-section-header">
+                <h5>تسک بعد</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div>{{ next_task_label|default:"صدور پیش فاکتور" }}</div>
+            </div>
         </div>
     </form>
 </div>
