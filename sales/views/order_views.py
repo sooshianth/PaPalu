@@ -386,6 +386,14 @@ def product_info_api(request, product_id):
                 'condition': price_info.condition[:100] if price_info.condition else '',
             })
         
+        # دریافت درصد مالیات از ProductSales
+        tax_percentage = '0'
+        try:
+            if hasattr(product, 'sales_info') and product.sales_info and product.sales_info.price_with_tax:
+                tax_percentage = str(product.sales_info.price_with_tax)
+        except:
+            pass
+        
         # اطلاعات پاسخ
         data = {
             'main_unit': product.main_unit or '',
@@ -393,6 +401,7 @@ def product_info_api(request, product_id):
             'prices': prices_list,
             'prices_count': len(prices_list),
             'has_price': len(prices_list) > 0,
+            'tax_percentage': tax_percentage,
         }
         
         # برای سازگاری با کد قدیمی، آخرین قیمت را هم اضافه می‌کنیم
@@ -484,12 +493,6 @@ def edit_order_view(request, order_number):
         messages.error(request, 'شما دسترسی به ویرایش سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
-    # بررسی اینکه آیا سفارش قابل ویرایش است یا نه
-    if not can_edit_order(order):
-        audit_logger.activity(f"تلاش برای ویرایش سفارش {order_number} که در وضعیت {order.status} است و قابل ویرایش نیست")
-        messages.error(request, 'این سفارش در وضعیت فعلی قابل ویرایش نیست.')
-        return redirect('sales:order_detail', order_number=order_number)
-    
     # دریافت سفارش
     try:
         if request.user.is_superuser:
@@ -502,6 +505,12 @@ def edit_order_view(request, order_number):
     except Order.DoesNotExist:
         messages.error(request, 'سفارش مورد نظر یافت نشد.')
         return redirect('sales:order_list')
+    
+    # بررسی اینکه آیا سفارش قابل ویرایش است یا نه
+    if not can_edit_order(order):
+        audit_logger.activity(f"تلاش برای ویرایش سفارش {order_number} که در وضعیت {order.status} است و قابل ویرایش نیست")
+        messages.error(request, 'این سفارش در وضعیت فعلی قابل ویرایش نیست.')
+        return redirect('sales:order_detail', order_number=order_number)
     
     if request.method == 'POST':
         # Build temporary instances to compute field-access

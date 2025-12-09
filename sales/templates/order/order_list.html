@@ -49,6 +49,26 @@
     }
     .data-table tbody tr:hover { background-color: var(--light-green); }
     .data-table tbody td { padding: 15px; color: var(--gray-600); }
+    
+    /* استایل سلول actions */
+    .data-table tbody td.actions,
+    .data-table tbody td:has(.btn-group) {
+        white-space: nowrap;
+        text-align: center;
+    }
+    
+    /* اطمینان از نمایش افقی دکمه‌ها در RTL */
+    .data-table .btn-group a,
+    .table-container .btn-group a {
+        display: inline-block !important;
+        vertical-align: middle;
+        margin: 0;
+    }
+    
+    .data-table .btn-group {
+        direction: ltr;
+        text-align: left;
+    }
     .alert {
         border-radius: 8px;
         padding: 15px 20px;
@@ -203,6 +223,7 @@
         background-color: transparent !important;
         display: inline-block;
         cursor: pointer;
+        white-space: nowrap;
     }
     
     .data-table .btn-outline-warning:hover,
@@ -212,11 +233,29 @@
         border-color: #ffc107 !important;
     }
     
+    /* استایل گروه دکمه‌ها */
+    .btn-group {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px;
+        align-items: center;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+    }
+    
+    .data-table .btn-group,
+    .table-container .btn-group {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
     /* استایل دکمه جزئیات - آبی */
     .data-table .btn-outline-info,
     .table-container .btn-outline-info {
         padding: 5px 10px;
-        margin-left: 5px;
         border-radius: 6px;
         text-decoration: none;
         font-size: 0.875rem;
@@ -227,6 +266,7 @@
         background-color: transparent !important;
         display: inline-block;
         cursor: pointer;
+        white-space: nowrap;
     }
     
     .data-table .btn-outline-info:hover,

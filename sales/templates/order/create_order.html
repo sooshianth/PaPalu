@@ -310,6 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const productSelect = formRow.querySelector('select[name*="-product"]');
         const weightUnitSelect = formRow.querySelector('select[name*="-weight_unit"]');
         const unitPriceInput = formRow.querySelector('input[name*="-unit_price"]');
+        const vatPercentInput = formRow.querySelector('input[name*="-vat_percent"]');
         
         if (productSelect && weightUnitSelect && unitPriceInput) {
             productSelect.addEventListener('change', function() {
@@ -319,6 +320,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     // اگر محصول انتخاب نشده، فیلدها را خالی کن
                     weightUnitSelect.value = 'kg';
                     unitPriceInput.value = '';
+                    if (vatPercentInput) {
+                        vatPercentInput.value = '0';
+                    }
                     // حذف dropdown قیمت
                     const existingDropdown = formRow.querySelector('.price-dropdown-container');
                     if (existingDropdown) {
@@ -344,6 +348,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             // اگر واحد تغییر کرد، bag weight toggle را فراخوانی کن
                             const event = new Event('change');
                             weightUnitSelect.dispatchEvent(event);
+                        }
+                        
+                        // پر کردن درصد مالیات
+                        if (data.tax_percentage && vatPercentInput) {
+                            vatPercentInput.value = data.tax_percentage;
                         }
                         
                         // مدیریت قیمت‌ها
