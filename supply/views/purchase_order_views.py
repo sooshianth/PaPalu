@@ -27,7 +27,7 @@ class ProcurementPurchaseOrderForm(ModelForm):
         fields = [
             'supplier', 'freight_payment_type',
             'subtotal_without_freight', 'freight_cost', 'vat_percentage',
-            'pre_invoice_file', 'pre_invoice_approved', 'external_system_id'
+            'external_system_id'
         ]
         labels = {
             'supplier': 'تأمین‌کننده',
@@ -35,8 +35,6 @@ class ProcurementPurchaseOrderForm(ModelForm):
             'subtotal_without_freight': 'جمع بدون کرایه',
             'freight_cost': 'هزینه کرایه',
             'vat_percentage': 'درصد مالیات بر ارزش افزوده',
-            'pre_invoice_file': 'فایل پیش‌فاکتور',
-            'pre_invoice_approved': 'پیش‌فاکتور تایید شد؟',
             'external_system_id': 'شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت',
         }
         widgets = {
@@ -45,8 +43,6 @@ class ProcurementPurchaseOrderForm(ModelForm):
             'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'vat_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'pre_invoice_file': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'pre_invoice_approved': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'external_system_id': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
@@ -100,6 +96,39 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['raw_material'].queryset = RawMaterial.objects.filter(status='active').order_by('name')
+    
+    def clean(self):
+        """اعتبارسنجی: واحد باید با واحد اصلی یا فرعی ماده اولیه مطابقت داشته باشد"""
+        cleaned_data = super().clean()
+        raw_material = cleaned_data.get('raw_material')
+        unit = cleaned_data.get('unit')
+        quantity = cleaned_data.get('quantity')
+        unit_price = cleaned_data.get('unit_price')
+        total_price = cleaned_data.get('total_price')
+        
+        if raw_material and unit:
+            # Get allowed units from raw material
+            allowed_units = []
+            if raw_material.primary_unit:
+                allowed_units.append(raw_material.get_primary_unit_display())
+            if raw_material.secondary_unit:
+                allowed_units.append(raw_material.get_secondary_unit_display())
+            
+            # Check if entered unit matches
+            if unit not in allowed_units and allowed_units:
+                raise forms.ValidationError(
+                    f'واحد "{unit}" برای ماده اولیه "{raw_material.name}" معتبر نیست. '
+                    f'واحدهای مجاز: {" یا ".join(allowed_units)}'
+                )
+        
+        # Validate total price calculation
+        if quantity and unit_price and total_price:
+            calculated_total = quantity * unit_price
+            # Allow small floating point difference
+            if abs(float(total_price) - float(calculated_total)) > 0.01:
+                cleaned_data['total_price'] = calculated_total
+        
+        return cleaned_data
 
 
 MaterialFormSet = inlineformset_factory(

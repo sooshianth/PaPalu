@@ -60,10 +60,10 @@
           {% for form in material_formset.forms %}
           <tr class="material-row">
             <td>{{ form.raw_material }}</td>
-            <td>{{ form.quantity }}</td>
+            <td><input type="number" step="0.001" name="{{ form.quantity.name }}" value="{{ form.quantity.value|default:'' }}" class="form-control qty-input" data-row-idx="{{ forloop.counter0 }}"/></td>
             <td>{{ form.unit }}</td>
-            <td>{{ form.unit_price }}</td>
-            <td>{{ form.total_price }}</td>
+            <td><input type="number" step="0.01" name="{{ form.unit_price.name }}" value="{{ form.unit_price.value|default:'' }}" class="form-control price-input" data-row-idx="{{ forloop.counter0 }}"/></td>
+            <td><input type="number" step="0.01" name="{{ form.total_price.name }}" value="{{ form.total_price.value|default:'' }}" class="form-control total-input" readonly style="background:#f0f0f0"/></td>
             <td>{{ form.freight_included }}</td>
             <td>{{ form.vat_on_material }}</td>
             <td>{{ form.freight_cost_completed }}</td>
@@ -90,10 +90,10 @@
             {% endfor %}
           </select>
         </td>
-        <td><input type="number" step="0.001" name="mat-__prefix__-quantity" class="form-control"/></td>
+        <td><input type="number" step="0.001" name="mat-__prefix__-quantity" class="form-control qty-input"/></td>
         <td><input type="text" name="mat-__prefix__-unit" class="form-control"/></td>
-        <td><input type="number" step="0.01" name="mat-__prefix__-unit_price" class="form-control"/></td>
-        <td><input type="number" step="0.01" name="mat-__prefix__-total_price" class="form-control"/></td>
+        <td><input type="number" step="0.01" name="mat-__prefix__-unit_price" class="form-control price-input"/></td>
+        <td><input type="number" step="0.01" name="mat-__prefix__-total_price" class="form-control total-input" readonly style="background:#f0f0f0"/></td>
         <td><input type="checkbox" name="mat-__prefix__-freight_included"/></td>
         <td><input type="number" step="0.01" name="mat-__prefix__-vat_on_material" class="form-control"/></td>
         <td><input type="number" step="0.01" name="mat-__prefix__-freight_cost_completed" class="form-control"/></td>
@@ -132,6 +132,7 @@ function addMaterialRow(){
   const tpl=document.getElementById('material-empty-row').content.cloneNode(true);
   tbody.appendChild(tpl);
   syncIndexes();
+  attachCalculationListeners();
 }
 function removeRow(btn){
   const tbody=document.querySelector('#materialsTable tbody');
@@ -139,6 +140,35 @@ function removeRow(btn){
   btn.closest('tr').remove();
   syncIndexes();
 }
-document.addEventListener('DOMContentLoaded', syncIndexes);
+function calculateTotal(row){
+  const qtyInput = row.querySelector('.qty-input');
+  const priceInput = row.querySelector('.price-input');
+  const totalInput = row.querySelector('.total-input');
+  
+  if(qtyInput && priceInput && totalInput){
+    const qty = parseFloat(qtyInput.value) || 0;
+    const price = parseFloat(priceInput.value) || 0;
+    const total = qty * price;
+    totalInput.value = total.toFixed(2);
+  }
+}
+function attachCalculationListeners(){
+  document.querySelectorAll('#materialsTable tbody tr').forEach(row => {
+    const qtyInput = row.querySelector('.qty-input');
+    const priceInput = row.querySelector('.price-input');
+    
+    if(qtyInput && priceInput){
+      qtyInput.removeEventListener('input', () => calculateTotal(row));
+      priceInput.removeEventListener('input', () => calculateTotal(row));
+      
+      qtyInput.addEventListener('input', () => calculateTotal(row));
+      priceInput.addEventListener('input', () => calculateTotal(row));
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded', function(){
+  syncIndexes();
+  attachCalculationListeners();
+});
 </script>
 {% endblock %}
