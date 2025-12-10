@@ -113,7 +113,7 @@ class RawMaterialPriceInquiryForm(ModelForm):
 			'negotiation_note': 'شرح مذاکره',
 		}
 		widgets = {
-			'inquiry_date': TextInput(attrs={'class': 'form-control jalali-date', 'dir': 'ltr', 'placeholder': 'YYYY-MM-DD'}),
+			'inquiry_date': TextInput(attrs={'class': 'form-control', 'id': 'id_inquiry_date', 'dir': 'ltr', 'placeholder': 'YYYY/MM/DD', 'readonly': 'readonly', 'style': 'cursor:pointer; padding-left:40px'}),
 			'price': NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
 			'freight_unit_price': NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
 			'delivery_terms': TextInput(attrs={'maxlength': 255, 'class': 'form-control'}),
@@ -128,6 +128,8 @@ class RawMaterialPriceInquiryForm(ModelForm):
 		super().__init__(*args, **kwargs)
 		self.fields['supplier'].queryset = Person.objects.filter(type='supplier').order_by('name')
 		self.fields['supplier'].required = True
+		self.fields['delivery_terms'].required = True
+		self.fields['loading_location'].required = True
 		self.fields['price'].required = True
 		self.fields['inquiry_date'].required = True
 		self.fields['delivery_terms'].required = True

@@ -246,6 +246,28 @@
       color: #212529 !important;
     }
     /* Pagination styles to match suppliers page */
+    .table-notice {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      margin-top: 20px;
+      background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
+      border: 1px solid #90caf9;
+      border-radius: 10px;
+      color: #1565c0;
+      font-size: 0.95rem;
+      font-weight: 500;
+      box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+    }
+    
+    .table-notice svg {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      color: #1976d2;
+    }
+    
     .pagination {
       margin-top: 30px;
       margin-bottom: 20px;
@@ -600,6 +622,12 @@
 
         <div class="table-container">
           {% render_table table %}
+          <div class="table-notice">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path fill-rule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm8.706-1.442c1.146-.573 2.437.463 2.126 1.706l-.709 2.836.042-.02a.75.75 0 01.67 1.34l-.04.022c-1.147.573-2.438-.463-2.127-1.706l.71-2.836-.042.02a.75.75 0 11-.671-1.34l.041-.022zM12 9a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+            </svg>
+            با کلیک بر روی هر سطر می‌توان برای آن ماده استعلام قیمت افزود.
+          </div>
         </div>
         <div id="piModalHost"></div>
     </div>
@@ -707,31 +735,29 @@
               // Hide table to avoid overlap capturing clicks
               if (tableWrap) { tableWrap.style.display = 'none'; }
               
-              const dateEl = form.querySelector('.jalali-date');
-              if (dateEl){
+              // Reset and set date field to today
+              const dateEl = jQuery('#id_inquiry_date');
+              const hiddenDateEl = jQuery('#id_inquiry_date_hidden');
+              if (dateEl.length){
                 try {
-                  // Set to today's Jalali date
+                  // Set to today's date
                   if (typeof persianDate !== 'undefined') {
                     const today = new persianDate();
-                    jQuery(dateEl).val(today.format('YYYY-MM-DD'));
+                    const todayPersian = today.format('YYYY/MM/DD');
+                    const todayGregorian = today.toCalendar('gregorian');
+                    const gregorianFormatted = todayGregorian.year + '-' + 
+                                              String(todayGregorian.month).padStart(2, '0') + '-' + 
+                                              String(todayGregorian.day).padStart(2, '0');
+                    
+                    dateEl.val(todayPersian);
+                    if (hiddenDateEl.length) {
+                      hiddenDateEl.val(gregorianFormatted);
+                    }
                   } else {
-                    jQuery(dateEl).val('');
+                    dateEl.val('');
+                    if (hiddenDateEl.length) hiddenDateEl.val('');
                   }
-                  dateEl.removeAttribute('readonly');
-                  // Reinitialize datepicker to ensure proper state
-                  if (jQuery.fn && jQuery.fn.persianDatepicker){
-                    try { jQuery(dateEl).persianDatepicker('destroy'); } catch(e){}
-                    try {
-                      jQuery(dateEl).persianDatepicker({
-                        format: 'YYYY-MM-DD',
-                        initialValue: false,
-                        initialValueType: 'gregorian',
-                        autoClose: true,
-                        observer: true
-                      });
-                    } catch(e){ console.error('[PI] reinit datepicker error', e); }
-                  }
-                } catch(e){ console.error('[PI] date clear error', e); }
+                } catch(e){ console.error('[PI] date set error', e); }
               }
               
               // Focus the first input
@@ -772,19 +798,45 @@
                 // populate form from row
                 pkInput.value = tr.dataset.pk || '';
                 const tds = tr.querySelectorAll('td');
-                const setVal = (name, idx) => { const el = form.querySelector(`[name="${name}"]`); if (el && tds[idx]) el.value = tds[idx].textContent.trim(); };
-                setVal('inquiry_date',0);
-                const idEl = form.querySelector('[name="inquiry_date"]');
-                const s = (idEl && idEl.value) ? idEl.value.trim() : '';
-                if (idEl && /^\d{4}-\d{2}-\d{2}$/.test(s) && !/^(13|14)\d{2}-/.test(s) && typeof persianDate !== 'undefined') {
-                  const g = new Date(s);
-                  if (!isNaN(g)) idEl.value = new persianDate(g).format('YYYY-MM-DD');
+                
+                // Handle date field with proper conversion
+                const dateStr = tds[0] ? tds[0].textContent.trim() : '';
+                const dateEl = jQuery('#id_inquiry_date');
+                const hiddenDateEl = jQuery('#id_inquiry_date_hidden');
+                if (dateStr && dateEl.length) {
+                  // Check if it's in Persian format (1403/09/20) or Gregorian (2024-12-10)
+                  if (/^\d{4}\/\d{2}\/\d{2}$/.test(dateStr)) {
+                    // Already Persian format
+                    dateEl.val(dateStr);
+                    // Convert to Gregorian for hidden field
+                    if (typeof persianDate !== 'undefined' && hiddenDateEl.length) {
+                      try {
+                        const pDate = persianDate.fromString(dateStr, 'YYYY/MM/DD');
+                        const gDate = pDate.toCalendar('gregorian');
+                        hiddenDateEl.val(gDate.year + '-' + String(gDate.month).padStart(2, '0') + '-' + String(gDate.day).padStart(2, '0'));
+                      } catch(e) {}
+                    }
+                  } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                    // Gregorian format - convert to Persian
+                    hiddenDateEl.val(dateStr);
+                    if (typeof persianDate !== 'undefined') {
+                      try {
+                        const parts = dateStr.split('-');
+                        const gDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                        const pDate = persianDate.fromGregorian(gDate);
+                        dateEl.val(pDate.format('YYYY/MM/DD'));
+                      } catch(e) {}
+                    }
+                  }
                 }
+                
                 const supplierSelect = form.querySelector('[name="supplier"]');
                 if (supplierSelect && tds[1]) {
                   const supplierName = tds[1].textContent.trim();
                   Array.from(supplierSelect.options).forEach(o=>{ if (o.text.trim()===supplierName) supplierSelect.value=o.value; });
                 }
+                
+                const setVal = (name, idx) => { const el = form.querySelector(`[name="${name}"]`); if (el && tds[idx]) el.value = tds[idx].textContent.trim(); };
                 setVal('price',2);
                 setVal('delivery_terms',4);
                 setVal('loading_location',5);
@@ -803,6 +855,50 @@
 
           window.PI_save = async function(){
             console.log('[PI] global save click');
+            
+            // Client-side validation for required fields
+            let hasErrors = false;
+            const requiredFields = [
+              { name: 'inquiry_date', label: 'تاریخ', hiddenName: 'id_inquiry_date_hidden' },
+              { name: 'supplier', label: 'تامین کننده' },
+              { name: 'price', label: 'قیمت' },
+              { name: 'delivery_terms', label: 'شرایط تحویل' },
+              { name: 'loading_location', label: 'محل بارگیری' }
+            ];
+            
+            // Clear previous error messages
+            form.querySelectorAll('.field-error').forEach(el => el.remove());
+            form.querySelectorAll('input, select, textarea').forEach(el => {
+              el.style.borderColor = '';
+            });
+            
+            requiredFields.forEach(field => {
+              const fieldName = field.hiddenName || field.name;
+              const input = form.querySelector(`[name="${fieldName}"], #${fieldName}`);
+              if (input && !input.value.trim()) {
+                hasErrors = true;
+                input.style.borderColor = '#c62828';
+                const fieldDiv = input.closest('.field');
+                if (fieldDiv) {
+                  const errorDiv = document.createElement('div');
+                  errorDiv.className = 'field-error';
+                  errorDiv.style.cssText = 'color:#c62828;font-size:.8rem;margin-top:4px';
+                  errorDiv.textContent = `${field.label} الزامی است.`;
+                  fieldDiv.appendChild(errorDiv);
+                }
+              }
+            });
+            
+            if (hasErrors) {
+              console.log('[PI] Validation failed - required fields missing');
+              // Scroll to first error
+              const firstError = form.querySelector('.field-error');
+              if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              return;
+            }
+            
             const fd = new FormData(form);
             try {
               const resp = await fetch(url, { method:'POST', body: fd, headers:{'X-Requested-With':'XMLHttpRequest'} });
@@ -846,53 +942,170 @@
             }
           }
 
-          // Initialize Persian datepicker for jalali-date inputs
-          if (window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker) {
-            jQuery(modal).find('.jalali-date').each(function(){
-              const $el = jQuery(this);
-              // Convert any prefilled Gregorian value to Jalali for display
-              try {
-                const cur = ($el.val()||'').trim();
-                if (/^\d{4}-\d{2}-\d{2}$/.test(cur) && !/^(13|14)\d{2}-/.test(cur) && typeof persianDate !== 'undefined') {
-                  const g = new Date(cur);
-                  if (!isNaN(g)) $el.val(new persianDate(g).format('YYYY-MM-DD'));
+          // Initialize Persian datepicker for inquiry_date field
+          if (window.jQuery && jQuery.fn && jQuery.fn.pDatepicker) {
+            var inquiryDateInput = jQuery(modal).find('#id_inquiry_date');
+            if (inquiryDateInput.length) {
+              console.log('[PI] Found inquiry date input, initializing datepicker');
+              
+              // Get initial value if exists
+              var initialValue = inquiryDateInput.val();
+              var persianDateValue = '';
+              
+              // Convert Gregorian to Persian if initial value exists
+              if (initialValue && initialValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                try {
+                  var parts = initialValue.split('-');
+                  var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                  if (typeof persianDate !== 'undefined') {
+                    var pDate = persianDate.fromGregorian(gregorianDate);
+                    persianDateValue = pDate.format('YYYY/MM/DD');
+                    inquiryDateInput.val(persianDateValue);
+                  }
+                } catch(e) {
+                  console.error('[PI] Error converting date:', e);
                 }
-              } catch(e) { /* ignore */ }
+              }
+              
+              // Create hidden input for Gregorian date submission
+              var hiddenInput = jQuery('<input>', {
+                type: 'hidden',
+                id: 'id_inquiry_date_hidden',
+                name: 'inquiry_date'
+              });
+              if (initialValue) {
+                hiddenInput.val(initialValue);
+              }
+              inquiryDateInput.after(hiddenInput);
+              inquiryDateInput.removeAttr('name'); // Remove name from visible input
+              
+              // Destroy existing datepicker if any
               try {
-                console.log('[PI] initializing persianDatepicker for', this);
-                $el.persianDatepicker({
-                  format: 'YYYY-MM-DD',
-                  initialValue: false,
-                  initialValueType: 'gregorian',
+                inquiryDateInput.pDatepicker('destroy');
+              } catch(e) {}
+              
+              // Set initial value to today if no value exists
+              if (!persianDateValue && typeof persianDate !== 'undefined') {
+                var today = new persianDate();
+                persianDateValue = today.format('YYYY/MM/DD');
+                inquiryDateInput.val(persianDateValue);
+                
+                // Also set hidden field
+                var todayGregorian = today.toCalendar('gregorian');
+                var gregorianFormatted = todayGregorian.year + '-' + 
+                                        String(todayGregorian.month).padStart(2, '0') + '-' + 
+                                        String(todayGregorian.day).padStart(2, '0');
+                if (hiddenInput && hiddenInput.length) {
+                  hiddenInput.val(gregorianFormatted);
+                }
+              }
+              
+              // Initialize Persian datepicker
+              try {
+                inquiryDateInput.pDatepicker({
+                  observer: true,
+                  format: 'YYYY/MM/DD',
+                  altField: '#id_inquiry_date_hidden',
+                  altFormat: 'YYYY-MM-DD',
+                  calendarType: 'persian',
+                  initialValue: true,
+                  initialValueType: 'persian',
                   autoClose: true,
-                  observer: true
+                  timePicker: {
+                    enabled: false
+                  },
+                  onSelect: function() {
+                    var selectedDate = inquiryDateInput.val();
+                    if (selectedDate && typeof persianDate !== 'undefined') {
+                      try {
+                        var persianDateParts = selectedDate.split('/');
+                        if (persianDateParts.length === 3) {
+                          var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                          var gregorianDate = persianDateObj.toCalendar('gregorian');
+                          var formattedDate = gregorianDate.year + '-' + 
+                                             String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                             String(gregorianDate.day).padStart(2, '0');
+                          
+                          hiddenInput.val(formattedDate);
+                        }
+                      } catch (e) {
+                        console.error('[PI] Error converting date:', e);
+                      }
+                    }
+                  }
                 });
-              } catch(e) { console.error('Persian datepicker init error:', e); }
-            });
+                console.log('[PI] Datepicker initialized successfully');
+              } catch(e) {
+                console.error('[PI] Persian datepicker init error:', e);
+              }
+              
+              // Add calendar icon
+              if (!inquiryDateInput.parent().find('.p-datepicker-trigger').length) {
+                var iconSpan = jQuery('<span>', {
+                  class: 'p-datepicker-trigger',
+                  html: '📅',
+                  css: {
+                    'position': 'absolute',
+                    'right': '10px',
+                    'top': '50%',
+                    'transform': 'translateY(-50%)',
+                    'cursor': 'pointer',
+                    'font-size': '1.2rem',
+                    'z-index': '10',
+                    'pointer-events': 'none'
+                  }
+                });
+                inquiryDateInput.parent().css('position', 'relative');
+                inquiryDateInput.parent().append(iconSpan);
+              }
+            }
           } else {
-            console.warn('persianDatepicker not available');
+            console.warn('[PI] pDatepicker not available');
           }
 
           function fillFormFromRow(tr){
             if (!tr) return;
             pkInput.value = tr.dataset.pk || '';
             const tds = tr.querySelectorAll('td');
-            const setVal = (name, idx) => { const el = form.querySelector(`[name="${name}"]`); if (el && tds[idx]) el.value = tds[idx].textContent.trim(); };
-            setVal('inquiry_date',0);
-            // If inquiry_date came from table as Gregorian, convert to Jalali for the input
-            try {
-              const idEl = form.querySelector('[name="inquiry_date"]');
-              const s = (idEl && idEl.value) ? idEl.value.trim() : '';
-              if (idEl && /^\d{4}-\d{2}-\d{2}$/.test(s) && !/^(13|14)\d{2}-/.test(s) && typeof persianDate !== 'undefined') {
-                const g = new Date(s);
-                if (!isNaN(g)) idEl.value = new persianDate(g).format('YYYY-MM-DD');
+            
+            // Handle date field with proper conversion
+            const dateStr = tds[0] ? tds[0].textContent.trim() : '';
+            const dateEl = jQuery('#id_inquiry_date');
+            const hiddenDateEl = jQuery('#id_inquiry_date_hidden');
+            if (dateStr && dateEl.length) {
+              // Check if it's in Persian format (1403/09/20) or Gregorian (2024-12-10)
+              if (/^\d{4}\/\d{2}\/\d{2}$/.test(dateStr)) {
+                // Already Persian format
+                dateEl.val(dateStr);
+                // Convert to Gregorian for hidden field
+                if (typeof persianDate !== 'undefined' && hiddenDateEl.length) {
+                  try {
+                    const pDate = persianDate.fromString(dateStr, 'YYYY/MM/DD');
+                    const gDate = pDate.toCalendar('gregorian');
+                    hiddenDateEl.val(gDate.year + '-' + String(gDate.month).padStart(2, '0') + '-' + String(gDate.day).padStart(2, '0'));
+                  } catch(e) {}
+                }
+              } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                // Gregorian format - convert to Persian
+                hiddenDateEl.val(dateStr);
+                if (typeof persianDate !== 'undefined') {
+                  try {
+                    const parts = dateStr.split('-');
+                    const gDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    const pDate = persianDate.fromGregorian(gDate);
+                    dateEl.val(pDate.format('YYYY/MM/DD'));
+                  } catch(e) {}
+                }
               }
-            } catch(e) { /* ignore */ }
+            }
+            
             const supplierSelect = form.querySelector('[name="supplier"]');
             if (supplierSelect && tds[1]) {
               const supplierName = tds[1].textContent.trim();
               Array.from(supplierSelect.options).forEach(o=>{ if (o.text.trim()===supplierName) supplierSelect.value=o.value; });
             }
+            
+            const setVal = (name, idx) => { const el = form.querySelector(`[name="${name}"]`); if (el && tds[idx]) el.value = tds[idx].textContent.trim(); };
             setVal('price',2);
             setVal('delivery_terms',4);
             setVal('loading_location',5);
@@ -910,6 +1123,50 @@
           if (saveBtn){
             saveBtn.onclick = async function(){
               console.log('[PI] save click');
+              
+              // Client-side validation for required fields
+              let hasErrors = false;
+              const requiredFields = [
+                { name: 'inquiry_date', label: 'تاریخ', hiddenName: 'id_inquiry_date_hidden' },
+                { name: 'supplier', label: 'تامین کننده' },
+                { name: 'price', label: 'قیمت' },
+                { name: 'delivery_terms', label: 'شرایط تحویل' },
+                { name: 'loading_location', label: 'محل بارگیری' }
+              ];
+              
+              // Clear previous error messages
+              form.querySelectorAll('.field-error').forEach(el => el.remove());
+              form.querySelectorAll('input, select, textarea').forEach(el => {
+                el.style.borderColor = '';
+              });
+              
+              requiredFields.forEach(field => {
+                const fieldName = field.hiddenName || field.name;
+                const input = form.querySelector(`[name="${fieldName}"], #${fieldName}`);
+                if (input && !input.value.trim()) {
+                  hasErrors = true;
+                  input.style.borderColor = '#c62828';
+                  const fieldDiv = input.closest('.field');
+                  if (fieldDiv) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'field-error';
+                    errorDiv.style.cssText = 'color:#c62828;font-size:.8rem;margin-top:4px';
+                    errorDiv.textContent = `${field.label} الزامی است.`;
+                    fieldDiv.appendChild(errorDiv);
+                  }
+                }
+              });
+              
+              if (hasErrors) {
+                console.log('[PI] Validation failed - required fields missing');
+                // Scroll to first error
+                const firstError = form.querySelector('.field-error');
+                if (firstError) {
+                  firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return;
+              }
+              
               const fd = new FormData(form);
               try {
                 const resp = await fetch(url, { method:'POST', body: fd, headers:{'X-Requested-With':'XMLHttpRequest'} });
