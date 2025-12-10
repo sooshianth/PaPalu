@@ -35,34 +35,17 @@ import json
 import jdatetime
 
 
-def get_or_create_company():
+def get_company_info():
     """
-    دریافت یا ایجاد شرکت تامین نهاده سیمرغ
+    دریافت اطلاعات شرکت از مدل CompanyInfo
     """
-    company_name = 'تامین نهاده سیمرغ'
-    
-    # جستجو برای پیدا کردن شرکت
-    company = Person.objects.filter(name=company_name).first()
-    
-    if not company:
-        # اگر شرکت پیدا نشد، ایجاد می‌کنیم
-        try:
-            company = Person.objects.create(
-                national_id='0000000000',
-                name=company_name,
-                type='supplier',
-                nature='legal'
-            )
-        except Exception as e:
-            # اگر national_id تکراری بود، سعی می‌کنیم پیدا کنیم
-            company = Person.objects.filter(name__icontains='تامین نهاده').first()
-    
-    return company
+    from core.CompanyFolder.CompanyInfoModel import CompanyInfo
+    return CompanyInfo.get_company_info()
 
 
 def get_person_complete_info(person):
     """
-    دریافت اطلاعات کامل یک شخص (تامین‌کننده یا شرکت)
+    دریافت اطلاعات کامل یک شخص (تامین‌کننده)
     شامل: نام، شماره اقتصادی، شماره ملی، شماره ثبت شرکت، آدرس، کدپستی، شماره تلفن
     """
     if not person:
@@ -103,6 +86,28 @@ def get_person_complete_info(person):
     }
     
     return info
+
+
+def get_company_complete_info():
+    """
+    دریافت اطلاعات کامل شرکت از مدل CompanyInfo
+    """
+    from core.CompanyFolder.CompanyInfoModel import CompanyInfo
+    company_info = CompanyInfo.get_company_info()
+    
+    return {
+        'name': company_info.name or '-',
+        'national_id': company_info.national_id or '-',
+        'registration_number': company_info.registration_number or '-',
+        'economic_code': company_info.economic_code or '-',
+        'address': company_info.tax_address or company_info.address or '-',
+        'postal_code': company_info.tax_postal_code or company_info.postal_code or '-',
+        'phone_number': company_info.phone_number or '-',
+        'phone_type': 'تلفن',
+        'tax_province': company_info.tax_province or '-',
+        'tax_city': company_info.tax_city or '-',
+        'tax_group': '-',
+    }
 
 
 def get_accessible_invoice_fields_for_view(user):
@@ -198,9 +203,8 @@ def invoice_create_view(request):
             try:
                 with transaction.atomic():
                     invoice = form.save(commit=False)
-                    # اگر company هنوز تنظیم نشده، تنظیم می‌کنیم
-                    if not invoice.company:
-                        invoice.company = get_or_create_company()
+                    # company از طریق Person تنظیم می‌شود (برای سازگاری با کد قدیمی)
+                    # اما اطلاعات شرکت از CompanyInfo گرفته می‌شود
                     invoice.save()
 
                 bug_logger.info(f"فاکتور {invoice.tax_invoice_number or invoice.id} با موفقیت ایجاد شد")
@@ -216,11 +220,10 @@ def invoice_create_view(request):
         temp_form = CreateInvoiceForm()
         access_map = get_accessible_invoice_fields(request.user, temp_form)
         form = CreateInvoiceForm(user=request.user, accessible_fields=access_map)
-        # تنظیم company به صورت خودکار
-        company = get_or_create_company()
-        if company:
-            form.initial['company'] = company
-            form.company_display = company
+        # company_display از CompanyInfo گرفته می‌شود
+        company_info = get_company_info()
+        if company_info:
+            form.company_display = company_info
 
     context = {
         'form': form,
@@ -275,11 +278,14 @@ def invoice_detail_view(request, invoice_id):
         form = CreateInvoiceForm(instance=invoice, user=request.user, accessible_fields=access_map)
         # تنظیم company_display برای نمایش در تمپلیت
         if invoice.company:
-            form.company_display = invoice.company
+            # company_display از CompanyInfo گرفته می‌شود
+            company_info = get_company_info()
+            if company_info:
+                form.company_display = company_info
         else:
-            company = get_or_create_company()
-            if company:
-                form.company_display = company
+            company_info = get_company_info()
+            if company_info:
+                form.company_display = company_info
 
     # دریافت اطلاعات سفارش
     order = invoice.order
@@ -300,7 +306,7 @@ def invoice_detail_view(request, invoice_id):
 
     # دریافت اطلاعات کامل تامین‌کننده و شرکت
     customer_info = get_person_complete_info(invoice.customer) if invoice.customer else None
-    company_info = get_person_complete_info(invoice.company) if invoice.company else None
+    company_info = get_company_complete_info()
     
     # بررسی وضعیت تسویه
     settlement_completed = invoice.is_settlement_completed()
@@ -497,7 +503,7 @@ def invoice_download_pdf(request, invoice_id):
         
         # دریافت اطلاعات کامل مشتری و شرکت
         customer_info = get_person_complete_info(invoice.customer) if invoice.customer else None
-        company_info = get_person_complete_info(invoice.company) if invoice.company else None
+        company_info = get_company_complete_info()
         
         # رندر HTML
         from django.template.loader import render_to_string

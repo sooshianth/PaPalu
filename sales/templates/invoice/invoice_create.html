@@ -268,6 +268,22 @@
 <script>
 // مدیریت autocomplete برای انتخاب سفارش خرید
 document.addEventListener('DOMContentLoaded', function() {
+    // لود کردن ملاحظات فاکتور از CompanyInfo
+    const descriptionTextarea = document.querySelector('textarea[name="description"]');
+    if (descriptionTextarea) {
+        fetch('{% url "sales:get_company_notes_api" note_type="invoice" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.notes && !descriptionTextarea.value.trim()) {
+                    // فقط اگر فیلد خالی است، ملاحظات را پر کن
+                    descriptionTextarea.value = data.notes;
+                }
+            })
+            .catch(error => {
+                console.error('خطا در دریافت ملاحظات فاکتور:', error);
+            });
+    }
+    
     const orderInput = document.querySelector('input[name="order"]');
     const orderIdInput = document.querySelector('input[name="order_id"]');
     const customerInput = document.querySelector('input[name="customer"]');

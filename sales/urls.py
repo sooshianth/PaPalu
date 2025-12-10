@@ -44,6 +44,8 @@ urlpatterns = [
     
     # API برای دریافت اطلاعات سفارش
     path('api/order/<str:order_number>/customer/', proforma_list_view.get_order_customer_api, name='get_order_customer_api'),
+    # API برای دریافت ملاحظات شرکت
+    path('api/company/notes/<str:note_type>/', proforma_list_view.get_company_notes_api, name='get_company_notes_api'),
     path('api/purchase-order/<str:order_number>/customer/', invoice_list_view.get_order_customer_api, name='get_purchase_order_customer_api'),
     
     # API برای جستجوی مشتری‌ها

@@ -248,6 +248,22 @@
 <script>
 // مدیریت autocomplete برای انتخاب سفارش
 document.addEventListener('DOMContentLoaded', function() {
+    // لود کردن ملاحظات پیش فاکتور از CompanyInfo
+    const descriptionTextarea = document.querySelector('textarea[name="description"]');
+    if (descriptionTextarea) {
+        fetch('{% url "sales:get_company_notes_api" note_type="proforma" %}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.notes && !descriptionTextarea.value.trim()) {
+                    // فقط اگر فیلد خالی است، ملاحظات را پر کن
+                    descriptionTextarea.value = data.notes;
+                }
+            })
+            .catch(error => {
+                console.error('خطا در دریافت ملاحظات پیش فاکتور:', error);
+            });
+    }
+    
     const orderInput = document.querySelector('input[name="order"]');
     const orderIdInput = document.querySelector('input[name="order_id"]');
     const customerInput = document.querySelector('input[name="customer"]');

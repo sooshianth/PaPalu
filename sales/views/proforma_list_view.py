@@ -5,6 +5,7 @@ from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.db import transaction
 from django.db.models import Q, Sum
 from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods
 import logging
 from core.logging_levels import *
 import django_tables2 as tables
@@ -32,36 +33,17 @@ import json
 import jdatetime
 
 
-def get_or_create_company():
+def get_company_info():
     """
-    دریافت یا ایجاد شرکت تامین نهاده سیمرغ
+    دریافت اطلاعات شرکت از مدل CompanyInfo
     """
-    company_name = 'تامین نهاده سیمرغ'
-    
-    # جستجو برای پیدا کردن شرکت
-    company = Person.objects.filter(name=company_name).first()
-    
-    if not company:
-        # اگر شرکت پیدا نشد، ایجاد می‌کنیم
-        # استفاده از یک national_id موقت
-        # در واقع باید این را از settings دریافت کنیم
-        try:
-            company = Person.objects.create(
-                national_id='0000000000',  # باید یک کد ملی معتبر باشد
-                name=company_name,
-                type='supplier',
-                nature='legal'
-            )
-        except Exception as e:
-            # اگر national_id تکراری بود، سعی می‌کنیم پیدا کنیم
-            company = Person.objects.filter(name__icontains='تامین نهاده').first()
-    
-    return company
+    from core.CompanyFolder.CompanyInfoModel import CompanyInfo
+    return CompanyInfo.get_company_info()
 
 
 def get_person_complete_info(person):
     """
-    دریافت اطلاعات کامل یک شخص (مشتری یا شرکت)
+    دریافت اطلاعات کامل یک شخص (مشتری)
     شامل: نام، شماره اقتصادی، شماره ملی، شماره ثبت شرکت، آدرس، کدپستی، شماره تلفن
     """
     if not person:
@@ -101,6 +83,27 @@ def get_person_complete_info(person):
     }
     
     return info
+
+
+def get_company_complete_info():
+    """
+    دریافت اطلاعات کامل شرکت از مدل CompanyInfo
+    """
+    from core.CompanyFolder.CompanyInfoModel import CompanyInfo
+    company_info = CompanyInfo.get_company_info()
+    
+    return {
+        'name': company_info.name or '-',
+        'national_id': company_info.national_id or '-',
+        'registration_number': company_info.registration_number or '-',
+        'economic_code': company_info.economic_code or '-',
+        'address': company_info.tax_address or company_info.address or '-',
+        'postal_code': company_info.tax_postal_code or company_info.postal_code or '-',
+        'phone_number': company_info.phone_number or '-',
+        'phone_type': 'تلفن',
+        'tax_province': company_info.tax_province or '-',
+        'tax_city': company_info.tax_city or '-',
+    }
 
 
 def get_accessible_proforma_fields_for_view(user):
@@ -194,9 +197,8 @@ def proforma_create_view(request):
             try:
                 with transaction.atomic():
                     proforma = form.save(commit=False)
-                    # اگر company هنوز تنظیم نشده، تنظیم می‌کنیم
-                    if not proforma.company:
-                        proforma.company = get_or_create_company()
+                    # company از طریق Person تنظیم می‌شود (برای سازگاری با کد قدیمی)
+                    # اما اطلاعات شرکت از CompanyInfo گرفته می‌شود
                     proforma.save()
 
                     # تغییر وضعیت سفارش به "در انتظار آپلود پیش فاکتور مشتری"
@@ -217,11 +219,10 @@ def proforma_create_view(request):
         temp_form = CreateProformaForm()
         access_map = get_accessible_proforma_fields(request.user, temp_form)
         form = CreateProformaForm(user=request.user, accessible_fields=access_map)
-        # تنظیم company به صورت خودکار - company_display توسط فرم تنظیم می‌شود
-        company = get_or_create_company()
-        if company:
-            form.initial['company'] = company
-            form.company_display = company
+        # company_display از CompanyInfo گرفته می‌شود
+        company_info = get_company_info()
+        if company_info:
+            form.company_display = company_info
 
     context = {
         'form': form,
@@ -274,13 +275,10 @@ def proforma_detail_view(request, proforma_id):
         temp_form = CreateProformaForm(instance=proforma)
         access_map = get_accessible_proforma_fields(request.user, temp_form)
         form = CreateProformaForm(instance=proforma, user=request.user, accessible_fields=access_map)
-        # تنظیم company_display برای نمایش در تمپلیت
-        if proforma.company:
-            form.company_display = proforma.company
-        else:
-            company = get_or_create_company()
-            if company:
-                form.company_display = company
+        # تنظیم company_display برای نمایش در تمپلیت (از CompanyInfo)
+        company_info = get_company_info()
+        if company_info:
+            form.company_display = company_info
 
     # دریافت اطلاعات سفارش
     order = proforma.order
@@ -308,7 +306,7 @@ def proforma_detail_view(request, proforma_id):
 
     # دریافت اطلاعات کامل مشتری و شرکت
     customer_info = get_person_complete_info(proforma.customer) if proforma.customer else None
-    company_info = get_person_complete_info(proforma.company) if proforma.company else None
+    company_info = get_company_complete_info()
 
     context = {
         'proforma': proforma,
@@ -357,6 +355,34 @@ def order_search_api(request):
         })
     
     return JsonResponse({'results': results})
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_company_notes_api(request, note_type='proforma'):
+    """
+    API endpoint برای دریافت ملاحظات شرکت (پیش فاکتور یا فاکتور)
+    """
+    audit_logger.info(f"درخواست دریافت ملاحظات {note_type}")
+    
+    try:
+        from core.CompanyFolder.CompanyInfoModel import CompanyInfo
+        company_info = CompanyInfo.get_company_info()
+        
+        if note_type == 'proforma':
+            notes = company_info.proforma_notes or ''
+        elif note_type == 'invoice':
+            notes = company_info.invoice_notes or ''
+        else:
+            notes = ''
+        
+        return JsonResponse({
+            'notes': notes,
+            'note_type': note_type
+        })
+    except Exception as e:
+        bug_logger.error(f"خطا در دریافت ملاحظات شرکت: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
 
 
 @login_required
@@ -442,7 +468,7 @@ def proforma_download_pdf(request, proforma_id):
         
         # دریافت اطلاعات کامل مشتری و شرکت
         customer_info = get_person_complete_info(proforma.customer) if proforma.customer else None
-        company_info = get_person_complete_info(proforma.company) if proforma.company else None
+        company_info = get_company_complete_info()
         
         # رندر HTML
         from django.template.loader import render_to_string
