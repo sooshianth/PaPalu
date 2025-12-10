@@ -28,19 +28,59 @@
     
     .form-section {
         background: var(--gray-100);
-        padding: 25px;
+        padding: 0;
         border-radius: 10px;
         margin-bottom: 25px;
         border-right: 4px solid var(--primary-green);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
     }
     
     .form-section h5 {
         color: var(--primary-green);
         font-size: 1.2rem;
         font-weight: 600;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid var(--light-green);
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-content {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    
+    .form-section.collapsed .form-section-content {
+        max-height: 0;
+        padding: 0 25px;
     }
     
     .form-label {
@@ -217,8 +257,17 @@
             padding: 20px;
         }
         
-        .form-section {
-            padding: 15px;
+        .form-section-header {
+            padding: 18px 20px;
+            min-height: 50px;
+        }
+        
+        .form-section-content {
+            padding: 0 20px 20px 20px;
+        }
+        
+        .form-section.collapsed .form-section-content {
+            padding: 0 20px;
         }
         
         .form-actions {
@@ -251,12 +300,28 @@
         
         <!-- اطلاعات اجباری محصول -->
         <div class="form-section">
-            <h5>اطلاعات اجباری محصول</h5>
-            <div class="row">
+            <div class="form-section-header">
+                <h5>اطلاعات اجباری محصول</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
                 {% if accessible_fields.code and 'code' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ product_form.code.label }}</label>
-                    {{ product_form.code }}
+                    <div style="display: flex; gap: 10px; align-items: flex-start;">
+                        <div style="flex: 1;">
+                            {{ product_form.code }}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="generate-product-code-btn" title="تولید شناسه جدید">
+                            <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </button>
+                    </div>
                     {% if product_form.code.errors %}
                         <div class="text-danger">{{ product_form.code.errors.0 }}</div>
                     {% endif %}
@@ -377,20 +442,30 @@
 
                 {% if accessible_fields.expiration_date and 'expiration_date' in product_form.fields %}
                 <div class="col-md-6 mb-3">
-                    <label class="form-label required-field">{{ product_form.expiration_date.label }}</label>
+                    <label class="form-label">{{ product_form.expiration_date.label }}</label>
                     {{ product_form.expiration_date }}
+                    {% if product_form.expiration_date.help_text %}
+                        <small class="form-text text-muted">{{ product_form.expiration_date.help_text }}</small>
+                    {% endif %}
                     {% if product_form.expiration_date.errors %}
                         <div class="text-danger">{{ product_form.expiration_date.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
+                </div>
             </div>
         </div>
 
         <!-- اطلاعات اختیاری محصول -->
         <div class="form-section">
-            <h5>اطلاعات اختیاری محصول</h5>
-            <div class="row">
+            <div class="form-section-header">
+                <h5>اطلاعات اختیاری محصول</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
                 {% if accessible_fields.pellet_granule_diameter and 'pellet_granule_diameter' in product_form.fields %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ product_form.pellet_granule_diameter.label }}</label>
@@ -438,23 +513,158 @@
                     {% endif %}
                 </div>
                 {% endif %}
+                </div>
             </div>
         </div>
 
-        <!-- اطلاعات تولید (Formset) -->
+        <!-- اطلاعات فروش و مالی -->
         <div class="form-section">
-            <h5>اطلاعات تولید</h5>
-            <div id="production-info-formset">
+            <div class="form-section-header">
+                <h5>اطلاعات فروش و مالی </h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                {% if accessible_fields.min_sales_amount and 'min_sales_amount' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.min_sales_amount.label }}</label>
+                    {{ product_form.min_sales_amount }}
+                    {% if product_form.min_sales_amount.errors %}
+                        <div class="text-danger">{{ product_form.min_sales_amount.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.tax_percentage and 'tax_percentage' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.tax_percentage.label }}</label>
+                    {{ product_form.tax_percentage }}
+                    {% if product_form.tax_percentage.errors %}
+                        <div class="text-danger">{{ product_form.tax_percentage.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.reserve_deposit and 'reserve_deposit' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.reserve_deposit.label }}</label>
+                    {{ product_form.reserve_deposit }}
+                    {% if product_form.reserve_deposit.errors %}
+                        <div class="text-danger">{{ product_form.reserve_deposit.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.tax_code and 'tax_code' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.tax_code.label }}</label>
+                    {{ product_form.tax_code }}
+                    {% if product_form.tax_code.errors %}
+                        <div class="text-danger">{{ product_form.tax_code.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.accounting_code and 'accounting_code' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.accounting_code.label }}</label>
+                    {{ product_form.accounting_code }}
+                    {% if product_form.accounting_code.errors %}
+                        <div class="text-danger">{{ product_form.accounting_code.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.min_inventory and 'min_inventory' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.min_inventory.label }}</label>
+                    {{ product_form.min_inventory }}
+                    {% if product_form.min_inventory.errors %}
+                        <div class="text-danger">{{ product_form.min_inventory.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.default_warehouse and 'default_warehouse' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.default_warehouse.label }}</label>
+                    {{ product_form.default_warehouse }}
+                    {% if product_form.default_warehouse.help_text %}
+                        <small class="form-text text-muted">{{ product_form.default_warehouse.help_text }}</small>
+                    {% endif %}
+                    {% if product_form.default_warehouse.errors %}
+                        <div class="text-danger">{{ product_form.default_warehouse.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.production_order_point and 'production_order_point' in product_form.fields %}
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">{{ product_form.production_order_point.label }}</label>
+                    {{ product_form.production_order_point }}
+                    {% if product_form.production_order_point.errors %}
+                        <div class="text-danger">{{ product_form.production_order_point.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.transport_conditions and 'transport_conditions' in product_form.fields %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ product_form.transport_conditions.label }}</label>
+                    {{ product_form.transport_conditions }}
+                    {% if product_form.transport_conditions.errors %}
+                        <div class="text-danger">{{ product_form.transport_conditions.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_fields.storage_conditions and 'storage_conditions' in product_form.fields %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ product_form.storage_conditions.label }}</label>
+                    {{ product_form.storage_conditions }}
+                    {% if product_form.storage_conditions.errors %}
+                        <div class="text-danger">{{ product_form.storage_conditions.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- اطلاعات تولید و BOM (فرمول و مواد اولیه به هم وصل) -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>فرمول‌های تولید و مواد اولیه (BOM)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+            <div id="production-formset-container">
                 {{ production_info_formset.management_form }}
-                {% for form in production_info_formset %}
-                <div class="formset-row" data-form-index="{{ forloop.counter0 }}">
-                    {{ form.id }}
+                {% for prod_form in production_info_formset %}
+                <div class="production-bom-group" data-production-index="{{ forloop.counter0 }}" style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border: 2px solid var(--primary-green);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h6 style="color: var(--primary-green); margin: 0;">فرمول تولید #{{ forloop.counter }}</h6>
+                        {{ prod_form.id }}
+                        {{ prod_form.DELETE }}
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-production-btn" data-production-index="{{ forloop.counter0 }}" title="حذف این فرمول">
+                            <svg style="width: 16px; height: 16px; margin-left: 5px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            حذف فرمول
+                        </button>
+                    </div>
+                    
+                    <!-- اطلاعات فرمول -->
                     <div class="row">
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label required-field">{{ form.formula_id.label }}</label>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">{{ prod_form.formula_id.label }}</label>
                             <div style="display: flex; gap: 10px; align-items: flex-start;">
                                 <div style="flex: 1;">
-                                    {{ form.formula_id }}
+                                    {{ prod_form.formula_id }}
                                 </div>
                                 <button type="button" class="btn btn-sm btn-outline-secondary generate-formula-id-btn" data-form-index="{{ forloop.counter0 }}" title="تولید شناسه فرمول جدید">
                                     <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -463,87 +673,83 @@
                                     </svg>
                                 </button>
                             </div>
-                            {% if form.formula_id.errors %}
-                                <div class="text-danger">{{ form.formula_id.errors.0 }}</div>
+                            {% if prod_form.formula_id.errors %}
+                                <div class="text-danger">{{ prod_form.formula_id.errors.0 }}</div>
                             {% endif %}
                         </div>
 
-                        <div class="col-md-4 mb-3">
-                            <label class="form-label required-field">{{ form.min_batch_production.label }}</label>
-                            {{ form.min_batch_production }}
-                            {% if form.min_batch_production.errors %}
-                                <div class="text-danger">{{ form.min_batch_production.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label">حذف</label>
-                            <div style="margin-top: 30px;">
-                                {{ form.DELETE }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-12 mb-3">
-                            <label class="form-label required-field">{{ form.specific_production_instruction.label }}</label>
-                            {{ form.specific_production_instruction }}
-                            {% if form.specific_production_instruction.errors %}
-                                <div class="text-danger">{{ form.specific_production_instruction.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            <button type="button" class="btn btn-success btn-sm btn-add" id="add-production-info">
-                <svg style="width: 16px; height: 16px; margin-left: 5px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                افزودن اطلاعات تولید
-            </button>
-        </div>
-
-        <!-- اطلاعات BOM (Formset) -->
-        <div class="form-section">
-            <h5>اطلاعات مواد اولیه (BOM)</h5>
-            <div id="bom-formset">
-                {{ bom_formset.management_form }}
-                {% for form in bom_formset %}
-                <div class="formset-row" data-form-index="{{ forloop.counter0 }}">
-                    {{ form.id }}
-                    <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label required-field">{{ form.raw_material.label }}</label>
-                            {{ form.raw_material }}
-                            {% if form.raw_material.errors %}
-                                <div class="text-danger">{{ form.raw_material.errors.0 }}</div>
+                            <label class="form-label required-field">{{ prod_form.min_batch_production.label }}</label>
+                            {{ prod_form.min_batch_production }}
+                            {% if prod_form.min_batch_production.errors %}
+                                <div class="text-danger">{{ prod_form.min_batch_production.errors.0 }}</div>
                             {% endif %}
                         </div>
 
-                        <div class="col-md-3 mb-3">
-                            <label class="form-label required-field">{{ form.quantity.label }}</label>
-                            {{ form.quantity }}
-                            {% if form.quantity.errors %}
-                                <div class="text-danger">{{ form.quantity.errors.0 }}</div>
+                        <div class="col-12 mb-3">
+                            <label class="form-label required-field">{{ prod_form.specific_production_instruction.label }}</label>
+                            {{ prod_form.specific_production_instruction }}
+                            {% if prod_form.specific_production_instruction.errors %}
+                                <div class="text-danger">{{ prod_form.specific_production_instruction.errors.0 }}</div>
                             {% endif %}
                         </div>
-
-                        <div class="col-md-2 mb-3">
-                            <label class="form-label">حذف</label>
-                            <div style="margin-top: 30px;">
-                                {{ form.DELETE }}
+                    </div>
+                    
+                    <!-- BOM های مربوط به این فرمول -->
+                    <div style="background: var(--gray-100); padding: 20px; border-radius: 8px; margin-top: 20px;">
+                        <h6 style="color: var(--gray-800); margin-bottom: 15px; font-weight: 600;">مواد اولیه این فرمول (BOM)</h6>
+                        <div class="bom-formset" data-production-index="{{ forloop.counter0 }}" data-production-id="{{ prod_form.instance.id }}">
+                            {% for bom_form in prod_form.bom_forms %}
+                            <div class="bom-row" data-bom-index="{{ forloop.counter0 }}">
+                                {{ bom_form.id }}
+                                <div class="row">
+                                    <div class="col-md-5 mb-3">
+                                        <label class="form-label required-field">{{ bom_form.raw_material.label }}</label>
+                                        {{ bom_form.raw_material }}
+                                        {% if bom_form.raw_material.errors %}
+                                            <div class="text-danger">{{ bom_form.raw_material.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label required-field">{{ bom_form.quantity.label }}</label>
+                                        {{ bom_form.quantity }}
+                                        {% if bom_form.quantity.errors %}
+                                            <div class="text-danger">{{ bom_form.quantity.errors.0 }}</div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-3 mb-3">
+                                        <label class="form-label">&nbsp;</label>
+                                        <div>
+                                            {{ bom_form.DELETE }}
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-bom-btn" data-production-index="{{ forloop.parentloop.counter0 }}" data-bom-index="{{ forloop.counter0 }}" title="حذف این ماده اولیه">
+                                                <svg style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                                </svg>
+                                                حذف
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
+                            {% endfor %}
                         </div>
+                        <button type="button" class="btn btn-success btn-sm add-bom-btn" data-production-index="{{ forloop.counter0 }}">
+                            <svg style="width: 16px; height: 16px; margin-left: 5px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            افزودن ماده اولیه
+                        </button>
                     </div>
                 </div>
                 {% endfor %}
             </div>
-            <button type="button" class="btn btn-success btn-sm btn-add" id="add-bom">
+            <button type="button" class="btn btn-primary btn-add" id="add-production-info">
                 <svg style="width: 16px; height: 16px; margin-left: 5px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                افزودن ماده اولیه
+                افزودن فرمول تولید جدید
             </button>
+            </div>
         </div>
 
         <!-- دکمه‌های ارسال و لغو -->
@@ -557,72 +763,279 @@
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Persian Date Picker Library -->
-<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 <script>
 $(document).ready(function() {
-    // راه‌اندازی تقویم شمسی برای فیلد تاریخ انقضا
-    var expirationDateInput = $('#id_expiration_date');
+    // متغیرهای global برای مدیریت formset ها
+    var rawMaterialOptions = null;
     
-    if (expirationDateInput.length) {
-        expirationDateInput.attr('type', 'text');
-        expirationDateInput.attr('readonly', 'readonly');
-        expirationDateInput.css('cursor', 'pointer');
-        
-        // دریافت مقدار اولیه (اگر وجود داشته باشد)
-        var initialValue = expirationDateInput.val();
-        
-        // راه‌اندازی تقویم شمسی
-        expirationDateInput.pDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            altField: '#id_expiration_date',
-            altFormat: 'YYYY-MM-DD',
-            calendarType: 'persian',
-            initialValue: initialValue || false,
-            timePicker: {
-                enabled: false
+    // دریافت لیست مواد اولیه از سرور یکبار برای همه
+    $.ajax({
+        url: '{% url "sales:get_raw_materials_ajax" %}',
+        type: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        success: function(data) {
+            if (data.success && data.raw_materials) {
+                rawMaterialOptions = '<option value="">-- انتخاب کنید --</option>';
+                data.raw_materials.forEach(function(rm) {
+                    rawMaterialOptions += '<option value="' + rm.id + '">' + rm.name + '</option>';
+                });
+                
+                // پر کردن selectهای موجود
+                $('select[name*="raw_material"]').each(function() {
+                    var currentValue = $(this).val();
+                    $(this).html(rawMaterialOptions);
+                    if (currentValue) {
+                        $(this).val(currentValue);
+                    }
+                });
             }
-        });
-    }
+        },
+        error: function() {
+            console.error('خطا در دریافت لیست مواد اولیه');
+        }
+    });
     
-
-
-    // افزودن فرم جدید برای BOM
-    $('#add-bom').click(function() {
-        var formCount = $('#id_bom-TOTAL_FORMS').val();
-        var formHtml = $('#bom-formset .formset-row').first().clone();
-        formHtml.find(':input').each(function() {
-            var name = $(this).attr('name');
-            if (name) {
-                var newName = name.replace(/bom-\d+-/, 'bom-' + formCount + '-');
-                $(this).attr('name', newName);
-                var id = $(this).attr('id');
-                if (id) {
-                    $(this).attr('id', id.replace(/id_bom-\d+-/, 'id_bom-' + formCount + '-'));
+    // افزودن BOM جدید به یک فرمول مشخص
+    $(document).on('click', '.add-bom-btn', function() {
+        var productionIndex = $(this).data('production-index');
+        var bomFormset = $('.bom-formset[data-production-index="' + productionIndex + '"]');
+        var totalFormsInput = $('#id_bom-TOTAL_FORMS');
+        var formCount = parseInt(totalFormsInput.val());
+        
+        var newBomRow = `
+            <div class="bom-row" data-bom-index="${formCount}">
+                <div class="row">
+                    <div class="col-md-5 mb-3">
+                        <label class="form-label required-field">ماده اولیه</label>
+                        <select name="bom-${formCount}-raw_material" 
+                                id="id_bom-${formCount}-raw_material" 
+                                class="form-control bom-raw-material-select"
+                                data-production-index="${productionIndex}">
+                            ${rawMaterialOptions || '<option value="">-- انتخاب کنید --</option>'}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label required-field">مقدار (کیلوگرم)</label>
+                        <input type="number" 
+                               name="bom-${formCount}-quantity" 
+                               id="id_bom-${formCount}-quantity" 
+                               class="form-control" 
+                               step="0.001" 
+                               placeholder="مقدار">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <input type="checkbox" 
+                                   name="bom-${formCount}-DELETE" 
+                                   id="id_bom-${formCount}-DELETE"
+                                   style="display: none;">
+                            <button type="button" 
+                                    class="btn btn-sm btn-outline-danger delete-bom-btn" 
+                                    data-production-index="${productionIndex}" 
+                                    data-bom-index="${formCount}"
+                                    title="حذف این ماده اولیه">
+                                <svg style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                حذف
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        bomFormset.append(newBomRow);
+        totalFormsInput.val(formCount + 1);
+    });
+    
+    // حذف BOM با دکمه
+    $(document).on('click', '.delete-bom-btn', function() {
+        var bomRow = $(this).closest('.bom-row');
+        var deleteCheckbox = bomRow.find('input[type="checkbox"][name*="-DELETE"]');
+        
+        if (deleteCheckbox.length > 0) {
+            // اگر از دیتابیس بود، checkbox را check کن و ردیف را مخفی کن
+            deleteCheckbox.prop('checked', true);
+            bomRow.hide();
+        } else {
+            // اگر جدید است، فقط حذفش کن
+            bomRow.remove();
+        }
+    });
+    
+    // حذف فرمول تولید با دکمه
+    $(document).on('click', '.delete-production-btn', function() {
+        var productionGroup = $(this).closest('.production-bom-group');
+        var productionIndex = $(this).data('production-index');
+        
+        // بررسی اینکه آیا این فرمول ذخیره شده در دیتابیس است یا نه
+        var deleteCheckbox = productionGroup.find('input[type="checkbox"][name="production_info-' + productionIndex + '-DELETE"]');
+        
+        if (deleteCheckbox.length > 0) {
+            // اگر از دیتابیس بود، checkbox را check کن و گروه را مخفی کن
+            deleteCheckbox.prop('checked', true);
+            productionGroup.hide();
+        } else {
+            // اگر جدید است، فقط حذفش کن
+            productionGroup.remove();
+        }
+    });
+    
+    // جلوگیری از تکراری شدن مواد اولیه در هر فرمول
+    $(document).on('change', '.bom-raw-material-select', function() {
+        var productionIndex = $(this).data('production-index');
+        var selectedValue = $(this).val();
+        var currentSelect = $(this);
+        
+        if (!selectedValue) return;
+        
+        // بررسی تکراری بودن در همان فرمول
+        var isDuplicate = false;
+        $('.bom-formset[data-production-index="' + productionIndex + '"]').find('.bom-raw-material-select').each(function() {
+            if ($(this)[0] !== currentSelect[0] && $(this).val() === selectedValue) {
+                // بررسی اینکه ردیف حذف نشده باشد
+                var isDeleted = $(this).closest('.bom-row').find('input[name*="_DELETE"]').prop('checked');
+                if (!isDeleted) {
+                    isDuplicate = true;
+                    return false;
                 }
             }
         });
-        formHtml.find('label').each(function() {
-            var forAttr = $(this).attr('for');
-            if (forAttr) {
-                $(this).attr('for', forAttr.replace(/id_bom-\d+-/, 'id_bom-' + formCount + '-'));
-            }
-        });
-        formHtml.find('[name*="-DELETE"]').prop('checked', false);
-        formHtml.find('input[type!="hidden"], textarea, select').val('');
-        formHtml.find('input[type="hidden"][name*="-id"]').remove();
-        formHtml.find('[data-form-index]').attr('data-form-index', formCount);
-        $('#bom-formset').append(formHtml);
-        $('#id_bom-TOTAL_FORMS').val(parseInt(formCount) + 1);
+        
+        if (isDuplicate) {
+            alert('این ماده اولیه قبلاً در این فرمول انتخاب شده است. لطفاً ماده اولیه دیگری انتخاب کنید.');
+            currentSelect.val('');
+            currentSelect.focus();
+        }
     });
     
-    // تابع تولید شناسه فرمول
-    function generateFormulaId(formIndex) {
-        var btn = $('.generate-formula-id-btn[data-form-index="' + formIndex + '"]');
+    // تولید شناسه محصول جدید
+    $('#generate-product-code-btn').click(function() {
+        var btn = $(this);
+        btn.prop('disabled', true);
+        btn.html('<span style="font-size: 12px;">...</span>');
+        
+        $.ajax({
+            url: '{% url "sales:generate_product_code_ajax" %}',
+            type: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(data) {
+                if (data.success) {
+                    $('#id_code').val(data.code);
+                } else {
+                    alert('خطا در تولید شناسه محصول: ' + (data.error || 'خطای نامشخص'));
+                }
+            },
+            error: function() {
+                alert('خطا در ارتباط با سرور');
+            },
+            complete: function() {
+                btn.prop('disabled', false);
+                btn.html('<svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+            }
+        });
+    });
+    
+    // افزودن فرمول تولید جدید
+    $('#add-production-info').click(function() {
+        var totalFormsInput = $('#id_production_info-TOTAL_FORMS');
+        var formCount = parseInt(totalFormsInput.val());
+        
+        var newProductionGroup = `
+            <div class="production-bom-group" data-production-index="${formCount}" style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border: 2px solid var(--primary-green);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h6 style="color: var(--primary-green); margin: 0;">فرمول تولید #${formCount + 1}</h6>
+                    <input type="checkbox" name="production_info-${formCount}-DELETE" id="id_production_info-${formCount}-DELETE" style="display: none;">
+                    <button type="button" class="btn btn-sm btn-outline-danger delete-production-btn" data-production-index="${formCount}" title="حذف این فرمول">
+                        <svg style="width: 16px; height: 16px; margin-left: 5px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        حذف فرمول
+                    </button>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">شناسه فرمول</label>
+                        <div style="display: flex; gap: 10px; align-items: flex-start;">
+                            <div style="flex: 1;">
+                                <input type="text" name="production_info-${formCount}-formula_id" id="id_production_info-${formCount}-formula_id" class="form-control" placeholder="شناسه فرمول">
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary generate-formula-id-btn" data-form-index="${formCount}" title="تولید شناسه فرمول جدید">
+                                <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">حداقل بچ تولید (کیلوگرم)</label>
+                        <input type="number" name="production_info-${formCount}-min_batch_production" id="id_production_info-${formCount}-min_batch_production" class="form-control" step="0.01" placeholder="حداقل بچ تولید">
+                    </div>
+
+                    <div class="col-12 mb-3">
+                        <label class="form-label required-field">دستور تولید</label>
+                        <textarea name="production_info-${formCount}-specific_production_instruction" id="id_production_info-${formCount}-specific_production_instruction" class="form-control" rows="3" placeholder="دستور تولید"></textarea>
+                    </div>
+                </div>
+                
+                <div style="background: var(--gray-100); padding: 20px; border-radius: 8px; margin-top: 20px;">
+                    <h6 style="color: var(--gray-800); margin-bottom: 15px; font-weight: 600;">مواد اولیه این فرمول (BOM)</h6>
+                    <div class="bom-formset" data-production-index="${formCount}">
+                        <div class="bom-row" data-bom-index="0">
+                            <div class="row">
+                                <div class="col-md-5 mb-3">
+                                    <label class="form-label required-field">ماده اولیه</label>
+                                    <select name="bom-${formCount}-0-raw_material" id="id_bom-${formCount}-0-raw_material" class="form-control bom-raw-material-select" data-production-index="${formCount}">
+                                        ${rawMaterialOptions || '<option value="">-- انتخاب کنید --</option>'}
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label required-field">مقدار (کیلوگرم)</label>
+                                    <input type="number" name="bom-${formCount}-0-quantity" id="id_bom-${formCount}-0-quantity" class="form-control" step="0.001" placeholder="مقدار">
+                                </div>
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div>
+                                        <input type="checkbox" name="bom-${formCount}-0-DELETE" id="id_bom-${formCount}-0-DELETE" style="display: none;">
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-bom-btn" data-production-index="${formCount}" data-bom-index="0" title="حذف این ماده اولیه">
+                                            <svg style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                            </svg>
+                                            حذف
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-success btn-sm add-bom-btn" data-production-index="${formCount}">
+                        <svg style="width: 16px; height: 16px; margin-left: 5px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        افزودن ماده اولیه
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        $('#production-formset-container').append(newProductionGroup);
+        totalFormsInput.val(formCount + 1);
+    });
+    
+    // تولید شناسه فرمول
+    $(document).on('click', '.generate-formula-id-btn', function() {
+        var formIndex = $(this).data('form-index');
+        var btn = $(this);
         btn.prop('disabled', true);
         btn.html('<span style="font-size: 12px;">...</span>');
         
@@ -647,50 +1060,13 @@ $(document).ready(function() {
                 btn.html('<svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 12H16M12 8V16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
             }
         });
-    }
-    
-    // اضافه کردن event handler برای دکمه‌های تولید شناسه فرمول موجود
-    $('.generate-formula-id-btn').click(function() {
-        var formIndex = $(this).data('form-index');
-        generateFormulaId(formIndex);
     });
     
-    // هنگام افزودن فرم جدید ProductionInfo، دکمه تولید شناسه را اضافه می‌کنیم
-    $('#add-production-info').off('click').on('click', function() {
-        var formCount = $('#id_production_info-TOTAL_FORMS').val();
-        var formHtml = $('#production-info-formset .formset-row').first().clone();
-        formHtml.find(':input').each(function() {
-            var name = $(this).attr('name');
-            if (name) {
-                var newName = name.replace(/production_info-\d+-/, 'production_info-' + formCount + '-');
-                $(this).attr('name', newName);
-                var id = $(this).attr('id');
-                if (id) {
-                    $(this).attr('id', id.replace(/id_production_info-\d+-/, 'id_production_info-' + formCount + '-'));
-                }
-            }
-        });
-        formHtml.find('label').each(function() {
-            var forAttr = $(this).attr('for');
-            if (forAttr) {
-                $(this).attr('for', forAttr.replace(/id_production_info-\d+-/, 'id_production_info-' + formCount + '-'));
-            }
-        });
-        formHtml.find('[name*="-DELETE"]').prop('checked', false);
-        formHtml.find('input[type!="hidden"], textarea, select').val('');
-        formHtml.find('input[type="hidden"][name*="-id"]').remove();
-        formHtml.find('[data-form-index]').attr('data-form-index', formCount);
-        
-        // به‌روزرسانی data-form-index برای دکمه تولید شناسه
-        formHtml.find('.generate-formula-id-btn').attr('data-form-index', formCount);
-        
-        $('#production-info-formset').append(formHtml);
-        $('#id_production_info-TOTAL_FORMS').val(parseInt(formCount) + 1);
-        
-        // اضافه کردن event handler برای دکمه تولید شناسه فرمول در فرم جدید
-        formHtml.find('.generate-formula-id-btn').off('click').on('click', function() {
-            var formIndex = $(this).data('form-index');
-            generateFormulaId(formIndex);
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const section = this.closest('.form-section');
+            section.classList.toggle('collapsed');
         });
     });
 });

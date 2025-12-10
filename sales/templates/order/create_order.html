@@ -317,7 +317,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 const productId = this.value;
                 
                 if (!productId) {
-                    // اگر محصول انتخاب نشده، فیلدها را خالی کن
+                    // اگر محصول انتخاب نشده، فیلدها را خالی کن و dropdown واحد را به حالت پیش‌فرض برگردان
+                    // بازگرداندن dropdown واحد به حالت پیش‌فرض (همه گزینه‌ها)
+                    weightUnitSelect.innerHTML = '';
+                    const defaultUnits = [
+                        {value: 'kg', display: 'کیلوگرم'},
+                        {value: 'ton', display: 'تن'},
+                        {value: 'bag', display: 'کیسه'},
+                        {value: 'piece', display: 'عدد'}
+                    ];
+                    defaultUnits.forEach(function(unit) {
+                        const option = document.createElement('option');
+                        option.value = unit.value;
+                        option.textContent = unit.display;
+                        weightUnitSelect.appendChild(option);
+                    });
                     weightUnitSelect.value = 'kg';
                     unitPriceInput.value = '';
                     if (vatPercentInput) {
@@ -341,11 +355,40 @@ document.addEventListener('DOMContentLoaded', function() {
                             return;
                         }
                         
-                        // پر کردن واحد وزن
-                        if (data.weight_unit && weightUnitSelect) {
-                            weightUnitSelect.value = data.weight_unit;
+                        // به‌روزرسانی dropdown واحد با واحدهای محصول
+                        if (data.available_units && weightUnitSelect) {
+                            // ذخیره مقدار فعلی
+                            const currentValue = weightUnitSelect.value;
+                            
+                            // پاک کردن گزینه‌های قبلی
+                            weightUnitSelect.innerHTML = '';
+                            
+                            // اضافه کردن واحدهای محصول
+                            data.available_units.forEach(function(unit) {
+                                const option = document.createElement('option');
+                                option.value = unit.value;
+                                option.textContent = unit.display;
+                                if (unit.is_main) {
+                                    option.setAttribute('data-main', 'true');
+                                }
+                                weightUnitSelect.appendChild(option);
+                            });
+                            
+                            // انتخاب واحد اصلی به صورت پیش‌فرض (یا واحد اول اگر اصلی وجود نداشت)
+                            const mainUnit = data.available_units.find(u => u.is_main) || data.available_units[0];
+                            if (mainUnit) {
+                                weightUnitSelect.value = mainUnit.value;
+                            } else if (data.weight_unit) {
+                                // fallback به weight_unit قدیمی
+                                weightUnitSelect.value = data.weight_unit;
+                            }
                             
                             // اگر واحد تغییر کرد، bag weight toggle را فراخوانی کن
+                            const event = new Event('change');
+                            weightUnitSelect.dispatchEvent(event);
+                        } else if (data.weight_unit && weightUnitSelect) {
+                            // fallback: اگر available_units وجود نداشت، از weight_unit قدیمی استفاده کن
+                            weightUnitSelect.value = data.weight_unit;
                             const event = new Event('change');
                             weightUnitSelect.dispatchEvent(event);
                         }
@@ -382,10 +425,65 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // تابع برای به‌روزرسانی dropdown واحد برای فرم‌های موجود (در زمان لود اولیه)
+    function updateUnitsForExistingForms() {
+        document.querySelectorAll('.item-form-row').forEach(function(row) {
+            const productSelect = row.querySelector('select[name*="-product"]');
+            const weightUnitSelect = row.querySelector('select[name*="-weight_unit"]');
+            
+            if (productSelect && weightUnitSelect && productSelect.value) {
+                const productId = productSelect.value;
+                const url = '{% url "sales:product_info_api" product_id=0 %}'.replace('0', productId);
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error || !data.available_units) {
+                            return;
+                        }
+                        
+                        // ذخیره مقدار فعلی
+                        const currentValue = weightUnitSelect.value;
+                        
+                        // پاک کردن گزینه‌های قبلی
+                        weightUnitSelect.innerHTML = '';
+                        
+                        // اضافه کردن واحدهای محصول
+                        data.available_units.forEach(function(unit) {
+                            const option = document.createElement('option');
+                            option.value = unit.value;
+                            option.textContent = unit.display;
+                            if (unit.is_main) {
+                                option.setAttribute('data-main', 'true');
+                            }
+                            weightUnitSelect.appendChild(option);
+                        });
+                        
+                        // اگر مقدار فعلی در لیست واحدهای جدید وجود دارد، آن را انتخاب کن
+                        if (currentValue && Array.from(weightUnitSelect.options).some(opt => opt.value === currentValue)) {
+                            weightUnitSelect.value = currentValue;
+                        } else {
+                            // در غیر این صورت، واحد اصلی را انتخاب کن
+                            const mainUnit = data.available_units.find(u => u.is_main) || data.available_units[0];
+                            if (mainUnit) {
+                                weightUnitSelect.value = mainUnit.value;
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا در به‌روزرسانی واحد برای فرم موجود:', error);
+                    });
+            }
+        });
+    }
+    
     // اعمال به تمام فرم‌های موجود
     document.querySelectorAll('.item-form-row').forEach(function(row) {
         setupProductAutoFill(row);
     });
+    
+    // به‌روزرسانی dropdown واحد برای فرم‌های موجود در زمان لود اولیه
+    updateUnitsForExistingForms();
     
     // مدیریت formset اقلام
     const formsetContainer = document.getElementById('items-container');

@@ -640,6 +640,15 @@ def edit_product_view(request, product_id):
             queryset=boms
         )
     
+    # متصل کردن BOM ها به هر ProductionInfo برای نمایش در template
+    for prod_form in production_info_formset:
+        prod_form.bom_forms = []
+        if prod_form.instance and prod_form.instance.pk:
+            for bom_form in bom_formset:
+                if bom_form.instance and bom_form.instance.pk:
+                    if bom_form.instance.production_info_id == prod_form.instance.id:
+                        prod_form.bom_forms.append(bom_form)
+    
     context = {
         'product_form': product_form,
         'production_info_formset': production_info_formset,

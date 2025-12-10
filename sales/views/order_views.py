@@ -344,13 +344,9 @@ def product_info_api(request, product_id):
             deadline__gte=today
         ).order_by('-created_at')
         
-        # تبدیل main_unit به weight_unit
+        # تبدیل main_unit و secondary_unit به weight_unit
         # mapping: kg -> kg, ton -> ton, bag -> bag, piece -> piece
         # یا اگر main_unit با وزن واحدها match نمی‌کند، سعی می‌کنیم تطبیق دهیم
-        main_unit = product.main_unit or 'kg'
-        main_unit_lower = main_unit.lower().strip()
-        
-        # تبدیل واحد محصول به واحد وزن سفارش
         weight_unit_mapping = {
             'kg': 'kg',
             'کیلوگرم': 'kg',
@@ -364,6 +360,48 @@ def product_info_api(request, product_id):
             'تعداد': 'piece',
         }
         
+        # ساخت لیست واحدهای قابل استفاده (اصلی و فرعی)
+        available_units = []
+        unit_display_names = {
+            'kg': 'کیلوگرم',
+            'ton': 'تن',
+            'bag': 'کیسه',
+            'piece': 'عدد',
+        }
+        
+        # واحد اصلی
+        if product.main_unit:
+            main_unit_lower = product.main_unit.lower().strip()
+            mapped_main_unit = weight_unit_mapping.get(main_unit_lower)
+            if mapped_main_unit and mapped_main_unit not in [u['value'] for u in available_units]:
+                available_units.append({
+                    'value': mapped_main_unit,
+                    'display': unit_display_names.get(mapped_main_unit, mapped_main_unit),
+                    'is_main': True
+                })
+        
+        # واحد فرعی
+        if product.secondary_unit:
+            secondary_unit_lower = product.secondary_unit.lower().strip()
+            mapped_secondary_unit = weight_unit_mapping.get(secondary_unit_lower)
+            if mapped_secondary_unit and mapped_secondary_unit not in [u['value'] for u in available_units]:
+                available_units.append({
+                    'value': mapped_secondary_unit,
+                    'display': unit_display_names.get(mapped_secondary_unit, mapped_secondary_unit),
+                    'is_main': False
+                })
+        
+        # اگر هیچ واحدی پیدا نشد، پیش‌فرض kg
+        if not available_units:
+            available_units.append({
+                'value': 'kg',
+                'display': 'کیلوگرم',
+                'is_main': True
+            })
+        
+        # برای سازگاری با کد قدیمی، weight_unit را هم برمی‌گردانیم (واحد اصلی)
+        main_unit = product.main_unit or 'kg'
+        main_unit_lower = main_unit.lower().strip()
         weight_unit = weight_unit_mapping.get(main_unit_lower, 'kg')  # پیش‌فرض kg
         
         # ساخت لیست قیمت‌ها
@@ -397,7 +435,9 @@ def product_info_api(request, product_id):
         # اطلاعات پاسخ
         data = {
             'main_unit': product.main_unit or '',
-            'weight_unit': weight_unit,
+            'secondary_unit': product.secondary_unit or '',
+            'weight_unit': weight_unit,  # برای سازگاری با کد قدیمی
+            'available_units': available_units,  # لیست واحدهای قابل استفاده
             'prices': prices_list,
             'prices_count': len(prices_list),
             'has_price': len(prices_list) > 0,
