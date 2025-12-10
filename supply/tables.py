@@ -438,6 +438,7 @@ class PurchaseTransportTable(tables.Table):
     transport_number = tables.Column(
         verbose_name='شماره حمل',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -448,6 +449,7 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='شماره سفارش',
         accessor='purchase_order.order_number',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -459,6 +461,7 @@ class PurchaseTransportTable(tables.Table):
         accessor='purchase_order.status',
         orderable=False,
         empty_values=(),
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -468,6 +471,7 @@ class PurchaseTransportTable(tables.Table):
     transport_type = tables.Column(
         verbose_name='نوع حمل',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -477,6 +481,7 @@ class PurchaseTransportTable(tables.Table):
     vehicle_type = tables.Column(
         verbose_name='نوع ماشین',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -486,6 +491,7 @@ class PurchaseTransportTable(tables.Table):
     status = tables.Column(
         verbose_name='وضعیت حمل',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -495,6 +501,7 @@ class PurchaseTransportTable(tables.Table):
     plate_number = tables.Column(
         verbose_name='پلاک',
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -505,6 +512,7 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='تاریخ پیش‌بینی ورود',
         format='Y-m-d',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -515,6 +523,7 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='تاریخ ایجاد',
         format='Y-m-d',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -525,11 +534,28 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='عملیات',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            # Show columns based on field access permissions
+            self.columns['transport_number'].column.visible = accessible_fields.get('transport_number', False)
+            self.columns['purchase_order'].column.visible = accessible_fields.get('purchase_order', False)
+            self.columns['purchase_order_status'].column.visible = accessible_fields.get('purchase_order_status', False)
+            self.columns['transport_type'].column.visible = accessible_fields.get('transport_type', False)
+            self.columns['vehicle_type'].column.visible = accessible_fields.get('vehicle_type', False)
+            self.columns['status'].column.visible = accessible_fields.get('status', False)
+            self.columns['plate_number'].column.visible = accessible_fields.get('plate_number', False)
+            self.columns['expected_arrival_date'].column.visible = accessible_fields.get('expected_arrival_date', False)
+            self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
+            # Always show actions if any field is visible
+            self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
