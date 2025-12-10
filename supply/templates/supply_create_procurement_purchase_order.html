@@ -20,11 +20,43 @@
   {% csrf_token %}
   <h4>ایجاد سفارش خرید</h4>
   {% for field in form %}
-    <div class="form-group">
-      <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-      {{ field }}
-      {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
-    </div>
+    {% if field.name == 'supplier' and accessible_po_fields.supplier %}
+      <div class="form-group">
+        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+      </div>
+    {% elif field.name == 'freight_payment_type' and accessible_po_fields.freight_payment_type %}
+      <div class="form-group">
+        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+      </div>
+    {% elif field.name == 'subtotal_without_freight' and accessible_po_fields.subtotal_without_freight %}
+      <div class="form-group">
+        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+      </div>
+    {% elif field.name == 'freight_cost' and accessible_po_fields.freight_cost %}
+      <div class="form-group">
+        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+      </div>
+    {% elif field.name == 'vat_percentage' and accessible_po_fields.vat_percentage %}
+      <div class="form-group">
+        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+      </div>
+    {% elif field.name == 'external_system_id' and accessible_po_fields.external_system_id %}
+      <div class="form-group">
+        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+        {{ field }}
+        {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
+      </div>
+    {% endif %}
   {% endfor %}
   <div class="materials-block">
     <h4>مواد اولیه (هر ماده با جزئیات خود)</h4>
@@ -38,43 +70,47 @@
       <table class="inline-set" id="materialsTable" style="min-width: 1600px;">
         <thead>
           <tr>
-            <th rowspan="2">ماده اولیه</th>
-            <th rowspan="2">مقدار</th>
-            <th rowspan="2">واحد</th>
-            <th colspan="4">اطلاعات مالی</th>
-            <th colspan="3">اطلاعات لجستیک</th>
-            <th rowspan="2">شناسه تخصیص</th>
-            <th rowspan="2">توضیحات</th>
+            {% if accessible_po_material_fields.raw_material %}<th rowspan="2">ماده اولیه</th>{% endif %}
+            {% if accessible_po_material_fields.quantity %}<th rowspan="2">مقدار</th>{% endif %}
+            {% if accessible_po_material_fields.unit %}<th rowspan="2">واحد</th>{% endif %}
+            {% if accessible_po_material_fields.unit_price or accessible_po_material_fields.total_price or accessible_po_material_fields.freight_included or accessible_po_material_fields.vat_on_material %}
+            <th colspan="{% if accessible_po_material_fields.unit_price %}1{% endif %}{% if accessible_po_material_fields.total_price %}1{% endif %}{% if accessible_po_material_fields.freight_included %}1{% endif %}{% if accessible_po_material_fields.vat_on_material %}1{% endif %}">اطلاعات مالی</th>
+            {% endif %}
+            {% if accessible_po_material_fields.freight_cost_completed or accessible_po_material_fields.total_cost_completed %}
+            <th colspan="{% if accessible_po_material_fields.freight_cost_completed %}1{% endif %}{% if accessible_po_material_fields.total_cost_completed %}1{% endif %}">اطلاعات لجستیک</th>
+            {% endif %}
+            {% if accessible_po_material_fields.external_allocation_id %}<th rowspan="2">شناسه تخصیص</th>{% endif %}
+            {% if accessible_po_material_fields.notes %}<th rowspan="2">توضیحات</th>{% endif %}
             <th rowspan="2">حذف</th>
           </tr>
           <tr>
-            <th>قیمت واحد</th>
-            <th>قیمت کل</th>
-            <th>بدون کرایه؟</th>
-            <th>مالیات</th>
-            <th>کرایه تمام شده</th>
-            <th>بهای تمام شده</th>
+            {% if accessible_po_material_fields.unit_price %}<th>قیمت واحد</th>{% endif %}
+            {% if accessible_po_material_fields.total_price %}<th>قیمت کل</th>{% endif %}
+            {% if accessible_po_material_fields.freight_included %}<th>بدون کرایه؟</th>{% endif %}
+            {% if accessible_po_material_fields.vat_on_material %}<th>مالیات</th>{% endif %}
+            {% if accessible_po_material_fields.freight_cost_completed %}<th>کرایه تمام شده</th>{% endif %}
+            {% if accessible_po_material_fields.total_cost_completed %}<th>بهای تمام شده</th>{% endif %}
           </tr>
         </thead>
         <tbody>
           {% for form in material_formset.forms %}
           <tr class="material-row">
-            <td>{{ form.raw_material }}</td>
-            <td><input type="number" step="0.001" name="{{ form.quantity.name }}" value="{{ form.quantity.value|default:'' }}" class="form-control qty-input" data-row-idx="{{ forloop.counter0 }}"/></td>
-            <td>{{ form.unit }}</td>
-            <td><input type="number" step="0.01" name="{{ form.unit_price.name }}" value="{{ form.unit_price.value|default:'' }}" class="form-control price-input" data-row-idx="{{ forloop.counter0 }}"/></td>
-            <td><input type="number" step="0.01" name="{{ form.total_price.name }}" value="{{ form.total_price.value|default:'' }}" class="form-control total-input" readonly style="background:#f0f0f0"/></td>
-            <td>{{ form.freight_included }}</td>
-            <td>{{ form.vat_on_material }}</td>
-            <td>{{ form.freight_cost_completed }}</td>
-            <td>{{ form.total_cost_completed }}</td>
-            <td>{{ form.external_allocation_id }}</td>
-            <td>{{ form.notes }}</td>
+            {% if accessible_po_material_fields.raw_material %}<td>{{ form.raw_material }}</td>{% endif %}
+            {% if accessible_po_material_fields.quantity %}<td><input type="number" step="0.001" name="{{ form.quantity.name }}" value="{{ form.quantity.value|default:'' }}" class="form-control qty-input" data-row-idx="{{ forloop.counter0 }}"/></td>{% endif %}
+            {% if accessible_po_material_fields.unit %}<td>{{ form.unit }}</td>{% endif %}
+            {% if accessible_po_material_fields.unit_price %}<td><input type="number" step="0.01" name="{{ form.unit_price.name }}" value="{{ form.unit_price.value|default:'' }}" class="form-control price-input" data-row-idx="{{ forloop.counter0 }}"/></td>{% endif %}
+            {% if accessible_po_material_fields.total_price %}<td><input type="number" step="0.01" name="{{ form.total_price.name }}" value="{{ form.total_price.value|default:'' }}" class="form-control total-input" readonly style="background:#f0f0f0"/></td>{% endif %}
+            {% if accessible_po_material_fields.freight_included %}<td>{{ form.freight_included }}</td>{% endif %}
+            {% if accessible_po_material_fields.vat_on_material %}<td>{{ form.vat_on_material }}</td>{% endif %}
+            {% if accessible_po_material_fields.freight_cost_completed %}<td>{{ form.freight_cost_completed }}</td>{% endif %}
+            {% if accessible_po_material_fields.total_cost_completed %}<td>{{ form.total_cost_completed }}</td>{% endif %}
+            {% if accessible_po_material_fields.external_allocation_id %}<td>{{ form.external_allocation_id }}</td>{% endif %}
+            {% if accessible_po_material_fields.notes %}<td>{{ form.notes }}</td>{% endif %}
             <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
           </tr>
           {% if form.non_field_errors %}
           <tr>
-            <td colspan="12" style="color:#d32f2f;text-align:right;font-size:.7rem">{{ form.non_field_errors|join:'، ' }}</td>
+            <td colspan="{% if accessible_po_material_fields.raw_material %}1{% endif %}{% if accessible_po_material_fields.quantity %}1{% endif %}{% if accessible_po_material_fields.unit %}1{% endif %}{% if accessible_po_material_fields.unit_price %}1{% endif %}{% if accessible_po_material_fields.total_price %}1{% endif %}{% if accessible_po_material_fields.freight_included %}1{% endif %}{% if accessible_po_material_fields.vat_on_material %}1{% endif %}{% if accessible_po_material_fields.freight_cost_completed %}1{% endif %}{% if accessible_po_material_fields.total_cost_completed %}1{% endif %}{% if accessible_po_material_fields.external_allocation_id %}1{% endif %}{% if accessible_po_material_fields.notes %}1{% endif %}1" style="color:#d32f2f;text-align:right;font-size:.7rem">{{ form.non_field_errors|join:'، ' }}</td>
           </tr>
           {% endif %}
           {% endfor %}
@@ -83,6 +119,7 @@
     </div>
     <template id="material-empty-row">
       <tr class="material-row">
+        {% if accessible_po_material_fields.raw_material %}
         <td>
           <select name="mat-__prefix__-raw_material" class="form-control">
             {% for rm in material_formset.forms.0.fields.raw_material.queryset %}
@@ -90,16 +127,17 @@
             {% endfor %}
           </select>
         </td>
-        <td><input type="number" step="0.001" name="mat-__prefix__-quantity" class="form-control qty-input"/></td>
-        <td><input type="text" name="mat-__prefix__-unit" class="form-control"/></td>
-        <td><input type="number" step="0.01" name="mat-__prefix__-unit_price" class="form-control price-input"/></td>
-        <td><input type="number" step="0.01" name="mat-__prefix__-total_price" class="form-control total-input" readonly style="background:#f0f0f0"/></td>
-        <td><input type="checkbox" name="mat-__prefix__-freight_included"/></td>
-        <td><input type="number" step="0.01" name="mat-__prefix__-vat_on_material" class="form-control"/></td>
-        <td><input type="number" step="0.01" name="mat-__prefix__-freight_cost_completed" class="form-control"/></td>
-        <td><input type="number" step="0.01" name="mat-__prefix__-total_cost_completed" class="form-control"/></td>
-        <td><input type="text" name="mat-__prefix__-external_allocation_id" class="form-control"/></td>
-        <td><textarea name="mat-__prefix__-notes" class="form-control" rows="2"></textarea></td>
+        {% endif %}
+        {% if accessible_po_material_fields.quantity %}<td><input type="number" step="0.001" name="mat-__prefix__-quantity" class="form-control qty-input"/></td>{% endif %}
+        {% if accessible_po_material_fields.unit %}<td><input type="text" name="mat-__prefix__-unit" class="form-control"/></td>{% endif %}
+        {% if accessible_po_material_fields.unit_price %}<td><input type="number" step="0.01" name="mat-__prefix__-unit_price" class="form-control price-input"/></td>{% endif %}
+        {% if accessible_po_material_fields.total_price %}<td><input type="number" step="0.01" name="mat-__prefix__-total_price" class="form-control total-input" readonly style="background:#f0f0f0"/></td>{% endif %}
+        {% if accessible_po_material_fields.freight_included %}<td><input type="checkbox" name="mat-__prefix__-freight_included"/></td>{% endif %}
+        {% if accessible_po_material_fields.vat_on_material %}<td><input type="number" step="0.01" name="mat-__prefix__-vat_on_material" class="form-control"/></td>{% endif %}
+        {% if accessible_po_material_fields.freight_cost_completed %}<td><input type="number" step="0.01" name="mat-__prefix__-freight_cost_completed" class="form-control"/></td>{% endif %}
+        {% if accessible_po_material_fields.total_cost_completed %}<td><input type="number" step="0.01" name="mat-__prefix__-total_cost_completed" class="form-control"/></td>{% endif %}
+        {% if accessible_po_material_fields.external_allocation_id %}<td><input type="text" name="mat-__prefix__-external_allocation_id" class="form-control"/></td>{% endif %}
+        {% if accessible_po_material_fields.notes %}<td><textarea name="mat-__prefix__-notes" class="form-control" rows="2"></textarea></td>{% endif %}
         <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
       </tr>
     </template>

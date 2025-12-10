@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django import forms
 from django.forms import ModelForm, inlineformset_factory
 from django.db import transaction
+from django.http import HttpResponseForbidden
 import logging
 from core.logging_levels import *
 from django_tables2 import RequestConfig
@@ -16,9 +17,74 @@ from core.SupplyFolder.ProcurementPurchaseOrderModel import (
 )
 from core.PersonFolder.PersonModel import Person
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
+from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_procurement_purchase_order_fields(user):
+    """دریافت فیلدهای قابل دسترس برای مدل ProcurementPurchaseOrder"""
+    return {
+        'order_number': user_can_access_field(user, ProcurementPurchaseOrder, 'order_number', 'view'),
+        'supplier': user_can_access_field(user, ProcurementPurchaseOrder, 'supplier', 'view'),
+        'status': user_can_access_field(user, ProcurementPurchaseOrder, 'status', 'view'),
+        'freight_payment_type': user_can_access_field(user, ProcurementPurchaseOrder, 'freight_payment_type', 'view'),
+        'subtotal_without_freight': user_can_access_field(user, ProcurementPurchaseOrder, 'subtotal_without_freight', 'view'),
+        'freight_cost': user_can_access_field(user, ProcurementPurchaseOrder, 'freight_cost', 'view'),
+        'vat_percentage': user_can_access_field(user, ProcurementPurchaseOrder, 'vat_percentage', 'view'),
+        'payment_confirmed': user_can_access_field(user, ProcurementPurchaseOrder, 'payment_confirmed', 'view'),
+        'external_system_id': user_can_access_field(user, ProcurementPurchaseOrder, 'external_system_id', 'view'),
+        'created_by': user_can_access_field(user, ProcurementPurchaseOrder, 'created_by', 'view'),
+        'created_at': user_can_access_field(user, ProcurementPurchaseOrder, 'created_at', 'view'),
+        'updated_at': user_can_access_field(user, ProcurementPurchaseOrder, 'updated_at', 'view'),
+    }
+
+
+def get_accessible_procurement_purchase_order_material_fields(user):
+    """دریافت فیلدهای قابل دسترس برای مدل ProcurementPurchaseOrderMaterial"""
+    return {
+        'raw_material': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'raw_material', 'view'),
+        'quantity': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'quantity', 'view'),
+        'unit': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'unit', 'view'),
+        'notes': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'notes', 'view'),
+        'unit_price': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'unit_price', 'view'),
+        'total_price': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'total_price', 'view'),
+        'freight_included': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'freight_included', 'view'),
+        'vat_on_material': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'vat_on_material', 'view'),
+        'freight_cost_completed': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'freight_cost_completed', 'view'),
+        'total_cost_completed': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'total_cost_completed', 'view'),
+        'external_allocation_id': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'external_allocation_id', 'view'),
+    }
+
+
+def get_accessible_raw_material_fields_for_po(user):
+    """دریافت فیلدهای قابل دسترس برای مدل RawMaterial"""
+    return {
+        'raw_material_id': user_can_access_field(user, RawMaterial, 'raw_material_id', 'view'),
+        'name': user_can_access_field(user, RawMaterial, 'name', 'view'),
+        'physical_form': user_can_access_field(user, RawMaterial, 'physical_form', 'view'),
+    }
+
+
+def get_accessible_person_fields_for_po(user):
+    """دریافت فیلدهای قابل دسترس برای مدل Person (supplier)"""
+    return {
+        'name': user_can_access_field(user, Person, 'name', 'view'),
+        'national_id': user_can_access_field(user, Person, 'national_id', 'view'),
+    }
+
+
+def get_accessible_user_fields_for_po(user):
+    """دریافت فیلدهای قابل دسترس برای مدل User (created_by)"""
+    return {
+        'username': user_can_access_field(user, User, 'username', 'view'),
+        'first_name': user_can_access_field(user, User, 'first_name', 'view'),
+        'last_name': user_can_access_field(user, User, 'last_name', 'view'),
+    }
 
 
 class ProcurementPurchaseOrderForm(ModelForm):
@@ -150,6 +216,20 @@ MaterialFormSet = inlineformset_factory(
 def purchase_order_management_view(request):
     """صفحه مدیریت سفارش‌های خرید شامل دو جدول سفارشات باز و تکمیل‌شده"""
     audit_logger.info("مشاهده مدیریت سفارش‌های خرید")
+    
+    # Check task permission
+    if not user_has_task(request.user, TaskChoices.SUPPLY_CREATE_ORDER.value):
+        audit_logger.activity(f"تلاش برای دسترسی به مدیریت سفارش‌های خرید بدون مجوز - کاربر: {request.user.username}")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions
+    accessible_po_fields = get_accessible_procurement_purchase_order_fields(request.user)
+    accessible_po_material_fields = get_accessible_procurement_purchase_order_material_fields(request.user)
+    accessible_raw_material_fields = get_accessible_raw_material_fields_for_po(request.user)
+    accessible_person_fields = get_accessible_person_fields_for_po(request.user)
+    accessible_user_fields = get_accessible_user_fields_for_po(request.user)
+    
     try:
         from supply.tables import ProcurementPurchaseOrderTable
         open_orders = ProcurementPurchaseOrder.objects.exclude(
@@ -163,9 +243,26 @@ def purchase_order_management_view(request):
             'materials__raw_material'
         ).order_by('-created_at')
         
+        # Prepare table accessible fields dict
+        # materials_list requires both PO material and raw material access
+        table_accessible_fields = {
+            'order_number': accessible_po_fields.get('order_number', False),
+            'status': accessible_po_fields.get('status', False),
+            'materials_list': (
+                accessible_po_material_fields.get('raw_material', False) and
+                accessible_raw_material_fields.get('name', False)
+            ),
+            'supplier': (
+                accessible_po_fields.get('supplier', False) and
+                accessible_person_fields.get('name', False)
+            ),
+            'created_by': accessible_po_fields.get('created_by', False),
+            'created_at': accessible_po_fields.get('created_at', False),
+        }
+        
         # Create tables
-        open_table = ProcurementPurchaseOrderTable(open_orders, prefix='open-')
-        completed_table = ProcurementPurchaseOrderTable(completed_orders, prefix='completed-')
+        open_table = ProcurementPurchaseOrderTable(open_orders, prefix='open-', accessible_fields=table_accessible_fields)
+        completed_table = ProcurementPurchaseOrderTable(completed_orders, prefix='completed-', accessible_fields=table_accessible_fields)
         
         # Configure pagination
         RequestConfig(request, paginate={'per_page': 15}).configure(open_table)
@@ -174,17 +271,35 @@ def purchase_order_management_view(request):
         context = {
             'open_table': open_table,
             'completed_table': completed_table,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_po_material_fields': accessible_po_material_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_person_fields': accessible_person_fields,
+            'accessible_user_fields': accessible_user_fields,
         }
         return render(request, 'supply_purchase_order_management.html', context)
     except Exception as e:
         bug_logger.error(f"Purchase order management error: {e}")
         messages.error(request, 'خطا در بارگذاری سفارش‌های خرید.')
         from supply.tables import ProcurementPurchaseOrderTable
-        open_table = ProcurementPurchaseOrderTable([], prefix='open-')
-        completed_table = ProcurementPurchaseOrderTable([], prefix='completed-')
+        table_accessible_fields = {
+            'order_number': accessible_po_fields.get('order_number', False),
+            'status': accessible_po_fields.get('status', False),
+            'materials_list': False,
+            'supplier': False,
+            'created_by': accessible_po_fields.get('created_by', False),
+            'created_at': accessible_po_fields.get('created_at', False),
+        }
+        open_table = ProcurementPurchaseOrderTable([], prefix='open-', accessible_fields=table_accessible_fields)
+        completed_table = ProcurementPurchaseOrderTable([], prefix='completed-', accessible_fields=table_accessible_fields)
         return render(request, 'supply_purchase_order_management.html', {
             'open_table': open_table,
             'completed_table': completed_table,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_po_material_fields': accessible_po_material_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_person_fields': accessible_person_fields,
+            'accessible_user_fields': accessible_user_fields,
         })
 
 
@@ -192,6 +307,37 @@ def purchase_order_management_view(request):
 def create_procurement_purchase_order_view(request):
     """ایجاد سفارش خرید جدید"""
     audit_logger.info("ایجاد سفارش خرید جدید")
+    
+    # Check task permission
+    if not user_has_task(request.user, TaskChoices.SUPPLY_CREATE_ORDER.value):
+        audit_logger.activity(f"تلاش برای دسترسی به ایجاد سفارش خرید بدون مجوز - کاربر: {request.user.username}")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions (edit permissions for form)
+    accessible_po_fields = {
+        'supplier': user_can_access_field(request.user, ProcurementPurchaseOrder, 'supplier', 'edit'),
+        'freight_payment_type': user_can_access_field(request.user, ProcurementPurchaseOrder, 'freight_payment_type', 'edit'),
+        'subtotal_without_freight': user_can_access_field(request.user, ProcurementPurchaseOrder, 'subtotal_without_freight', 'edit'),
+        'freight_cost': user_can_access_field(request.user, ProcurementPurchaseOrder, 'freight_cost', 'edit'),
+        'vat_percentage': user_can_access_field(request.user, ProcurementPurchaseOrder, 'vat_percentage', 'edit'),
+        'external_system_id': user_can_access_field(request.user, ProcurementPurchaseOrder, 'external_system_id', 'edit'),
+    }
+    
+    accessible_po_material_fields = {
+        'raw_material': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'raw_material', 'edit'),
+        'quantity': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'quantity', 'edit'),
+        'unit': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'unit', 'edit'),
+        'notes': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'notes', 'edit'),
+        'unit_price': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'unit_price', 'edit'),
+        'total_price': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'total_price', 'edit'),
+        'freight_included': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'freight_included', 'edit'),
+        'vat_on_material': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'vat_on_material', 'edit'),
+        'freight_cost_completed': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'freight_cost_completed', 'edit'),
+        'total_cost_completed': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'total_cost_completed', 'edit'),
+        'external_allocation_id': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'external_allocation_id', 'edit'),
+    }
+    
     try:
         if request.method == 'POST':
             form = ProcurementPurchaseOrderForm(request.POST, request.FILES)
@@ -224,6 +370,8 @@ def create_procurement_purchase_order_view(request):
                         return render(request, 'supply_create_procurement_purchase_order.html', {
                             'form': form,
                             'material_formset': material_formset,
+                            'accessible_po_fields': accessible_po_fields,
+                            'accessible_po_material_fields': accessible_po_material_fields,
                         })
                 messages.success(request, 'سفارش خرید ثبت شد.')
                 return redirect(reverse('supply:purchase_order_management'))
@@ -236,6 +384,8 @@ def create_procurement_purchase_order_view(request):
         return render(request, 'supply_create_procurement_purchase_order.html', {
             'form': form,
             'material_formset': material_formset,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_po_material_fields': accessible_po_material_fields,
         })
     except Exception as e:
         bug_logger.error(f"Create procurement PO error: {e}")
@@ -243,6 +393,8 @@ def create_procurement_purchase_order_view(request):
         return render(request, 'supply_create_procurement_purchase_order.html', {
             'form': ProcurementPurchaseOrderForm(),
             'material_formset': MaterialFormSet(prefix='mat'),
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_po_material_fields': accessible_po_material_fields,
         })
 
 

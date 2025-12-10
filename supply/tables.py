@@ -16,6 +16,7 @@ class SupplierTable(tables.Table):
     national_id = tables.Column(
         verbose_name='کد ملی',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -25,6 +26,7 @@ class SupplierTable(tables.Table):
     name = tables.Column(
         verbose_name='نام تأمین‌کننده',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -34,6 +36,7 @@ class SupplierTable(tables.Table):
     nature = tables.Column(
         verbose_name='نوع',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -43,6 +46,7 @@ class SupplierTable(tables.Table):
     registration_number = tables.Column(
         verbose_name='شماره ثبت',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -52,6 +56,7 @@ class SupplierTable(tables.Table):
     phone_number = tables.Column(
         verbose_name='شماره تلفن',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -62,11 +67,23 @@ class SupplierTable(tables.Table):
         verbose_name='عملیات',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            self.columns['national_id'].column.visible = accessible_fields.get('national_id', False)
+            self.columns['name'].column.visible = accessible_fields.get('name', False)
+            self.columns['nature'].column.visible = accessible_fields.get('nature', False)
+            self.columns['registration_number'].column.visible = accessible_fields.get('registration_number', False)
+            self.columns['phone_number'].column.visible = accessible_fields.get('phone_number', False)
+            # Always show actions column if any field is visible
+            self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
         model = Person
@@ -121,6 +138,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     order_number = tables.Column(
         verbose_name='شماره سفارش',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -130,6 +148,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     status = tables.Column(
         verbose_name='وضعیت فعلی',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -140,6 +159,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='نام مواد اولیه',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -150,6 +170,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='نام تأمین‌کننده',
         accessor='supplier.name',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -161,6 +182,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         accessor='created_by',
         orderable=True,
         empty_values=(),
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -171,6 +193,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='تاریخ ایجاد',
         format='Y-m-d',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -181,11 +204,26 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='عملیات',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            # Show columns based on field access permissions
+            self.columns['order_number'].column.visible = accessible_fields.get('order_number', False)
+            self.columns['status'].column.visible = accessible_fields.get('status', False)
+            # materials_list requires checking both ProcurementPurchaseOrderMaterial.raw_material and RawMaterial.name
+            self.columns['materials_list'].column.visible = accessible_fields.get('materials_list', False)
+            self.columns['supplier'].column.visible = accessible_fields.get('supplier', False)
+            self.columns['created_by'].column.visible = accessible_fields.get('created_by', False)
+            self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
+            # Always show actions if any field is visible
+            self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
         model = ProcurementPurchaseOrder

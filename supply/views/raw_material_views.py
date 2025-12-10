@@ -53,9 +53,8 @@ def get_accessible_raw_material_fields(user):
 def get_accessible_purchase_info_fields(user):
 	"""دریافت فیلدهای قابل دسترس برای مدل RawMaterialPurchaseInfo"""
 	return {
-		'min_order_quantity': user_can_access_field(user, RawMaterialPurchaseInfo, 'min_order_quantity', 'view'),
-		'standard_package_size': user_can_access_field(user, RawMaterialPurchaseInfo, 'standard_package_size', 'view'),
-		'quality_control_criteria': user_can_access_field(user, RawMaterialPurchaseInfo, 'quality_control_criteria', 'view'),
+		'minimum_order_quantity': user_can_access_field(user, RawMaterialPurchaseInfo, 'minimum_order_quantity', 'view'),
+		'transportation_conditions': user_can_access_field(user, RawMaterialPurchaseInfo, 'transportation_conditions', 'view'),
 		'storage_conditions': user_can_access_field(user, RawMaterialPurchaseInfo, 'storage_conditions', 'view'),
 		'vat_percentage': user_can_access_field(user, RawMaterialPurchaseInfo, 'vat_percentage', 'view'),
 		'accounting_code': user_can_access_field(user, RawMaterialPurchaseInfo, 'accounting_code', 'view'),

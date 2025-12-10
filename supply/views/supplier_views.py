@@ -4,10 +4,14 @@ View های مربوط به مدیریت تامین‌کنندگان
 """
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction
+from django.http import HttpResponseForbidden
 from django_tables2 import RequestConfig
 import logging
+
+from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 
 from core.logging_levels import *
 from core.PersonFolder.PersonModel import Person
@@ -26,6 +30,26 @@ from supply.views.forms import (
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_person_fields(user):
+	"""بررسی دسترسی کاربر به فیلدهای Person"""
+	return {
+		'national_id': user_can_access_field(user, Person, 'national_id', 'view'),
+		'name': user_can_access_field(user, Person, 'name', 'view'),
+		'nature': user_can_access_field(user, Person, 'nature', 'view'),
+		'registration_number': user_can_access_field(user, Person, 'registration_number', 'view'),
+		'phone_number': user_can_access_field(user, Person, 'phone_number', 'view'),
+		'type': user_can_access_field(user, Person, 'type', 'view'),
+		'accounting_code': user_can_access_field(user, Person, 'accounting_code', 'view'),
+		'birth_date': user_can_access_field(user, Person, 'birth_date', 'view'),
+		'activity_fields': user_can_access_field(user, Person, 'activity_fields', 'view'),
+		'sales_expert': user_can_access_field(user, Person, 'sales_expert', 'view'),
+		'description': user_can_access_field(user, Person, 'description', 'view'),
+		'introducer': user_can_access_field(user, Person, 'introducer', 'view'),
+		'warehouse': user_can_access_field(user, Person, 'warehouse', 'view'),
+		'is_active': user_can_access_field(user, Person, 'is_active', 'view'),
+	}
 
 
 def create_supplier_view(request):
@@ -119,9 +143,20 @@ def supply_home_view(request):
 	return redirect(reverse('supply:supplier_list'))
 
 
+@login_required
 def supplier_list_view(request):
 	"""نمایش لیست تأمین‌کنندگان و ایجاد تامین‌کننده جدید"""
 	audit_logger.info("مشاهده لیست تأمین‌کنندگان")
+	
+	# Check task permission
+	if not user_has_task(request.user, TaskChoices.SUPPLY_CREATE_SUPPLIER.value):
+		audit_logger.activity(f"تلاش برای دسترسی به لیست تامین‌کنندگان بدون مجوز - کاربر: {request.user.username}")
+		messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+		return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+	
+	# Get accessible fields
+	accessible_person_fields = get_accessible_person_fields(request.user)
+	
 	try:
 		if request.method == 'POST':
 			audit_logger.info("تعریف تامین‌کننده جدید")
@@ -179,7 +214,7 @@ def supplier_list_view(request):
 		
 		from supply.tables import SupplierTable
 		suppliers = Person.objects.filter(type='supplier').order_by('-national_id')
-		table = SupplierTable(suppliers)
+		table = SupplierTable(suppliers, accessible_fields=accessible_person_fields)
 		RequestConfig(request, paginate={'per_page': 25}).configure(table)
 		
 		# افزودن flag برای نمایان کردن فرم (در صورت وجود خطا)
@@ -195,14 +230,16 @@ def supplier_list_view(request):
 			'sn_formset': sn_fs,
 			'att_formset': att_fs,
 			'form_has_errors': form_has_errors,
+			'accessible_person_fields': accessible_person_fields,
 		}
 		return render(request, 'supply_supplier_list.html', context)
 	except Exception as e:
 		bug_logger.error(f"Supplier list error: {e}")
 		messages.error(request, 'خطا در بارگذاری لیست تأمین‌کنندگان.')
 		from supply.tables import SupplierTable
-		table = SupplierTable(Person.objects.none())
-		return render(request, 'supply_supplier_list.html', {'table': table})
+		accessible_person_fields = get_accessible_person_fields(request.user)
+		table = SupplierTable(Person.objects.none(), accessible_fields=accessible_person_fields)
+		return render(request, 'supply_supplier_list.html', {'table': table, 'accessible_person_fields': accessible_person_fields})
 
 
 def supplier_detail_view(request, national_id):
