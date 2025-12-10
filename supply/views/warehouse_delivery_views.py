@@ -14,12 +14,100 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
-from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrder
-from core.RBACModel.TaskPermission import TaskChoices
-from core.RBACModel.Roles import user_has_task
+from core.SupplyFolder.ProcurementPurchaseOrderModel import (
+    ProcurementPurchaseOrder,
+    ProcurementPurchaseOrderMaterial,
+)
+from core.RawMaterialFolder.RawMaterialModel import RawMaterial
+from core.PersonFolder.PersonModel import Person
+from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
+from django.contrib.auth import get_user_model
 from supply.tables import PurchaseTransportTable
 import django_tables2 as tables
 from django.utils.html import format_html
+
+User = get_user_model()
+
+
+# ==================== Field Access Helper Functions ====================
+
+def get_accessible_purchase_transport_fields(user):
+    """Check field access for PurchaseTransport model (view permission)"""
+    return {
+        'transport_number': user_can_access_field(user, PurchaseTransport, 'transport_number', 'view'),
+        'purchase_order': user_can_access_field(user, PurchaseTransport, 'purchase_order', 'view'),
+        'status': user_can_access_field(user, PurchaseTransport, 'status', 'view'),
+        'vehicle_type': user_can_access_field(user, PurchaseTransport, 'vehicle_type', 'view'),
+        'plate_number': user_can_access_field(user, PurchaseTransport, 'plate_number', 'view'),
+        'driver': user_can_access_field(user, PurchaseTransport, 'driver', 'view'),
+        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'view'),
+        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'view'),
+        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'view'),
+        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'view'),
+        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'view'),
+        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'view'),
+        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'view'),
+        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'view'),
+        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'view'),
+        'loading_date': user_can_access_field(user, PurchaseTransport, 'loading_date', 'view'),
+        'created_at': user_can_access_field(user, PurchaseTransport, 'created_at', 'view'),
+    }
+
+
+def get_accessible_purchase_transport_fields_edit(user):
+    """Check field access for PurchaseTransport model (edit permission)"""
+    return {
+        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'edit'),
+        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'edit'),
+        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'edit'),
+        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'edit'),
+        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'edit'),
+        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'edit'),
+        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'edit'),
+        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'edit'),
+        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'edit'),
+        'loading_date': user_can_access_field(user, PurchaseTransport, 'loading_date', 'edit'),
+    }
+
+
+def get_accessible_procurement_purchase_order_fields_for_warehouse(user):
+    """Check field access for ProcurementPurchaseOrder model (for warehouse views)"""
+    return {
+        'order_number': user_can_access_field(user, ProcurementPurchaseOrder, 'order_number', 'view'),
+        'status': user_can_access_field(user, ProcurementPurchaseOrder, 'status', 'view'),
+        'supplier': user_can_access_field(user, ProcurementPurchaseOrder, 'supplier', 'view'),
+        'materials': user_can_access_field(user, ProcurementPurchaseOrder, 'materials', 'view'),
+        'created_at': user_can_access_field(user, ProcurementPurchaseOrder, 'created_at', 'view'),
+    }
+
+
+def get_accessible_raw_material_fields_for_warehouse(user):
+    """Check field access for RawMaterial model (for warehouse views)"""
+    return {
+        'name': user_can_access_field(user, RawMaterial, 'name', 'view'),
+        'material_code': user_can_access_field(user, RawMaterial, 'material_code', 'view'),
+        'unit': user_can_access_field(user, RawMaterial, 'unit', 'view'),
+    }
+
+
+def get_accessible_person_fields_for_warehouse(user):
+    """Check field access for Person model (for warehouse views)"""
+    return {
+        'name': user_can_access_field(user, Person, 'name', 'view'),
+        'phone_number': user_can_access_field(user, Person, 'phone_number', 'view'),
+        'type': user_can_access_field(user, Person, 'type', 'view'),
+    }
+
+
+def get_accessible_po_material_fields_for_warehouse(user):
+    """Check field access for ProcurementPurchaseOrderMaterial model"""
+    return {
+        'quantity': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'quantity', 'view'),
+        'unit': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'unit', 'view'),
+        'raw_material': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'raw_material', 'view'),
+    }
+
+# ==================== End Field Access Helper Functions ====================
 
 
 class WarehouseDeliveryForm(forms.Form):
@@ -149,26 +237,18 @@ class WarehouseDeliveryTable(PurchaseTransportTable):
         verbose_name='نام ماده اولیه',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
     
-    def render_raw_materials(self, record):
-        """نمایش لیست مواد اولیه از سفارش خرید"""
-        if not record.purchase_order:
-            return '—'
-        materials = record.purchase_order.materials.select_related('raw_material').all()
-        if materials:
-            names = [m.raw_material.name for m in materials if m.raw_material]
-            return format_html('<br>'.join(names)) if names else '—'
-        return '—'
-    
     quantity = tables.Column(
         verbose_name='مقدار',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -179,11 +259,34 @@ class WarehouseDeliveryTable(PurchaseTransportTable):
         verbose_name='واحد',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            # Handle columns from parent table already initialized by PurchaseTransportTable
+            # Set visibility for custom columns based on related field access
+            if hasattr(self.base_columns, 'raw_materials'):
+                self.base_columns['raw_materials'].visible = accessible_fields.get('purchase_order', False)
+            if hasattr(self.base_columns, 'quantity'):
+                self.base_columns['quantity'].visible = accessible_fields.get('purchase_order', False)
+            if hasattr(self.base_columns, 'unit'):
+                self.base_columns['unit'].visible = accessible_fields.get('purchase_order', False)
+    
+    def render_raw_materials(self, record):
+        """نمایش لیست مواد اولیه از سفارش خرید"""
+        if not record.purchase_order:
+            return '—'
+        materials = record.purchase_order.materials.select_related('raw_material').all()
+        if materials:
+            names = [m.raw_material.name for m in materials if m.raw_material]
+            return format_html('<br>'.join(names)) if names else '—'
+        return '—'
     
     def render_quantity(self, record):
         """نمایش مقدار سفارش"""
@@ -227,6 +330,13 @@ def warehouse_delivery_list_view(request):
         messages.error(request, 'شما دسترسی به این بخش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
+    # Get field access permissions
+    accessible_transport_fields = get_accessible_purchase_transport_fields(request.user)
+    accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_warehouse(request.user)
+    accessible_raw_material_fields = get_accessible_raw_material_fields_for_warehouse(request.user)
+    accessible_person_fields = get_accessible_person_fields_for_warehouse(request.user)
+    accessible_po_material_fields = get_accessible_po_material_fields_for_warehouse(request.user)
+    
     try:
         # حمل‌های در وضعیت های قابل تحویل انبار (awaiting_unloading for warehouseman)
         transports_unloading_qs = PurchaseTransport.objects.filter(
@@ -262,23 +372,35 @@ def warehouse_delivery_list_view(request):
                     bug_logger.warning(f"Failed to backfill transport_number for transport_id={pt.transport_id}: {gen_err}")
             transports_guard.append(pt)
         
-        table_unloading = WarehouseDeliveryTable(transports_unloading, prefix='wh-')
+        table_unloading = WarehouseDeliveryTable(transports_unloading, prefix='wh-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table_unloading)
         
         from supply.tables import GuardExitTable
-        table_guard = GuardExitTable(transports_guard, prefix='guard-')
+        table_guard = GuardExitTable(transports_guard, prefix='guard-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table_guard)
         
-        return render(request, 'supply_warehouse_delivery_list.html', {
+        context = {
             'table': table_unloading,
             'guard_table': table_guard,
-        })
+            'accessible_transport_fields': accessible_transport_fields,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_person_fields': accessible_person_fields,
+            'accessible_po_material_fields': accessible_po_material_fields,
+        }
+        return render(request, 'supply_warehouse_delivery_list.html', context)
     except Exception as e:
         bug_logger.error(f"Warehouse delivery list error: {e}")
         messages.error(request, 'خطا در بارگذاری لیست تحویل انبار.')
-        return render(request, 'supply_warehouse_delivery_list.html', {
-            'table': WarehouseDeliveryTable([], prefix='wh-')
-        })
+        context = {
+            'table': WarehouseDeliveryTable([], prefix='wh-'),
+            'accessible_transport_fields': accessible_transport_fields,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_person_fields': accessible_person_fields,
+            'accessible_po_material_fields': accessible_po_material_fields,
+        }
+        return render(request, 'supply_warehouse_delivery_list.html', context)
 
 
 @login_required
@@ -290,6 +412,13 @@ def warehouse_delivery_detail_view(request, transport_number):
         audit_logger.activity(f"تلاش برای ثبت تخلیه بدون دسترسی - حمل {transport_number}")
         messages.error(request, 'شما دسترسی به ثبت تخلیه را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions
+    accessible_transport_fields = get_accessible_purchase_transport_fields_edit(request.user)
+    accessible_transport_fields_view = get_accessible_purchase_transport_fields(request.user)
+    accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_warehouse(request.user)
+    accessible_raw_material_fields = get_accessible_raw_material_fields_for_warehouse(request.user)
+    accessible_po_material_fields = get_accessible_po_material_fields_for_warehouse(request.user)
     
     # Support both transport_number and numeric transport_id as identifier
     try:
@@ -331,12 +460,17 @@ def warehouse_delivery_detail_view(request, transport_number):
         for field in form.fields:
             form.fields[field].disabled = True
         
-        return render(request, 'supply_warehouse_delivery_detail.html', {
+        context = {
             'form': form,
             'pt': pt,
             'read_only': True,
             'awaiting_guard': True,
-        })
+            'accessible_transport_fields': accessible_transport_fields_view,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_po_material_fields': accessible_po_material_fields,
+        }
+        return render(request, 'supply_warehouse_delivery_detail.html', context)
     
     if request.method == 'POST':
         form = WarehouseDeliveryForm(request.POST)
@@ -433,12 +567,17 @@ def warehouse_delivery_detail_view(request, transport_number):
         }
         form = WarehouseDeliveryForm(initial=initial)
     
-    return render(request, 'supply_warehouse_delivery_detail.html', {
+    context = {
         'form': form,
         'pt': pt,
         'read_only': False,
         'awaiting_guard': False,
-    })
+        'accessible_transport_fields': accessible_transport_fields,
+        'accessible_po_fields': accessible_po_fields,
+        'accessible_raw_material_fields': accessible_raw_material_fields,
+        'accessible_po_material_fields': accessible_po_material_fields,
+    }
+    return render(request, 'supply_warehouse_delivery_detail.html', context)
 
 
 @login_required  
@@ -451,6 +590,10 @@ def guard_vehicle_exit_view(request, transport_number):
         audit_logger.activity(f"تلاش برای تایید خروج خودرو بدون دسترسی - حمل {transport_number}")
         messages.error(request, 'شما دسترسی به تایید خروج خودرو را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions for view
+    accessible_transport_fields = get_accessible_purchase_transport_fields(request.user)
+    accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_warehouse(request.user)
     
     # Get transport
     try:
@@ -499,6 +642,9 @@ def guard_vehicle_exit_view(request, transport_number):
             bug_logger.error(f"خطا در تایید خروج خودرو برای حمل {transport_number}: {e}")
             messages.error(request, f'خطا در تایید خروج خودرو: {str(e)}')
     
-    return render(request, 'supply_guard_vehicle_exit.html', {
-        'pt': pt
-    })
+    context = {
+        'pt': pt,
+        'accessible_transport_fields': accessible_transport_fields,
+        'accessible_po_fields': accessible_po_fields,
+    }
+    return render(request, 'supply_guard_vehicle_exit.html', context)
