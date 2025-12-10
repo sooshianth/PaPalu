@@ -325,3 +325,10 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Rate limiting configuration
 MAX_REQUESTS_PER_MINUTE = 100
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://erp.simurgh360.com",
+    "http://erp.simurgh360.com",
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
