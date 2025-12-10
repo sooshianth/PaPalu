@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -222,13 +223,13 @@
         {% if empty_weight %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">وزن خالی:</span>
-            <span class="readonly-info-value">{{ empty_weight|floatformat:3 }} کیلوگرم</span>
+            <span class="readonly-info-value">{{ empty_weight|persian_number:3 }} کیلوگرم</span>
         </div>
         {% endif %}
         {% if gross_weight %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">وزن پر:</span>
-            <span class="readonly-info-value">{{ gross_weight|floatformat:3 }} کیلوگرم</span>
+            <span class="readonly-info-value">{{ gross_weight|persian_number:3 }} کیلوگرم</span>
         </div>
         {% endif %}
         {% if accessible_person_fields.name and driver_name %}

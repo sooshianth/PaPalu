@@ -5,6 +5,32 @@ from core.OrderFolder.OrderModel import Order
 from core.helpers import check_field_access_prefer_edit
 
 
+def convert_to_persian_numbers(text):
+    """تبدیل اعداد انگلیسی به فارسی"""
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    translation_table = str.maketrans(english_digits, persian_digits)
+    return str(text).translate(translation_table)
+
+
+def format_number_persian(number, decimal_places=0):
+    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    if number is None:
+        return '-'
+    try:
+        # تبدیل به float
+        num_float = float(number)
+        # فرمت با کاما
+        if decimal_places > 0:
+            formatted = f"{num_float:,.{decimal_places}f}"
+        else:
+            formatted = f"{num_float:,.0f}"
+        # تبدیل به فارسی
+        return convert_to_persian_numbers(formatted)
+    except (ValueError, TypeError):
+        return str(number)
+
+
 def calculate_order_total_quantity(order):
     """
     محاسبه مجموع مقدار محصولات سفارش (تبدیل به کیلوگرم)
@@ -255,32 +281,32 @@ class AllocationTable(tables.Table):
         """نمایش تعداد تخصیص‌ها"""
         # استفاده از مقدار annotate شده اگر موجود باشد
         if value is not None:
-            return str(value)
+            return format_number_persian(value, decimal_places=0)
         # fallback: محاسبه دستی
         from core.AllocationFolder.AllocationModel import Allocation
         count = Allocation.objects.filter(order=record).count()
-        return str(count)
+        return format_number_persian(count, decimal_places=0)
     
     def render_order_total_quantity(self, value, record):
         """نمایش مقدار سفارش"""
         # استفاده از مقدار annotate شده اگر موجود باشد
         if value is not None:
-            formatted_total = f"{float(value):.2f}"
+            formatted_total = format_number_persian(value, decimal_places=2)
             return format_html('{}', formatted_total)
         # fallback: محاسبه دستی
         total = calculate_order_total_quantity(record)
-        formatted_total = f"{total:.2f}"
+        formatted_total = format_number_persian(total, decimal_places=2)
         return format_html('{}', formatted_total)
     
     def render_allocation_total_quantity(self, value, record):
         """نمایش مقدار تخصیص شده"""
         # استفاده از مقدار annotate شده اگر موجود باشد
         if value is not None:
-            formatted_total = f"{float(value):.2f}"
+            formatted_total = format_number_persian(value, decimal_places=2)
             return format_html('{}', formatted_total)
         # fallback: محاسبه دستی
         total = calculate_allocation_total_quantity(record)
-        formatted_total = f"{total:.2f}"
+        formatted_total = format_number_persian(total, decimal_places=2)
         return format_html('{}', formatted_total)
     
     def render_status(self, value, record):
@@ -556,32 +582,32 @@ class ApproveAllocationTable(tables.Table):
         """نمایش تعداد تخصیص‌ها"""
         # استفاده از مقدار annotate شده اگر موجود باشد
         if value is not None:
-            return str(value)
+            return format_number_persian(value, decimal_places=0)
         # fallback: محاسبه دستی
         from core.AllocationFolder.AllocationModel import Allocation
         count = Allocation.objects.filter(order=record).count()
-        return str(count)
+        return format_number_persian(count, decimal_places=0)
     
     def render_order_total_quantity(self, value, record):
         """نمایش مقدار سفارش"""
         # استفاده از مقدار annotate شده اگر موجود باشد
         if value is not None:
-            formatted_total = f"{float(value):.2f}"
+            formatted_total = format_number_persian(value, decimal_places=2)
             return format_html('{}', formatted_total)
         # fallback: محاسبه دستی
         total = calculate_order_total_quantity(record)
-        formatted_total = f"{total:.2f}"
+        formatted_total = format_number_persian(total, decimal_places=2)
         return format_html('{}', formatted_total)
     
     def render_allocation_total_quantity(self, value, record):
         """نمایش مقدار تخصیص شده"""
         # استفاده از مقدار annotate شده اگر موجود باشد
         if value is not None:
-            formatted_total = f"{float(value):.2f}"
+            formatted_total = format_number_persian(value, decimal_places=2)
             return format_html('{}', formatted_total)
         # fallback: محاسبه دستی
         total = calculate_allocation_total_quantity(record)
-        formatted_total = f"{total:.2f}"
+        formatted_total = format_number_persian(total, decimal_places=2)
         return format_html('{}', formatted_total)
     
     def render_balance_status(self, value, record):

@@ -1,3 +1,4 @@
+{% load number_filters %}
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
@@ -192,19 +193,19 @@
             {% if transport.empty_weight %}
             <div class="info-row">
                 <span class="info-label">وزن خالی:</span>
-                <span class="info-value">{{ transport.empty_weight|floatformat:3 }} کیلوگرم</span>
+                <span class="info-value">{{ transport.empty_weight|persian_number:3 }} کیلوگرم</span>
             </div>
             {% endif %}
             {% if transport.gross_weight %}
             <div class="info-row">
                 <span class="info-label">وزن پر:</span>
-                <span class="info-value">{{ transport.gross_weight|floatformat:3 }} کیلوگرم</span>
+                <span class="info-value">{{ transport.gross_weight|persian_number:3 }} کیلوگرم</span>
             </div>
             {% endif %}
             {% if transport.net_weight %}
             <div class="info-row">
                 <span class="info-label">وزن خالص:</span>
-                <span class="info-value">{{ transport.net_weight|floatformat:3 }} کیلوگرم</span>
+                <span class="info-value">{{ transport.net_weight|persian_number:3 }} کیلوگرم</span>
             </div>
             {% endif %}
             {% if product_info and product_info.packaging_type %}

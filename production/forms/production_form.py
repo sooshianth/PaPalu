@@ -37,7 +37,7 @@ class ProductionForm(forms.ModelForm):
     planned_weight_ton = forms.DecimalField(
         max_digits=12, decimal_places=3,
         required=False,
-        label='تناژ برنامه (تن)',
+        label='تناژ برنامه (کیلوگرم)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
     # Separate date and time fields for start
@@ -76,19 +76,19 @@ class ProductionForm(forms.ModelForm):
     inventory_snapshot = forms.DecimalField(
         max_digits=12, decimal_places=3,
         required=False,
-        label='موجودی لحظه ثبت',
+        label='موجودی لحظه ثبت (کیلوگرم)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
     net_unplanned_requirement = forms.DecimalField(
         max_digits=12, decimal_places=3,
         required=False,
-        label='نیاز برنامه ریزی نشده',
+        label='نیاز برنامه ریزی نشده (کیلوگرم)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
     produced_weight_ton = forms.DecimalField(
         max_digits=12, decimal_places=3,
         required=False,
-        label='وزن تولید شده',
+        label='وزن تولید شده (کیلوگرم)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
     actual_start_date = jDateField(

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load number_filters %}
 {% block title %}جزئیات اظهار تولید (انبار) | سیمرغ افزار{% endblock %}
 
 {% block extra_css %}
@@ -885,19 +886,19 @@
         {% if accessible_production_program_fields.planned_weight_ton %}
         <div class="detail-row">
             <span class="detail-label">تناژ برنامه‌ریزی شده:</span>
-            <span class="detail-value">{{ program.planned_weight_ton|default:"-"|floatformat:3 }} تن</span>
+            <span class="detail-value">{{ program.planned_weight_ton|default:"-"|persian_number:3 }} کیلوگرم</span>
         </div>
         {% endif %}
         {% if accessible_production_program_fields.produced_weight_ton %}
         <div class="detail-row">
             <span class="detail-label">تناژ تولید شده:</span>
-            <span class="detail-value">{{ program.produced_weight_ton|default:"-"|floatformat:3 }} تن</span>
+            <span class="detail-value">{{ program.produced_weight_ton|default:"-"|persian_number:3 }} کیلوگرم</span>
         </div>
         {% endif %}
         {% if accessible_production_program_fields.fulfillment_percentage %}
         <div class="detail-row">
             <span class="detail-label">درصد تحقق:</span>
-            <span class="detail-value">{{ program.fulfillment_percentage|default:"-"|floatformat:2 }}%</span>
+            <span class="detail-value">{{ program.fulfillment_percentage|default:"-"|persian_number:2 }}%</span>
         </div>
         {% endif %}
         {% if accessible_production_program_fields.started_at %}
@@ -1001,17 +1002,17 @@
                             <td style="text-align: right; font-weight: 600; color: #343a40;">
                                 {{ bom.raw_material.name|default:"-" }}
                             </td>
-                            <td style="text-align: center;">{{ bom.planned_quantity|floatformat:3 }}</td>
-                            <td style="color: #0d6efd; font-weight: 600; text-align: center;">{{ bom.total_consumption|floatformat:3 }}</td>
-                            <td style="color: #28a745; font-weight: 600; text-align: center;">{{ bom.total_actual_consumption|floatformat:3 }}</td>
+                            <td style="text-align: center;">{{ bom.planned_quantity|persian_number:3 }}</td>
+                            <td style="color: #0d6efd; font-weight: 600; text-align: center;">{{ bom.total_consumption|persian_number:3 }}</td>
+                            <td style="color: #28a745; font-weight: 600; text-align: center;">{{ bom.total_actual_consumption|persian_number:3 }}</td>
                             <td style="text-align: center;">
                                 <div class="bom-variance-badge" data-variance="{{ bom.total_variance|default:0 }}">
-                                    {% if bom.total_variance > 0 %}+ {% endif %}{{ bom.total_variance|floatformat:3 }}
+                                    {% if bom.total_variance > 0 %}+ {% endif %}{{ bom.total_variance|persian_number:3 }}
                                 </div>
                             </td>
                             <td style="text-align: center;">
                                 <div class="bom-variance-percent" data-variance="{{ bom.total_variance|default:0 }}">
-                                    {{ bom.total_variance_percent|floatformat:1 }}%
+                                    {{ bom.total_variance_percent|persian_number:1 }}%
                                 </div>
                             </td>
                             <td style="text-align: center;">{{ bom.unit }}</td>
@@ -1039,18 +1040,18 @@
                                             </td>
                                             <td style="color: #0d6efd; font-weight: 600; text-align: center;">
                                                 {% if wh_row.planned_amount is not None %}
-                                                    {{ wh_row.planned_amount|floatformat:3 }}
+                                                    {{ wh_row.planned_amount|persian_number:3 }}
                                                 {% else %}
                                                     <span style="color: #6c757d;">-</span>
                                                 {% endif %}
                                             </td>
                                             <td style="color: #28a745; font-weight: 600; text-align: center;">
-                                                {{ wh_row.actual_amount|floatformat:3 }}
+                                                {{ wh_row.actual_amount|persian_number:3 }}
                                             </td>
                                             <td style="text-align: center;">
                                                 {% if wh_row.variance is not None %}
                                                 <div class="bom-variance-badge" data-variance="{{ wh_row.variance|default:0 }}">
-                                                    {% if wh_row.variance > 0 %}+ {% endif %}{{ wh_row.variance|floatformat:3 }}
+                                                    {% if wh_row.variance > 0 %}+ {% endif %}{{ wh_row.variance|persian_number:3 }}
                                                 </div>
                                                 {% else %}
                                                 <span style="color: #6c757d;">-</span>
@@ -1059,7 +1060,7 @@
                                             <td style="text-align: center;">
                                                 {% if wh_row.variance_percent is not None %}
                                                 <div class="bom-variance-percent" data-variance="{{ wh_row.variance|default:0 }}">
-                                                    {{ wh_row.variance_percent|floatformat:1 }}%
+                                                    {{ wh_row.variance_percent|persian_number:1 }}%
                                                 </div>
                                                 {% else %}
                                                 <span style="color: #6c757d;">-</span>
@@ -1258,7 +1259,7 @@ document.querySelectorAll('.bom-variance-badge, .bom-variance-percent').forEach(
                     </div>
                     {% if accessible_inventory_item_fields.quantity %}
                     <div class="inventory-item-quantity">
-                        {{ item_data.quantity|default:"0"|floatformat:3 }}
+                        {{ item_data.quantity|default:"0"|persian_number:3 }}
                     </div>
                     {% endif %}
                 </div>
@@ -1353,7 +1354,7 @@ document.querySelectorAll('.bom-variance-badge, .bom-variance-percent').forEach(
                         {% for item_key, item_data in data.before.items %}
                         <div class="comparison-row">
                             <span class="comparison-label">{{ item_data.item|default:"-" }}:</span>
-                            <span class="comparison-value">{{ item_data.quantity|floatformat:3 }} {{ item_data.unit }}</span>
+                            <span class="comparison-value">{{ item_data.quantity|persian_number:3 }} {{ item_data.unit }}</span>
                         </div>
                         {% endfor %}
                         {% else %}
@@ -1367,7 +1368,7 @@ document.querySelectorAll('.bom-variance-badge, .bom-variance-percent').forEach(
                         {% for item_key, item_data in data.after.items %}
                         <div class="comparison-row">
                             <span class="comparison-label">{{ item_data.item|default:"-" }}:</span>
-                            <span class="comparison-value">{{ item_data.quantity|floatformat:3 }} {{ item_data.unit }}</span>
+                            <span class="comparison-value">{{ item_data.quantity|persian_number:3 }} {{ item_data.unit }}</span>
                         </div>
                         {% endfor %}
                         {% else %}

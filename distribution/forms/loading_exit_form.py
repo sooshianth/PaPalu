@@ -15,7 +15,7 @@ class LoadingExitForm(forms.Form):
     # فیلدهای اجباری وزن
     empty_weight = forms.DecimalField(
         required=True,
-        label='وزن خالی',
+        label='وزن خالی (کیلوگرم)',
         max_digits=15,
         decimal_places=3,
         widget=forms.NumberInput(attrs={
@@ -28,7 +28,7 @@ class LoadingExitForm(forms.Form):
     
     gross_weight = forms.DecimalField(
         required=True,
-        label='وزن پر',
+        label='وزن پر (کیلوگرم)',
         max_digits=15,
         decimal_places=3,
         widget=forms.NumberInput(attrs={
@@ -42,7 +42,7 @@ class LoadingExitForm(forms.Form):
     # وزن خالص (read-only، محاسبه خودکار)
     net_weight = forms.DecimalField(
         required=False,
-        label='وزن خالص',
+        label='وزن خالص (کیلوگرم)',
         max_digits=15,
         decimal_places=3,
         widget=forms.NumberInput(attrs={

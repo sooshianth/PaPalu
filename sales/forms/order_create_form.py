@@ -200,14 +200,14 @@ class OrderItemForm(forms.Form):
         max_digits=10,
         decimal_places=2,
         required=True,
-        label='مقدار/وزن',
+        label='مقدار/وزن (کیلوگرم)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
     unit_price = forms.DecimalField(
         max_digits=12,
         decimal_places=2,
         required=True,
-        label='فی (قیمت واحد)',
+        label='فی (قیمت واحد) (ریال)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
     discount = forms.DecimalField(
@@ -231,7 +231,7 @@ class OrderItemForm(forms.Form):
         decimal_places=2,
         required=False,
         initial=Decimal('0'),
-        label='درصد مالیات بر ارزش افزوده',
+        label='درصد مالیات بر ارزش افزوده (درصد)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
 

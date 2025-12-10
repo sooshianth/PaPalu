@@ -114,14 +114,14 @@ class WarehouseDeliveryForm(forms.Form):
     """فرم تحویل انبار - صفحه اطلاعات تخلیه"""
     # وزن ها
     gross_weight = forms.DecimalField(
-        label='وزن پر',
+        label='وزن پر (کیلوگرم)',
         required=True,
         max_digits=15,
         decimal_places=3,
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
     tare_weight = forms.DecimalField(
-        label='وزن خالی',
+        label='وزن خالی (کیلوگرم)',
         required=True,
         max_digits=15,
         decimal_places=3,

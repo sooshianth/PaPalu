@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -284,7 +285,7 @@
                                 {{ inv_data.product.code }}
                             </td>
                             {% endif %}
-                            <td>{{ inv_data.total_quantity|floatformat:2 }}</td>
+                            <td>{{ inv_data.total_quantity|persian_number:2 }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -361,7 +362,7 @@
                                     </div>
                                 </td>
                                 {% endif %}
-                                <td>{{ item.total_quantity_kg|floatformat:2 }}</td>
+                                <td>{{ item.total_quantity_kg|persian_number:2 }}</td>
                                 <td onclick="event.stopPropagation();">
                                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                         <button type="button" 

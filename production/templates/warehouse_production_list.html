@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load number_filters %}
 {% block title %}اظهار تولید (انبار) | سیمرغ افزار{% endblock %}
 
 {% block extra_css %}
@@ -345,13 +346,13 @@
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
-                            <td>{{ program.planned_weight_ton|default:"-"|floatformat:3 }}</td>
+                            <td>{{ program.planned_weight_ton|default:"-"|persian_number:3 }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.produced_weight_ton %}
-                            <td>{{ program.produced_weight_ton|default:"-"|floatformat:3 }}</td>
+                            <td>{{ program.produced_weight_ton|default:"-"|persian_number:3 }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.fulfillment_percentage %}
-                            <td>{{ program.fulfillment_percentage|default:"-"|floatformat:2 }}%</td>
+                            <td>{{ program.fulfillment_percentage|default:"-"|persian_number:2 }}%</td>
                             {% endif %}
                             {% if accessible_production_program_fields.completed_at %}
                             <td>{{ program.completed_at|default:"-" }}</td>
@@ -442,13 +443,13 @@
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
-                            <td>{{ program.planned_weight_ton|default:"-"|floatformat:3 }}</td>
+                            <td>{{ program.planned_weight_ton|default:"-"|persian_number:3 }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.produced_weight_ton %}
-                            <td>{{ program.produced_weight_ton|default:"-"|floatformat:3 }}</td>
+                            <td>{{ program.produced_weight_ton|default:"-"|persian_number:3 }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.fulfillment_percentage %}
-                            <td>{{ program.fulfillment_percentage|default:"-"|floatformat:2 }}%</td>
+                            <td>{{ program.fulfillment_percentage|default:"-"|persian_number:2 }}%</td>
                             {% endif %}
                             {% if accessible_production_program_fields.completed_at %}
                             <td>{{ program.completed_at|default:"-" }}</td>
@@ -536,10 +537,10 @@
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
-                            <td>{{ program.planned_weight_ton|default:"-"|floatformat:3 }}</td>
+                            <td>{{ program.planned_weight_ton|default:"-"|persian_number:3 }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.produced_weight_ton %}
-                            <td>{{ program.produced_weight_ton|default:"-"|floatformat:3 }}</td>
+                            <td>{{ program.produced_weight_ton|default:"-"|persian_number:3 }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.reason_for_warehouse_disapprove %}
                             <td>{{ program.reason_for_warehouse_disapprove|default:"-"|truncatewords:10 }}</td>

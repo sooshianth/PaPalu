@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -366,7 +367,7 @@
                     <td>{{ product_info.item_type|default:"-" }}</td>
                     <td>
                         {% if product_info.weight %}
-                            {{ product_info.weight|floatformat:3 }}
+                            {{ product_info.weight|persian_number:3 }}
                         {% else %}
                             <span style="color: var(--gray-400);">نامشخص</span>
                         {% endif %}

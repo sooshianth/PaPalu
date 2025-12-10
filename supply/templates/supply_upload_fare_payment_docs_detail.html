@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load number_filters %}
 {% block title %}بارگذاری اسناد پرداخت - {{ transport.transport_number }}{% endblock %}
 {% block extra_css %}
 <style>
@@ -271,7 +272,7 @@
             <span class="info-label">کرایه پرداختی (نهایی - جهت کنترل)</span>
             <span class="info-value" style="border-right-color: #ff9800; font-weight: 700; color: #e65100;">
                 {% if transport.freight_payment %}
-                    <span dir="ltr">{{ transport.freight_payment|floatformat:0 }}</span> ریال
+                    {{ transport.freight_payment|persian_number:0 }} ریال
                 {% else %}
                     —
                 {% endif %}

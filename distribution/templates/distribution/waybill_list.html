@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -153,14 +154,14 @@
                         </td>
                         <td>
                             {% if item.empty_weight %}
-                                {{ item.empty_weight|floatformat:3 }} کیلوگرم
+                                {{ item.empty_weight|persian_number:3 }} کیلوگرم
                             {% else %}
                                 <span style="color: var(--gray-400);">-</span>
                             {% endif %}
                         </td>
                         <td>
                             {% if item.gross_weight %}
-                                {{ item.gross_weight|floatformat:3 }} کیلوگرم
+                                {{ item.gross_weight|persian_number:3 }} کیلوگرم
                             {% else %}
                                 <span style="color: var(--gray-400);">-</span>
                             {% endif %}

@@ -74,8 +74,8 @@ class PurchaseInfoInlineForm(ModelForm):
 		model = RawMaterialPurchaseInfo
 		fields = ['transportation_conditions', 'storage_conditions', 'minimum_order_quantity', 'vat_percentage', 'accounting_code', 'tax_code', 'supplier']
 		labels = {
-			'minimum_order_quantity': 'حداقل مقدار سفارش',
-			'vat_percentage': 'درصد مالیات بر ارزش افزوده',
+			'minimum_order_quantity': 'حداقل مقدار سفارش (کیلوگرم)',
+			'vat_percentage': 'درصد مالیات بر ارزش افزوده (درصد)',
 			'accounting_code': 'کد حسابداری مرتبط',
 			'tax_code': 'کد مالیاتی ماده',
 			'supplier': 'تامین‌کننده (Purchase Info)',
@@ -105,11 +105,11 @@ class RawMaterialPriceInquiryForm(ModelForm):
 		labels = {
 			'inquiry_date': 'تاریخ',
 			'supplier': 'تامین کننده',
-			'price': 'قیمت',
+			'price': 'قیمت (ریال)',
 			'raw_material': 'ماده',
 			'delivery_terms': 'شرایط تحویل',
 			'loading_location': 'محل بارگیری',
-			'freight_unit_price': 'فی کرایه',
+			'freight_unit_price': 'فی کرایه (ریال)',
 			'negotiation_note': 'شرح مذاکره',
 		}
 		widgets = {
@@ -285,7 +285,7 @@ class FinancialBankingForm(ModelForm):
 		]
 		labels = {
 			'tax_group': 'گروه مالیاتی',
-			'account_balance': 'مانده حساب',
+			'account_balance': 'مانده حساب (ریال)',
 			'economic_code': 'کد اقتصادی',
 			'tax_postal_code': 'کد پستی مالیاتی',
 			'tax_province': 'استان مالیاتی',

@@ -10,6 +10,32 @@ from core.PersonFolder.AttachmentModel import Attachment
 from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrder
 
 
+def convert_to_persian_numbers(text):
+    """تبدیل اعداد انگلیسی به فارسی"""
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    translation_table = str.maketrans(english_digits, persian_digits)
+    return str(text).translate(translation_table)
+
+
+def format_number_persian(number, decimal_places=0):
+    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    if number is None:
+        return '-'
+    try:
+        # تبدیل به float
+        num_float = float(number)
+        # فرمت با کاما
+        if decimal_places > 0:
+            formatted = f"{num_float:,.{decimal_places}f}"
+        else:
+            formatted = f"{num_float:,.0f}"
+        # تبدیل به فارسی
+        return convert_to_persian_numbers(formatted)
+    except (ValueError, TypeError):
+        return str(number)
+
+
 class SupplierTable(tables.Table):
     """جدول لیست تأمین‌کنندگان با استفاده از django-tables2"""
     
@@ -351,7 +377,7 @@ class PaymentPreferenceTable(tables.Table):
     
     payment_method = tables.Column(verbose_name='روش', orderable=False)
     payment_term_days = tables.Column(verbose_name='شرایط (روز)', orderable=False)
-    credit_limit = tables.Column(verbose_name='سقف اعتبار', orderable=False)
+    credit_limit = tables.Column(verbose_name='سقف اعتبار (ریال)', orderable=False)
     notes = tables.Column(verbose_name='توضیحات', orderable=False)
     
     class Meta:
@@ -370,7 +396,9 @@ class PaymentPreferenceTable(tables.Table):
         return value or '—'
     
     def render_credit_limit(self, value):
-        return value or '—'
+        if value:
+            return format_number_persian(value, decimal_places=0)
+        return '—'
     
     def render_notes(self, value):
         return value or '—'
@@ -740,7 +768,7 @@ class GuardExitTable(tables.Table):
     )
     
     net_weight = tables.Column(
-        verbose_name='وزن خالص',
+        verbose_name='وزن خالص (کیلوگرم)',
         orderable=False,
         visible=False,
         attrs={
@@ -781,7 +809,8 @@ class GuardExitTable(tables.Table):
     
     def render_net_weight(self, value):
         if value:
-            return format_html('{} کیلوگرم', value)
+            formatted = format_number_persian(value, decimal_places=3)
+            return format_html('{} کیلوگرم', formatted)
         return '—'
     
     def render_actions(self, record):
@@ -1117,9 +1146,9 @@ class LogisticConfirmationTable(tables.Table):
     def render_net_weight(self, value):
         """نمایش وزن خالص با فرمت عددی"""
         if value:
-            # Convert to float and format it as string first
-            formatted_value = '{:,.2f}'.format(float(value))
-            return format_html('<span dir="ltr">{}</span>', formatted_value)
+            # Convert to float and format it as Persian number
+            formatted_value = format_number_persian(value, decimal_places=2)
+            return format_html('{}', formatted_value)
         return '—'
     
     def render_delivery_date(self, value):
@@ -1243,15 +1272,15 @@ class UploadFarePaymentDocsTable(tables.Table):
     def render_net_weight(self, value):
         """نمایش وزن خالص با فرمت عددی"""
         if value:
-            formatted_value = '{:,.2f}'.format(float(value))
-            return format_html('<span dir="ltr">{}</span> کیلوگرم', formatted_value)
+            formatted_value = format_number_persian(value, decimal_places=2)
+            return format_html('{} کیلوگرم', formatted_value)
         return '—'
     
     def render_freight_payment(self, value):
         """نمایش کرایه پرداختی نهایی (جهت کنترل)"""
         if value:
-            formatted_value = '{:,.0f}'.format(float(value))
-            return format_html('<span dir="ltr">{}</span> ریال', formatted_value)
+            formatted_value = format_number_persian(value, decimal_places=0)
+            return format_html('{} ریال', formatted_value)
         return '—'
     
     def render_status(self, record):

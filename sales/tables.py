@@ -398,7 +398,7 @@ class OrderTable(tables.Table):
     )
     
     total_purchase_cost = tables.Column(
-        verbose_name='بهای تمام شده خرید',
+        verbose_name='بهای تمام شده خرید (ریال)',
         orderable=True,
         attrs={
             'td': {'class': 'text-right'},
@@ -407,7 +407,7 @@ class OrderTable(tables.Table):
     )
     
     total_order_weight = tables.Column(
-        verbose_name='وزن کل سفارش',
+        verbose_name='وزن کل سفارش (کیلوگرم)',
         empty_values=(),
         orderable=True,
         order_by='total_order_weight',
@@ -504,8 +504,8 @@ class OrderTable(tables.Table):
     def render_total_purchase_cost(self, value, record):
         """نمایش بهای تمام شده خرید"""
         if value is None:
-            return '0'
-        return str(value)
+            return format_number_persian(0, decimal_places=0)
+        return format_number_persian(value, decimal_places=0)
     
     def render_total_order_weight(self, value, record):
         """نمایش وزن کل سفارش"""
@@ -523,12 +523,15 @@ class OrderTable(tables.Table):
                 return '-'
         
         if total_weight > 0:
-            # نمایش به صورت عدد با دو رقم اعشار
+            # نمایش به صورت عدد با دو رقم اعشار و فرمت فارسی
             if total_weight >= 1000:
                 # اگر بیشتر از 1000 کیلوگرم است، به تن تبدیل کن
-                return f"{total_weight / 1000:.2f} تن"
+                ton_value = total_weight / 1000
+                ton_formatted = format_number_persian(ton_value, decimal_places=2)
+                return f"{ton_formatted} تن"
             else:
-                return f"{total_weight:.2f} کیلوگرم"
+                kg_formatted = format_number_persian(total_weight, decimal_places=2)
+                return f"{kg_formatted} کیلوگرم"
         else:
             return '-'
     
@@ -1040,7 +1043,7 @@ class ProductPriceTable(tables.Table):
     )
     
     price = tables.Column(
-        verbose_name='قیمت',
+        verbose_name='قیمت (ریال)',
         orderable=True,
         attrs={
             'td': {'class': 'text-right'},
@@ -1572,9 +1575,9 @@ class PendingSettlementOrderTable(tables.Table):
                 weight_kg = item.get_weight_in_kg()
                 order_weight += Decimal(str(weight_kg))
             
-            # تبدیل به float و فرمت کردن
+            # تبدیل به float و فرمت کردن با اعداد فارسی
             weight_value = float(order_weight)
-            weight_formatted = f"{weight_value:,.2f}"
+            weight_formatted = format_number_persian(weight_value, decimal_places=2)
             
             # نمایش وزن (حتی اگر صفر باشد)
             return format_html('<strong>{}</strong>', weight_formatted)
@@ -1595,9 +1598,9 @@ class PendingSettlementOrderTable(tables.Table):
                 Decimal(str(t.net_weight or 0)) for t in transports
             )
             
-            # تبدیل به float و فرمت کردن
+            # تبدیل به float و فرمت کردن با اعداد فارسی
             weight_value = float(delivered_weight)
-            weight_formatted = f"{weight_value:,.2f}"
+            weight_formatted = format_number_persian(weight_value, decimal_places=2)
             
             # نمایش وزن (حتی اگر صفر باشد)
             return format_html('<strong>{}</strong>', weight_formatted)
@@ -1647,9 +1650,9 @@ class PendingSettlementOrderTable(tables.Table):
             # محاسبه مبلغ اختلاف
             difference_amount = weight_difference * weighted_avg_price
             
-            # تبدیل به float و فرمت کردن
+            # تبدیل به float و فرمت کردن با اعداد فارسی
             amount_value = float(difference_amount)
-            amount_formatted = f"{amount_value:,.0f}"
+            amount_formatted = format_number_persian(amount_value, decimal_places=0)
             
             # نمایش با رنگ مناسب (حتی اگر صفر باشد)
             if difference_amount > 0:
@@ -1663,7 +1666,7 @@ class PendingSettlementOrderTable(tables.Table):
                     amount_formatted
                 )
             else:
-                return format_html('<strong>0</strong>')
+                return format_html('<strong>{}</strong>', format_number_persian(0, decimal_places=0))
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
     
@@ -1891,9 +1894,9 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                         weight_kg = item.get_weight_in_kg()
                         order_weight += Decimal(str(weight_kg))
             
-            # تبدیل به float و فرمت کردن
+            # تبدیل به float و فرمت کردن با اعداد فارسی
             weight_value = float(order_weight)
-            weight_formatted = f"{weight_value:,.2f}"
+            weight_formatted = format_number_persian(weight_value, decimal_places=2)
             
             # نمایش وزن (حتی اگر صفر باشد)
             return format_html('<strong>{}</strong>', weight_formatted)
@@ -1920,9 +1923,9 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                         Decimal(str(t.net_weight or 0)) for t in transports
                     )
             
-            # تبدیل به float و فرمت کردن
+            # تبدیل به float و فرمت کردن با اعداد فارسی
             weight_value = float(delivered_weight)
-            weight_formatted = f"{weight_value:,.2f}"
+            weight_formatted = format_number_persian(weight_value, decimal_places=2)
             
             # نمایش وزن (حتی اگر صفر باشد)
             return format_html('<strong>{}</strong>', weight_formatted)
@@ -1973,9 +1976,9 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                     
                     difference_amount = weight_difference * weighted_avg_price
             
-            # تبدیل به float و فرمت کردن
+            # تبدیل به float و فرمت کردن با اعداد فارسی
             amount_value = float(difference_amount)
-            amount_formatted = f"{amount_value:,.0f}"
+            amount_formatted = format_number_persian(amount_value, decimal_places=0)
             
             # نمایش با رنگ مناسب (حتی اگر صفر باشد)
             if difference_amount > 0:
@@ -1989,7 +1992,7 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                     amount_formatted
                 )
             else:
-                return format_html('<strong>0</strong>')
+                return format_html('<strong>{}</strong>', format_number_persian(0, decimal_places=0))
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
     
@@ -2019,9 +2022,9 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                     else:
                         settled_amount = Decimal('0')
             
-            # تبدیل به float و فرمت کردن
+            # تبدیل به float و فرمت کردن با اعداد فارسی
             amount_value = float(settled_amount)
-            amount_formatted = f"{amount_value:,.0f}"
+            amount_formatted = format_number_persian(amount_value, decimal_places=0)
             
             return format_html('<strong style="color: var(--dark-green);">{}</strong>', amount_formatted)
         except Exception as e:

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load number_filters %}
 {% block title %}{% if is_create %}ایجاد{% else %}ویرایش{% endif %} برنامه تولید | سیمرغ افزار{% endblock %}
 
 {% block extra_css %}
@@ -662,7 +663,7 @@
                                     {% if accessible_raw_material_fields.name %}
                                     <td>{{ item.name }}</td>
                                     {% endif %}
-                                    <td><span class="total-badge">{{ item.total_quantity|floatformat:2 }}</span></td>
+                                    <td><span class="total-badge">{{ item.total_quantity|persian_number:2 }}</span></td>
                                     <td>{{ item.unit }}</td>
                                 </tr>
                                 {% for warehouse in item.warehouses %}
@@ -672,7 +673,7 @@
                                         <span class="warehouse-indent">📦 {{ warehouse.warehouse_name }}{% if accessible_warehouse_fields.warehouse_id %} ({{ warehouse.warehouse_id }}){% endif %}</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ warehouse.quantity|floatformat:2 }}</td>
+                                    <td>{{ warehouse.quantity|persian_number:2 }}</td>
                                     <td>{{ item.unit }}</td>
                                 </tr>
                                 {% endfor %}

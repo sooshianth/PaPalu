@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load number_filters %}
 {% block title %}تایید لجستیک - {{ transport.transport_number }}{% endblock %}
 {% block extra_css %}
 <style>
@@ -350,16 +351,16 @@
         </div>
         <div class="info-item">
             <span class="info-label">وزن ناخالص</span>
-            <span class="info-value">{{ transport.gross_weight|floatformat:2|default:"—" }} کیلوگرم</span>
+            <span class="info-value">{{ transport.gross_weight|persian_number:2|default:"—" }} کیلوگرم</span>
         </div>
         <div class="info-item">
             <span class="info-label">وزن خالی</span>
-            <span class="info-value">{{ transport.tare_weight|floatformat:2|default:"—" }} کیلوگرم</span>
+            <span class="info-value">{{ transport.tare_weight|persian_number:2|default:"—" }} کیلوگرم</span>
         </div>
         <div class="info-item">
             <span class="info-label">وزن خالص (مقدار تحویلی)</span>
             <span class="info-value" style="border-right-color: #28a745; font-weight: 700; color: #28a745;">
-                {{ transport.net_weight|floatformat:2|default:"—" }} کیلوگرم
+                {{ transport.net_weight|persian_number:2|default:"—" }} کیلوگرم
             </span>
         </div>
         <div class="info-item">

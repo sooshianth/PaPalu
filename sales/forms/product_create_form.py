@@ -286,7 +286,7 @@ class CreateProductForm(forms.ModelForm):
         max_digits=5,
         decimal_places=2,
         required=False,
-        label='درصد مالیات بر ارزش افزوده',
+        label='درصد مالیات بر ارزش افزوده (درصد)',
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.01',

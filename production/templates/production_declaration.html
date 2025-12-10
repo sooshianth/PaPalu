@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load number_filters %}
 {% block title %}اعلام تولید | سیمرغ افزار{% endblock %}
 
 {% block extra_css %}
@@ -895,7 +896,7 @@
                                 {% if accessible_raw_material_fields.name %}
                                 <td>{{ item.name }}</td>
                                 {% endif %}
-                                <td><span class="total-badge">{{ item.total_quantity|floatformat:2 }}</span></td>
+                                <td><span class="total-badge">{{ item.total_quantity|persian_number:2 }}</span></td>
                                 <td>{{ item.unit }}</td>
                             </tr>
                             {% for warehouse in item.warehouses %}
@@ -903,7 +904,7 @@
                                 <td {% if accessible_raw_material_fields.raw_material_id and accessible_raw_material_fields.name %}colspan="2"{% endif %}>
                                     <span class="warehouse-indent">📦 {{ warehouse.warehouse_name }} ({{ warehouse.warehouse_id }})</span>
                                 </td>
-                                <td>{{ warehouse.quantity|floatformat:2 }}</td>
+                                <td>{{ warehouse.quantity|persian_number:2 }}</td>
                                 <td>{{ item.unit }}</td>
                             </tr>
                             {% endfor %}

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -169,7 +170,7 @@
                         </td>
                         <td>
                             {% if item.quantity %}
-                                {{ item.quantity|floatformat:3 }}
+                                {{ item.quantity|persian_number:3 }}
                             {% else %}
                                 <span style="color: var(--gray-400);">-</span>
                             {% endif %}

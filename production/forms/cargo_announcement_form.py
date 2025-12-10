@@ -31,7 +31,7 @@ class CargoAnnouncementForm(forms.Form):
         max_digits=12,
         decimal_places=3,
         required=False,
-        label="مقدار"
+        label="مقدار (کیلوگرم)"
     )
 
     items_json = forms.CharField(

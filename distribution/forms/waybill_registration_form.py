@@ -85,7 +85,7 @@ class WaybillRegistrationForm(forms.Form):
     
     per_transport_fee = forms.DecimalField(
         required=False,
-        label='فی حمل',
+        label='فی حمل (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -97,7 +97,7 @@ class WaybillRegistrationForm(forms.Form):
     
     initial_fare = forms.DecimalField(
         required=False,
-        label='کرایه اولیه',
+        label='کرایه اولیه (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -109,7 +109,7 @@ class WaybillRegistrationForm(forms.Form):
     
     terminal_fee = forms.DecimalField(
         required=False,
-        label='کارمزد پایانه',
+        label='کارمزد پایانه (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -121,7 +121,7 @@ class WaybillRegistrationForm(forms.Form):
     
     company_fee = forms.DecimalField(
         required=False,
-        label='کارمزد شرکت',
+        label='کارمزد شرکت (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -133,7 +133,7 @@ class WaybillRegistrationForm(forms.Form):
     
     other_costs = forms.DecimalField(
         required=False,
-        label='سایر هزینه‌ها',
+        label='سایر هزینه‌ها (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -145,7 +145,7 @@ class WaybillRegistrationForm(forms.Form):
     
     total_fare = forms.DecimalField(
         required=False,
-        label='کرایه کل',
+        label='کرایه کل (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -157,7 +157,7 @@ class WaybillRegistrationForm(forms.Form):
     
     discount = forms.DecimalField(
         required=False,
-        label='تخفیف',
+        label='تخفیف (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -169,7 +169,7 @@ class WaybillRegistrationForm(forms.Form):
     
     excess = forms.DecimalField(
         required=False,
-        label='مازاد',
+        label='مازاد (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
@@ -181,7 +181,7 @@ class WaybillRegistrationForm(forms.Form):
     
     paid_fare = forms.DecimalField(
         required=False,
-        label='کرایه پرداختی',
+        label='کرایه پرداختی (ریال)',
         max_digits=15,
         decimal_places=2,
         widget=forms.NumberInput(attrs={
