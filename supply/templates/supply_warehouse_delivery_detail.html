@@ -66,23 +66,29 @@
   <div class="section-divider"></div>
   <div class="section-title">داده‌های پرکردنی اجباری</div>
   
+  {% if accessible_transport_fields.gross_weight %}
   <div class="form-group">
     <label>{{ form.gross_weight.label }}{% if form.gross_weight.field.required %} *{% endif %}</label>
     {{ form.gross_weight }}
     {% if form.gross_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.gross_weight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.tare_weight %}
   <div class="form-group">
     <label>{{ form.tare_weight.label }}{% if form.tare_weight.field.required %} *{% endif %}</label>
     {{ form.tare_weight }}
     {% if form.tare_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.tare_weight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.freight_payment_type %}
   <div class="form-group">
     <label>{{ form.freight_payment_type.label }}{% if form.freight_payment_type.field.required %} *{% endif %}</label>
     {{ form.freight_payment_type }}
     {% if form.freight_payment_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment_type.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">داده‌های پرکردنی اختیاری</div>
@@ -93,35 +99,45 @@
     {% if form.freight_rate.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_rate.errors|join:'، ' }}</div>{% endif %}
   </div>
   
+  {% if accessible_transport_fields.initial_freight %}
   <div class="form-group">
     <label>{{ form.initial_freight.label }}</label>
     {{ form.initial_freight }}
     {% if form.initial_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.initial_freight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.total_freight %}
   <div class="form-group">
     <label>{{ form.total_freight.label }}</label>
     {{ form.total_freight }}
     {% if form.total_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.total_freight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.discount %}
   <div class="form-group">
     <label>{{ form.discount.label }}</label>
     {{ form.discount }}
     {% if form.discount.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.discount.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.surplus %}
   <div class="form-group">
     <label>{{ form.surplus.label }}</label>
     {{ form.surplus }}
     {% if form.surplus.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.surplus.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.freight_payment %}
   <div class="form-group">
     <label>{{ form.freight_payment.label }}</label>
     {{ form.freight_payment }}
     {% if form.freight_payment.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div class="form-group">
     <label>{{ form.warehouse_identifier.label }}{% if form.warehouse_identifier.field.required %} *{% endif %}</label>

@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django import forms
 from django.forms import ModelForm
 from django.db import transaction
+from django.http import HttpResponseForbidden
 import logging
 from core.logging_levels import *
 from django_tables2 import RequestConfig
@@ -14,9 +15,72 @@ from core.SupplyFolder.PurchaseTransportModel import (
     PurchaseTransportStatusLog,
 )
 from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrder
+from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
+from core.PersonFolder.PersonModel import Person
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def get_accessible_purchase_transport_fields(user):
+    """دریافت فیلدهای قابل دسترس برای مدل PurchaseTransport"""
+    return {
+        'transport_number': user_can_access_field(user, PurchaseTransport, 'transport_number', 'view'),
+        'purchase_order': user_can_access_field(user, PurchaseTransport, 'purchase_order', 'view'),
+        'status': user_can_access_field(user, PurchaseTransport, 'status', 'view'),
+        'transport_type': user_can_access_field(user, PurchaseTransport, 'transport_type', 'view'),
+        'vehicle_type': user_can_access_field(user, PurchaseTransport, 'vehicle_type', 'view'),
+        'plate_number': user_can_access_field(user, PurchaseTransport, 'plate_number', 'view'),
+        'driver': user_can_access_field(user, PurchaseTransport, 'driver', 'view'),
+        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'view'),
+        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'view'),
+        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'view'),
+        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'view'),
+        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'view'),
+        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'view'),
+        'driver_account_number': user_can_access_field(user, PurchaseTransport, 'driver_account_number', 'view'),
+        'driver_sheba_number': user_can_access_field(user, PurchaseTransport, 'driver_sheba_number', 'view'),
+        'expected_arrival_date': user_can_access_field(user, PurchaseTransport, 'expected_arrival_date', 'view'),
+        'actual_arrival_date': user_can_access_field(user, PurchaseTransport, 'actual_arrival_date', 'view'),
+        'loading_date': user_can_access_field(user, PurchaseTransport, 'loading_date', 'view'),
+        'delivery_date': user_can_access_field(user, PurchaseTransport, 'delivery_date', 'view'),
+        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'view'),
+        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'view'),
+        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'view'),
+        'waybill_number': user_can_access_field(user, PurchaseTransport, 'waybill_number', 'view'),
+        'notes': user_can_access_field(user, PurchaseTransport, 'notes', 'view'),
+        'created_at': user_can_access_field(user, PurchaseTransport, 'created_at', 'view'),
+        'created_by': user_can_access_field(user, PurchaseTransport, 'created_by', 'view'),
+    }
+
+
+def get_accessible_procurement_purchase_order_fields_for_transport(user):
+    """دریافت فیلدهای قابل دسترس برای مدل ProcurementPurchaseOrder"""
+    return {
+        'order_number': user_can_access_field(user, ProcurementPurchaseOrder, 'order_number', 'view'),
+        'status': user_can_access_field(user, ProcurementPurchaseOrder, 'status', 'view'),
+        'supplier': user_can_access_field(user, ProcurementPurchaseOrder, 'supplier', 'view'),
+    }
+
+
+def get_accessible_person_fields_for_transport(user):
+    """دریافت فیلدهای قابل دسترس برای مدل Person (driver and supplier)"""
+    return {
+        'name': user_can_access_field(user, Person, 'name', 'view'),
+        'national_id': user_can_access_field(user, Person, 'national_id', 'view'),
+    }
+
+
+def get_accessible_user_fields_for_transport(user):
+    """دریافت فیلدهای قابل دسترس برای مدل User (created_by)"""
+    return {
+        'username': user_can_access_field(user, User, 'username', 'view'),
+        'first_name': user_can_access_field(user, User, 'first_name', 'view'),
+        'last_name': user_can_access_field(user, User, 'last_name', 'view'),
+    }
 
 
 class PurchaseTransportForm(ModelForm):
@@ -104,6 +168,19 @@ class PurchaseTransportForm(ModelForm):
 def purchase_transport_list_view(request):
     """صفحه لیست حمل‌های خرید شامل دو جدول: فعال و تکمیل‌شده"""
     audit_logger.info("مشاهده لیست حمل‌های خرید")
+    
+    # Check task permission
+    if not user_has_task(request.user, TaskChoices.SUPPLY_DEFINE_TRANSPORTATION.value):
+        audit_logger.activity(f"تلاش برای دسترسی به لیست حمل‌های خرید بدون مجوز - کاربر: {request.user.username}")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions
+    accessible_transport_fields = get_accessible_purchase_transport_fields(request.user)
+    accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_transport(request.user)
+    accessible_person_fields = get_accessible_person_fields_for_transport(request.user)
+    accessible_user_fields = get_accessible_user_fields_for_transport(request.user)
+    
     try:
         from supply.tables import PurchaseTransportTable
         # Orders awaiting transport definition (for quick create)
@@ -121,9 +198,28 @@ def purchase_transport_list_view(request):
             status__in=[PurchaseTransport.STATUS_COMPLETED, PurchaseTransport.STATUS_PAYMENT_DOC_UPLOADED]
         ).select_related('purchase_order', 'created_by').order_by('-created_at')
         
+        # Prepare table accessible fields dict
+        table_accessible_fields = {
+            'transport_number': accessible_transport_fields.get('transport_number', False),
+            'purchase_order': (
+                accessible_transport_fields.get('purchase_order', False) and
+                accessible_po_fields.get('order_number', False)
+            ),
+            'purchase_order_status': (
+                accessible_transport_fields.get('purchase_order', False) and
+                accessible_po_fields.get('status', False)
+            ),
+            'transport_type': accessible_transport_fields.get('transport_type', False),
+            'vehicle_type': accessible_transport_fields.get('vehicle_type', False),
+            'status': accessible_transport_fields.get('status', False),
+            'plate_number': accessible_transport_fields.get('plate_number', False),
+            'expected_arrival_date': accessible_transport_fields.get('expected_arrival_date', False),
+            'created_at': accessible_transport_fields.get('created_at', False),
+        }
+        
         # Create tables
-        active_table = PurchaseTransportTable(active_transports, prefix='active-')
-        completed_table = PurchaseTransportTable(completed_transports, prefix='completed-')
+        active_table = PurchaseTransportTable(active_transports, prefix='active-', accessible_fields=table_accessible_fields)
+        completed_table = PurchaseTransportTable(completed_transports, prefix='completed-', accessible_fields=table_accessible_fields)
         
         # Configure pagination
         RequestConfig(request, paginate={'per_page': 15}).configure(active_table)
@@ -133,17 +229,36 @@ def purchase_transport_list_view(request):
             'active_table': active_table,
             'completed_table': completed_table,
             'awaiting_pos': awaiting_pos,
+            'accessible_transport_fields': accessible_transport_fields,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_person_fields': accessible_person_fields,
+            'accessible_user_fields': accessible_user_fields,
         }
         return render(request, 'supply_purchase_transport_list.html', context)
     except Exception as e:
         bug_logger.error(f"Purchase transport list error: {e}")
         messages.error(request, 'خطا در بارگذاری لیست حمل‌ها.')
         from supply.tables import PurchaseTransportTable
-        active_table = PurchaseTransportTable([], prefix='active-')
-        completed_table = PurchaseTransportTable([], prefix='completed-')
+        table_accessible_fields = {
+            'transport_number': accessible_transport_fields.get('transport_number', False),
+            'purchase_order': False,
+            'purchase_order_status': False,
+            'transport_type': accessible_transport_fields.get('transport_type', False),
+            'vehicle_type': accessible_transport_fields.get('vehicle_type', False),
+            'status': accessible_transport_fields.get('status', False),
+            'plate_number': accessible_transport_fields.get('plate_number', False),
+            'expected_arrival_date': accessible_transport_fields.get('expected_arrival_date', False),
+            'created_at': accessible_transport_fields.get('created_at', False),
+        }
+        active_table = PurchaseTransportTable([], prefix='active-', accessible_fields=table_accessible_fields)
+        completed_table = PurchaseTransportTable([], prefix='completed-', accessible_fields=table_accessible_fields)
         return render(request, 'supply_purchase_transport_list.html', {
             'active_table': active_table,
             'completed_table': completed_table,
+            'accessible_transport_fields': accessible_transport_fields,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_person_fields': accessible_person_fields,
+            'accessible_user_fields': accessible_user_fields,
         })
 
 
@@ -151,6 +266,38 @@ def purchase_transport_list_view(request):
 def create_purchase_transport_view(request):
     """ایجاد حمل جدید برای سفارش خرید"""
     audit_logger.info("ایجاد حمل خرید جدید")
+    
+    # Check task permission
+    if not user_has_task(request.user, TaskChoices.SUPPLY_DEFINE_TRANSPORTATION.value):
+        audit_logger.activity(f"تلاش برای دسترسی به ایجاد حمل خرید بدون مجوز - کاربر: {request.user.username}")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions (edit permissions for form)
+    accessible_transport_fields = {
+        'purchase_order': user_can_access_field(request.user, PurchaseTransport, 'purchase_order', 'edit'),
+        'transport_type': user_can_access_field(request.user, PurchaseTransport, 'transport_type', 'edit'),
+        'vehicle_type': user_can_access_field(request.user, PurchaseTransport, 'vehicle_type', 'edit'),
+        'plate_number': user_can_access_field(request.user, PurchaseTransport, 'plate_number', 'edit'),
+        'driver': user_can_access_field(request.user, PurchaseTransport, 'driver', 'edit'),
+        'freight_payment_type': user_can_access_field(request.user, PurchaseTransport, 'freight_payment_type', 'edit'),
+        'initial_freight': user_can_access_field(request.user, PurchaseTransport, 'initial_freight', 'edit'),
+        'total_freight': user_can_access_field(request.user, PurchaseTransport, 'total_freight', 'edit'),
+        'discount': user_can_access_field(request.user, PurchaseTransport, 'discount', 'edit'),
+        'surplus': user_can_access_field(request.user, PurchaseTransport, 'surplus', 'edit'),
+        'freight_payment': user_can_access_field(request.user, PurchaseTransport, 'freight_payment', 'edit'),
+        'driver_account_number': user_can_access_field(request.user, PurchaseTransport, 'driver_account_number', 'edit'),
+        'driver_sheba_number': user_can_access_field(request.user, PurchaseTransport, 'driver_sheba_number', 'edit'),
+        'expected_arrival_date': user_can_access_field(request.user, PurchaseTransport, 'expected_arrival_date', 'edit'),
+        'actual_arrival_date': user_can_access_field(request.user, PurchaseTransport, 'actual_arrival_date', 'edit'),
+        'loading_date': user_can_access_field(request.user, PurchaseTransport, 'loading_date', 'edit'),
+        'delivery_date': user_can_access_field(request.user, PurchaseTransport, 'delivery_date', 'edit'),
+        'gross_weight': user_can_access_field(request.user, PurchaseTransport, 'gross_weight', 'edit'),
+        'tare_weight': user_can_access_field(request.user, PurchaseTransport, 'tare_weight', 'edit'),
+        'net_weight': user_can_access_field(request.user, PurchaseTransport, 'net_weight', 'edit'),
+        'waybill_number': user_can_access_field(request.user, PurchaseTransport, 'waybill_number', 'edit'),
+        'notes': user_can_access_field(request.user, PurchaseTransport, 'notes', 'edit'),
+    }
     
     # Check if coming from purchase order detail page
     order_number = request.GET.get('order')
@@ -187,6 +334,7 @@ def create_purchase_transport_view(request):
         return render(request, 'supply_create_purchase_transport.html', {
             'form': form,
             'initial_order': initial_order,
+            'accessible_transport_fields': accessible_transport_fields,
         })
     except Exception as e:
         bug_logger.error(f"Create purchase transport error: {e}")
@@ -194,6 +342,7 @@ def create_purchase_transport_view(request):
         return render(request, 'supply_create_purchase_transport.html', {
             'form': PurchaseTransportForm(),
             'initial_order': None,
+            'accessible_transport_fields': accessible_transport_fields,
         })
 
 

@@ -16,6 +16,7 @@ class SupplierTable(tables.Table):
     national_id = tables.Column(
         verbose_name='کد ملی',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -25,6 +26,7 @@ class SupplierTable(tables.Table):
     name = tables.Column(
         verbose_name='نام تأمین‌کننده',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -34,6 +36,7 @@ class SupplierTable(tables.Table):
     nature = tables.Column(
         verbose_name='نوع',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -43,6 +46,7 @@ class SupplierTable(tables.Table):
     registration_number = tables.Column(
         verbose_name='شماره ثبت',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -52,6 +56,7 @@ class SupplierTable(tables.Table):
     phone_number = tables.Column(
         verbose_name='شماره تلفن',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -62,11 +67,23 @@ class SupplierTable(tables.Table):
         verbose_name='عملیات',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            self.columns['national_id'].column.visible = accessible_fields.get('national_id', False)
+            self.columns['name'].column.visible = accessible_fields.get('name', False)
+            self.columns['nature'].column.visible = accessible_fields.get('nature', False)
+            self.columns['registration_number'].column.visible = accessible_fields.get('registration_number', False)
+            self.columns['phone_number'].column.visible = accessible_fields.get('phone_number', False)
+            # Always show actions column if any field is visible
+            self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
         model = Person
@@ -121,6 +138,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     order_number = tables.Column(
         verbose_name='شماره سفارش',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -130,6 +148,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     status = tables.Column(
         verbose_name='وضعیت فعلی',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -140,6 +159,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='نام مواد اولیه',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -150,6 +170,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='نام تأمین‌کننده',
         accessor='supplier.name',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -161,6 +182,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         accessor='created_by',
         orderable=True,
         empty_values=(),
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -171,6 +193,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='تاریخ ایجاد',
         format='Y-m-d',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -181,11 +204,26 @@ class ProcurementPurchaseOrderTable(tables.Table):
         verbose_name='عملیات',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            # Show columns based on field access permissions
+            self.columns['order_number'].column.visible = accessible_fields.get('order_number', False)
+            self.columns['status'].column.visible = accessible_fields.get('status', False)
+            # materials_list requires checking both ProcurementPurchaseOrderMaterial.raw_material and RawMaterial.name
+            self.columns['materials_list'].column.visible = accessible_fields.get('materials_list', False)
+            self.columns['supplier'].column.visible = accessible_fields.get('supplier', False)
+            self.columns['created_by'].column.visible = accessible_fields.get('created_by', False)
+            self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
+            # Always show actions if any field is visible
+            self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
         model = ProcurementPurchaseOrder
@@ -400,6 +438,7 @@ class PurchaseTransportTable(tables.Table):
     transport_number = tables.Column(
         verbose_name='شماره حمل',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -410,6 +449,7 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='شماره سفارش',
         accessor='purchase_order.order_number',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -421,6 +461,7 @@ class PurchaseTransportTable(tables.Table):
         accessor='purchase_order.status',
         orderable=False,
         empty_values=(),
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -430,6 +471,7 @@ class PurchaseTransportTable(tables.Table):
     transport_type = tables.Column(
         verbose_name='نوع حمل',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -439,6 +481,7 @@ class PurchaseTransportTable(tables.Table):
     vehicle_type = tables.Column(
         verbose_name='نوع ماشین',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -448,6 +491,7 @@ class PurchaseTransportTable(tables.Table):
     status = tables.Column(
         verbose_name='وضعیت حمل',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -457,6 +501,7 @@ class PurchaseTransportTable(tables.Table):
     plate_number = tables.Column(
         verbose_name='پلاک',
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -467,6 +512,7 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='تاریخ پیش‌بینی ورود',
         format='Y-m-d',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -477,6 +523,7 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='تاریخ ایجاد',
         format='Y-m-d',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -487,11 +534,28 @@ class PurchaseTransportTable(tables.Table):
         verbose_name='عملیات',
         empty_values=(),
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            # Show columns based on field access permissions
+            self.columns['transport_number'].column.visible = accessible_fields.get('transport_number', False)
+            self.columns['purchase_order'].column.visible = accessible_fields.get('purchase_order', False)
+            self.columns['purchase_order_status'].column.visible = accessible_fields.get('purchase_order_status', False)
+            self.columns['transport_type'].column.visible = accessible_fields.get('transport_type', False)
+            self.columns['vehicle_type'].column.visible = accessible_fields.get('vehicle_type', False)
+            self.columns['status'].column.visible = accessible_fields.get('status', False)
+            self.columns['plate_number'].column.visible = accessible_fields.get('plate_number', False)
+            self.columns['expected_arrival_date'].column.visible = accessible_fields.get('expected_arrival_date', False)
+            self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
+            # Always show actions if any field is visible
+            self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
@@ -637,6 +701,7 @@ class GuardExitTable(tables.Table):
     transport_number = tables.Column(
         verbose_name='شماره حمل',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -647,6 +712,7 @@ class GuardExitTable(tables.Table):
         verbose_name='شماره سفارش',
         accessor='purchase_order.order_number',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -656,6 +722,7 @@ class GuardExitTable(tables.Table):
     plate_number = tables.Column(
         verbose_name='پلاک',
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -665,6 +732,7 @@ class GuardExitTable(tables.Table):
     vehicle_type = tables.Column(
         verbose_name='نوع ماشین',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -674,6 +742,7 @@ class GuardExitTable(tables.Table):
     net_weight = tables.Column(
         verbose_name='وزن خالص',
         orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -689,6 +758,20 @@ class GuardExitTable(tables.Table):
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            if hasattr(self.base_columns, 'transport_number'):
+                self.base_columns['transport_number'].visible = accessible_fields.get('transport_number', False)
+            if hasattr(self.base_columns, 'purchase_order'):
+                self.base_columns['purchase_order'].visible = accessible_fields.get('purchase_order', False)
+            if hasattr(self.base_columns, 'plate_number'):
+                self.base_columns['plate_number'].visible = accessible_fields.get('plate_number', False)
+            if hasattr(self.base_columns, 'vehicle_type'):
+                self.base_columns['vehicle_type'].visible = accessible_fields.get('vehicle_type', False)
+            if hasattr(self.base_columns, 'net_weight'):
+                self.base_columns['net_weight'].visible = accessible_fields.get('net_weight', False)
     
     def render_vehicle_type(self, record):
         return record.get_vehicle_type_display() or '—'
@@ -727,6 +810,7 @@ class RawMaterialTable(tables.Table):
     raw_material_id = tables.Column(
         verbose_name='شناسه',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center muted'},
             'th': {'class': 'text-center'}
@@ -736,6 +820,7 @@ class RawMaterialTable(tables.Table):
     name = tables.Column(
         verbose_name='نام',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -745,6 +830,7 @@ class RawMaterialTable(tables.Table):
     physical_form = tables.Column(
         verbose_name='شکل فیزیکی',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -754,6 +840,7 @@ class RawMaterialTable(tables.Table):
     primary_unit = tables.Column(
         verbose_name='واحد اصلی',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -763,6 +850,7 @@ class RawMaterialTable(tables.Table):
     secondary_unit = tables.Column(
         verbose_name='واحد فرعی',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -772,6 +860,7 @@ class RawMaterialTable(tables.Table):
     conversion_factor = tables.Column(
         verbose_name='ضریب تبدیل',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -781,6 +870,7 @@ class RawMaterialTable(tables.Table):
     status = tables.Column(
         verbose_name='وضعیت',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -791,11 +881,25 @@ class RawMaterialTable(tables.Table):
         verbose_name='تاریخ ایجاد',
         format='Y-m-d H:i',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set column visibility based on field access permissions
+        if accessible_fields:
+            self.columns['raw_material_id'].column.visible = accessible_fields.get('raw_material_id', False)
+            self.columns['name'].column.visible = accessible_fields.get('name', False)
+            self.columns['physical_form'].column.visible = accessible_fields.get('physical_form', False)
+            self.columns['primary_unit'].column.visible = accessible_fields.get('primary_unit', False)
+            self.columns['secondary_unit'].column.visible = accessible_fields.get('secondary_unit', False)
+            self.columns['conversion_factor'].column.visible = accessible_fields.get('conversion_factor', False)
+            self.columns['status'].column.visible = accessible_fields.get('status', False)
+            self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
     
     class Meta:
         from core.RawMaterialFolder.RawMaterialModel import RawMaterial
@@ -832,6 +936,7 @@ class LogisticConfirmationTable(tables.Table):
         verbose_name='شماره حمل',
         linkify=lambda record: ('supply:logistic_confirmation_detail', {'transport_number': record.transport_number}) if record.transport_number else None,
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -842,6 +947,7 @@ class LogisticConfirmationTable(tables.Table):
         verbose_name='شماره سفارش خرید',
         accessor='purchase_order__order_number',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -852,6 +958,7 @@ class LogisticConfirmationTable(tables.Table):
         verbose_name='تأمین‌کننده',
         accessor='purchase_order__supplier__name',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -862,6 +969,7 @@ class LogisticConfirmationTable(tables.Table):
         verbose_name='نوع ماده اولیه',
         orderable=False,
         empty_values=(),
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -871,6 +979,7 @@ class LogisticConfirmationTable(tables.Table):
     vehicle_type = tables.Column(
         verbose_name='نوع خودرو',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -880,6 +989,7 @@ class LogisticConfirmationTable(tables.Table):
     plate_number = tables.Column(
         verbose_name='پلاک',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -890,6 +1000,7 @@ class LogisticConfirmationTable(tables.Table):
         verbose_name='راننده',
         accessor='driver__name',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -899,6 +1010,7 @@ class LogisticConfirmationTable(tables.Table):
     net_weight = tables.Column(
         verbose_name='وزن خالص (کیلوگرم)',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -909,6 +1021,7 @@ class LogisticConfirmationTable(tables.Table):
         verbose_name='تاریخ تحویل',
         format='Y-m-d',
         orderable=True,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -924,6 +1037,28 @@ class LogisticConfirmationTable(tables.Table):
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            if hasattr(self.base_columns, 'transport_number'):
+                self.base_columns['transport_number'].visible = accessible_fields.get('transport_number', False)
+            if hasattr(self.base_columns, 'purchase_order'):
+                self.base_columns['purchase_order'].visible = accessible_fields.get('purchase_order', False)
+            if hasattr(self.base_columns, 'supplier'):
+                self.base_columns['supplier'].visible = accessible_fields.get('purchase_order', False)
+            if hasattr(self.base_columns, 'raw_materials'):
+                self.base_columns['raw_materials'].visible = accessible_fields.get('purchase_order', False)
+            if hasattr(self.base_columns, 'vehicle_type'):
+                self.base_columns['vehicle_type'].visible = accessible_fields.get('vehicle_type', False)
+            if hasattr(self.base_columns, 'plate_number'):
+                self.base_columns['plate_number'].visible = accessible_fields.get('plate_number', False)
+            if hasattr(self.base_columns, 'driver'):
+                self.base_columns['driver'].visible = accessible_fields.get('driver', False)
+            if hasattr(self.base_columns, 'net_weight'):
+                self.base_columns['net_weight'].visible = accessible_fields.get('net_weight', False)
+            if hasattr(self.base_columns, 'delivery_date'):
+                self.base_columns['delivery_date'].visible = accessible_fields.get('created_at', False)
     
     class Meta:
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport

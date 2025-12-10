@@ -390,6 +390,7 @@
         {% csrf_token %}
         
         <div class="info-grid">
+            {% if accessible_transport_fields.freight_payment_type %}
             <div class="form-group">
                 <label for="{{ form.freight_payment_type.id_for_label }}">
                     <span class="required">*</span>
@@ -402,7 +403,9 @@
                     {% endfor %}
                 {% endif %}
             </div>
+            {% endif %}
             
+            {% if accessible_transport_fields.initial_freight %}
             <div class="form-group">
                 <label for="{{ form.initial_freight.id_for_label }}">
                     <span class="required">*</span>
@@ -415,7 +418,9 @@
                     {% endfor %}
                 {% endif %}
             </div>
+            {% endif %}
             
+            {% if accessible_transport_fields.total_freight %}
             <div class="form-group">
                 <label for="{{ form.total_freight.id_for_label }}">
                     <span class="required">*</span>
@@ -428,7 +433,9 @@
                     {% endfor %}
                 {% endif %}
             </div>
+            {% endif %}
             
+            {% if accessible_transport_fields.discount %}
             <div class="form-group">
                 <label for="{{ form.discount.id_for_label }}">
                     <span class="required">*</span>
@@ -441,7 +448,9 @@
                     {% endfor %}
                 {% endif %}
             </div>
+            {% endif %}
             
+            {% if accessible_transport_fields.surplus %}
             <div class="form-group">
                 <label for="{{ form.surplus.id_for_label }}">
                     <span class="required">*</span>
@@ -454,7 +463,9 @@
                     {% endfor %}
                 {% endif %}
             </div>
+            {% endif %}
             
+            {% if accessible_transport_fields.freight_payment %}
             <div class="form-group">
                 <label for="{{ form.freight_payment.id_for_label }}">
                     <span class="required">*</span>
@@ -467,6 +478,7 @@
                     {% endfor %}
                 {% endif %}
             </div>
+            {% endif %}
         </div>
         
         <div class="form-actions">

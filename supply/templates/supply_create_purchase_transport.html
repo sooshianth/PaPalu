@@ -34,12 +34,14 @@
   
   <div class="section-title">اطلاعات اصلی حمل</div>
   
+  {% if accessible_transport_fields.purchase_order %}
   <div class="form-group">
     <label>{{ form.purchase_order.label }}{% if form.purchase_order.field.required %} *{% endif %}</label>
     {{ form.purchase_order }}
     {% if form.purchase_order.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.purchase_order.errors|join:'، ' }}</div>{% endif %}
     <small style="font-size:.65rem;color:#666;margin-top:2px">انتخاب سفارش خرید که در وضعیت "در انتظار تعریف حمل" یا بعد از آن است</small>
   </div>
+  {% endif %}
   
   {% if initial_order %}
   <div id="order-info-display" style="grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px">
@@ -57,22 +59,27 @@
   </div>
   {% endif %}
   
+  {% if accessible_transport_fields.transport_type %}
   <div class="form-group">
     <label>{{ form.transport_type.label }}{% if form.transport_type.field.required %} *{% endif %}</label>
     {{ form.transport_type }}
     {% if form.transport_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.transport_type.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات خودرو و راننده</div>
   
   <div class="form-row-2">
+    {% if accessible_transport_fields.vehicle_type %}
     <div class="form-group" style="order:1">
       <label>{{ form.vehicle_type.label }}{% if form.vehicle_type.field.required %} *{% endif %}</label>
       {{ form.vehicle_type }}
       {% if form.vehicle_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.vehicle_type.errors|join:'، ' }}</div>{% endif %}
     </div>
+    {% endif %}
     
+    {% if accessible_transport_fields.plate_number %}
     <div class="form-group" style="order:2">
       <label>{{ form.plate_number.label }}</label>
       <!-- Segmented license plate input -->
@@ -89,130 +96,167 @@
       <div class="plate-helper">الگو: 12345 | الف | 67</div>
       {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
     </div>
+    {% endif %}
   </div>
   
+  {% if accessible_transport_fields.driver %}
   <div class="form-group">
     <label>{{ form.driver.label }}</label>
     {{ form.driver }}
     {% if form.driver.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver.errors|join:'، ' }}</div>{% endif %}
     <small style="font-size:.65rem;color:#666;margin-top:2px">انتخاب راننده از لیست اشخاص</small>
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات کرایه</div>
   
+  {% if accessible_transport_fields.freight_payment_type %}
   <div class="form-group">
     <label>{{ form.freight_payment_type.label }}</label>
     {{ form.freight_payment_type }}
     {% if form.freight_payment_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment_type.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.initial_freight %}
   <div class="form-group">
     <label>{{ form.initial_freight.label }}</label>
     {{ form.initial_freight }}
     {% if form.initial_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.initial_freight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.total_freight %}
   <div class="form-group">
     <label>{{ form.total_freight.label }}</label>
     {{ form.total_freight }}
     {% if form.total_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.total_freight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.discount %}
   <div class="form-group">
     <label>{{ form.discount.label }}</label>
     {{ form.discount }}
     {% if form.discount.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.discount.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.surplus %}
   <div class="form-group">
     <label>{{ form.surplus.label }}</label>
     {{ form.surplus }}
     {% if form.surplus.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.surplus.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.freight_payment %}
   <div class="form-group">
     <label>{{ form.freight_payment.label }}</label>
     {{ form.freight_payment }}
     {% if form.freight_payment.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.driver_account_number %}
   <div class="form-group">
     <label>{{ form.driver_account_number.label }}</label>
     {{ form.driver_account_number }}
     {% if form.driver_account_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver_account_number.errors|join:'، ' }}</div>{% endif %}
     <small style="font-size:.65rem;color:#666;margin-top:2px">راننده با شماره حساب</small>
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.driver_sheba_number %}
   <div class="form-group">
     <label>{{ form.driver_sheba_number.label }}</label>
     {{ form.driver_sheba_number }}
     {% if form.driver_sheba_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver_sheba_number.errors|join:'، ' }}</div>{% endif %}
     <small style="font-size:.65rem;color:#666;margin-top:2px">راننده با شماره شبا</small>
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">تاریخ‌های حمل</div>
   
+  {% if accessible_transport_fields.expected_arrival_date %}
   <div class="form-group">
     <label>{{ form.expected_arrival_date.label }}</label>
     {{ form.expected_arrival_date }}
     {% if form.expected_arrival_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.expected_arrival_date.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.actual_arrival_date %}
   <div class="form-group">
     <label>{{ form.actual_arrival_date.label }}</label>
     {{ form.actual_arrival_date }}
     {% if form.actual_arrival_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.actual_arrival_date.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.loading_date %}
   <div class="form-group">
     <label>{{ form.loading_date.label }}</label>
     {{ form.loading_date }}
     {% if form.loading_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.loading_date.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.delivery_date %}
   <div class="form-group">
     <label>{{ form.delivery_date.label }}</label>
     {{ form.delivery_date }}
     {% if form.delivery_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.delivery_date.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات وزنی</div>
   
+  {% if accessible_transport_fields.gross_weight %}
   <div class="form-group">
     <label>{{ form.gross_weight.label }}</label>
     {{ form.gross_weight }}
     {% if form.gross_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.gross_weight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.tare_weight %}
   <div class="form-group">
     <label>{{ form.tare_weight.label }}</label>
     {{ form.tare_weight }}
     {% if form.tare_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.tare_weight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.net_weight %}
   <div class="form-group">
     <label>{{ form.net_weight.label }}</label>
     {{ form.net_weight }}
     {% if form.net_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.net_weight.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">سایر اطلاعات</div>
   
+  {% if accessible_transport_fields.waybill_number %}
   <div class="form-group">
     <label>{{ form.waybill_number.label }}</label>
     {{ form.waybill_number }}
     {% if form.waybill_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.waybill_number.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.notes %}
   <div class="form-group" style="grid-column:1/-1">
     <label>{{ form.notes.label }}</label>
     {{ form.notes }}
     {% if form.notes.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.notes.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
     <a href="{% url 'supply:purchase_transport_list' %}" class="btn btn-secondary btn-sm">بازگشت</a>

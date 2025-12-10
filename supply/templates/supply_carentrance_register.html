@@ -33,65 +33,83 @@
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات سفارش (فقط خواندنی)</div>
   
+  {% if accessible_transport_fields.purchase_order and accessible_po_fields.order_number %}
   <div class="form-group">
     <label>شماره سفارش</label>
     <input type="text" class="form-control" value="{{ pt.purchase_order.order_number }}" readonly style="background:#f5f5f5;cursor:not-allowed">
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.vehicle_type %}
   <div class="form-group">
     <label>نوع ماشین</label>
     <input type="text" class="form-control" value="{{ pt.get_vehicle_type_display }}" readonly style="background:#f5f5f5;cursor:not-allowed">
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.purchase_order and accessible_po_fields.materials %}
   <div class="form-group">
     <label>مواد اولیه</label>
-    <textarea class="form-control" readonly style="background:#f5f5f5;cursor:not-allowed;min-height:50px">{% for material in pt.purchase_order.materials.all %}{{ material.raw_material.name }}{% if not forloop.last %}, {% endif %}{% endfor %}</textarea>
+    <textarea class="form-control" readonly style="background:#f5f5f5;cursor:not-allowed;min-height:50px">{% for material in pt.purchase_order.materials.all %}{% if accessible_raw_material_fields.name %}{{ material.raw_material.name }}{% if not forloop.last %}, {% endif %}{% endif %}{% endfor %}</textarea>
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات راننده</div>
   
+  {% if accessible_person_fields.phone_number %}
   <div class="form-group">
     <label>{{ form.phone.label }}{% if form.phone.field.required %} *{% endif %}</label>
     {{ form.phone }}
     {% if form.phone.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.phone.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_person_fields.name %}
   <div class="form-group">
     <label>{{ form.name.label }}</label>
     {{ form.name }}
     {% if form.name.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.name.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_person_fields.national_id %}
   <div class="form-group">
     <label>{{ form.national_id.label }}</label>
     {{ form.national_id }}
     {% if form.national_id.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.national_id.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات خودرو</div>
   
+  {% if accessible_transport_fields.plate_number %}
   <div class="form-group">
     <label>{{ form.plate_number.label }}</label>
     {{ form.plate_number }}
     {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات بانکی</div>
   
+  {% if accessible_transport_fields.driver_account_number %}
   <div class="form-group">
     <label>{{ form.account.label }}</label>
     {{ form.account }}
     {% if form.account.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.account.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
+  {% if accessible_transport_fields.driver_sheba_number %}
   <div class="form-group">
     <label>{{ form.sheba.label }}</label>
     {{ form.sheba }}
     {% if form.sheba.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.sheba.errors|join:'، ' }}</div>{% endif %}
   </div>
+  {% endif %}
   
   <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
     <a href="{% url 'supply:carentrance' %}" class="btn btn-secondary btn-sm">بازگشت</a>

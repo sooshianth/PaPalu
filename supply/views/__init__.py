@@ -64,11 +64,7 @@ from .logistic_confirmation_views import (
     logistic_confirmation_detail_view,
 )
 
-# Upload Fare Payment Documents Views
-from .upload_fare_payment_docs_views import (
-    upload_fare_payment_docs_list_view,
-    upload_fare_payment_docs_detail_view,
-)
+
 
 __all__ = [
     # Supplier Views
@@ -110,8 +106,6 @@ __all__ = [
     # Logistic Confirmation Views
     'logistic_confirmation_list_view',
     'logistic_confirmation_detail_view',
-    # Upload Fare Payment Documents Views
-    'upload_fare_payment_docs_list_view',
-    'upload_fare_payment_docs_detail_view',
+
 ]
 

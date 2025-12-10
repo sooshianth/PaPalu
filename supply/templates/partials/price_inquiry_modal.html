@@ -1,3 +1,7 @@
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
 <style>
   .pi-modal .field input[type=text],
   .pi-modal .field input[type=number],
@@ -64,9 +68,11 @@
           </div>
           {% endif %}
           <div class="form-groups" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
-            <div class="field" style="display:flex;flex-direction:column;gap:6px">
+            <div class="field" style="display:flex;flex-direction:column;gap:6px;position:relative">
               <label style="font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px">{% if form.inquiry_date.field.required %}<span style="color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px">*</span>{% endif %}{{ form.inquiry_date.label }}</label>
-              {{ form.inquiry_date }}
+              <div style="position:relative">
+                {{ form.inquiry_date }}
+              </div>
               {% if form.inquiry_date.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.inquiry_date.errors.0 }}</div>{% endif %}
             </div>
             <div class="field" style="display:flex;flex-direction:column;gap:6px">
@@ -80,12 +86,12 @@
               {% if form.price.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.price.errors.0 }}</div>{% endif %}
             </div>
             <div class="field" style="display:flex;flex-direction:column;gap:6px">
-              <label style="font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px">{{ form.delivery_terms.label }}</label>
+              <label style="font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px">{% if form.delivery_terms.field.required %}<span style="color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px">*</span>{% endif %}{{ form.delivery_terms.label }}</label>
               {{ form.delivery_terms }}
               {% if form.delivery_terms.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.delivery_terms.errors.0 }}</div>{% endif %}
             </div>
             <div class="field" style="display:flex;flex-direction:column;gap:6px">
-              <label style="font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px">{{ form.loading_location.label }}</label>
+              <label style="font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px">{% if form.loading_location.field.required %}<span style="color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px">*</span>{% endif %}{{ form.loading_location.label }}</label>
               {{ form.loading_location }}
               {% if form.loading_location.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.loading_location.errors.0 }}</div>{% endif %}
             </div>
