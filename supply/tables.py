@@ -727,6 +727,7 @@ class RawMaterialTable(tables.Table):
     raw_material_id = tables.Column(
         verbose_name='شناسه',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center muted'},
             'th': {'class': 'text-center'}
@@ -736,6 +737,7 @@ class RawMaterialTable(tables.Table):
     name = tables.Column(
         verbose_name='نام',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -745,6 +747,7 @@ class RawMaterialTable(tables.Table):
     physical_form = tables.Column(
         verbose_name='شکل فیزیکی',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -754,6 +757,7 @@ class RawMaterialTable(tables.Table):
     primary_unit = tables.Column(
         verbose_name='واحد اصلی',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -763,6 +767,7 @@ class RawMaterialTable(tables.Table):
     secondary_unit = tables.Column(
         verbose_name='واحد فرعی',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -772,6 +777,7 @@ class RawMaterialTable(tables.Table):
     conversion_factor = tables.Column(
         verbose_name='ضریب تبدیل',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -781,6 +787,7 @@ class RawMaterialTable(tables.Table):
     status = tables.Column(
         verbose_name='وضعیت',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -791,11 +798,25 @@ class RawMaterialTable(tables.Table):
         verbose_name='تاریخ ایجاد',
         format='Y-m-d H:i',
         orderable=True,
+        visible=False,  # Will be set dynamically
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
         }
     )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Set column visibility based on field access permissions
+        if accessible_fields:
+            self.columns['raw_material_id'].column.visible = accessible_fields.get('raw_material_id', False)
+            self.columns['name'].column.visible = accessible_fields.get('name', False)
+            self.columns['physical_form'].column.visible = accessible_fields.get('physical_form', False)
+            self.columns['primary_unit'].column.visible = accessible_fields.get('primary_unit', False)
+            self.columns['secondary_unit'].column.visible = accessible_fields.get('secondary_unit', False)
+            self.columns['conversion_factor'].column.visible = accessible_fields.get('conversion_factor', False)
+            self.columns['status'].column.visible = accessible_fields.get('status', False)
+            self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
     
     class Meta:
         from core.RawMaterialFolder.RawMaterialModel import RawMaterial

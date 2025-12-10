@@ -476,6 +476,7 @@
               <div class="detail-grid">
                 <div class="detail-card">
                   <div class="detail-card-title">اطلاعات پایه</div>
+                  {% if accessible_raw_material_fields.name %}
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.name.label }}:{% if rm_form.name.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -483,6 +484,8 @@
                       {% if rm_form.name.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.name.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
+                  {% if accessible_raw_material_fields.physical_form %}
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.physical_form.label }}:{% if rm_form.physical_form.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -490,6 +493,8 @@
                       {% if rm_form.physical_form.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.physical_form.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
+                  {% if accessible_raw_material_fields.status %}
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.status.label }}:{% if rm_form.status.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -497,6 +502,8 @@
                       {% if rm_form.status.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.status.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
+                  {% if accessible_raw_material_fields.main_supplier and accessible_person_fields.name %}
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.main_supplier.label }}:</span>
                     <span class="detail-value">
@@ -504,10 +511,12 @@
                       {% if rm_form.main_supplier.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.main_supplier.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
                 </div>
                 
                 <div class="detail-card">
                   <div class="detail-card-title">واحدها و تبدیل</div>
+                  {% if accessible_raw_material_fields.primary_unit %}
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.primary_unit.label }}:{% if rm_form.primary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -515,6 +524,8 @@
                       {% if rm_form.primary_unit.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.primary_unit.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
+                  {% if accessible_raw_material_fields.secondary_unit %}
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.secondary_unit.label }}:{% if rm_form.secondary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -522,6 +533,8 @@
                       {% if rm_form.secondary_unit.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.secondary_unit.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
+                  {% if accessible_raw_material_fields.conversion_factor %}
                   <div class="detail-row">
                     <span class="detail-label">{{ rm_form.conversion_factor.label }}:{% if rm_form.conversion_factor.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -529,10 +542,12 @@
                       {% if rm_form.conversion_factor.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.conversion_factor.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
                 </div>
                 
                 <div class="detail-card">
                   <div class="detail-card-title">شرایط نگهداری و حمل</div>
+                  {% if accessible_purchase_info_fields.transportation_conditions %}
                   <div class="detail-row">
                     <span class="detail-label">{{ pi_form.transportation_conditions.label }}:{% if pi_form.transportation_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -540,6 +555,8 @@
                       {% if pi_form.transportation_conditions.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ pi_form.transportation_conditions.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
+                  {% if accessible_purchase_info_fields.storage_conditions %}
                   <div class="detail-row">
                     <span class="detail-label">{{ pi_form.storage_conditions.label }}:{% if pi_form.storage_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
                     <span class="detail-value">
@@ -547,8 +564,10 @@
                       {% if pi_form.storage_conditions.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ pi_form.storage_conditions.errors.0 }}</div>{% endif %}
                     </span>
                   </div>
+                  {% endif %}
                 </div>
                 
+                {% if accessible_raw_material_fields.technical_description %}
                 <div class="detail-card" style="grid-column: 1/-1;">
                   <div class="detail-card-title">توضیحات فنی</div>
                   <div class="detail-row">
@@ -559,6 +578,7 @@
                     </span>
                   </div>
                 </div>
+                {% endif %}
               </div>
               
               <div class="optional-toggle" id="toggleOptional">اطلاعات تکمیلی (اختیاری) ▼</div>
@@ -567,50 +587,70 @@
                 <div class="detail-grid">
                   <div class="detail-card">
                     <div class="detail-card-title">اطلاعات اضافی</div>
+                    {% if accessible_raw_material_fields.expiration_date %}
                     <div class="detail-row">
                       <span class="detail-label">{{ rm_form.expiration_date.label }}:</span>
                       <span class="detail-value">{{ rm_form.expiration_date }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.hs_code %}
                     <div class="detail-row">
                       <span class="detail-label">{{ rm_form.hs_code.label }}:</span>
                       <span class="detail-value">{{ rm_form.hs_code }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.veterinary_health_id %}
                     <div class="detail-row">
                       <span class="detail-label">{{ rm_form.veterinary_health_id.label }}:</span>
                       <span class="detail-value">{{ rm_form.veterinary_health_id }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.standard_loss_percentage %}
                     <div class="detail-row">
                       <span class="detail-label">{{ rm_form.standard_loss_percentage.label }}:</span>
                       <span class="detail-value">{{ rm_form.standard_loss_percentage }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.attachments %}
                     <div class="detail-row">
                       <span class="detail-label">{{ rm_form.attachments.label }}:</span>
                       <span class="detail-value">{{ rm_form.attachments }}</span>
                     </div>
+                    {% endif %}
                   </div>
                   
                   <div class="detail-card">
                     <div class="detail-card-title">اطلاعات خرید</div>
+                    {% if accessible_purchase_info_fields.minimum_order_quantity %}
                     <div class="detail-row">
                       <span class="detail-label">{{ pi_form.minimum_order_quantity.label }}:</span>
                       <span class="detail-value">{{ pi_form.minimum_order_quantity }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_purchase_info_fields.vat_percentage %}
                     <div class="detail-row">
                       <span class="detail-label">{{ pi_form.vat_percentage.label }}:</span>
                       <span class="detail-value">{{ pi_form.vat_percentage }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_purchase_info_fields.accounting_code %}
                     <div class="detail-row">
                       <span class="detail-label">{{ pi_form.accounting_code.label }}:</span>
                       <span class="detail-value">{{ pi_form.accounting_code }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_purchase_info_fields.tax_code %}
                     <div class="detail-row">
                       <span class="detail-label">{{ pi_form.tax_code.label }}:</span>
                       <span class="detail-value">{{ pi_form.tax_code }}</span>
                     </div>
+                    {% endif %}
+                    {% if accessible_purchase_info_fields.supplier and accessible_person_fields.name %}
                     <div class="detail-row">
                       <span class="detail-label">{{ pi_form.supplier.label }}:</span>
                       <span class="detail-value">{{ pi_form.supplier }}</span>
                     </div>
+                    {% endif %}
                   </div>
                 </div>
               </div>
