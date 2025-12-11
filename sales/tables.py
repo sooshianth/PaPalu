@@ -7,6 +7,7 @@ from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
 from typing import Optional, Dict
 from core.OrderFolder.OrderModel import Order
+import jdatetime
 
 
 def convert_to_persian_numbers(text):
@@ -531,15 +532,9 @@ class OrderTable(tables.Table):
                 return '-'
         
         if total_weight > 0:
-            # نمایش به صورت عدد با دو رقم اعشار و فرمت فارسی
-            if total_weight >= 1000:
-                # اگر بیشتر از 1000 کیلوگرم است، به تن تبدیل کن
-                ton_value = total_weight / 1000
-                ton_formatted = format_number_persian(ton_value, decimal_places=2)
-                return f"{ton_formatted} تن"
-            else:
-                kg_formatted = format_number_persian(total_weight, decimal_places=2)
-                return f"{kg_formatted} کیلوگرم"
+            # نمایش به صورت عدد با دو رقم اعشار و فرمت فارسی (همیشه کیلوگرم)
+            kg_formatted = format_number_persian(total_weight, decimal_places=2)
+            return f"{kg_formatted} کیلوگرم"
         else:
             return '-'
     
@@ -551,8 +546,32 @@ class OrderTable(tables.Table):
     
     def render_created_at(self, value, record):
         """نمایش تاریخ ایجاد"""
+        # استفاده از record برای اطمینان از دریافت مقدار صحیح
+        if hasattr(record, 'created_at') and record.created_at:
+            dt = record.created_at
+            # اگر jdatetime.datetime است
+            if isinstance(dt, jdatetime.datetime):
+                # اگر ساعت دارد (نه 00:00:00)
+                if dt.hour != 0 or dt.minute != 0 or dt.second != 0:
+                    # نمایش تاریخ و ساعت (بدون ثانیه)
+                    return dt.strftime('%Y-%m-%d %H:%M')
+                else:
+                    # فقط تاریخ
+                    return dt.strftime('%Y-%m-%d')
+            # اگر jdatetime.date است
+            elif isinstance(dt, jdatetime.date):
+                return dt.strftime('%Y-%m-%d')
+        
+        # fallback: استفاده از value
         if value:
-            return value
+            if isinstance(value, jdatetime.datetime):
+                if value.hour != 0 or value.minute != 0 or value.second != 0:
+                    return value.strftime('%Y-%m-%d %H:%M')
+                else:
+                    return value.strftime('%Y-%m-%d')
+            elif isinstance(value, jdatetime.date):
+                return value.strftime('%Y-%m-%d')
+        
         return '-'
     
     actions = tables.Column(

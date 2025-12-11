@@ -394,6 +394,13 @@
         padding-left: 15px;
     }
     
+    .col-md-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
     .col-md-4 {
         flex: 0 0 33.333333%;
         max-width: 33.333333%;
@@ -444,7 +451,8 @@
         }
         
         .col-md-6,
-        .col-md-4 {
+        .col-md-4,
+        .col-md-3 {
             flex: 0 0 100%;
             max-width: 100%;
         }
@@ -483,15 +491,30 @@
                            id="search" 
                            name="search" 
                            value="{{ search_query }}"
-                           placeholder="نام، کد ملی، یا شماره همراه...">
+                           placeholder="نام، کد ملی، شماره همراه، حیطه فعالیت، یا استان...">
                 </div>
                 
-                <div class="col-md-4 mb-3">
-                    <label for="status" class="form-label">وضعیت</label>
-                    <select class="form-select" id="status" name="status">
+                <div class="col-md-3 mb-3">
+                    <label for="activity_field" class="form-label">حیطه فعالیت</label>
+                    <select class="form-select" id="activity_field" name="activity_field">
                         <option value="">همه</option>
-                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>فعال</option>
-                        <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>غیرفعال</option>
+                        {% for activity_field in activity_fields %}
+                            <option value="{{ activity_field.id }}" {% if activity_field_filter == activity_field.id|stringformat:"s" %}selected{% endif %}>
+                                {{ activity_field }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="province" class="form-label">استان</label>
+                    <select class="form-select" id="province" name="province">
+                        <option value="">همه</option>
+                        {% for province in provinces %}
+                            <option value="{{ province }}" {% if province_filter == province %}selected{% endif %}>
+                                {{ province }}
+                            </option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
@@ -550,7 +573,7 @@
             </svg>
             <p>هیچ مشتری‌ای یافت نشد.</p>
             <p style="font-size: 0.9rem; margin-top: 10px;">
-                {% if search_query or status_filter %}
+                {% if search_query or activity_field_filter or province_filter %}
                 نتیجه‌ای برای جستجوی شما پیدا نشد. لطفاً فیلترها را تغییر دهید.
                 {% else %}
                 برای ایجاد مشتری جدید روی دکمه بالا کلیک کنید.
@@ -567,7 +590,8 @@
     (function() {
         let searchTimeout;
         const searchInput = document.getElementById('search');
-        const statusSelect = document.getElementById('status');
+        const activityFieldSelect = document.getElementById('activity_field');
+        const provinceSelect = document.getElementById('province');
         const form = document.getElementById('search-filter-form');
         
         // تابع debounce برای جستجوی لایو
@@ -627,9 +651,15 @@
             }, 500));
         }
         
-        // تغییر فوری برای فیلتر وضعیت
-        if (statusSelect) {
-            statusSelect.addEventListener('change', function() {
+        // تغییر فوری برای فیلترهای dropdown
+        if (activityFieldSelect) {
+            activityFieldSelect.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+        
+        if (provinceSelect) {
+            provinceSelect.addEventListener('change', function() {
                 form.submit();
             });
         }

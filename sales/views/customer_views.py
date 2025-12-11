@@ -600,7 +600,8 @@ def customer_list_view(request):
     
     # دریافت پارامترهای جستجو و فیلتر
     search_query = request.GET.get('search', '')
-    status_filter = request.GET.get('status', '')
+    activity_field_filter = request.GET.get('activity_field', '')
+    province_filter = request.GET.get('province', '')
     
     # اگر کاربر superuser است، همه مشتریان را نمایش بده
     from django.db.models import OuterRef, Subquery, IntegerField, Q, Exists
@@ -623,7 +624,7 @@ def customer_list_view(request):
     if request.user.is_superuser:
         customers = Person.objects.filter(type='customer').annotate(
             mobile_number_sort=Subquery(mobile_subquery)
-        ).select_related().prefetch_related('activity_fields')
+        ).select_related().prefetch_related('activity_fields', 'financial_banking')
     else:
         # فقط مشتریانی که کارشناس فروششان کاربر فعلی است
         customers = Person.objects.filter(
@@ -631,10 +632,13 @@ def customer_list_view(request):
             sales_expert=request.user
         ).annotate(
             mobile_number_sort=Subquery(mobile_subquery)
-        ).select_related().prefetch_related('activity_fields')
+        ).select_related().prefetch_related('activity_fields', 'financial_banking')
     
-    # اعمال جستجو
+    # اعمال جستجو (عام‌تر - شامل نام، کد ملی، شماره همراه، حیطه فعالیت و استان)
     if search_query:
+        from core.PersonFolder.PersonModel import ActivityField
+        from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
+        
         # جستجو در شماره همراه با استفاده از Exists
         mobile_search_subquery = PhoneNumber.objects.filter(
             content_type=person_content_type,
@@ -644,24 +648,58 @@ def customer_list_view(request):
             number__icontains=search_query
         )
         
-        # ترکیب جستجو در نام، کد ملی و شماره همراه
-        customers = customers.filter(
+        # ساخت query برای جستجو
+        search_conditions = Q(
             Q(name__icontains=search_query) |
             Q(national_id__icontains=search_query) |
             Q(Exists(mobile_search_subquery))
         )
+        
+        # جستجو در حیطه فعالیت (اگر نتیجه‌ای پیدا شد)
+        activity_field_search = ActivityField.objects.filter(
+            code__icontains=search_query
+        ).values_list('id', flat=True)
+        if activity_field_search:
+            search_conditions |= Q(activity_fields__in=activity_field_search)
+        
+        # جستجو در استان مالیاتی (اگر نتیجه‌ای پیدا شد)
+        from core.PersonFolder.FinancialBankingModel import FinancialBanking
+        province_search_persons = FinancialBanking.objects.filter(
+            tax_province__icontains=search_query
+        ).values_list('person_id', flat=True)
+        if province_search_persons:
+            search_conditions |= Q(id__in=province_search_persons)
+        
+        # اعمال جستجو
+        customers = customers.filter(search_conditions).distinct()
     
-    # اعمال فیلتر وضعیت
-    if status_filter:
-        if status_filter == 'active':
-            customers = customers.filter(is_active=True)
-        elif status_filter == 'inactive':
-            customers = customers.filter(is_active=False)
+    # اعمال فیلتر حیطه فعالیت
+    if activity_field_filter:
+        customers = customers.filter(activity_fields__id=activity_field_filter).distinct()
+    
+    # اعمال فیلتر استان مالیاتی
+    if province_filter:
+        from core.PersonFolder.FinancialBankingModel import FinancialBanking
+        province_persons = FinancialBanking.objects.filter(
+            tax_province=province_filter
+        ).values_list('person_id', flat=True)
+        customers = customers.filter(id__in=province_persons).distinct()
     
     bug_logger.debug(f"تعداد {customers.count()} مشتری برای نمایش لود شد")
     
     # محاسبه فیلدهای قابل دسترسی
     accessible_fields = get_accessible_customer_list_fields(request.user)
+    
+    # دریافت لیست حیطه‌های فعالیت و استان‌های مالیاتی برای dropdown
+    from core.PersonFolder.PersonModel import ActivityField
+    activity_fields = ActivityField.objects.all().order_by('code')
+    
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    provinces = FinancialBanking.objects.exclude(
+        tax_province__isnull=True
+    ).exclude(
+        tax_province=''
+    ).values_list('tax_province', flat=True).distinct().order_by('tax_province')
     
     # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
     table = CustomerTable(customers, user=request.user, accessible_fields=accessible_fields)
@@ -672,7 +710,10 @@ def customer_list_view(request):
         'table': table,
         'accessible_fields': accessible_fields,
         'search_query': search_query,
-        'status_filter': status_filter,
+        'activity_field_filter': activity_field_filter,
+        'province_filter': province_filter,
+        'activity_fields': activity_fields,
+        'provinces': provinces,
         'page_title': 'لیست مشتریان'
     }
     
