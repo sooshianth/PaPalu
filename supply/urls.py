@@ -31,6 +31,8 @@ from .views import (
     delete_purchase_transport_view,
     transition_purchase_transport_status_view,
     get_purchase_order_info_api,
+    supplier_search_api,
+    raw_material_search_api,
     # Car Entrance Views
     car_entrance_list_view,
     register_driver_for_transport_view,
@@ -75,6 +77,8 @@ urlpatterns = [
     path('purchasetransport/<str:transport_number>/transition/<str:new_status>/', transition_purchase_transport_status_view, name='transition_purchase_transport_status'),
     # API
     path('api/purchase-order-info/<str:order_number>/', get_purchase_order_info_api, name='get_purchase_order_info_api'),
+    path('api/supplier-search/', supplier_search_api, name='supplier_search_api'),
+    path('api/raw-material-search/', raw_material_search_api, name='raw_material_search_api'),
     # Car Entrance (Gatekeeper)
     path('carentrance/', car_entrance_list_view, name='carentrance'),
     path('carentrance/<str:transport_number>/register/', register_driver_for_transport_view, name='carentrance_register_driver'),

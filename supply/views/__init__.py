@@ -28,6 +28,8 @@ from .purchase_order_views import (
     delete_procurement_purchase_order_view,
     transition_procurement_purchase_order_status_view,
     confirm_procurement_purchase_order_payment_view,
+    supplier_search_api,
+    raw_material_search_api,
 )
 
 # Purchase Transport Views
@@ -84,6 +86,8 @@ __all__ = [
     'delete_procurement_purchase_order_view',
     'transition_procurement_purchase_order_status_view',
     'confirm_procurement_purchase_order_payment_view',
+    'supplier_search_api',
+    'raw_material_search_api',
     # Purchase Transport Views
     'purchase_transport_list_view',
     'create_purchase_transport_view',

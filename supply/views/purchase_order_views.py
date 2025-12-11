@@ -3,9 +3,12 @@ from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django import forms
-from django.forms import ModelForm, inlineformset_factory
+from django.forms import ModelForm, inlineformset_factory, BaseInlineFormSet
 from django.db import transaction
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.db.models import Q
+from decimal import Decimal
 import logging
 from core.logging_levels import *
 from django_tables2 import RequestConfig
@@ -92,7 +95,7 @@ class ProcurementPurchaseOrderForm(ModelForm):
         model = ProcurementPurchaseOrder
         fields = [
             'supplier', 'freight_payment_type',
-            'subtotal_without_freight', 'freight_cost', 'vat_percentage',
+            'subtotal_without_freight', 'freight_cost',
             'external_system_id'
         ]
         labels = {
@@ -100,27 +103,68 @@ class ProcurementPurchaseOrderForm(ModelForm):
             'freight_payment_type': 'نوع پرداخت کرایه',
             'subtotal_without_freight': 'جمع بدون کرایه',
             'freight_cost': 'هزینه کرایه',
-            'vat_percentage': 'درصد مالیات بر ارزش افزوده',
             'external_system_id': 'شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت',
         }
         widgets = {
             'supplier': forms.Select(attrs={'class': 'form-control'}),
             'freight_payment_type': forms.Select(attrs={'class': 'form-control'}),
-            'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
             'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'vat_percentage': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'external_system_id': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Only supplier persons
-        self.fields['supplier'].queryset = Person.objects.filter(type='supplier').order_by('name')
+        
+        # تبدیل supplier به autocomplete
+        self.fields['supplier'] = forms.CharField(
+            required=True,
+            label='تأمین‌کننده',
+            widget=forms.TextInput(attrs={
+                'class': 'form-control supplier-autocomplete',
+                'placeholder': 'جستجوی تأمین‌کننده...',
+                'autocomplete': 'off'
+            })
+        )
+        
+        # اضافه کردن فیلد مخفی برای ذخیره ID تأمین‌کننده
+        self.fields['supplier_id'] = forms.CharField(
+            required=False,
+            widget=forms.HiddenInput()
+        )
+        
         # Lock financial fields if payment confirmed
         if self.instance and self.instance.payment_confirmed:
-            for f in ['subtotal_without_freight', 'freight_cost', 'vat_percentage']:
+            for f in ['subtotal_without_freight', 'freight_cost']:
                 if f in self.fields:
                     self.fields[f].disabled = True
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        # تبدیل supplier_id به supplier
+        supplier_id = cleaned_data.get('supplier_id', '').strip()
+        supplier_text = cleaned_data.get('supplier', '').strip()
+        
+        # اگر supplier_id وجود ندارد اما متن وارد شده، سعی کن از متن استخراج کن
+        if not supplier_id and supplier_text:
+            # استخراج کد ملی از متن (فرمت: "نام (کد ملی)")
+            import re
+            match = re.search(r'\((\d+)\)', supplier_text)
+            if match:
+                supplier_id = match.group(1)
+                cleaned_data['supplier_id'] = supplier_id
+        
+        if not supplier_id:
+            self.add_error('supplier', 'لطفاً یک تأمین‌کننده را از لیست انتخاب کنید.')
+            return cleaned_data
+        
+        try:
+            supplier = Person.objects.get(national_id=supplier_id, type='supplier')
+            cleaned_data['supplier'] = supplier
+        except Person.DoesNotExist:
+            self.add_error('supplier', 'تأمین‌کننده انتخاب شده یافت نشد.')
+        
+        return cleaned_data
 
 
 class ProcurementPurchaseOrderMaterialForm(ModelForm):
@@ -148,30 +192,99 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
         widgets = {
             'raw_material': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
-            'unit': forms.TextInput(attrs={'class': 'form-control'}),
+            'unit': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'total_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'total_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
             'freight_included': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'vat_on_material': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'freight_cost_completed': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'total_cost_completed': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'external_allocation_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'external_allocation_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': True}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['raw_material'].queryset = RawMaterial.objects.filter(status='active').order_by('name')
+        
+        # تبدیل raw_material به autocomplete
+        self.fields['raw_material'] = forms.CharField(
+            required=False,  # در clean بررسی می‌کنیم که آیا فرم خالی است یا نه
+            label='ماده اولیه',
+            widget=forms.TextInput(attrs={
+                'class': 'form-control raw-material-autocomplete',
+                'placeholder': 'جستجوی ماده اولیه...',
+                'autocomplete': 'off'
+            })
+        )
+        
+        # اضافه کردن فیلد مخفی برای ذخیره ID ماده اولیه
+        self.fields['raw_material_id'] = forms.CharField(
+            required=False,
+            widget=forms.HiddenInput()
+        )
+        
+        # واحد به صورت dropdown که بعداً با JavaScript پر می‌شود
+        self.fields['unit'].widget = forms.Select(attrs={'class': 'form-control material-unit-select'})
+        self.fields['unit'].choices = [('', '-- انتخاب واحد --')]
     
     def clean(self):
         """اعتبارسنجی: واحد باید با واحد اصلی یا فرعی ماده اولیه مطابقت داشته باشد"""
         cleaned_data = super().clean()
-        raw_material = cleaned_data.get('raw_material')
+        
+        # بررسی اینکه آیا فرم برای حذف علامت خورده است
+        if self.cleaned_data.get('DELETE', False):
+            return cleaned_data
+        
+        raw_material_id = cleaned_data.get('raw_material_id', '').strip()
+        raw_material_text = cleaned_data.get('raw_material', '').strip()
         unit = cleaned_data.get('unit')
         quantity = cleaned_data.get('quantity')
         unit_price = cleaned_data.get('unit_price')
         total_price = cleaned_data.get('total_price')
         
+        # اگر فرم خالی است (بدون raw_material و quantity)، آن را نادیده بگیر
+        if not raw_material_text and not raw_material_id and not quantity:
+            # فرم خالی است، خطا نده - همه فیلدها را خالی کن تا formset آن را نادیده بگیرد
+            cleaned_data = {}
+            return cleaned_data
+        
+        # تبدیل raw_material_id به raw_material
+        if not raw_material_id and raw_material_text:
+            # استخراج ID از متن - ممکن است در ابتدای متن باشد
+            import re
+            # سعی کن ID را از ابتدای متن یا از داخل پرانتز پیدا کن
+            # فرمت: "1-2025-0027 - نام ماده" یا فقط "1-2025-0027"
+            match = re.search(r'(\d+)', raw_material_text)
+            if match:
+                # اگر raw_material_id به صورت عدد ساده است
+                potential_id = match.group(1)
+                # بررسی کن که آیا این ID معتبر است
+                try:
+                    test_rm = RawMaterial.objects.get(id=potential_id, status='active')
+                    raw_material_id = potential_id
+                    cleaned_data['raw_material_id'] = raw_material_id
+                except (RawMaterial.DoesNotExist, ValueError):
+                    pass
+        
+        # اگر هنوز raw_material_id نداریم
+        if not raw_material_id:
+            if not raw_material_text and not quantity:
+                # اگر همه فیلدها خالی هستند، فرم خالی است - خطا نده
+                cleaned_data = {}
+                return cleaned_data
+            # اگر raw_material_text وجود دارد اما raw_material_id نداریم
+            self.add_error('raw_material', 'لطفاً یک ماده اولیه را از لیست انتخاب کنید.')
+            return cleaned_data
+        
+        try:
+            raw_material = RawMaterial.objects.get(id=raw_material_id, status='active')
+            # تنظیم raw_material در cleaned_data برای استفاده در save
+            cleaned_data['raw_material'] = raw_material
+        except (RawMaterial.DoesNotExist, ValueError):
+            self.add_error('raw_material', 'ماده اولیه انتخاب شده یافت نشد.')
+            return cleaned_data
+        
+        # اعتبارسنجی واحد
         if raw_material and unit:
             # Get allowed units from raw material
             allowed_units = []
@@ -182,25 +295,69 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             
             # Check if entered unit matches
             if unit not in allowed_units and allowed_units:
-                raise forms.ValidationError(
-                    f'واحد "{unit}" برای ماده اولیه "{raw_material.name}" معتبر نیست. '
-                    f'واحدهای مجاز: {" یا ".join(allowed_units)}'
-                )
+                self.add_error('unit', f'واحد "{unit}" برای ماده اولیه "{raw_material.name}" معتبر نیست. واحدهای مجاز: {" یا ".join(allowed_units)}')
         
         # Validate total price calculation
-        if quantity and unit_price and total_price:
+        if quantity and unit_price:
             calculated_total = quantity * unit_price
-            # Allow small floating point difference
-            if abs(float(total_price) - float(calculated_total)) > 0.01:
-                cleaned_data['total_price'] = calculated_total
+            cleaned_data['total_price'] = calculated_total
+            if total_price and abs(float(total_price) - float(calculated_total)) > 0.01:
+                # فقط هشدار می‌دهیم، مقدار را اصلاح می‌کنیم
+                pass
+        
+        # اگر quantity required است و وجود ندارد، خطا بده
+        if not quantity:
+            self.add_error('quantity', 'این فیلد لازم است.')
         
         return cleaned_data
+    
+    def save(self, commit=True):
+        """ذخیره فرم با تبدیل raw_material_id به raw_material"""
+        # اگر raw_material در cleaned_data نیست، از raw_material_id استفاده کن
+        if 'raw_material' not in self.cleaned_data or not isinstance(self.cleaned_data['raw_material'], RawMaterial):
+            raw_material_id = self.cleaned_data.get('raw_material_id', '').strip()
+            if raw_material_id:
+                try:
+                    self.cleaned_data['raw_material'] = RawMaterial.objects.get(id=raw_material_id, status='active')
+                except RawMaterial.DoesNotExist:
+                    pass
+        
+        return super().save(commit=commit)
+
+
+class MaterialFormSetBase(BaseInlineFormSet):
+    """FormSet سفارشی که فرم‌های خالی را نادیده می‌گیرد"""
+    
+    def clean(self):
+        """حذف فرم‌های خالی از اعتبارسنجی"""
+        if any(self.errors):
+            return
+        
+        # حذف فرم‌های خالی از cleaned_data
+        for form in self.forms:
+            if form in self.deleted_forms:
+                continue
+            
+            cleaned_data = form.cleaned_data
+            if cleaned_data:
+                # بررسی اینکه آیا فرم خالی است
+                raw_material_id = cleaned_data.get('raw_material_id', '').strip()
+                raw_material_text = cleaned_data.get('raw_material', '').strip()
+                quantity = cleaned_data.get('quantity')
+                
+                # اگر همه فیلدهای اصلی خالی هستند، فرم را خالی در نظر بگیر
+                if not raw_material_id and not raw_material_text and not quantity:
+                    # حذف این فرم از cleaned_data
+                    form.cleaned_data = {}
+        
+        super().clean()
 
 
 MaterialFormSet = inlineformset_factory(
     ProcurementPurchaseOrder,
     ProcurementPurchaseOrderMaterial,
     form=ProcurementPurchaseOrderMaterialForm,
+    formset=MaterialFormSetBase,
     fields=[
         'raw_material', 'quantity', 'unit', 'notes',
         'unit_price', 'total_price', 'freight_included',
@@ -320,7 +477,6 @@ def create_procurement_purchase_order_view(request):
         'freight_payment_type': user_can_access_field(request.user, ProcurementPurchaseOrder, 'freight_payment_type', 'edit'),
         'subtotal_without_freight': user_can_access_field(request.user, ProcurementPurchaseOrder, 'subtotal_without_freight', 'edit'),
         'freight_cost': user_can_access_field(request.user, ProcurementPurchaseOrder, 'freight_cost', 'edit'),
-        'vat_percentage': user_can_access_field(request.user, ProcurementPurchaseOrder, 'vat_percentage', 'edit'),
         'external_system_id': user_can_access_field(request.user, ProcurementPurchaseOrder, 'external_system_id', 'edit'),
     }
     
@@ -335,7 +491,6 @@ def create_procurement_purchase_order_view(request):
         'vat_on_material': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'vat_on_material', 'edit'),
         'freight_cost_completed': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'freight_cost_completed', 'edit'),
         'total_cost_completed': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'total_cost_completed', 'edit'),
-        'external_allocation_id': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'external_allocation_id', 'edit'),
     }
     
     try:
@@ -345,19 +500,40 @@ def create_procurement_purchase_order_view(request):
                 with transaction.atomic():
                     po = form.save(commit=False)
                     po.created_by = request.user
-                    po.save()  # triggers order_number generation, status defaults to DRAFT
                     
-                    # Create initial status log
-                    ProcurementPurchaseOrderStatusLog.objects.create(
-                        purchase_order=po,
-                        old_status='',
-                        new_status=po.status,
-                        changed_by=request.user,
-                        note='ایجاد سفارش خرید'
-                    )
-                    
-                    material_formset = MaterialFormSet(request.POST, instance=po, prefix='mat')
+                    # محاسبه خودکار subtotal_without_freight از مجموع total_price اقلام
+                    material_formset = MaterialFormSet(request.POST, prefix='mat')
                     if material_formset.is_valid():
+                        # محاسبه مجموع قبل از ذخیره
+                        total_subtotal = Decimal('0')
+                        for material_form in material_formset:
+                            if material_form.cleaned_data and not material_form.cleaned_data.get('DELETE', False):
+                                # بررسی اینکه آیا فرم خالی است
+                                raw_material_id = material_form.cleaned_data.get('raw_material_id', '').strip()
+                                raw_material_text = material_form.cleaned_data.get('raw_material', '').strip()
+                                quantity = material_form.cleaned_data.get('quantity')
+                                
+                                # اگر فرم خالی است، آن را نادیده بگیر
+                                if not raw_material_id and not raw_material_text and not quantity:
+                                    continue
+                                
+                                total_price = material_form.cleaned_data.get('total_price')
+                                if total_price:
+                                    total_subtotal += Decimal(str(total_price))
+                        
+                        po.subtotal_without_freight = total_subtotal
+                        po.save()  # triggers order_number generation, status defaults to DRAFT
+                        
+                        # Create initial status log
+                        ProcurementPurchaseOrderStatusLog.objects.create(
+                            purchase_order=po,
+                            old_status='',
+                            new_status=po.status,
+                            changed_by=request.user,
+                            note='ایجاد سفارش خرید'
+                        )
+                        
+                        material_formset.instance = po
                         material_formset.save()
                     else:
                         bug_logger.warning(f"Material formset invalid on create: {material_formset.errors}")
@@ -519,3 +695,63 @@ def confirm_procurement_purchase_order_payment_view(request, order_number):
         bug_logger.error(f"Confirm payment PO error: {e}")
         messages.error(request, 'خطا در تایید پرداخت.')
     return redirect(reverse('supply:procurement_purchase_order_detail', kwargs={'order_number': order_number}))
+
+
+@login_required
+@require_http_methods(["GET"])
+def supplier_search_api(request):
+    """
+    API endpoint برای جستجوی تامین‌کننده‌ها
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # فیلتر کردن تامین‌کننده‌ها
+    suppliers = Person.objects.filter(
+        type='supplier'
+    ).filter(
+        Q(name__icontains=query) | Q(national_id__icontains=query)
+    ).order_by('name')[:20]
+    
+    results = []
+    for supplier in suppliers:
+        results.append({
+            'id': supplier.national_id,
+            'text': f"{supplier.name} ({supplier.national_id})"
+        })
+    
+    return JsonResponse({'results': results})
+
+
+@login_required
+@require_http_methods(["GET"])
+def raw_material_search_api(request):
+    """
+    API endpoint برای جستجوی مواد اولیه
+    """
+    query = request.GET.get('q', '').strip()
+    
+    if not query:
+        return JsonResponse({'results': []})
+    
+    # فیلتر کردن مواد اولیه فعال
+    raw_materials = RawMaterial.objects.filter(
+        status='active'
+    ).filter(
+        Q(name__icontains=query) | Q(raw_material_id__icontains=query)
+    ).order_by('name')[:20]
+    
+    results = []
+    for rm in raw_materials:
+        results.append({
+            'id': rm.id,
+            'text': f"{rm.raw_material_id or ''} - {rm.name}",
+            'primary_unit': rm.primary_unit or '',
+            'secondary_unit': rm.secondary_unit or '',
+            'primary_unit_display': rm.get_primary_unit_display() if rm.primary_unit else '',
+            'secondary_unit_display': rm.get_secondary_unit_display() if rm.secondary_unit else '',
+        })
+    
+    return JsonResponse({'results': results})
