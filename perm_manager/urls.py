@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/save-field-permissions/', views.save_field_permissions, name='api_save_field_permissions'),
     path('api/add-managed-field/', views.add_managed_field, name='api_add_managed_field'),
     path('api/delete-managed-field/', views.delete_managed_field, name='api_delete_managed_field'),
+    path('api/get-model-fields/', views.get_model_fields, name='api_get_model_fields'),
     
     # API endpoints - Roles and Users
     path('api/add-role/', views.add_role, name='api_add_role'),

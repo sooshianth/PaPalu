@@ -956,15 +956,6 @@
     <aside class="sidebar" id="sidebar">
         <nav class="sidebar-nav">
             <ul class="nav-list">
-                <li class="nav-item">
-                    <a href="#" class="nav-link" title="پروفایل">
-                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <span class="nav-text">پروفایل</span>
-                    </a>
-                </li>
                 <li class="nav-item has-submenu" id="salesSubmenu">
                     <a href="#" class="nav-link" title="فروش" id="salesMainLink">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1382,15 +1373,31 @@
                         </li>
                     </ul>
                 </li>
-                <li class="nav-item">
-                    <a href="{% url 'permission_manager:home' %}" class="nav-link" title="دسترسی‌ها">
+                {% if user.is_authenticated and user.is_superuser %}
+                <li class="nav-item has-submenu" id="settingsSubmenu">
+                    <a href="#" class="nav-link" title="تنظیمات" id="settingsMainLink">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        <span class="nav-text">دسترسی‌ها</span>
+                        <span class="nav-text">تنظیمات</span>
+                        <svg class="submenu-toggle" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 16px; height: 16px; margin-right: auto;">
+                            <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
                     </a>
+                    <ul class="submenu">
+                        <li class="submenu-item">
+                            <a href="{% url 'permission_manager:home' %}" class="nav-link submenu-link" title="دسترسی‌ها">
+                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M12 15C15.866 15 19 11.866 19 8C19 4.13401 15.866 1 12 1C8.13401 1 5 4.13401 5 8C5 11.866 8.13401 15 12 15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                                <span class="nav-text">دسترسی‌ها</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
+                {% endif %}
             </ul>
         </nav>
     </aside>
@@ -1696,18 +1703,24 @@ document.addEventListener('DOMContentLoaded', function() {
         const accountingSubmenu = document.getElementById('accountingSubmenu');
         const accountingMainLink = document.getElementById('accountingMainLink');
         
-        // Check if current page is in sales, production, distribution, supply or accounting section
+        // Settings submenu
+        const settingsSubmenu = document.getElementById('settingsSubmenu');
+        const settingsMainLink = document.getElementById('settingsMainLink');
+        
+        // Check if current page is in sales, production, distribution, supply, accounting or settings section
         const currentPath = window.location.pathname;
         const salesPaths = ['/sales/customer/', '/sales/order/', '/sales/product/', '/sales/price/', '/sales/proforma/', '/sales/invoice/', '/sales/allocation/', '/sales/approve-allocation/', '/sales/approve-proforma/', '/sales/transaction-receipts/', '/sales/unload-approval/'];
         const productionPaths = ['/production/'];
         const distributionPaths = ['/distribution/'];
         const supplyPaths = ['/supply/'];
         const accountingPaths = ['/sales/approve-transaction-receipt/', '/sales/settlement/', '/sales/settlement-approval/', '/supply/upload-fare-payment-docs/'];
+        const settingsPaths = ['/permission_manager/'];
         const isSalesPage = salesPaths.some(path => currentPath.includes(path));
         const isProductionPage = productionPaths.some(path => currentPath.includes(path));
         const isDistributionPage = distributionPaths.some(path => currentPath.includes(path));
         const isSupplyPage = supplyPaths.some(path => currentPath.includes(path));
         const isAccountingPage = accountingPaths.some(path => currentPath.includes(path));
+        const isSettingsPage = settingsPaths.some(path => currentPath.includes(path));
         
         // Setup sales submenu
         if (salesSubmenu && salesMainLink) {
@@ -1862,6 +1875,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+        
+        // Setup settings submenu
+        if (settingsSubmenu && settingsMainLink) {
+            const checkIsMobile = () => window.innerWidth <= 768;
+            
+            if (!checkIsMobile()) {
+                if (isSettingsPage) {
+                    settingsSubmenu.classList.add('expanded');
+                } else {
+                    const savedState = localStorage.getItem('settingsSubmenuExpanded');
+                    if (savedState === 'true') {
+                        settingsSubmenu.classList.add('expanded');
+                    }
+                }
+            } else {
+                settingsSubmenu.classList.remove('expanded');
+            }
+            
+            settingsMainLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                settingsSubmenu.classList.toggle('expanded');
+                
+                if (!checkIsMobile()) {
+                    const isExpanded = settingsSubmenu.classList.contains('expanded');
+                    localStorage.setItem('settingsSubmenuExpanded', isExpanded);
+                }
+            });
+        }
     }
     
     /**
@@ -1917,12 +1959,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const distributionPaths = ['/distribution/'];
             const supplyPaths = ['/supply/'];
             const accountingPaths = ['/sales/approve-transaction-receipt/', '/sales/settlement/', '/sales/settlement-approval/', '/supply/upload-fare-payment-docs/'];
+            const settingsPaths = ['/permission_manager/'];
             
             const isSalesPage = salesPaths.some(path => currentPath.includes(path));
             const isProductionPage = productionPaths.some(path => currentPath.includes(path));
             const isDistributionPage = distributionPaths.some(path => currentPath.includes(path));
             const isSupplyPage = supplyPaths.some(path => currentPath.includes(path));
             const isAccountingPage = accountingPaths.some(path => currentPath.includes(path));
+            const isSettingsPage = settingsPaths.some(path => currentPath.includes(path));
             
             // بازگرداندن وضعیت هر زیرمنو
             const salesSubmenu = document.getElementById('salesSubmenu');
@@ -1962,6 +2006,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 accountingSubmenu.classList.remove('expanded');
                 if (isAccountingPage || localStorage.getItem('accountingSubmenuExpanded') === 'true') {
                     accountingSubmenu.classList.add('expanded');
+                }
+            }
+            
+            const settingsSubmenu = document.getElementById('settingsSubmenu');
+            if (settingsSubmenu) {
+                settingsSubmenu.classList.remove('expanded');
+                if (isSettingsPage || localStorage.getItem('settingsSubmenuExpanded') === 'true') {
+                    settingsSubmenu.classList.add('expanded');
                 }
             }
         }

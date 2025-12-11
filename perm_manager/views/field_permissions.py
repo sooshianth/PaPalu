@@ -331,3 +331,40 @@ def delete_managed_field(request):
         return JsonResponse({'status': 'error', 'message': 'JSON نامعتبر'}, status=400)
     except Exception:
         return JsonResponse({'status': 'error', 'message': 'خطای سرور'}, status=400)
+
+
+@superuser_required
+@require_http_methods(["GET"])
+def get_model_fields(request):
+    """
+    API برای دریافت فهرست فیلدهای یک مدل بر اساس content_type_id.
+    فقط فیلدهای غیر auto_created و غیر many_to_many بازگردانده می‌شود.
+    """
+    ct_id = request.GET.get('content_type_id')
+    if not ct_id:
+        return JsonResponse({'status': 'error', 'message': 'content_type_id الزامی است'}, status=400)
+    try:
+        ct = ContentType.objects.get(id=int(ct_id))
+    except (ValueError, ContentType.DoesNotExist):
+        return JsonResponse({'status': 'error', 'message': 'مدل یافت نشد'}, status=404)
+
+    model_class = ct.model_class()
+    if not model_class:
+        return JsonResponse({'status': 'error', 'message': 'مدل یافت نشد'}, status=404)
+
+    fields = []
+    for f in model_class._meta.get_fields():
+        if f.auto_created or f.many_to_many:
+            continue
+        label = str(getattr(f, 'verbose_name', f.name) or f.name)
+        fields.append({
+            'name': f.name,
+            'label': label,
+            'content_type_id': ct.id
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'model': f"{ct.app_label}.{ct.model}",
+        'fields': fields
+    })
