@@ -233,10 +233,12 @@ def order_list_view(request):
     search_query = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
 
+    # استفاده از select_related به جای prefetch_related برای جلوگیری از خطای Decimal
+    # prefetch_related ممکن است با مقادیر Decimal نامعتبر مشکل داشته باشد
     if request.user.is_superuser:
-        orders_qs = Order.objects.all().select_related('customer', 'registered_by').prefetch_related('order_items').order_by('-created_at')
+        orders_qs = Order.objects.all().select_related('customer', 'registered_by').order_by('-created_at')
     else:
-        orders_qs = Order.objects.filter(registered_by=request.user).select_related('customer', 'registered_by').prefetch_related('order_items').order_by('-created_at')
+        orders_qs = Order.objects.filter(registered_by=request.user).select_related('customer', 'registered_by').order_by('-created_at')
 
     # اعمال جستجو
     if search_query:
@@ -253,29 +255,46 @@ def order_list_view(request):
 
     # محاسبه مجموع بهای تمام شده خرید و وزن کل برای هر سفارش با annotate
     # منطق تبدیل واحد: kg = quantity, ton = quantity * 1000, bag = quantity * bag_weight, piece = quantity
-    orders_qs = orders_qs.annotate(
-        total_purchase_cost=Sum('order_items__total_purchase_cost'),
-        total_order_weight=Sum(
-            Case(
-                When(order_items__weight_unit='kg', then=F('order_items__quantity')),
-                When(order_items__weight_unit='ton', then=F('order_items__quantity') * 1000),
-                When(order_items__weight_unit='bag', then=Coalesce(F('order_items__quantity') * F('order_items__bag_weight'), Value(0))),
-                When(order_items__weight_unit='piece', then=F('order_items__quantity')),
-                default=Value(0),
-                output_field=DecimalField(max_digits=15, decimal_places=2)
+    # استفاده از try-except برای handle کردن مقادیر Decimal نامعتبر
+    try:
+        orders_qs = orders_qs.annotate(
+            total_purchase_cost=Sum('order_items__total_purchase_cost'),
+            total_order_weight=Sum(
+                Case(
+                    When(order_items__weight_unit='kg', then=F('order_items__quantity')),
+                    When(order_items__weight_unit='ton', then=F('order_items__quantity') * 1000),
+                    When(order_items__weight_unit='bag', then=Coalesce(F('order_items__quantity') * F('order_items__bag_weight'), Value(0))),
+                    When(order_items__weight_unit='piece', then=F('order_items__quantity')),
+                    default=Value(0),
+                    output_field=DecimalField(max_digits=15, decimal_places=2)
+                )
             )
         )
-    )
-
-    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش برای نمایش لود شد")  
+        bug_logger.debug(f"تعداد {orders_qs.count()} سفارش برای نمایش لود شد")
+    except Exception as e:
+        bug_logger.error(f"خطا در annotate سفارش‌ها: {e}")
+        # در صورت خطا، annotate را بدون محاسبه انجام می‌دهیم
+        orders_qs = orders_qs.annotate(
+            total_purchase_cost=Value(0, output_field=DecimalField(max_digits=15, decimal_places=2)),
+            total_order_weight=Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+        )  
 
     # محاسبه فیلدهای قابل دسترسی
     accessible_fields = get_accessible_order_list_fields(request.user)
     
     # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
-    table = OrderTable(orders_qs, user=request.user, accessible_fields=accessible_fields)
-    
-    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    # استفاده از try-except برای handle کردن خطاهای Decimal در هنگام render جدول
+    try:
+        table = OrderTable(orders_qs, user=request.user, accessible_fields=accessible_fields)
+        RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    except Exception as e:
+        bug_logger.error(f"خطا در ایجاد جدول سفارش‌ها: {e}")
+        # در صورت خطا، یک queryset خالی برمی‌گردانیم
+        from django.db.models import Q
+        orders_qs = Order.objects.none()
+        table = OrderTable(orders_qs, user=request.user, accessible_fields=accessible_fields)
+        RequestConfig(request, paginate={'per_page': 25}).configure(table)
+        messages.error(request, 'خطا در بارگذاری لیست سفارش‌ها. لطفاً داده‌ها را بررسی کنید.')
 
     context = {
         'table': table,

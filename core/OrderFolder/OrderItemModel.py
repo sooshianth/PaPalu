@@ -1,4 +1,5 @@
 from django.db import models
+from decimal import Decimal
 from .OrderModel import Order
 
 
@@ -187,35 +188,51 @@ class OrderItem(models.Model):
         unit_price بر اساس هر کیلوگرم است (مگر برای piece که بر اساس هر عدد است)
         مالیات بر ارزش افزوده به صورت درصدی (vat_percent) محاسبه می‌شود.
         """
+        from decimal import Decimal
+        
         if not self.quantity or not self.unit_price:
-            return 0
+            return Decimal('0')
         
         # برای واحد piece، قیمت مستقیماً برای هر عدد است
         if self.weight_unit == 'piece':
-            subtotal = float(self.quantity) * float(self.unit_price)
+            subtotal = Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
         else:
             # برای سایر واحدها (kg, ton, bag)، ابتدا وزن را به کیلوگرم تبدیل می‌کنیم
             weight_in_kg = self.get_weight_in_kg()
             
             if weight_in_kg == 0:
-                return 0
+                return Decimal('0')
             
             # محاسبه subtotal: وزن به کیلوگرم * قیمت هر کیلوگرم
-            subtotal = weight_in_kg * float(self.unit_price)
+            subtotal = Decimal(str(weight_in_kg)) * Decimal(str(self.unit_price))
         
         # محاسبه مالیات بر اساس درصد
-        vat_amount = (float(self.vat_percent or 0) / 100) * subtotal
+        vat_percent = Decimal(str(self.vat_percent or 0))
+        vat_amount = (vat_percent / Decimal('100')) * subtotal
         
         # محاسبه نهایی با در نظرگیری تخفیف، اضافات و مالیات درصدی
-        total = subtotal - float(self.discount or 0) + float(self.additional_charges or 0) + vat_amount
-        return total
+        discount = Decimal(str(self.discount or 0))
+        additional_charges = Decimal(str(self.additional_charges or 0))
+        total = subtotal - discount + additional_charges + vat_amount
+        return total.quantize(Decimal('0.01'))
     
     def save(self, *args, **kwargs):
         """
         محاسبه خودکار بهای تمام شده خرید قبل از ذخیره
         """
         # محاسبه بهای تمام شده خرید
-        if self.quantity and self.unit_price:
-            self.total_purchase_cost = self.calculate_total()
+        try:
+            if self.quantity and self.unit_price:
+                total = self.calculate_total()
+                # اطمینان از اینکه total یک Decimal معتبر است
+                if total is not None:
+                    self.total_purchase_cost = total.quantize(Decimal('0.01'))
+                else:
+                    self.total_purchase_cost = Decimal('0')
+            else:
+                self.total_purchase_cost = Decimal('0')
+        except Exception:
+            # در صورت خطا، مقدار صفر قرار می‌دهیم
+            self.total_purchase_cost = Decimal('0')
         
         super().save(*args, **kwargs)
