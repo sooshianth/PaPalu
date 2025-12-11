@@ -145,8 +145,8 @@ class CompanyInfo(models.Model):
     )
     
     class Meta:
-        verbose_name = 'شرکت | اطلاعات شرکت'
-        verbose_name_plural = 'شرکت | اطلاعات شرکت'
+        verbose_name = 'Settings | اطلاعات شرکت'
+        verbose_name_plural = 'Settings | اطلاعات شرکت'
         ordering = ['-updated_at']
     
     def __str__(self):

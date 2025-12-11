@@ -12,6 +12,10 @@ class Role(models.Model):
     description = models.TextField(blank=True, null=True)
     users = models.ManyToManyField(User, related_name='roles', blank=True)
 
+    class Meta:
+        verbose_name = 'RBAC | نقش'
+        verbose_name_plural = 'RBAC | نقش‌ها'
+
     def __str__(self):
         return self.name
 
@@ -19,6 +23,10 @@ class Role(models.Model):
 class UserTaskPermission(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='task_permission')
     task_permission = models.ForeignKey(TaskPermission, on_delete=models.SET_NULL, null=True)
+
+    class Meta:
+        verbose_name = 'RBAC | مجوز دسترسی تسک برای کاربر'
+        verbose_name_plural = 'RBAC | مجوزهای دسترسی تسک برای کاربران'
 
     def __str__(self):
         return f"{self.user.username}"
@@ -43,8 +51,8 @@ class UserFieldPermission(models.Model):
     )
 
     class Meta:
-        verbose_name = 'مجوز دسترسی فیلد کاربر'
-        verbose_name_plural = 'مجوزهای دسترسی فیلد کاربران'
+        verbose_name = 'RBAC | مجوز دسترسی فیلد کاربر'
+        verbose_name_plural = 'RBAC | مجوزهای دسترسی فیلد کاربران'
 
     def __str__(self):
         return f"{self.user.username} - Field Permission"

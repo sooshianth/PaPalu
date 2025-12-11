@@ -908,14 +908,36 @@ class ProductTable(tables.Table):
     
     def render_created_at(self, value, record):
         """نمایش تاریخ ایجاد"""
+        # استفاده از record برای اطمینان از دریافت مقدار صحیح
+        if hasattr(record, 'created_at') and record.created_at:
+            dt = record.created_at
+            # اگر jdatetime.datetime است
+            if isinstance(dt, jdatetime.datetime):
+                # اگر ساعت دارد (نه 00:00:00)
+                if dt.hour != 0 or dt.minute != 0 or dt.second != 0:
+                    # نمایش تاریخ و ساعت (بدون ثانیه)
+                    formatted_date = dt.strftime('%Y-%m-%d %H:%M')
+                else:
+                    # فقط تاریخ
+                    formatted_date = dt.strftime('%Y-%m-%d')
+                return convert_to_persian_numbers(formatted_date)
+            # اگر jdatetime.date است
+            elif isinstance(dt, jdatetime.date):
+                formatted_date = dt.strftime('%Y-%m-%d')
+                return convert_to_persian_numbers(formatted_date)
+        
+        # fallback: استفاده از value
         if value:
             try:
-                # اگر فیلد datetime باشد، ساعت را هم نمایش بده
-                if hasattr(value, 'hour'):
-                    formatted_date = value.strftime('%Y/%m/%d %H:%M')
-                else:
-                    formatted_date = value.strftime('%Y/%m/%d')
-                return convert_to_persian_numbers(formatted_date)
+                if isinstance(value, jdatetime.datetime):
+                    if value.hour != 0 or value.minute != 0 or value.second != 0:
+                        formatted_date = value.strftime('%Y-%m-%d %H:%M')
+                    else:
+                        formatted_date = value.strftime('%Y-%m-%d')
+                    return convert_to_persian_numbers(formatted_date)
+                elif isinstance(value, jdatetime.date):
+                    formatted_date = value.strftime('%Y-%m-%d')
+                    return convert_to_persian_numbers(formatted_date)
             except (AttributeError, TypeError):
                 return str(value)
         return '-'
@@ -1195,14 +1217,36 @@ class ProductPriceTable(tables.Table):
     
     def render_created_at(self, value, record):
         """نمایش تاریخ ایجاد"""
+        # استفاده از record برای اطمینان از دریافت مقدار صحیح
+        if hasattr(record, 'created_at') and record.created_at:
+            dt = record.created_at
+            # اگر jdatetime.datetime است
+            if isinstance(dt, jdatetime.datetime):
+                # اگر ساعت دارد (نه 00:00:00)
+                if dt.hour != 0 or dt.minute != 0 or dt.second != 0:
+                    # نمایش تاریخ و ساعت (بدون ثانیه)
+                    formatted_date = dt.strftime('%Y-%m-%d %H:%M')
+                else:
+                    # فقط تاریخ
+                    formatted_date = dt.strftime('%Y-%m-%d')
+                return convert_to_persian_numbers(formatted_date)
+            # اگر jdatetime.date است
+            elif isinstance(dt, jdatetime.date):
+                formatted_date = dt.strftime('%Y-%m-%d')
+                return convert_to_persian_numbers(formatted_date)
+        
+        # fallback: استفاده از value
         if value:
             try:
-                # برای jDateTimeField از strftime استفاده می‌کنیم - با ساعت
-                if hasattr(value, 'hour'):
-                    formatted_date = value.strftime('%Y/%m/%d %H:%M')
-                else:
-                    formatted_date = value.strftime('%Y/%m/%d')
-                return convert_to_persian_numbers(formatted_date)
+                if isinstance(value, jdatetime.datetime):
+                    if value.hour != 0 or value.minute != 0 or value.second != 0:
+                        formatted_date = value.strftime('%Y-%m-%d %H:%M')
+                    else:
+                        formatted_date = value.strftime('%Y-%m-%d')
+                    return convert_to_persian_numbers(formatted_date)
+                elif isinstance(value, jdatetime.date):
+                    formatted_date = value.strftime('%Y-%m-%d')
+                    return convert_to_persian_numbers(formatted_date)
             except (AttributeError, TypeError):
                 # اگر strftime کار نکرد، از str استفاده می‌کنیم
                 return str(value)

@@ -129,5 +129,9 @@ class TaskPermission(models.Model):
     name = models.CharField(max_length=100, unique=True)
     tasks = models.JSONField(default=list)
 
+    class Meta:
+        verbose_name = 'RBAC | مجوز دسترسی تسک'
+        verbose_name_plural = 'RBAC | مجوزهای دسترسی تسک'
+
     def __str__(self):
         return self.name

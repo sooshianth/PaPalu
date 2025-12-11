@@ -28,7 +28,7 @@ class ManagedField(models.Model):
     )
 
     class Meta:
-        verbose_name = 'فیلد قابل مدیریت'
+        verbose_name = 'RBAC | فیلد قابل مدیریت'
         verbose_name_plural = 'فیلدهای قابل مدیریت'
         unique_together = ['content_type', 'field_name']
         ordering = ['content_type', 'field_name']
@@ -65,8 +65,8 @@ class FieldPermission(models.Model):
     )
     
     class Meta:
-        verbose_name = 'مجوز دسترسی فیلد'
-        verbose_name_plural = 'مجوزهای دسترسی فیلد'
+        verbose_name = 'RBAC | مجوز دسترسی فیلد'
+        verbose_name_plural = 'RBAC | مجوزهای دسترسی فیلد'
         ordering = ['name']
     
     def __str__(self):
@@ -122,8 +122,8 @@ class FieldChoice(models.Model):
     )
     
     class Meta:
-        verbose_name = 'انتخاب فیلد'
-        verbose_name_plural = 'انتخاب‌های فیلد'
+        verbose_name = 'RBAC | انتخاب فیلد'
+        verbose_name_plural = 'RBAC | انتخاب‌های فیلد'
         unique_together = ['field_permission', 'content_type', 'field_name', 'access_type']
         ordering = ['content_type', 'field_name']
         indexes = [

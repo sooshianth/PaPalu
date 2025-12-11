@@ -29,8 +29,8 @@ class ActivityField(models.Model):
     )
     
     class Meta:
-        verbose_name = _("حیطه فعالیت")
-        verbose_name_plural = _("حیطه های فعالیت")
+        verbose_name = _("شخص | حیطه فعالیت")
+        verbose_name_plural = _("شخص | حیطه های فعالیت")
         ordering = ['code']
     
     def __str__(self):

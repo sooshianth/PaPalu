@@ -202,9 +202,9 @@ class ProductionProgram(models.Model):
     completed_at = models.TimeField(blank=True, null=True, verbose_name='زمان تکمیل')
 
     class Meta:
-        verbose_name = 'برنامه تولید'
+        verbose_name = 'تولید | برنامه تولید'
         # Fixed a hidden null byte in verbose_name_plural string.
-        verbose_name_plural = 'برنامه های تولید'
+        verbose_name_plural = 'تولید | برنامه های تولید'
         ordering = ['-created_at']
 
     def __str__(self):
