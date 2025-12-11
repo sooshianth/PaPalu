@@ -64,7 +64,7 @@ class CustomerTable(tables.Table):
                 'name': True,
                 'nature': True,
                 'mobile_number': True,
-                'status': True,
+                'activity_fields': True,
                 'actions': True,
             }
         
@@ -74,7 +74,7 @@ class CustomerTable(tables.Table):
             'name': ('Person', 'name'),
             'nature': ('Person', 'nature'),
             'mobile_number': ('PhoneNumber', 'number'),
-            'status': ('Person', 'is_active'),
+            'activity_fields': ('Person', 'activity_fields'),
             'actions': None,  # عملیات همیشه نمایش داده می‌شود
         }
         
@@ -181,13 +181,13 @@ class CustomerTable(tables.Table):
         }
     )
     
-    status = tables.Column(
-        verbose_name='وضعیت',
-        accessor='is_active',
-        orderable=True,
+    activity_fields = tables.Column(
+        verbose_name='حیطه فعالیت',
+        empty_values=(),
+        orderable=False,
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -204,12 +204,12 @@ class CustomerTable(tables.Table):
     class Meta:
         model = Person
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('national_id', 'name', 'nature', 'mobile_number', 'status', 'actions')
+        fields = ('national_id', 'name', 'nature', 'mobile_number', 'activity_fields', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('national_id', 'name', 'nature', 'mobile_number', 'status', 'actions')
+        sequence = ('national_id', 'name', 'nature', 'mobile_number', 'activity_fields', 'actions')
     
     def render_nature(self, value, record):
         """نمایش نوع شخص به صورت badge"""
@@ -250,12 +250,20 @@ class CustomerTable(tables.Table):
             return mobile_phone.number
         return '-'
     
-    def render_status(self, value, record):
-        """نمایش وضعیت به صورت badge"""
-        if value:
-            return format_html('<span class="badge badge-success">فعال</span>')
-        else:
-            return format_html('<span class="badge badge-secondary">غیرفعال</span>')
+    def render_activity_fields(self, record):
+        """نمایش حیطه‌های فعالیت"""
+        # استفاده از prefetch شده برای جلوگیری از query اضافی
+        activity_fields = record.activity_fields.all()
+        if activity_fields.exists():
+            # نمایش همه حیطه‌های فعالیت به صورت badge
+            badges = []
+            for activity in activity_fields:
+                badges.append(format_html(
+                    '<span class="badge badge-info" style="margin-left: 3px; margin-bottom: 3px; display: inline-block;">{}</span>',
+                    str(activity)
+                ))
+            return format_html(''.join(badges))
+        return format_html('<span class="text-muted">-</span>')
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""

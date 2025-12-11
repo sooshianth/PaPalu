@@ -552,7 +552,7 @@ def get_accessible_customer_list_fields(user):
             'name': True,
             'nature': True,
             'mobile_number': True,
-            'status': True,
+            'activity_fields': True,
             'actions': True,
         }
     
@@ -562,7 +562,7 @@ def get_accessible_customer_list_fields(user):
         'name': (PersonModel, 'name'),
         'nature': (PersonModel, 'nature'),
         'mobile_number': (PhoneNumberModel, 'number'),
-        'status': (PersonModel, 'is_active'),
+        'activity_fields': (PersonModel, 'activity_fields'),
         'actions': None,  # عملیات همیشه نمایش داده می‌شود
     }
     
@@ -623,7 +623,7 @@ def customer_list_view(request):
     if request.user.is_superuser:
         customers = Person.objects.filter(type='customer').annotate(
             mobile_number_sort=Subquery(mobile_subquery)
-        ).select_related().prefetch_related()
+        ).select_related().prefetch_related('activity_fields')
     else:
         # فقط مشتریانی که کارشناس فروششان کاربر فعلی است
         customers = Person.objects.filter(
@@ -631,7 +631,7 @@ def customer_list_view(request):
             sales_expert=request.user
         ).annotate(
             mobile_number_sort=Subquery(mobile_subquery)
-        ).select_related().prefetch_related()
+        ).select_related().prefetch_related('activity_fields')
     
     # اعمال جستجو
     if search_query:
@@ -1065,7 +1065,7 @@ def edit_customer_view(request, national_id):
             'name': person.name,
             'nature': person.nature,
             'registration_number': person.registration_number,
-            'birth_date': person.birth_date.strftime('%Y/%m/%d') if person.birth_date else '',
+            'birth_date': person.birth_date.strftime('%Y-%m-%d') if person.birth_date else '',
             'activity_fields': list(person.activity_fields.all()),
             'introducer': person.introducer,
             'description': person.description,

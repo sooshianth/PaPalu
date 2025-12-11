@@ -14,6 +14,7 @@ from core.PersonFolder.AttachmentModel import Attachment
 from django.contrib.contenttypes.models import ContentType
 from typing import Dict, Any, Optional
 import re
+import jdatetime
 
 
 def clean_empty_to_none(value):
@@ -383,9 +384,10 @@ class CreateCustomerForm(forms.Form):
     birth_date = forms.CharField(
         required=False,
         label='تاریخ تولد شخص',
+        help_text='فرمت: 1370-01-01 (سال-ماه-روز)',
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '1370/01/01',
+            'placeholder': '1370-01-01',
             'dir': 'ltr'
         })
     )
@@ -546,6 +548,27 @@ class CreateCustomerForm(forms.Form):
                 raise forms.ValidationError('شماره ثبت شرکت باید بین 3 تا 10 رقم باشد.')
         
         return registration_number
+    
+    def clean_birth_date(self):
+        """اعتبارسنجی و تبدیل فرمت تاریخ تولد"""
+        birth_date = self.cleaned_data.get('birth_date')
+        
+        if birth_date:
+            # تبدیل اسلش به هایفن
+            birth_date = birth_date.replace('/', '-').strip()
+            
+            # بررسی فرمت تاریخ (باید به صورت YYYY-MM-DD باشد)
+            if not re.match(r'^\d{4}-\d{2}-\d{2}$', birth_date):
+                raise forms.ValidationError('فرمت تاریخ تولد باید به صورت 1370-01-01 (سال-ماه-روز) باشد.')
+            
+            # تبدیل رشته به jdatetime.date برای اعتبارسنجی
+            try:
+                year, month, day = map(int, birth_date.split('-'))
+                jdatetime.date(year, month, day)
+            except (ValueError, TypeError) as e:
+                raise forms.ValidationError('تاریخ تولد معتبر نیست. لطفاً تاریخ صحیح را وارد کنید.')
+        
+        return birth_date
     
     def clean(self):
         """اعتبارسنجی کلی فرم"""
