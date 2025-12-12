@@ -31,7 +31,7 @@ from core.PersonFolder.RepresentativeModel import Representative
 from core.PersonFolder.BankAccountModel import BankAccount
 from django.contrib.contenttypes.models import ContentType
 from sales.forms.customer_create_form import clean_empty_to_none
-from sales.tables import CustomerTable
+from sales.tables.tables import CustomerTable
 
 
 @login_required

@@ -4,22 +4,36 @@
 
 {% block extra_css %}
 <style>
+    /* Actions Section */
     .actions {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
+        margin-bottom: 1.5rem;
         flex-wrap: wrap;
-        gap: 1rem;
+        gap: 0.75rem;
     }
     
+    .actions-text {
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 400;
+    }
+    
+    .actions-buttons {
+        display: flex;
+        gap: 0.625rem;
+        align-items: center;
+    }
+    
+    /* Table Container */
     .table-container {
         overflow-x: auto;
-        border: 2px solid #e8eef5;
-        border-radius: 16px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        border: 1px solid #e5e7eb;
+        background-color: white;
     }
     
+    /* Table Styles */
     table {
         width: 100%;
         border-collapse: collapse;
@@ -27,177 +41,266 @@
         direction: rtl;
     }
     
+    /* Header Styles */
     thead {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background-color: #fafafa;
         position: sticky;
         top: 0;
         z-index: 10;
     }
     
     th {
-        padding: 1.25rem 1rem;
+        padding: 0.75rem 0.875rem;
         text-align: right;
-        font-weight: 700;
-        color: #2c3e50;
-        border-bottom: 3px solid #2d7a4f;
+        font-weight: 500;
+        color: #374151;
+        border-bottom: 1px solid #e5e7eb;
         white-space: nowrap;
-        font-size: 0.95rem;
+        font-size: 0.875rem;
+        background-color: #fafafa;
     }
     
     th:first-child {
-        min-width: 200px;
+        min-width: 180px;
         position: sticky;
         right: 0;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        background-color: #fafafa;
         z-index: 11;
-        border-left: 2px solid #e8eef5;
+        border-left: 1px solid #e5e7eb;
     }
     
+    .task-label {
+        font-size: 0.8125rem;
+        padding: 0.625rem 0.75rem;
+        font-weight: 500;
+        color: #6b7280;
+    }
+    
+    /* Body Styles */
     td {
-        padding: 1rem 0.75rem;
-        border-bottom: 1px solid #f0f5f9;
+        padding: 0.75rem 0.875rem;
+        border-bottom: 1px solid #f3f4f6;
         text-align: center;
-        transition: all 0.2s ease;
+        background-color: white;
+        transition: background-color 0.15s ease;
     }
     
     td:first-child {
         text-align: right;
-        font-weight: 600;
-        color: #2c3e50;
+        font-weight: 400;
+        color: #374151;
         position: sticky;
         right: 0;
         background-color: white;
-        border-left: 2px solid #e8eef5;
+        border-left: 1px solid #e5e7eb;
+        z-index: 1;
     }
     
     tbody tr:hover td {
-        background: linear-gradient(90deg, #f0f5f9 0%, #f8f9fa 100%);
+        background-color: #f9fafb;
     }
     
     tbody tr:hover td:first-child {
-        background: linear-gradient(90deg, #e8f4f0 0%, #f0f5f9 100%);
+        background-color: #f3f4f6;
     }
     
+    /* New Row Styles */
     .new-row td {
-        background: linear-gradient(135deg, #f0f5f9 0%, #e8eef5 100%) !important;
-        border-radius: 8px;
+        background-color: #fafafa !important;
+        padding: 0.875rem;
     }
     
     .new-row td:first-child {
-        background: linear-gradient(135deg, #f0f5f9 0%, #e8eef5 100%) !important;
+        background-color: #fafafa !important;
+    }
+    
+    .new-row-input-container {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
     }
     
     .new-row input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 2px solid #e8eef5;
-        border-radius: 12px;
-        font-size: 0.95rem;
+        flex: 1;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid #d1d5db;
+        font-size: 0.875rem;
         font-family: 'Vazirmatn', 'Tahoma', sans-serif;
-        transition: all 0.3s ease;
+        background-color: white;
+        transition: all 0.15s ease;
     }
     
     .new-row input:focus {
         outline: none;
         border-color: #2d7a4f;
-        box-shadow: 0 0 0 4px rgba(45, 122, 79, 0.1);
+        box-shadow: 0 0 0 3px rgba(45, 122, 79, 0.08);
     }
     
     .new-row input::placeholder {
-        color: #95a5b8;
-        font-style: normal;
+        color: #9ca3af;
     }
     
+    /* Checkbox Styles */
     .checkbox-cell {
         cursor: pointer;
-        transition: transform 0.2s ease;
-    }
-    
-    .checkbox-cell:hover {
-        transform: scale(1.1);
+        padding: 0.75rem;
     }
     
     .checkbox-cell input[type="checkbox"] {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         cursor: pointer;
         accent-color: #2d7a4f;
-        border-radius: 6px;
     }
     
+    /* Button Styles */
     .add-btn {
-        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
+        background-color: #2d7a4f;
         color: white;
         border: none;
-        padding: 0.75rem 1.25rem;
-        border-radius: 12px;
+        padding: 0.5rem 0.875rem;
         cursor: pointer;
-        font-size: 1.3rem;
+        font-size: 1.125rem;
         line-height: 1;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(45, 122, 79, 0.3);
+        transition: all 0.15s ease;
+        font-weight: 500;
     }
     
     .add-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(45, 122, 79, 0.4);
+        background-color: #256342;
     }
     
     .add-btn:active {
-        transform: translateY(0);
+        background-color: #1e5a3a;
     }
     
     .add-btn:disabled {
-        background: #cbd5e0;
+        background-color: #d1d5db;
         cursor: not-allowed;
-        box-shadow: none;
-        transform: none;
     }
     
     .delete-btn {
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        background-color: #ef4444;
         color: white;
         border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 10px;
+        padding: 0.375rem 0.75rem;
         cursor: pointer;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         margin-right: 0.5rem;
-        transition: all 0.3s ease;
+        transition: all 0.15s ease;
         font-family: 'Vazirmatn', 'Tahoma', sans-serif;
-        font-weight: 600;
-        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.2);
+        font-weight: 500;
     }
     
     .delete-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(220, 53, 69, 0.3);
+        background-color: #dc2626;
     }
     
     .delete-btn:active {
-        transform: translateY(0);
+        background-color: #b91c1c;
     }
     
+    /* Permission Name Cell */
     .perm-name-cell {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 1rem;
+        gap: 0.75rem;
     }
     
+    /* Changed Row Indicator */
+    .perm-changed {
+        background-color: #fef3c7 !important;
+    }
+    
+    .perm-changed td {
+        background-color: #fef3c7 !important;
+    }
+    
+    .perm-changed td:first-child {
+        border-right: 2px solid #f59e0b;
+    }
+    
+    /* Message */
     #message {
         display: none;
     }
     
-    .task-label {
-        font-size: 0.875rem;
-        padding: 0.5rem 0.75rem;
-        font-weight: 600;
+    /* Category Accordion Styles */
+    .category-header {
+        background-color: #2d7a4f;
+        color: white;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        user-select: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.2s ease;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 500;
+        font-size: 0.9375rem;
+        min-height: 44px;
     }
     
-    .perm-changed {
-        background: linear-gradient(90deg, #fff3cd 0%, #ffeeba 100%) !important;
-        border-right: 4px solid #ffc107;
+    .category-header:hover {
+        background-color: #256342;
+    }
+    
+    .category-header.active {
+        background-color: #1e5a3a;
+    }
+    
+    .category-toggle {
+        font-size: 0.875rem;
+        transition: transform 0.25s ease;
+        margin-left: 0.75rem;
+        display: inline-block;
+        opacity: 0.9;
+    }
+    
+    .category-header.active .category-toggle {
+        transform: rotate(180deg);
+    }
+    
+    .category-columns {
+        display: none !important;
+    }
+    
+    .category-columns.active {
+        display: table-cell !important;
+    }
+    
+    /* Category Header Row */
+    .category-header-row {
+        background-color: #fafafa;
+    }
+    
+    .category-header-cell {
+        padding: 0;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+    
+    .category-header-cell:first-child {
+        padding: 0.75rem 0.875rem;
+        background-color: #fafafa;
+        font-size: 0.8125rem;
+        color: #6b7280;
+    }
+    
+    /* Task labels row styling */
+    #taskLabelsRow th {
+        background-color: #f3f4f6;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 0.8125rem;
+        padding: 0.625rem 0.75rem;
+        font-weight: 500;
+        color: #6b7280;
+    }
+    
+    #taskLabelsRow th:first-child {
+        background-color: #f3f4f6;
     }
 </style>
 {% endblock %}
@@ -208,10 +311,10 @@
 <div id="message"></div>
 
 <div class="actions">
-    <div>
-        <span style="color: #5a6c7d; font-size: 1rem; font-weight: 500;">مدیریت مجوزهای وظیفه با انتخاب یا لغو انتخاب وظایف برای هر مجموعه مجوز</span>
+    <div class="actions-text">
+        <span>مدیریت مجوزهای وظیفه با انتخاب یا لغو انتخاب وظایف برای هر مجموعه مجوز</span>
     </div>
-    <div style="display:flex; gap: 10px; align-items:center;">
+    <div class="actions-buttons">
         <a class="btn btn-secondary" href="{% url 'permission_manager:field_permissions' %}">آپلود دسترسی فیلدها</a>
         <button class="btn btn-primary" id="saveBtn">ذخیره تغییرات</button>
     </div>
@@ -220,19 +323,24 @@
 <div class="table-container">
     <table id="permissionsTable">
         <thead>
-            <tr style="background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);">
-                <th style="font-size: 0.875rem; color: #5a6c7d; font-style: normal; font-weight: 600;">← دسته‌بندی‌ها</th>
+            <!-- Category Headers Row -->
+            <tr class="category-header-row">
+                <th class="category-header-cell">نام مجوز</th>
                 {% for category, tasks in grouped_choices %}
-                <th colspan="{{ tasks|length }}" style="font-size: 0.95rem; color: #2d7a4f; font-weight: 700; border-right: 3px solid #2d7a4f; text-align: center; text-transform: capitalize;">
-                    {{ category }}
+                <th class="category-header-cell" colspan="{{ tasks|length }}" data-category="{{ category }}">
+                    <div class="category-header" data-category="{{ category }}">
+                        <span>{{ category }}</span>
+                        <span class="category-toggle">▼</span>
+                    </div>
                 </th>
                 {% endfor %}
             </tr>
-            <tr>
+            <!-- Task Labels Row (Hidden by default) -->
+            <tr id="taskLabelsRow" style="display: none;">
                 <th>نام مجوز</th>
                 {% for category, tasks in grouped_choices %}
                     {% for code, label in tasks %}
-                    <th class="task-label" title="{{ label }}">{{ label }}</th>
+                    <th class="task-label category-columns" data-category="{{ category }}" title="{{ label }}">{{ label }}</th>
                     {% endfor %}
                 {% endfor %}
             </tr>
@@ -241,14 +349,14 @@
             <!-- New permission row -->
             <tr class="new-row">
                 <td>
-                    <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <div class="new-row-input-container">
                         <input type="text" id="newPermName" placeholder="نام مجوز جدید را وارد کنید..." />
                         <button class="add-btn" id="addBtn" title="افزودن مجوز جدید">+</button>
                     </div>
                 </td>
                 {% for category, tasks in grouped_choices %}
                     {% for code, label in tasks %}
-                    <td></td>
+                    <td class="category-columns" data-category="{{ category }}"></td>
                     {% endfor %}
                 {% endfor %}
             </tr>
@@ -264,7 +372,7 @@
                 </td>
                 {% for category, tasks in grouped_choices %}
                     {% for code, label in tasks %}
-                    <td class="checkbox-cell">
+                    <td class="checkbox-cell category-columns" data-category="{{ category }}">
                         <input type="checkbox" 
                                data-perm-id="{{ perm.id }}" 
                                data-task="{{ code|escape }}"
@@ -526,6 +634,45 @@
                 checkbox.dispatchEvent(new Event('change'));
             }
         });
+    });
+    
+    // Category Accordion Functionality
+    function toggleCategory(category) {
+        const columns = document.querySelectorAll(`.category-columns[data-category="${category}"]`);
+        const header = document.querySelector(`.category-header[data-category="${category}"]`);
+        const isActive = header.classList.contains('active');
+        
+        if (isActive) {
+            // Close category
+            header.classList.remove('active');
+            columns.forEach(col => col.classList.remove('active'));
+        } else {
+            // Open category
+            header.classList.add('active');
+            columns.forEach(col => col.classList.add('active'));
+        }
+        
+        // Show/hide task labels row based on any open category
+        const taskLabelsRow = document.getElementById('taskLabelsRow');
+        const hasOpenCategory = document.querySelector('.category-header.active');
+        if (hasOpenCategory) {
+            taskLabelsRow.style.display = 'table-row';
+        } else {
+            taskLabelsRow.style.display = 'none';
+        }
+    }
+    
+    // Initialize: All categories closed
+    document.querySelectorAll('.category-header').forEach(header => {
+        header.addEventListener('click', function() {
+            const category = this.dataset.category;
+            toggleCategory(category);
+        });
+    });
+    
+    // Initially hide all category columns
+    document.querySelectorAll('.category-columns').forEach(col => {
+        col.classList.remove('active');
     });
 </script>
 {% endblock %}

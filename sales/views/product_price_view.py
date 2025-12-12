@@ -18,7 +18,7 @@ from sales.forms.product_financial_info_form import (
     ProductFinancialInfoForm,
     get_accessible_financial_info_fields
 )
-from sales.tables import ProductPriceTable
+from sales.tables.tables import ProductPriceTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

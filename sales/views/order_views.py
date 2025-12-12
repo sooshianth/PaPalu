@@ -27,7 +27,7 @@ from core.PersonFolder.PersonModel import Person
 from core.ProductFolder.ProductModel import Product
 from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
 from core.helpers import check_field_access_prefer_edit
-from sales.tables import OrderTable
+from sales.tables.tables import OrderTable
 import jdatetime
 from decimal import Decimal
 

@@ -11,7 +11,7 @@ from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.ProformaModel import Proforma
 from core.OrderFolder.OrderDocumentModel import OrderDocument
-from sales.tables_proforma import ApproveProformaTable
+from sales.tables.tables_proforma import ApproveProformaTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

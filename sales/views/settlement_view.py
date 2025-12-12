@@ -17,7 +17,7 @@ from core.TransportFolder.TransportModel import Transport
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
 from sales.forms.settlement_transaction_form import SettlementTransactionForm
-from sales.tables import PendingSettlementOrderTable
+from sales.tables.tables_settlement import PendingSettlementOrderTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

@@ -23,7 +23,7 @@ from sales.forms.product_create_form import (
     get_accessible_product_fields,
 )
 from core.helpers import check_field_access_prefer_edit
-from sales.tables import ProductTable
+from sales.tables.tables import ProductTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

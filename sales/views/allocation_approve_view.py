@@ -21,7 +21,7 @@ from sales.views.allocation_list_view import (
     calculate_allocation_total_quantity,
     get_delivery_address_info
 )
-from sales.tables_allocation import ApproveAllocationTable
+from sales.tables.tables_allocation import ApproveAllocationTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

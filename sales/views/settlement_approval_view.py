@@ -16,7 +16,7 @@ from core.AllocationFolder.AllocationModel import Allocation
 from core.TransportFolder.TransportModel import Transport
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
-from sales.tables import PendingSettlementApprovalOrderTable
+from sales.tables.tables_settlement import PendingSettlementApprovalOrderTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

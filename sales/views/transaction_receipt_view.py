@@ -14,7 +14,7 @@ from core.OrderFolder.OrderModel import Order
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
 from sales.forms.transaction_document_form import TransactionDocumentForm
-from sales.tables_transaction_receipt import TransactionReceiptOrderTable
+from sales.tables.tables_transaction_receipt import TransactionReceiptOrderTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

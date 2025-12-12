@@ -29,7 +29,7 @@ from core.AllocationFolder.AllocationModel import Allocation
 from core.TransportFolder.TransportModel import Transport
 from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
-from sales.tables_invoice import InvoiceTable
+from sales.tables.tables_invoice import InvoiceTable
 from decimal import Decimal
 import json
 import jdatetime

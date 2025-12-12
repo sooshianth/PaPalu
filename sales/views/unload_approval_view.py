@@ -17,7 +17,7 @@ from core.OrderFolder.ApprovalInfoModel import ApprovalInfo
 from core.AllocationFolder.AllocationModel import Allocation
 from core.TransportFolder.TransportModel import Transport
 from sales.forms.unload_approval_form import UnloadApprovalForm
-from sales.tables import UnloadApprovalOrderTable
+from sales.tables.tables_settlement import UnloadApprovalOrderTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")

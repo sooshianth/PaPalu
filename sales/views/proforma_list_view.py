@@ -28,7 +28,7 @@ from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
-from sales.tables_proforma import ProformaTable
+from sales.tables.tables_proforma import ProformaTable
 import json
 import jdatetime
 
