@@ -272,6 +272,62 @@
         color: white;
     }
     
+    /* استایل‌های حیطه فعالیت - ساده */
+    .activity-fields-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        justify-content: flex-start;
+        max-width: 100%;
+        padding: 2px 0;
+    }
+    
+    .activity-badge-green {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        background-color: var(--primary-green);
+        color: white;
+        border: none;
+        line-height: 1.4;
+        white-space: nowrap;
+    }
+    
+    /* استایل نوع شخص - ساده و سبز */
+    .badge-nature {
+        display: inline-block;
+        padding: 5px 12px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        background-color: var(--primary-green);
+        color: white;
+        border: none;
+        line-height: 1.4;
+    }
+    
+    .badge-nature-legal {
+        background-color: var(--primary-green);
+    }
+    
+    .badge-nature-natural {
+        background-color: var(--primary-green);
+    }
+    
+    /* استایل جایگزین برای badge-info در صورت نیاز */
+    .badge-info {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(23, 162, 184, 0.2);
+    }
+    
     .alert {
         border-radius: 8px;
         padding: 15px 20px;
@@ -455,6 +511,21 @@
         .col-md-3 {
             flex: 0 0 100%;
             max-width: 100%;
+        }
+        
+        /* استایل‌های responsive برای حیطه فعالیت */
+        .activity-fields-container {
+            gap: 4px;
+        }
+        
+        .activity-badge-green {
+            font-size: 0.8rem;
+            padding: 4px 10px;
+        }
+        
+        .badge-nature {
+            font-size: 0.8rem;
+            padding: 4px 10px;
         }
     }
 </style>

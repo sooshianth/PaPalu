@@ -212,6 +212,10 @@ class CustomerTable(tables.Table):
         }
         sequence = ('national_id', 'name', 'nature', 'mobile_number', 'activity_fields', 'actions')
     
+    def render_national_id(self, value, record):
+        """نمایش شناسه مشتری به صورت badge"""
+        return format_html('<span class="badge badge-green">{}</span>', value)
+    
     def render_nature(self, value, record):
         """نمایش نوع شخص به صورت badge"""
         # اگر value None باشد یا خالی باشد، از record استفاده کن
@@ -223,14 +227,14 @@ class CustomerTable(tables.Table):
             value = record.nature if hasattr(record, 'nature') else None
         
         if value == 'legal':
-            return format_html('<span class="badge badge-primary">حقوقی</span>')
+            return format_html('<span class="badge badge-nature badge-nature-legal">حقوقی</span>')
         elif value == 'natural':
-            return format_html('<span class="badge badge-success">حقیقی</span>')
+            return format_html('<span class="badge badge-nature badge-nature-natural">حقیقی</span>')
         elif value:
             # اگر مقدار دیگری دارد، آن را نمایش بده
-            return format_html('<span class="badge badge-secondary">{}</span>', value)
+            return format_html('<span class="badge badge-nature">{}</span>', value)
         else:
-            return format_html('<span class="badge badge-secondary">-</span>')
+            return format_html('<span class="badge badge-nature">-</span>')
     
     def render_mobile_number(self, record):
         """دریافت شماره همراه از PhoneNumber"""
@@ -256,15 +260,23 @@ class CustomerTable(tables.Table):
         # استفاده از prefetch شده برای جلوگیری از query اضافی
         activity_fields = record.activity_fields.all()
         if activity_fields.exists():
-            # نمایش همه حیطه‌های فعالیت به صورت badge
+            # تبدیل به لیست برای دسترسی بهتر
+            activity_list = list(activity_fields)
+            
+            # نمایش همه حیطه‌های فعالیت به صورت badge با چیدمان منظم
             badges = []
-            for activity in activity_fields:
+            for activity in activity_list:
                 badges.append(format_html(
-                    '<span class="badge badge-info" style="margin-left: 3px; margin-bottom: 3px; display: inline-block;">{}</span>',
+                    '<span class="activity-badge-green">{}</span>',
                     str(activity)
                 ))
-            return format_html(''.join(badges))
-        return format_html('<span class="text-muted">-</span>')
+            
+            # استفاده از container با flexbox برای چیدمان منظم
+            return format_html(
+                '<div class="activity-fields-container">{}</div>',
+                mark_safe(''.join(badges))
+            )
+        return format_html('<span class="text-muted" style="font-style: italic;">-</span>')
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""
@@ -456,8 +468,8 @@ class OrderTable(tables.Table):
         sequence = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
     
     def render_order_number(self, value, record):
-        """نمایش شماره سفارش به صورت badge"""
-        return format_html('<span class="code-badge">{}</span>', value)
+        """نمایش شماره سفارش به صورت عدد bold و واضح"""
+        return format_html('<span style="font-weight: 700; color: #000; font-size: 1rem;">{}</span>', value)
     
     def render_status(self, value, record):
         """نمایش وضعیت به صورت badge"""
@@ -479,24 +491,21 @@ class OrderTable(tables.Table):
         except:
             status_display = None
         
-        # تعریف رنگ‌ها و متن‌های فارسی برای هر وضعیت
+        # تعریف رنگ‌ها و متن‌های فارسی برای هر وضعیت (بر اساس OrderModel.py)
+        # هر وضعیت رنگ متفاوت و کدر دارد
         status_badges = {
-            'pending': ('badge-pending', 'در انتظار'),
-            'confirmed': ('badge-confirmed', 'تایید شده'),
-            'processing': ('badge-processing', 'در حال پردازش'),
-            'pending_proforma_issue': ('badge-pending-proforma', 'در انتظار صدور پیش فاکتور'),
-            'pending_customer_proforma_upload': ('badge-pending-upload', 'در انتظار آپلود پیش فاکتور مشتری'),
-            'pending_transaction_receipt_upload': ('badge-pending-receipt', 'در انتظار بارگذاری رسید تراکنش'),
-            'pending_accounting_approval': ('badge-pending-accounting', 'در انتظار تایید حسابداری'),
-            'pending_payment_approval': ('badge-pending-payment', 'در انتظار تایید پرداخت'),
-            'pending_allocation': ('badge-pending-allocation', 'در انتظار تخصیص'),
-            'pending_allocation_approval': ('badge-pending-allocation-approval', 'در انتظار تأیید تخصیص'),
-            'pending_factory': ('badge-pending-factory', 'در انتظار کارخانه'),
-            'pending_unloading_approval': ('badge-pending-unloading', 'در انتظار تایید تخلیه'),
-            'pending_settlement': ('badge-pending-settlement', 'در انتظار تسویه'),
-            'completed': ('badge-completed', 'تکمیل شده'),
-            'cancelled': ('badge-cancelled', 'لغو شده'),
-            'archived': ('badge-archived', 'بایگانی شده'),
+            'pending_proforma_issue': ('badge-status-1', 'در انتظار صدور پیش فاکتور'),
+            'pending_customer_proforma_upload': ('badge-status-2', 'در انتظار آپلود پیش فاکتور مشتری'),
+            'pending_transaction_receipt_upload': ('badge-status-3', 'در انتظار بارگذاری رسید تراکنش'),
+            'pending_accounting_approval': ('badge-status-4', 'در انتظار تایید حسابداری'),
+            'pending_allocation': ('badge-status-5', 'در انتظار تخصیص'),
+            'pending_allocation_approval': ('badge-status-6', 'در انتظار تأیید تخصیص'),
+            'pending_factory': ('badge-status-7', 'در انتظار کارخانه'),
+            'pending_unloading_approval': ('badge-status-8', 'در انتظار تایید تخلیه'),
+            'pending_settlement': ('badge-status-9', 'در انتظار تسویه'),
+            'pending_settlement_approval': ('badge-status-10', 'در انتظار تایید تسویه کامل'),
+            'cancelled': ('badge-status-11', 'لغو شده'),
+            'archived': ('badge-status-12', 'بایگانی شده'),
         }
         
         if status_value and status_value in status_badges:
@@ -513,8 +522,10 @@ class OrderTable(tables.Table):
     def render_total_purchase_cost(self, value, record):
         """نمایش بهای تمام شده خرید"""
         if value is None:
-            return format_number_persian(0, decimal_places=0)
-        return format_number_persian(value, decimal_places=0)
+            formatted = format_number_persian(0, decimal_places=0)
+        else:
+            formatted = format_number_persian(value, decimal_places=0)
+        return format_html('<span><span style="color: var(--primary-green); font-weight: 500;">{}</span> ریال</span>', formatted)
     
     def render_total_order_weight(self, value, record):
         """نمایش وزن کل سفارش"""
@@ -534,9 +545,9 @@ class OrderTable(tables.Table):
         if total_weight > 0:
             # نمایش به صورت عدد با دو رقم اعشار و فرمت فارسی (همیشه کیلوگرم)
             kg_formatted = format_number_persian(total_weight, decimal_places=2)
-            return f"{kg_formatted} کیلوگرم"
+            return format_html('<span><span style="color: var(--primary-green); font-weight: 500;">{}</span> کیلوگرم</span>', kg_formatted)
         else:
-            return '-'
+            return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_registered_by(self, value, record):
         """نمایش ثبت‌کننده"""
@@ -853,12 +864,12 @@ class ProductTable(tables.Table):
             )
         else:
             return format_html(
-                '<div class="product-image-thumb" style="background-color: var(--gray-200); display: flex; align-items: center; justify-content: center; color: var(--gray-600);">-</div>'
+                '<div class="product-image-thumb product-image-empty">-</div>'
             )
     
     def render_code(self, value, record):
-        """نمایش کد محصول"""
-        return format_html('<code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{}</code>', value)
+        """نمایش کد محصول به صورت badge"""
+        return format_html('<span class="badge badge-green">{}</span>', value)
     
     def render_name(self, value, record):
         """نمایش نام محصول با لینک به جزئیات"""
@@ -873,9 +884,9 @@ class ProductTable(tables.Table):
         """نمایش گروه محصول"""
         if value:
             if record.subcategory:
-                return format_html('{}<br><small style="color: var(--gray-600);">{}</small>', value, record.subcategory)
-            return value
-        return '-'
+                return format_html('<div class="category-display"><span class="category-main">{}</span><span class="category-sub">{}</span></div>', value, record.subcategory)
+            return format_html('<span class="category-main">{}</span>', value)
+        return format_html('<span class="empty-value">-</span>')
     
     def render_grade(self, value, record):
         """نمایش گرید"""
@@ -890,22 +901,22 @@ class ProductTable(tables.Table):
         if value:
             try:
                 display_value = record.get_main_application_display()
-                return format_html('<span class="badge badge-info">{}</span>', display_value)
+                return format_html('<span class="badge badge-green" style="white-space: nowrap;">{}</span>', display_value)
             except:
-                return format_html('<span class="badge badge-info">{}</span>', value)
+                return format_html('<span class="badge badge-green" style="white-space: nowrap;">{}</span>', value)
         else:
-            return format_html('<span class="badge badge-secondary">-</span>')
+            return format_html('<span class="badge badge-green-empty">-</span>')
     
     def render_main_unit(self, value, record):
         """نمایش واحد اصلی"""
-        return value if value else '-'
+        return format_html('<span class="field-value">{}</span>', value) if value else format_html('<span class="empty-value">-</span>')
     
     def render_is_custom(self, value, record):
         """نمایش نوع محصول"""
         if value:
-            return format_html('<span class="badge badge-warning">سفارشی</span>')
+            return format_html('<span class="badge badge-green">سفارشی</span>')
         else:
-            return format_html('<span class="badge badge-secondary">استاندارد</span>')
+            return format_html('<span class="badge badge-green">استاندارد</span>')
     
     def render_created_at(self, value, record):
         """نمایش تاریخ ایجاد"""
@@ -1159,8 +1170,8 @@ class ProductPriceTable(tables.Table):
         sequence = ('product_code', 'product_name', 'price', 'deadline', 'loading_date', 'condition', 'created_at', 'actions')
     
     def render_product_code(self, value, record):
-        """نمایش کد محصول"""
-        return format_html('<code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{}</code>', value)
+        """نمایش کد محصول به صورت badge"""
+        return format_html('<span class="badge badge-green">{}</span>', value)
     
     def render_product_name(self, value, record):
         """نمایش نام محصول با لینک به جزئیات"""
