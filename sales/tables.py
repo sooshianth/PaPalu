@@ -592,12 +592,13 @@ class OrderTable(tables.Table):
         
         buttons = []
         
-        # دکمه جزئیات
+        # دکمه جزئیات (popup)
         detail_url = reverse('sales:order_detail', args=[record.order_number])
         buttons.append(
             format_html(
-                '<a href="{}" class="btn-outline-info">جزئیات</a>',
-                detail_url
+                '<a href="{}" class="btn-outline-info order-detail-link" data-order-number="{}" title="جزئیات">جزئیات</a>',
+                detail_url,
+                record.order_number
             )
         )
         

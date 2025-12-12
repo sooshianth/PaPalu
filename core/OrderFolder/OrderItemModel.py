@@ -164,6 +164,28 @@ class OrderItem(models.Model):
     def __str__(self):
         return f"{self.order.order_number} - {self.product}"
     
+    @property
+    def vat(self):
+        """محاسبه مبلغ مالیات بر ارزش افزوده"""
+        from decimal import Decimal
+        
+        if not self.quantity or not self.unit_price:
+            return Decimal('0')
+        
+        # محاسبه subtotal
+        if self.weight_unit == 'piece':
+            subtotal = Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
+        else:
+            weight_in_kg = self.get_weight_in_kg()
+            if weight_in_kg == 0:
+                return Decimal('0')
+            subtotal = Decimal(str(weight_in_kg)) * Decimal(str(self.unit_price))
+        
+        # محاسبه مالیات
+        vat_percent = Decimal(str(self.vat_percent or 0))
+        vat_amount = (vat_percent / Decimal('100')) * subtotal
+        return vat_amount.quantize(Decimal('0.01'))
+    
     def get_weight_in_kg(self):
         """
         محاسبه وزن کل به کیلوگرم (برای محاسبات یکپارچه)

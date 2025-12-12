@@ -1,0 +1,474 @@
+{% load static %}
+<div class="order-detail-popup" id="orderDetailPopup">
+    <div class="popup-overlay" onclick="closeOrderDetailPopup()"></div>
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3>جزئیات سفارش</h3>
+            <button class="popup-close" onclick="closeOrderDetailPopup()" aria-label="بستن">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="popup-body">
+            <!-- اطلاعات اصلی سفارش -->
+            <div class="detail-section">
+                <h4>اطلاعات اصلی سفارش</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">شماره سفارش:</span>
+                        <span class="detail-value">{{ order.order_number }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">مشتری:</span>
+                        <span class="detail-value">{{ order.customer.name|default:"-" }} ({{ order.customer.national_id|default:"-" }})</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">وضعیت:</span>
+                        <span class="detail-value">
+                            {% if order.status == 'pending_proforma_issue' %}
+                                <span class="badge badge-pending-proforma">در انتظار صدور پیش فاکتور</span>
+                            {% elif order.status == 'pending_customer_proforma_upload' %}
+                                <span class="badge badge-pending-upload">در انتظار آپلود پیش فاکتور مشتری</span>
+                            {% elif order.status == 'pending_transaction_receipt_upload' %}
+                                <span class="badge badge-pending-receipt">در انتظار بارگذاری رسید تراکنش</span>
+                            {% elif order.status == 'pending_accounting_approval' %}
+                                <span class="badge badge-pending-accounting">در انتظار تایید حسابداری</span>
+                            {% elif order.status == 'pending_allocation' %}
+                                <span class="badge badge-pending-allocation">در انتظار تخصیص</span>
+                            {% elif order.status == 'pending_allocation_approval' %}
+                                <span class="badge badge-pending-allocation-approval">در انتظار تأیید تخصیص</span>
+                            {% elif order.status == 'pending_factory' %}
+                                <span class="badge badge-pending-factory">در انتظار کارخانه</span>
+                            {% elif order.status == 'pending_unloading_approval' %}
+                                <span class="badge badge-pending-unloading">در انتظار تایید تخلیه</span>
+                            {% elif order.status == 'pending_settlement' %}
+                                <span class="badge badge-pending-settlement">در انتظار تسویه</span>
+                            {% elif order.status == 'completed' %}
+                                <span class="badge badge-completed">تکمیل شده</span>
+                            {% elif order.status == 'cancelled' %}
+                                <span class="badge badge-cancelled">لغو شده</span>
+                            {% elif order.status == 'archived' %}
+                                <span class="badge badge-archived">بایگانی شده</span>
+                            {% else %}
+                                <span class="badge badge-archived">{{ order.get_status_display|default:"-" }}</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">نوع سفارش:</span>
+                        <span class="detail-value">{{ order.get_order_type_display|default:"-" }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">منبع ثبت:</span>
+                        <span class="detail-value">{{ order.get_registration_source_display|default:"-" }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">نوع پرداخت کرایه:</span>
+                        <span class="detail-value">{{ order.get_freight_payment_type_display|default:"-" }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">ثبت‌کننده:</span>
+                        <span class="detail-value">{{ order.registered_by.username|default:"-" }}</span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">تاریخ ایجاد:</span>
+                        <span class="detail-value">{{ order.created_at|default:"-" }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- اطلاعات مالی -->
+            <div class="detail-section">
+                <h4>اطلاعات مالی</h4>
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <span class="detail-label">بهای تمام شده خرید (کل):</span>
+                        <span class="detail-value" style="font-size: 1.2rem; font-weight: 600; color: var(--primary-green);">
+                            {{ total_purchase_cost|floatformat:0|default:"0" }} تومان
+                        </span>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <span class="detail-label">وزن کل سفارش:</span>
+                        <span class="detail-value" style="font-size: 1.2rem; font-weight: 600; color: var(--primary-green);">
+                            {% if total_weight_ton %}
+                                {{ total_weight_ton|floatformat:2 }} تن
+                            {% else %}
+                                {{ total_weight|floatformat:2 }} کیلوگرم
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- اقلام سفارش -->
+            <div class="detail-section">
+                <h4>اقلام سفارش ({{ order_items|length }})</h4>
+                {% if order_items %}
+                    <div style="overflow-x: auto;">
+                        <table class="items-table">
+                            <thead>
+                                <tr>
+                                    <th>محصول</th>
+                                    <th>واحد وزن</th>
+                                    <th>مقدار/وزن</th>
+                                    <th>فی (قیمت واحد)</th>
+                                    <th>تخفیف</th>
+                                    <th>اضافات</th>
+                                    <th>مالیات</th>
+                                    <th>بهای تمام شده</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in order_items %}
+                                <tr>
+                                    <td>{{ item.product.name|default:"-" }}</td>
+                                    <td>{{ item.get_weight_unit_display|default:"-" }}</td>
+                                    <td>
+                                        {{ item.quantity|floatformat:2|default:"-" }}
+                                        {% if item.weight_unit == 'bag' and item.bag_weight %}
+                                            ({{ item.bag_weight|floatformat:2 }} کیلوگرم هر کیسه)
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ item.unit_price|floatformat:0|default:"-" }} تومان</td>
+                                    <td>{{ item.discount|floatformat:0|default:"0" }} تومان</td>
+                                    <td>{{ item.additional_charges|floatformat:0|default:"0" }} تومان</td>
+                                    <td>{{ item.vat|floatformat:0|default:"0" }} تومان</td>
+                                    <td style="font-weight: 600; color: var(--primary-green);">
+                                        {{ item.total_purchase_cost|floatformat:0|default:"0" }} تومان
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p style="text-align: center; color: var(--gray-600); padding: 2rem;">هیچ قلمی ثبت نشده است.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="popup-footer">
+            {% if can_edit %}
+            <a href="{% url 'sales:order_edit' order.order_number %}" class="btn btn-warning">ویرایش سفارش</a>
+            {% endif %}
+            <button class="btn btn-secondary" onclick="closeOrderDetailPopup()">بستن</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .order-detail-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .order-detail-popup.active {
+        display: flex;
+    }
+    
+    .popup-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(2px);
+    }
+    
+    .popup-content {
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 900px;
+        width: 90%;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        z-index: 10001;
+    }
+    
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .popup-header h3 {
+        margin: 0;
+        color: var(--primary-green);
+        font-size: 1.3rem;
+    }
+    
+    .popup-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        color: var(--gray-600);
+        transition: color 0.3s;
+    }
+    
+    .popup-close:hover {
+        color: var(--gray-800);
+    }
+    
+    .popup-close svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .popup-body {
+        padding: 25px;
+        overflow-y: auto;
+        flex: 1;
+    }
+    
+    .detail-section {
+        margin-bottom: 25px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .detail-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+    
+    .detail-section h4 {
+        color: var(--primary-green);
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+    }
+    
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.85rem;
+    }
+    
+    .detail-value {
+        color: var(--gray-800);
+        font-size: 1rem;
+    }
+    
+    .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        margin-top: 15px;
+    }
+    
+    .items-table thead {
+        background: var(--gray-100);
+    }
+    
+    .items-table thead th {
+        padding: 12px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+        font-size: 0.9rem;
+    }
+    
+    .items-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .items-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .items-table tbody td {
+        padding: 12px;
+        color: var(--gray-600);
+        font-size: 0.9rem;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .badge-pending-proforma {
+        background-color: #fd7e14;
+        color: white;
+    }
+    
+    .badge-pending-upload {
+        background-color: #ff9800;
+        color: white;
+    }
+    
+    .badge-pending-receipt {
+        background-color: #ff6b35;
+        color: white;
+    }
+    
+    .badge-pending-accounting {
+        background-color: #6610f2;
+        color: white;
+    }
+    
+    .badge-pending-allocation {
+        background-color: #6f42c1;
+        color: white;
+    }
+    
+    .badge-pending-allocation-approval {
+        background-color: #5e35b1;
+        color: white;
+    }
+    
+    .badge-pending-factory {
+        background-color: #0dcaf0;
+        color: #212529;
+    }
+    
+    .badge-pending-unloading {
+        background-color: #00bcd4;
+        color: white;
+    }
+    
+    .badge-pending-settlement {
+        background-color: #17a2b8;
+        color: white;
+    }
+    
+    .badge-completed {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .badge-cancelled {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .badge-archived {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .popup-footer {
+        padding: 20px 25px;
+        border-top: 2px solid var(--gray-200);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+    }
+    
+    .btn-warning {
+        background-color: #ffc107;
+        color: #212529;
+    }
+    
+    .btn-warning:hover {
+        background-color: #e0a800;
+        color: #212529;
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .popup-content {
+            width: 95%;
+            max-height: 95vh;
+        }
+        
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .popup-header,
+        .popup-body,
+        .popup-footer {
+            padding: 15px;
+        }
+        
+        .items-table {
+            font-size: 0.8rem;
+        }
+        
+        .items-table thead th,
+        .items-table tbody td {
+            padding: 8px;
+        }
+    }
+</style>
+
+<script>
+    function closeOrderDetailPopup() {
+        const popup = document.getElementById('orderDetailPopup');
+        if (popup) {
+            popup.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+    
+    // بستن با کلید Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeOrderDetailPopup();
+        }
+    });
+</script>
+

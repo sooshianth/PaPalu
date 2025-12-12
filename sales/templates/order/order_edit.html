@@ -665,7 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
 {% block content %}
 <div class="page-header">
     <h2>{{ page_title|default:"ویرایش سفارش" }}</h2>
-    <a href="{% url 'sales:order_detail' order.order_number %}" class="btn btn-secondary">بازگشت به جزئیات</a>
+    <a href="{% url 'sales:order_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
 </div>
 
 <div class="form-card">
@@ -872,7 +872,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <!-- دکمه‌ها -->
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
-            <a href="{% url 'sales:order_detail' order.order_number %}" class="btn btn-secondary">انصراف</a>
+            <a href="{% url 'sales:order_list' %}" class="btn btn-secondary">انصراف</a>
         </div>
     </form>
 </div>

@@ -480,14 +480,17 @@ def product_info_api(request, product_id):
 @login_required
 def order_detail_view(request, order_number):
     """
-    ویو نمایش جزئیات سفارش
+    ویو نمایش جزئیات سفارش (popup)
     - کنترل دسترسی TaskPermission: SALES_VIEW_ORDER_DETAIL
-    - نمایش اطلاعات سفارش و اقلام آن
+    - نمایش اطلاعات سفارش و اقلام آن در popup
+    - پشتیبانی از AJAX
     """
     audit_logger.info(f"درخواست مشاهده جزئیات سفارش {order_number}")
     
     if not user_has_task(request.user, TaskChoices.SALES_VIEW_ORDER_DETAIL.value):
         audit_logger.activity("تلاش برای مشاهده جزئیات سفارش بدون دسترسی")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'شما دسترسی به این بخش ندارید.'}, status=403)
         messages.error(request, 'شما دسترسی به مشاهده جزئیات سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
@@ -501,6 +504,8 @@ def order_detail_view(request, order_number):
                 registered_by=request.user
             )
     except Order.DoesNotExist:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'سفارش مورد نظر یافت نشد.'}, status=404)
         messages.error(request, 'سفارش مورد نظر یافت نشد.')
         return redirect('sales:order_list')
     
@@ -534,7 +539,7 @@ def order_detail_view(request, order_number):
         'can_edit': can_edit,
         'page_title': f'جزئیات سفارش {order_number}',
     }
-    return render(request, 'order/order_detail.html', context)
+    return render(request, 'order/order_detail_popup.html', context)
 
 
 @login_required
@@ -569,7 +574,7 @@ def edit_order_view(request, order_number):
     if not can_edit_order(order):
         audit_logger.activity(f"تلاش برای ویرایش سفارش {order_number} که در وضعیت {order.status} است و قابل ویرایش نیست")
         messages.error(request, 'این سفارش در وضعیت فعلی قابل ویرایش نیست.')
-        return redirect('sales:order_detail', order_number=order_number)
+        return redirect('sales:order_list')
     
     if request.method == 'POST':
         # Build temporary instances to compute field-access
@@ -683,7 +688,7 @@ def edit_order_view(request, order_number):
                     bug_logger.info(f"سفارش {order_number} با {items_saved} قلم به‌روزرسانی شد")
                     messages.success(request, success_msg)
                 
-                return redirect('sales:order_detail', order_number=order.order_number)
+                return redirect('sales:order_list')
             except Exception as e:
                 bug_logger.error(f"خطا در ویرایش سفارش: {str(e)}", exc_info=True)
                 messages.error(request, f'خطا در ویرایش سفارش: {str(e)}')
