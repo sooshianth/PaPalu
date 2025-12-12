@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load render_table from django_tables2 %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -61,56 +62,120 @@
         color: var(--gray-600);
     }
     
-    .code-badge {
-        display: inline-block;
-        padding: 6px 10px;
-        border-radius: 6px;
-        background: var(--gray-100);
-        color: var(--gray-800);
-        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-        font-size: 0.85rem;
+    /* استایل‌های django-tables2 - لینک‌های مرتب‌سازی */
+    .data-table thead th a,
+    .data-table thead th a:link,
+    .data-table thead th a:visited,
+    .data-table thead th a:hover,
+    .data-table thead th a:active,
+    .data-table thead th a:focus {
+        color: inherit !important;
+        text-decoration: none !important;
+        border-bottom: none !important;
     }
     
+    /* استایل برای لینک‌های عادی در جدول */
+    .data-table a:not(.btn-outline-primary):not(.btn-outline-warning):not(.btn-outline-info):not(.btn-success) {
+        color: inherit;
+        text-decoration: none;
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        background-color: var(--primary-green);
+        color: white;
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    /* استایل دکمه ایجاد حمل - سبز */
+    .data-table .btn-outline-primary,
+    .table-container .btn-outline-primary,
     .btn-outline-primary {
         padding: 5px 10px;
         border-radius: 6px;
         text-decoration: none;
         font-size: 0.875rem;
+        font-family: inherit;
         border: 1px solid var(--primary-green);
-        color: var(--primary-green);
         transition: all 0.3s;
+        color: var(--primary-green) !important;
+        border-color: var(--primary-green) !important;
+        background-color: transparent !important;
         display: inline-block;
         cursor: pointer;
-        background: white;
+        white-space: nowrap;
     }
     
+    .data-table .btn-outline-primary:hover,
+    .table-container .btn-outline-primary:hover,
     .btn-outline-primary:hover {
-        background-color: var(--primary-green);
-        color: white;
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
     }
     
+    /* استایل دکمه تکمیل جذب خودرو - سبز */
+    .data-table .btn-success,
+    .table-container .btn-success,
     .btn-success {
         padding: 5px 10px;
         border-radius: 6px;
         text-decoration: none;
         font-size: 0.875rem;
+        font-family: inherit;
         border: 1px solid var(--dark-green);
-        color: white;
+        color: white !important;
         background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
         transition: all 0.3s;
         display: inline-block;
         cursor: pointer;
+        white-space: nowrap;
     }
     
+    .data-table .btn-success:hover,
+    .table-container .btn-success:hover,
     .btn-success:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
     }
     
+    .data-table .btn-success:disabled,
+    .table-container .btn-success:disabled,
     .btn-success:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
+    }
+    
+    /* استایل دکمه جزئیات - آبی */
+    .data-table .btn-outline-info,
+    .table-container .btn-outline-info,
+    .btn-outline-info {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-family: inherit;
+        border: 1px solid #17a2b8;
+        transition: all 0.3s;
+        color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    
+    .data-table .btn-outline-info:hover,
+    .table-container .btn-outline-info:hover,
+    .btn-outline-info:hover {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
     }
     
     .empty-state {
@@ -227,6 +292,113 @@
         justify-content: flex-end;
         margin-top: 25px;
     }
+    
+    /* استایل سلول actions */
+    .data-table tbody td.actions,
+    .data-table tbody td:has(.btn-group) {
+        white-space: nowrap;
+        text-align: center;
+    }
+    
+    /* اطمینان از نمایش افقی دکمه‌ها در RTL */
+    .data-table .btn-group a,
+    .data-table .btn-group button,
+    .table-container .btn-group a,
+    .table-container .btn-group button {
+        display: inline-block !important;
+        vertical-align: middle;
+        margin: 0;
+    }
+    
+    .data-table .btn-group {
+        direction: ltr;
+        text-align: left;
+    }
+    
+    /* استایل صفحه‌بندی django-tables2 */
+    .pagination {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 0;
+        direction: ltr !important;
+        flex-direction: row !important;
+    }
+    
+    .pagination li {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+    
+    .pagination a,
+    .pagination span {
+        display: inline-block;
+        padding: 10px 16px;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        color: var(--gray-700);
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        font-weight: 500;
+        min-width: 40px;
+        text-align: center;
+        background-color: white;
+        margin: 0 2px;
+    }
+    
+    .pagination a:hover {
+        background-color: var(--primary-green);
+        color: white !important;
+        border-color: var(--primary-green);
+        transform: translateY(-2px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .current {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .pagination .disabled a,
+    .pagination .disabled span {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+    }
+    
+    .pagination .ellipsis {
+        padding: 10px 8px;
+        color: var(--gray-600);
+        border: none !important;
+        background: transparent !important;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success { background-color: var(--light-green); color: var(--dark-green); }
+    .alert-info { background-color: #d1ecf1; color: #0c5460; }
+    .alert-danger { background-color: #f8d7da; color: #721c24; }
 </style>
 {% endblock %}
 
@@ -244,114 +416,96 @@
         {% endfor %}
     {% endif %}
     
-    {% if allocations_with_info %}
+    {% if table %}
         <div class="table-container">
-            <table class="data-table">
-                    <thead>
-                        <tr>
-                            {% if accessible_allocation_fields.allocation_number %}
-                            <th>شماره تخصیص</th>
-                            {% endif %}
-                            {% if accessible_order_fields.order_number %}
-                            <th>شماره سفارش</th>
-                            {% endif %}
-                            <th>شیوه اعلام بار</th>
-                            {% if accessible_delivery_fields.recipient_name or accessible_delivery_fields.recipient_national_id or accessible_delivery_fields.address %}
-                            <th>اطلاعات آدرس تحویل</th>
-                            {% endif %}
-                            <th>تعداد حمل‌ها</th>
-                            <th>عملیات</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for item in allocations_with_info %}
-                        <tr>
-                            {% if accessible_allocation_fields.allocation_number %}
-                            <td>
-                                <span class="code-badge">{{ item.allocation.allocation_number }}</span>
-                            </td>
-                            {% endif %}
-                            {% if accessible_order_fields.order_number %}
-                            <td>
-                                <span class="code-badge">{{ item.order_number }}</span>
-                            </td>
-                            {% endif %}
-                            <td>
-                                <span style="color: var(--gray-700);">{{ item.shipping_method }}</span>
-                            </td>
-                            {% if accessible_delivery_fields.recipient_name or accessible_delivery_fields.recipient_national_id or accessible_delivery_fields.address %}
-                            <td>
-                                {% if item.delivery_info %}
-                                    <div class="delivery-info">
-                                        {% if accessible_delivery_fields.recipient_name %}
-                                        <div class="delivery-info-item">
-                                            <span class="delivery-info-label">نام تحویل گیرنده:</span>
-                                            <span class="delivery-info-value">{{ item.delivery_info.recipient_name }}</span>
-                                        </div>
-                                        {% endif %}
-                                        {% if accessible_delivery_fields.recipient_national_id %}
-                                        <div class="delivery-info-item">
-                                            <span class="delivery-info-label">کد ملی:</span>
-                                            <span class="delivery-info-value">{{ item.delivery_info.recipient_national_id }}</span>
-                                        </div>
-                                        {% endif %}
-                                        {% if accessible_delivery_fields.unique_delivery_id %}
-                                        <div class="delivery-info-item">
-                                            <span class="delivery-info-label">شناسه یکتا:</span>
-                                            <span class="delivery-info-value">{{ item.delivery_info.unique_delivery_id }}</span>
-                                        </div>
-                                        {% endif %}
-                                        {% if accessible_delivery_fields.address %}
-                                        <div class="delivery-info-item">
-                                            <span class="delivery-info-label">آدرس:</span>
-                                            <span class="delivery-info-value">{{ item.delivery_info.address }}</span>
-                                        </div>
-                                        {% endif %}
-                                        <div class="delivery-info-item">
-                                            <span class="delivery-info-label">شماره ثابت:</span>
-                                            <span class="delivery-info-value">{{ item.delivery_info.landline_phone|default:"-" }}</span>
-                                        </div>
-                                        <div class="delivery-info-item">
-                                            <span class="delivery-info-label">شماره همراه:</span>
-                                            <span class="delivery-info-value">{{ item.delivery_info.mobile_phone|default:"-" }}</span>
-                                        </div>
-                                    </div>
-                                {% else %}
-                                    <span style="color: var(--gray-400);">اطلاعات آدرس یافت نشد</span>
-                                {% endif %}
-                            </td>
-                            {% endif %}
-                        <td>
-                            <span class="transports-count">{{ item.transports_count }} حمل</span>
-                        </td>
-                        <td onclick="event.stopPropagation();">
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <button type="button" 
-                                        class="btn-outline-primary" 
-                                        onclick="showCreateTransportModal('{{ item.allocation.allocation_number }}')">
-                                    ایجاد حمل
-                                </button>
-                                {% if item.transports_count > 0 %}
-                                <form method="post" 
-                                      action="{% url 'distribution:complete_vehicle_recruitment' item.allocation.allocation_number %}" 
-                                      style="display: inline;"
-                                      onsubmit="return confirm('آیا از تکمیل جذب خودرو برای این تخصیص اطمینان دارید؟');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn-success">تکمیل جذب خودرو</button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% render_table table %}
         </div>
+        <script>
+            // اصلاح ترتیب صفحه‌بندی برای RTL
+            (function() {
+                function fixPaginationOrder() {
+                    const paginations = document.querySelectorAll('.pagination');
+                    paginations.forEach(function(pagination) {
+                        if (pagination.dataset.fixed === 'true') return;
+                        
+                        const items = Array.from(pagination.children);
+                        if (items.length === 0) return;
+                        
+                        let prevItem = null;
+                        let nextItem = null;
+                        const numberItems = [];
+                        
+                        items.forEach(function(item) {
+                            const link = item.querySelector('a');
+                            const text = (link ? link.textContent : item.textContent).trim();
+                            const isPrev = text.includes('قبلی') || text.includes('Previous') || text === '«';
+                            const isNext = text.includes('بعدی') || text.includes('Next') || text === '»';
+                            
+                            if (isPrev) {
+                                prevItem = item;
+                            } else if (isNext) {
+                                nextItem = item;
+                            } else {
+                                const isNumber = /^\d+$/.test(text) || item.classList.contains('current');
+                                if (isNumber || item.classList.contains('ellipsis')) {
+                                    numberItems.push(item);
+                                }
+                            }
+                        });
+                        
+                        if (nextItem && prevItem && items[0] === nextItem && items[items.length - 1] === prevItem) {
+                            numberItems.reverse();
+                            
+                            pagination.innerHTML = '';
+                            if (prevItem) {
+                                pagination.appendChild(prevItem);
+                            }
+                            numberItems.forEach(function(item) {
+                                pagination.appendChild(item);
+                            });
+                            if (nextItem) {
+                                pagination.appendChild(nextItem);
+                            }
+                            
+                            pagination.dataset.fixed = 'true';
+                        }
+                    });
+                }
+                
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', fixPaginationOrder);
+                } else {
+                    fixPaginationOrder();
+                }
+                
+                setTimeout(fixPaginationOrder, 100);
+                setTimeout(fixPaginationOrder, 500);
+            })();
+        </script>
     {% else %}
         <div class="empty-state">
             <p>تخصیصی در انتظار جذب خودرو وجود ندارد.</p>
         </div>
     {% endif %}
+</div>
+
+<!-- مودال اطلاعات آدرس تحویل -->
+<div id="deliveryInfoModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>جزئیات آدرس تحویل</h3>
+        </div>
+        <div id="deliveryInfoContent" class="delivery-info">
+            <!-- محتوای اطلاعات آدرس تحویل اینجا نمایش داده می‌شود -->
+        </div>
+        <div class="form-actions">
+            <button type="button" 
+                    class="btn-outline-primary" 
+                    onclick="closeDeliveryInfoModal()">
+                بستن
+            </button>
+        </div>
+    </div>
 </div>
 
 <!-- مودال ایجاد حمل -->
@@ -654,6 +808,115 @@
     // بستن مودال با کلیک روی پس‌زمینه
     document.getElementById('createTransportModal')?.addEventListener('click', function(e) {
         if (e.target === this) {
+            closeCreateTransportModal();
+        }
+    });
+    
+    // نمایش مودال اطلاعات آدرس تحویل
+    function showDeliveryInfoModal(button) {
+        try {
+            let deliveryDataJson = button.getAttribute('data-delivery-info');
+            if (!deliveryDataJson) {
+                alert('اطلاعات آدرس تحویل یافت نشد');
+                return;
+            }
+            
+            // Unescape HTML entities (فقط double quotes)
+            deliveryDataJson = deliveryDataJson.replace(/&quot;/g, '"');
+            
+            let deliveryData;
+            try {
+                deliveryData = JSON.parse(deliveryDataJson);
+            } catch (parseError) {
+                console.error('خطا در parse کردن JSON:', parseError, deliveryDataJson);
+                alert('خطا در خواندن اطلاعات آدرس تحویل');
+                return;
+            }
+            
+            const accessibleFields = deliveryData.accessible_fields || {};
+            
+            // ساخت HTML برای نمایش اطلاعات
+            let html = '';
+            
+            if (accessibleFields.recipient_name !== false && deliveryData.recipient_name) {
+                html += `
+                    <div class="delivery-info-item">
+                        <span class="delivery-info-label">نام تحویل گیرنده:</span>
+                        <span class="delivery-info-value">${deliveryData.recipient_name}</span>
+                    </div>
+                `;
+            }
+            
+            if (accessibleFields.recipient_national_id !== false && deliveryData.recipient_national_id) {
+                html += `
+                    <div class="delivery-info-item">
+                        <span class="delivery-info-label">کد ملی:</span>
+                        <span class="delivery-info-value">${deliveryData.recipient_national_id}</span>
+                    </div>
+                `;
+            }
+            
+            if (accessibleFields.unique_delivery_id !== false && deliveryData.unique_delivery_id) {
+                html += `
+                    <div class="delivery-info-item">
+                        <span class="delivery-info-label">شناسه یکتا:</span>
+                        <span class="delivery-info-value">${deliveryData.unique_delivery_id}</span>
+                    </div>
+                `;
+            }
+            
+            if (accessibleFields.address !== false && deliveryData.address) {
+                html += `
+                    <div class="delivery-info-item">
+                        <span class="delivery-info-label">آدرس:</span>
+                        <span class="delivery-info-value">${deliveryData.address}</span>
+                    </div>
+                `;
+            }
+            
+            // شماره تلفن‌ها همیشه نمایش داده می‌شوند
+            html += `
+                <div class="delivery-info-item">
+                    <span class="delivery-info-label">شماره ثابت:</span>
+                    <span class="delivery-info-value">${deliveryData.landline_phone || '-'}</span>
+                </div>
+            `;
+            
+            html += `
+                <div class="delivery-info-item">
+                    <span class="delivery-info-label">شماره همراه:</span>
+                    <span class="delivery-info-value">${deliveryData.mobile_phone || '-'}</span>
+                </div>
+            `;
+            
+            // نمایش محتوا در مودال
+            document.getElementById('deliveryInfoContent').innerHTML = html;
+            document.getElementById('deliveryInfoModal').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        } catch (error) {
+            console.error('خطا در نمایش اطلاعات آدرس تحویل:', error);
+            alert('خطا در نمایش اطلاعات آدرس تحویل');
+        }
+    }
+    
+    // بستن مودال اطلاعات آدرس تحویل
+    function closeDeliveryInfoModal() {
+        document.getElementById('deliveryInfoModal').classList.remove('active');
+        document.body.style.overflow = '';
+        document.getElementById('deliveryInfoContent').innerHTML = '';
+    }
+    
+    // بستن مودال با کلیک روی پس‌زمینه
+    document.getElementById('deliveryInfoModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeliveryInfoModal();
+        }
+    });
+    
+    // بستن مودال با کلید Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDeliveryInfoModal();
             closeCreateTransportModal();
         }
     });

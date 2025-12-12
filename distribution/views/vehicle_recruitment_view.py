@@ -6,6 +6,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.AllocationFolder.AllocationModel import Allocation
@@ -23,6 +25,7 @@ from django.contrib.contenttypes.models import ContentType
 from sales.views.allocation_list_view import get_delivery_address_info
 from core.helpers import check_field_access_prefer_edit
 from decimal import Decimal
+from distribution.tables import VehicleRecruitmentTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -104,41 +107,47 @@ def vehicle_recruitment_list_view(request):
         'product_infos__product'
     ).order_by('-allocation_priority', '-created_at')
     
-    # آماده‌سازی اطلاعات تخصیص‌ها
-    allocations_with_info = []
-    for allocation in allocations:
-        # دریافت اطلاعات آدرس تحویل
-        delivery_info = None
-        if allocation.delivery_postal_code:
-            delivery_info = get_delivery_address_info(allocation.delivery_postal_code)
-        
-        # شمارش تعداد حمل‌های ایجاد شده برای این تخصیص
-        transports_count = Transport.objects.filter(
-            allocation=allocation
-        ).count()
-        
-        allocations_with_info.append({
-            'allocation': allocation,
-            'order_number': allocation.order.order_number if allocation.order else '-',
-            'delivery_info': delivery_info,
-            'transports_count': transports_count,
-            'shipping_method': allocation.get_shipping_announcement_method_display() if allocation.shipping_announcement_method else '-',
-        })
-    
     # بررسی دسترسی فیلدها
-    accessible_person_fields = get_accessible_person_fields(request.user)
     accessible_delivery_fields = get_accessible_delivery_address_fields(request.user)
-    accessible_allocation_fields = get_accessible_allocation_fields(request.user)
-    accessible_order_fields = get_accessible_order_fields(request.user)
     
-    bug_logger.debug(f"تعداد {len(allocations_with_info)} تخصیص در انتظار جذب خودرو لود شد")
+    # دریافت CSRF token
+    from django.middleware.csrf import get_token
+    csrf_token = get_token(request)
+    
+    # آماده‌سازی اطلاعات تخصیص‌ها برای جدول
+    # استفاده از یک class ساده که allocation را نگه می‌دارد
+    class AllocationRow:
+        def __init__(self, allocation):
+            self.allocation = allocation
+            # محاسبه تعداد حمل‌ها برای امکان مرتب‌سازی
+            self.transports_count = Transport.objects.filter(allocation=allocation).count()
+        
+        def __getattr__(self, name):
+            # اگر attribute در self وجود نداشت، از allocation بگیر
+            if hasattr(self.allocation, name):
+                return getattr(self.allocation, name)
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
+    
+    allocations_data = [AllocationRow(alloc) for alloc in allocations]
+    
+    # ایجاد جدول
+    table = VehicleRecruitmentTable(
+        allocations_data,
+        accessible_fields=None,  # table خودش محاسبه می‌کند
+        user=request.user
+    )
+    
+    # اضافه کردن accessible_delivery_fields و csrf_token به table
+    table.accessible_delivery_fields = accessible_delivery_fields
+    table.csrf_token = csrf_token
+    
+    # تنظیم صفحه‌بندی
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    
+    bug_logger.debug(f"تعداد {len(allocations_data)} تخصیص در انتظار جذب خودرو لود شد")
     
     context = {
-        'allocations_with_info': allocations_with_info,
-        'accessible_person_fields': accessible_person_fields,
-        'accessible_delivery_fields': accessible_delivery_fields,
-        'accessible_allocation_fields': accessible_allocation_fields,
-        'accessible_order_fields': accessible_order_fields,
+        'table': table,
         'page_title': 'لیست تخصیص‌های در انتظار جذب خودرو',
     }
     return render(request, 'distribution/vehicle_recruitment_list.html', context)
