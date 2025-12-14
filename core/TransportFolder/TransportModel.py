@@ -15,13 +15,12 @@ class Transport(models.Model):
     STATUS_CHOICES = [
         ('pending_recruitment_completion', 'در انتظار تکمیل جذب خودرو'),
         ('pending_vehicle_entry', 'در انتظار ورود خودرو به کارخانه'),
-        ('vehicle_entered', 'خودرو وارد شده'),
         ('loading', 'در انتظار بارگیری'),
-        ('loaded', 'بارگیری شده'),
         ('pending_waybill', 'در انتظار بارنامه'),
         ('pending_exit', 'در انتظار خروج'),
-        ('in_transit', 'در حال حمل'),
-        ('delivered', 'تحویل شده'),
+        ('pending_unloading', 'در انتظار تخلیه'),
+        ('pending_logistics_approval', 'در انتظار تایید لجستیک'),
+        ('pending_settlement', 'در انتظار تسویه'),
         ('completed', 'تکمیل شده'),
     ]
     
@@ -196,3 +195,28 @@ class Transport(models.Model):
     def __str__(self):
         return self.waybill_number or str(self.pk)
 
+    def save(self, *args, **kwargs):
+        # وضعیت‌های مجاز بر اساس جهت حمل را بررسی می‌کنیم
+        if self.direction == 'inbound':
+            allowed_statuses = [
+                'pending_vehicle_entry',
+                'pending_unloading',
+                'pending_logistics_approval',
+                'pending_settlement',
+                'completed'
+            ]
+        elif self.direction == 'outbound':
+            allowed_statuses = [
+                'pending_vehicle_entry',
+                'loading',
+                'pending_waybill',
+                'pending_exit',
+                'completed'
+            ]
+        else:
+            allowed_statuses = []
+
+        if self.status not in allowed_statuses:
+            raise ValueError("وضعیت انتخاب‌شده با جهت حمل سازگار نیست.")
+
+        super().save(*args, **kwargs)

@@ -219,13 +219,22 @@ def car_entrance_list_view(request):
     accessible_person_fields = get_accessible_person_fields_for_carentrance(request.user)
     
     try:
-        # نمایش حمل‌هایی که وضعیت آنها "در انتظار ورود خودرو" است
+        # نمایش حمل‌های ورودی (inbound) که در وضعیت "در انتظار ورود خودرو" هستند
         # یا سفارش خرید آنها در وضعیت "در انتظار ورود خودرو" است
+        # همچنین حمل‌هایی که transport_ref دارند و direction آنها inbound و status آنها pending_vehicle_entry است
+        from core.TransportFolder.TransportModel import Transport
         transports = PurchaseTransport.objects.filter(
-            Q(status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY) |
-            Q(purchase_order__status=ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY)
-        ).select_related('purchase_order', 'driver').order_by('-created_at')
-        bug_logger.debug(f"تعداد حمل‌های پیدا شده برای ورود خودرو: {transports.count()}")
+            (
+                Q(transport_type='inbound') & (
+                    Q(status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY) |
+                    Q(purchase_order__status=ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY)
+                )
+            ) | Q(
+                transport_ref__direction='inbound',
+                transport_ref__status='pending_vehicle_entry'
+            )
+        ).select_related('purchase_order', 'driver', 'transport_ref').order_by('-created_at')
+        bug_logger.debug(f"تعداد حمل‌های ورودی پیدا شده برای ورود خودرو: {transports.count()}")
         table = CarEntranceTable(transports, prefix='car-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table)
         
