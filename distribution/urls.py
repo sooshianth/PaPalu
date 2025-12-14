@@ -11,7 +11,8 @@ from distribution.views.vehicle_recruitment_view import (
 )
 from distribution.views.vehicle_entry_view import (
     vehicle_entry_list_view,
-    register_vehicle_entry_view
+    register_vehicle_entry_view,
+    get_driver_info_by_national_id_view
 )
 from distribution.views.loading_exit_view import (
     loading_exit_list_view,
@@ -39,6 +40,7 @@ urlpatterns = [
     path('vehicle-recruitment/<str:allocation_number>/complete/', complete_vehicle_recruitment_view, name='complete_vehicle_recruitment'),
     path('vehicle-entry/', vehicle_entry_list_view, name='vehicle_entry_list'),
     path('vehicle-entry/<str:waybill_number>/register/', register_vehicle_entry_view, name='register_vehicle_entry'),
+    path('vehicle-entry/get-driver-info/', get_driver_info_by_national_id_view, name='get_driver_info_by_national_id'),
     path('loading-exit/', loading_exit_list_view, name='loading_exit_list'),
     path('loading-exit/<str:waybill_number>/register/', register_loading_exit_view, name='register_loading_exit'),
     path('loading-exit/<str:waybill_number>/create-account/', create_bank_account_ajax_view, name='create_bank_account_ajax'),

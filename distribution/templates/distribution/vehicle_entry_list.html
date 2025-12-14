@@ -91,22 +91,30 @@
         text-decoration: none;
     }
     
+    .data-table .btn-outline-primary,
+    .table-container .btn-outline-primary,
     .btn-outline-primary {
-        padding: 8px 15px;
+        padding: 5px 10px;
         border-radius: 6px;
         text-decoration: none;
         font-size: 0.875rem;
+        font-family: inherit;
         border: 1px solid var(--primary-green);
-        color: var(--primary-green);
         transition: all 0.3s;
+        color: var(--primary-green) !important;
+        border-color: var(--primary-green) !important;
+        background-color: transparent !important;
         display: inline-block;
         cursor: pointer;
-        background: white;
+        white-space: nowrap;
     }
     
+    .data-table .btn-outline-primary:hover,
+    .table-container .btn-outline-primary:hover,
     .btn-outline-primary:hover {
-        background-color: var(--primary-green);
-        color: white;
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
     }
     
     .data-table .btn-success,
@@ -507,7 +515,9 @@
                        placeholder="شماره ملی راننده"
                        maxlength="10"
                        pattern="[0-9]{10}"
-                       required>
+                       required
+                       onblur="loadDriverInfo(this.value)">
+                <small id="driver_info_status" style="display: none; color: var(--primary-green); font-size: 0.85rem; margin-top: 5px;"></small>
             </div>
             
             <div class="form-group">
@@ -518,6 +528,9 @@
                        class="form-control" 
                        placeholder="نام راننده"
                        required>
+                <small id="driver_name_hint" style="display: none; color: var(--gray-600); font-size: 0.85rem; margin-top: 5px;">
+                    این فیلد به صورت خودکار پر شده و قابل ویرایش نیست
+                </small>
             </div>
             
             <div class="form-group">
@@ -534,31 +547,52 @@
             <!-- پلاک خودرو -->
             <div class="form-group">
                 <label class="required">پلاک خودرو</label>
-                <div class="plate-input-group">
-                    <input type="text" 
-                           name="plate_part1" 
-                           id="plate_part1" 
-                           class="form-control plate-input" 
-                           placeholder="99"
-                           maxlength="2"
-                           required>
-                    <span class="plate-separator">|</span>
+                <div class="plate-input-group" style="position: relative; margin-bottom: 25px;">
+                    <div style="position: relative; flex: 1;">
+                        <input type="text" 
+                               name="plate_part1" 
+                               id="plate_part1" 
+                               class="form-control plate-input" 
+                               placeholder="11"
+                               maxlength="2"
+                               pattern="[0-9]{2}"
+                               required
+                               oninput="autoMoveToNext(this, 'plate_part2', 2)">
+                        <small style="position: absolute; bottom: -20px; right: 5px; font-size: 0.75rem; color: var(--gray-600); white-space: nowrap; z-index: 1;">ایران</small>
+                    </div>
+                    <span class="plate-separator">-</span>
                     <input type="text" 
                            name="plate_part2" 
                            id="plate_part2" 
                            class="form-control plate-input" 
-                           placeholder="123ب"
-                           maxlength="5"
-                           required>
-                    <span class="plate-separator">|</span>
+                           placeholder="345"
+                           maxlength="3"
+                           pattern="[0-9]{3}"
+                           required
+                           oninput="autoMoveToNext(this, 'plate_part3', 3)">
+                    <span class="plate-separator">-</span>
                     <input type="text" 
                            name="plate_part3" 
                            id="plate_part3" 
                            class="form-control plate-input" 
-                           placeholder="21"
+                           placeholder="ح"
+                           maxlength="1"
+                           pattern="[ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی]"
+                           required
+                           oninput="autoMoveToNext(this, 'plate_part4', 1)">
+                    <span class="plate-separator">-</span>
+                    <input type="text" 
+                           name="plate_part4" 
+                           id="plate_part4" 
+                           class="form-control plate-input" 
+                           placeholder="12"
                            maxlength="2"
+                           pattern="[0-9]{2}"
                            required>
                 </div>
+                <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">
+                    فرمت: 11(ایران) - 345 - ح - 12 | نمایش: 11|345ح12
+                </small>
             </div>
             
             <!-- فیلدهای اختیاری -->
@@ -607,9 +641,31 @@
                        id="national_card_file" 
                        class="form-control" 
                        accept="image/*,.pdf"
-                       capture="environment"
-                       required>
+                       capture="environment">
                 <img id="national_card_preview" class="image-preview" alt="پیش‌نمایش کارت ملی">
+                <div id="previous_national_card_info" style="display: none; margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 6px; border: 1px solid #b3d9ff;">
+                    <p style="margin: 0 0 8px 0; font-size: 0.9rem; color: var(--gray-700);">
+                        <strong>کارت ملی از پیوست‌های شخص:</strong>
+                    </p>
+                    <a id="previous_national_card_link" 
+                       href="#" 
+                       target="_blank" 
+                       style="color: var(--primary-green); text-decoration: underline; margin-left: 10px; cursor: pointer;"
+                       onclick="event.preventDefault(); if(this.href && this.href !== '#') window.open(this.href, '_blank');">
+                        مشاهده کارت ملی قبلی
+                    </a>
+                    <label style="display: block; margin-top: 10px; cursor: pointer;">
+                        <input type="checkbox" 
+                               name="use_previous_national_card" 
+                               id="use_previous_national_card" 
+                               value="true"
+                               onchange="toggleNationalCardRequired()">
+                        <span style="margin-right: 5px;">استفاده از کارت ملی قبلی</span>
+                    </label>
+                    <p style="margin: 8px 0 0 0; font-size: 0.85rem; color: var(--gray-600);">
+                        می‌توانید فایل جدیدی آپلود کنید یا از کارت ملی قبلی استفاده کنید.
+                    </p>
+                </div>
             </div>
             
             <div class="form-actions">
@@ -633,16 +689,41 @@
         const form = document.getElementById('vehicleEntryForm');
         form.action = form.action.replace('WAYBILL_NUMBER_PLACEHOLDER', waybillNumber);
         
+        // نمایش اولیه waybill_number (قبل از AJAX)
+        document.getElementById('readonly_waybill_number').textContent = waybillNumber || '-';
+        document.getElementById('readonly_allocation_id').textContent = '-';
+        
         // بارگذاری اطلاعات حمل از طریق AJAX
         fetch(`/distribution/vehicle-entry/${waybillNumber}/register/`, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            document.getElementById('readonly_waybill_number').textContent = data.waybill_number || '-';
-            document.getElementById('readonly_allocation_id').textContent = (data.allocation_id || '-');
+            console.log('Data received:', data); // برای دیباگ
+            
+            // نمایش شناسه حمل
+            if (data.waybill_number) {
+                document.getElementById('readonly_waybill_number').textContent = data.waybill_number;
+            } else if (waybillNumber) {
+                document.getElementById('readonly_waybill_number').textContent = waybillNumber;
+            } else {
+                document.getElementById('readonly_waybill_number').textContent = '-';
+            }
+            
+            // نمایش شناسه تخصیص
+            const allocationId = data.allocation_id || data.allocation_number;
+            if (allocationId) {
+                document.getElementById('readonly_allocation_id').textContent = allocationId;
+            } else {
+                document.getElementById('readonly_allocation_id').textContent = '-';
+            }
             
             if (data.driver_national_id) {
                 document.getElementById('driver_national_id').value = data.driver_national_id;
@@ -660,10 +741,16 @@
                 document.getElementById('plate_part1').value = data.plate_part1;
             }
             if (data.plate_part2) {
+                // plate_part2 باید 3 رقم باشد (345)
                 document.getElementById('plate_part2').value = data.plate_part2;
             }
             if (data.plate_part3) {
+                // plate_part3 باید یک حرف باشد (ح)
                 document.getElementById('plate_part3').value = data.plate_part3;
+            }
+            if (data.plate_part4) {
+                // plate_part4 باید 2 رقم باشد (12)
+                document.getElementById('plate_part4').value = data.plate_part4;
             }
             if (data.vehicle_type) {
                 document.getElementById('vehicle_type').value = data.vehicle_type;
@@ -674,6 +761,8 @@
         })
         .catch(error => {
             console.error('خطا در بارگذاری اطلاعات:', error);
+            // در صورت خطا، حداقل waybill_number را نمایش بده
+            document.getElementById('readonly_waybill_number').textContent = waybillNumber || '-';
         });
         
         document.getElementById('vehicleEntryModal').classList.add('active');
@@ -685,6 +774,18 @@
         document.getElementById('vehicleEntryForm').reset();
         document.getElementById('national_card_preview').classList.remove('active');
         document.getElementById('national_card_preview').src = '';
+        document.getElementById('driver_info_status').style.display = 'none';
+        document.getElementById('previous_national_card_info').style.display = 'none';
+        
+        // حذف readonly از نام
+        const driverNameInput = document.getElementById('driver_name');
+        driverNameInput.removeAttribute('readonly');
+        driverNameInput.style.backgroundColor = '';
+        driverNameInput.style.cursor = '';
+        const driverNameHint = document.getElementById('driver_name_hint');
+        if (driverNameHint) {
+            driverNameHint.style.display = 'none';
+        }
     }
     
     // بستن مودال با کلیک روی پس‌زمینه
@@ -694,9 +795,157 @@
         }
     });
     
+    // بارگذاری اطلاعات راننده بر اساس شماره ملی
+    function loadDriverInfo(nationalId) {
+        const statusElement = document.getElementById('driver_info_status');
+        const previousCardInfo = document.getElementById('previous_national_card_info');
+        const driverNameInput = document.getElementById('driver_name');
+        const driverMobileInput = document.getElementById('driver_mobile');
+        const driverDescriptionInput = document.getElementById('driver_description');
+        const nationalCardFileInput = document.getElementById('national_card_file');
+        const usePreviousCheckbox = document.getElementById('use_previous_national_card');
+        
+        // پاک کردن پیام قبلی
+        statusElement.style.display = 'none';
+        previousCardInfo.style.display = 'none';
+        
+        // بررسی اینکه شماره ملی 10 رقم باشد
+        if (!nationalId || nationalId.length !== 10 || !/^\d{10}$/.test(nationalId)) {
+            // اگر شماره ملی معتبر نیست، فیلدها را پاک کن
+            driverNameInput.value = '';
+            driverMobileInput.value = '';
+            driverDescriptionInput.value = '';
+            nationalCardFileInput.value = '';
+            if (usePreviousCheckbox) {
+                usePreviousCheckbox.checked = false;
+            }
+            // حذف readonly از نام
+            driverNameInput.removeAttribute('readonly');
+            driverNameInput.style.backgroundColor = '';
+            driverNameInput.style.cursor = '';
+            return;
+        }
+        
+        // نمایش پیام در حال بارگذاری
+        statusElement.textContent = 'در حال جستجو...';
+        statusElement.style.display = 'block';
+        statusElement.style.color = 'var(--gray-600)';
+        
+        // ارسال درخواست AJAX
+        fetch(`/distribution/vehicle-entry/get-driver-info/?national_id=${encodeURIComponent(nationalId)}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                statusElement.textContent = data.error;
+                statusElement.style.color = '#dc3545';
+                statusElement.style.display = 'block';
+                return;
+            }
+            
+            if (!data.found) {
+                statusElement.textContent = 'راننده یافت نشد. می‌توانید اطلاعات را به صورت دستی وارد کنید.';
+                statusElement.style.color = 'var(--gray-600)';
+                statusElement.style.display = 'block';
+                return;
+            }
+            
+            // پر کردن فیلدها با اطلاعات یافت شده
+            if (data.driver_name !== undefined) {
+                const driverNameInput = document.getElementById('driver_name');
+                const driverNameHint = document.getElementById('driver_name_hint');
+                driverNameInput.value = data.driver_name || '';
+                // نام را read-only کن چون هر کد ملی فقط برای یک اسم است
+                driverNameInput.setAttribute('readonly', 'readonly');
+                driverNameInput.style.backgroundColor = 'var(--gray-100)';
+                driverNameInput.style.cursor = 'not-allowed';
+                if (driverNameHint) {
+                    driverNameHint.style.display = 'block';
+                }
+            }
+            if (data.driver_mobile !== undefined) {
+                document.getElementById('driver_mobile').value = data.driver_mobile || '';
+            }
+            if (data.driver_description !== undefined) {
+                document.getElementById('driver_description').value = data.driver_description || '';
+            }
+            
+            // نمایش کارت ملی قبلی اگر وجود داشته باشد
+            if (data.national_card_url) {
+                const linkElement = document.getElementById('previous_national_card_link');
+                // اطمینان از اینکه URL کامل است
+                let fullUrl = data.national_card_url;
+                if (!fullUrl.startsWith('http://') && !fullUrl.startsWith('https://') && !fullUrl.startsWith('/')) {
+                    fullUrl = '/' + fullUrl;
+                }
+                linkElement.href = fullUrl;
+                linkElement.setAttribute('data-url', fullUrl);
+                previousCardInfo.style.display = 'block';
+            }
+            
+            // نمایش پیام موفقیت
+            statusElement.textContent = 'اطلاعات راننده با موفقیت بارگذاری شد. می‌توانید آنها را ویرایش کنید.';
+            statusElement.style.color = 'var(--primary-green)';
+            statusElement.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('خطا در بارگذاری اطلاعات راننده:', error);
+            statusElement.textContent = 'خطا در بارگذاری اطلاعات راننده';
+            statusElement.style.color = '#dc3545';
+            statusElement.style.display = 'block';
+            // در صورت خطا، فیلدها را پاک کن
+            driverNameInput.value = '';
+            driverMobileInput.value = '';
+            driverDescriptionInput.value = '';
+            nationalCardFileInput.value = '';
+            if (usePreviousCheckbox) {
+                usePreviousCheckbox.checked = false;
+            }
+            // حذف readonly از نام
+            driverNameInput.removeAttribute('readonly');
+            driverNameInput.style.backgroundColor = '';
+            driverNameInput.style.cursor = '';
+            const driverNameHint = document.getElementById('driver_name_hint');
+            if (driverNameHint) {
+                driverNameHint.style.display = 'none';
+            }
+        });
+    }
+    
+    // حرکت خودکار به فیلد بعدی پلاک
+    function autoMoveToNext(currentInput, nextInputId, maxLength) {
+        if (currentInput.value.length >= maxLength) {
+            const nextInput = document.getElementById(nextInputId);
+            if (nextInput) {
+                nextInput.focus();
+                // اگر فیلد بعدی خالی است، مقدار را انتخاب کن تا کاربر بتواند مستقیماً تایپ کند
+                if (!nextInput.value) {
+                    nextInput.select();
+                }
+            }
+        }
+    }
+    
+    // تغییر required بودن فایل کارت ملی
+    function toggleNationalCardRequired() {
+        const usePreviousCheckbox = document.getElementById('use_previous_national_card');
+        const nationalCardFile = document.getElementById('national_card_file');
+        
+        if (usePreviousCheckbox.checked) {
+            nationalCardFile.removeAttribute('required');
+        } else {
+            nationalCardFile.setAttribute('required', 'required');
+        }
+    }
+    
     // پیش‌نمایش تصویر کارت ملی
     document.getElementById('national_card_file')?.addEventListener('change', function(e) {
         const file = e.target.files[0];
+        const usePreviousCheckbox = document.getElementById('use_previous_national_card');
+        
         if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -708,6 +957,12 @@
         } else {
             document.getElementById('national_card_preview').classList.remove('active');
         }
+        
+        // اگر فایل جدیدی انتخاب شد، checkbox استفاده از قبلی را غیرفعال کن
+        if (file && usePreviousCheckbox) {
+            usePreviousCheckbox.checked = false;
+            toggleNationalCardRequired();
+        }
     });
     
     // اعتبارسنجی فرم قبل از ارسال
@@ -718,12 +973,21 @@
         const platePart1 = document.getElementById('plate_part1').value;
         const platePart2 = document.getElementById('plate_part2').value;
         const platePart3 = document.getElementById('plate_part3').value;
+        const platePart4 = document.getElementById('plate_part4').value;
         const nationalCardFile = document.getElementById('national_card_file').files[0];
         
         // بررسی فیلدهای اجباری
-        if (!driverNationalId || !driverName || !driverMobile || !platePart1 || !platePart2 || !platePart3 || !nationalCardFile) {
+        const usePreviousCard = document.getElementById('use_previous_national_card')?.checked || false;
+        if (!driverNationalId || !driverName || !driverMobile || !platePart1 || !platePart2 || !platePart3 || !platePart4) {
             e.preventDefault();
             alert('لطفاً تمام فیلدهای اجباری را پر کنید.');
+            return false;
+        }
+        
+        // بررسی کارت ملی
+        if (!nationalCardFile && !usePreviousCard) {
+            e.preventDefault();
+            alert('لطفاً کارت ملی را آپلود کنید یا از کارت ملی قبلی استفاده کنید.');
             return false;
         }
         
@@ -738,6 +1002,34 @@
         if (!/^09\d{9}$/.test(driverMobile)) {
             e.preventDefault();
             alert('شماره همراه باید با فرمت 09XXXXXXXXX باشد.');
+            return false;
+        }
+        
+        // بررسی فرمت بخش اول پلاک (2 رقم)
+        if (!/^\d{2}$/.test(platePart1)) {
+            e.preventDefault();
+            alert('بخش اول پلاک باید 2 رقم باشد.');
+            return false;
+        }
+        
+        // بررسی فرمت بخش دوم پلاک (3 رقم)
+        if (!/^\d{3}$/.test(platePart2)) {
+            e.preventDefault();
+            alert('بخش دوم پلاک باید 3 رقم باشد (مثال: 345).');
+            return false;
+        }
+        
+        // بررسی فرمت بخش سوم پلاک (1 حرف فارسی)
+        if (!/^[ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی]$/.test(platePart3)) {
+            e.preventDefault();
+            alert('بخش سوم پلاک باید یک حرف فارسی باشد (مثال: ح).');
+            return false;
+        }
+        
+        // بررسی فرمت بخش چهارم پلاک (2 رقم)
+        if (!/^\d{2}$/.test(platePart4)) {
+            e.preventDefault();
+            alert('بخش چهارم پلاک باید 2 رقم باشد.');
             return false;
         }
         

@@ -533,6 +533,10 @@ class VehicleEntryTable(tables.Table):
         """نمایش پلاک خودرو"""
         plate_number = getattr(record, 'plate_number', None)
         if plate_number:
+            # فرمت پلاک: 11|345ح12 -> نمایش: 11|345ح12
+            # اگر به صورت | جدا شده باشد، همان را نمایش بده
+            if '|' in plate_number:
+                return format_html('<span class="code-badge">{}</span>', plate_number)
             return format_html('<span class="code-badge">{}</span>', plate_number)
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
@@ -559,7 +563,7 @@ class VehicleEntryTable(tables.Table):
         try:
             return format_html(
                 '<button type="button" '
-                'class="btn-success" '
+                'class="btn-outline-primary" '
                 'onclick="showVehicleEntryModal(\'{}\')">'
                 'ثبت ورود'
                 '</button>',

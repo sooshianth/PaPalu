@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import transaction, models
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -16,6 +16,7 @@ from core.TransportFolder.LoadingScheduleInfoModel import LoadingScheduleInfo
 from core.TransportFolder.TruckInfoModel import TruckInfo
 from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
+from core.PersonFolder.AttachmentModel import Attachment
 from core.AllocationFolder.AllocationModel import Allocation
 from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
@@ -157,7 +158,10 @@ def register_vehicle_entry_view(request, waybill_number):
         messages.error(request, 'شما دسترسی به ثبت ورود خودرو را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
-    transport = get_object_or_404(Transport, waybill_number=waybill_number)
+    transport = get_object_or_404(
+        Transport.objects.select_related('allocation'),
+        waybill_number=waybill_number
+    )
     
     if transport.status != 'pending_vehicle_entry':
         messages.error(request, 'این حمل در وضعیت مناسب برای ثبت ورود نیست.')
@@ -174,8 +178,9 @@ def register_vehicle_entry_view(request, waybill_number):
                 
                 # اطلاعات پلاک
                 plate_part1 = request.POST.get('plate_part1', '').strip()
-                plate_part2 = request.POST.get('plate_part2', '').strip()
-                plate_part3 = request.POST.get('plate_part3', '').strip()
+                plate_part2 = request.POST.get('plate_part2', '').strip()  # 3 رقم
+                plate_part3 = request.POST.get('plate_part3', '').strip()  # حرف
+                plate_part4 = request.POST.get('plate_part4', '').strip()  # 2 رقم
                 
                 vehicle_type = request.POST.get('vehicle_type', '').strip()
                 loading_type = request.POST.get('loading_type', '').strip()
@@ -204,31 +209,37 @@ def register_vehicle_entry_view(request, waybill_number):
                     return redirect('distribution:vehicle_entry_list')
                 
                 # اعتبارسنجی پلاک
-                if not plate_part1 or not plate_part2 or not plate_part3:
+                if not plate_part1 or not plate_part2 or not plate_part3 or not plate_part4:
                     messages.error(request, 'تمام بخش‌های پلاک الزامی است.')
                     return redirect('distribution:vehicle_entry_list')
                 
-                # ساخت پلاک کامل
-                plate_number = f"{plate_part1}|{plate_part2}|{plate_part3}"
-                
-                # اعتبارسنجی فایل کارت ملی
-                national_card_file = request.FILES.get('national_card_file')
-                if not national_card_file:
-                    messages.error(request, 'آپلود کارت ملی الزامی است.')
+                # اعتبارسنجی فرمت بخش اول (2 رقم)
+                if not re.match(r'^\d{2}$', plate_part1):
+                    messages.error(request, 'بخش اول پلاک باید 2 رقم باشد.')
                     return redirect('distribution:vehicle_entry_list')
                 
-                # بررسی فرمت فایل
-                allowed_extensions = ['.jpg', '.jpeg', '.png', '.pdf']
-                file_name = national_card_file.name.lower()
-                if '.' in file_name:
-                    file_extension = '.' + file_name.split('.')[-1]
-                else:
-                    file_extension = ''
-                if file_extension not in allowed_extensions:
-                    messages.error(request, 'فرمت فایل کارت ملی باید JPG، PNG یا PDF باشد.')
+                # اعتبارسنجی فرمت بخش دوم (3 رقم)
+                if not re.match(r'^\d{3}$', plate_part2):
+                    messages.error(request, 'بخش دوم پلاک باید 3 رقم باشد.')
                     return redirect('distribution:vehicle_entry_list')
                 
-                # ایجاد یا به‌روزرسانی Person برای راننده
+                # اعتبارسنجی فرمت بخش سوم (1 حرف فارسی)
+                if not re.match(r'^[ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی]$', plate_part3):
+                    messages.error(request, 'بخش سوم پلاک باید یک حرف فارسی باشد.')
+                    return redirect('distribution:vehicle_entry_list')
+                
+                # اعتبارسنجی فرمت بخش چهارم (2 رقم)
+                if not re.match(r'^\d{2}$', plate_part4):
+                    messages.error(request, 'بخش چهارم پلاک باید 2 رقم باشد.')
+                    return redirect('distribution:vehicle_entry_list')
+                
+                # ساخت پلاک کامل با فرمت: 11|345ح12
+                # حرف در وسط: 3 رقم + حرف + 2 رقم
+                plate_middle = f"{plate_part2}{plate_part3}{plate_part4}"  # 345ح12
+                
+                plate_number = f"{plate_part1}|{plate_middle}"
+                
+                # ایجاد یا به‌روزرسانی Person برای راننده (قبل از بررسی کارت ملی)
                 driver_person, created = Person.objects.get_or_create(
                     national_id=driver_national_id,
                     defaults={
@@ -237,6 +248,48 @@ def register_vehicle_entry_view(request, waybill_number):
                         'description': driver_description or None,
                     }
                 )
+                
+                # اعتبارسنجی فایل کارت ملی
+                national_card_file = request.FILES.get('national_card_file')
+                use_previous_card = request.POST.get('use_previous_national_card') == 'true'
+                previous_card_attachment = None
+                
+                # اگر از کارت ملی قبلی استفاده می‌شود، بررسی کن که آیا کارت ملی قبلی وجود دارد
+                if use_previous_card:
+                    # بررسی attachment های Person که ممکن است کارت ملی باشد
+                    previous_card_attachment = Attachment.objects.filter(
+                        person=driver_person
+                    ).filter(
+                        models.Q(description__icontains='کارت ملی') | 
+                        models.Q(description__icontains='national card') |
+                        models.Q(doc_type='other')
+                    ).first()
+                    
+                    # اگر پیدا نشد، همه attachment ها را بررسی کن
+                    if not previous_card_attachment:
+                        previous_card_attachment = Attachment.objects.filter(
+                            person=driver_person,
+                            file__isnull=False
+                        ).exclude(file='').first()
+                    
+                    if not previous_card_attachment or not previous_card_attachment.file:
+                        messages.error(request, 'کارت ملی قبلی یافت نشد. لطفاً فایل جدیدی آپلود کنید.')
+                        return redirect('distribution:vehicle_entry_list')
+                elif not national_card_file:
+                    messages.error(request, 'آپلود کارت ملی الزامی است.')
+                    return redirect('distribution:vehicle_entry_list')
+                
+                # بررسی فرمت فایل (فقط اگر فایل جدید آپلود شده)
+                if national_card_file:
+                    allowed_extensions = ['.jpg', '.jpeg', '.png', '.pdf']
+                    file_name = national_card_file.name.lower()
+                    if '.' in file_name:
+                        file_extension = '.' + file_name.split('.')[-1]
+                    else:
+                        file_extension = ''
+                    if file_extension not in allowed_extensions:
+                        messages.error(request, 'فرمت فایل کارت ملی باید JPG، PNG یا PDF باشد.')
+                        return redirect('distribution:vehicle_entry_list')
                 
                 # به‌روزرسانی اطلاعات اگر Person از قبل وجود داشت
                 if not created:
@@ -284,11 +337,20 @@ def register_vehicle_entry_view(request, waybill_number):
                     )
                 
                 # آپلود کارت ملی
-                TransportAttachment.objects.create(
-                    transport=transport,
-                    attachment_type='national_card',
-                    file=national_card_file
-                )
+                if use_previous_card and previous_card_attachment:
+                    # استفاده از کارت ملی قبلی (کپی کردن فایل)
+                    TransportAttachment.objects.create(
+                        transport=transport,
+                        attachment_type='national_card',
+                        file=previous_card_attachment.file
+                    )
+                elif national_card_file:
+                    # آپلود فایل جدید
+                    TransportAttachment.objects.create(
+                        transport=transport,
+                        attachment_type='national_card',
+                        file=national_card_file
+                    )
                 
                 # تغییر وضعیت حمل به loading (در حال بارگیری)
                 transport.status = 'loading'
@@ -348,23 +410,46 @@ def register_vehicle_entry_view(request, waybill_number):
         truck_info = transport.truck_infos.first()
         if truck_info:
             # تجزیه پلاک
+            # فرمت ذخیره شده: 11|345ح12
             plate_parts = truck_info.plate_number.split('|')
-            if len(plate_parts) == 3:
-                plate_part1 = plate_parts[0]
-                plate_part2 = plate_parts[1]
-                plate_part3 = plate_parts[2]
+            if len(plate_parts) == 2:
+                plate_part1 = plate_parts[0]  # 11
+                plate_middle = plate_parts[1]  # 345ح12
+                
+                # استخراج حرف و اعداد از وسط: 345ح12 -> 12345 و ح
+                # فرمت: 3 رقم + حرف + 2 رقم
+                plate_middle_match = re.match(r'^(\d{3})([ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی])(\d{2})$', plate_middle)
+                if plate_middle_match:
+                    plate_part2 = plate_middle_match.group(1)  # 345
+                    plate_part3 = plate_middle_match.group(2)  # ح
+                    plate_part4 = plate_middle_match.group(3)   # 12
+                else:
+                    # فرمت قدیمی (fallback) - برای سازگاری با داده‌های قدیمی
+                    plate_part2 = None
+                    plate_part3 = None
+                    plate_part4 = None
             vehicle_type = truck_info.vehicle_type
             loading_type = truck_info.loading_type
         
         # بررسی دسترسی فیلدها
         accessible_person_fields = get_accessible_person_fields(request.user)
         
+        # دریافت allocation_number
+        allocation_number = None
+        if transport.allocation:
+            allocation_number = transport.allocation.allocation_number
+            bug_logger.debug(f"Transport {transport.waybill_number} has allocation: {allocation_number}")
+        else:
+            bug_logger.debug(f"Transport {transport.waybill_number} has no allocation")
+        
         response_data = {
-            'waybill_number': transport.waybill_number,
-            'allocation_id': transport.allocation.allocation_number if transport.allocation else None,
+            'waybill_number': transport.waybill_number or str(transport.pk),  # اگر waybill_number نبود، از pk استفاده کن
+            'allocation_id': allocation_number,
+            'allocation_number': allocation_number,  # برای سازگاری
             'plate_part1': plate_part1,
             'plate_part2': plate_part2,
             'plate_part3': plate_part3,
+            'plate_part4': plate_part4,
             'vehicle_type': vehicle_type,
             'loading_type': loading_type,
         }
@@ -384,4 +469,82 @@ def register_vehicle_entry_view(request, waybill_number):
     
     # در غیر این صورت به لیست برگرد
     return redirect('distribution:vehicle_entry_list')
+
+
+@login_required
+def get_driver_info_by_national_id_view(request):
+    """
+    دریافت اطلاعات راننده بر اساس شماره ملی (برای AJAX)
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    national_id = request.GET.get('national_id', '').strip()
+    
+    if not national_id:
+        return JsonResponse({'error': 'شماره ملی الزامی است'}, status=400)
+    
+    # بررسی فرمت شماره ملی (10 رقم)
+    if not re.match(r'^\d{10}$', national_id):
+        return JsonResponse({'error': 'شماره ملی باید 10 رقم باشد'}, status=400)
+    
+    try:
+        # جستجوی راننده
+        driver = Person.objects.filter(national_id=national_id, type='driver').first()
+        
+        if not driver:
+            return JsonResponse({'found': False})
+        
+        # دریافت شماره همراه
+        person_content_type = ContentType.objects.get_for_model(Person)
+        mobile_phone = PhoneNumber.objects.filter(
+            content_type=person_content_type,
+            object_id=driver.national_id,
+            phone_type='mobile'
+        ).first()
+        
+        # بررسی دسترسی فیلدها
+        accessible_person_fields = get_accessible_person_fields(request.user)
+        
+        response_data = {
+            'found': True,
+        }
+        
+        # فقط فیلدهایی که کاربر دسترسی دارد را اضافه کن
+        if accessible_person_fields.get('name'):
+            response_data['driver_name'] = driver.name or ''
+        if accessible_person_fields.get('national_id'):
+            response_data['driver_national_id'] = driver.national_id or ''
+        if accessible_person_fields.get('description'):
+            response_data['driver_description'] = driver.description or ''
+        
+        # شماره همراه را همیشه نشان بده
+        response_data['driver_mobile'] = mobile_phone.number if mobile_phone else ''
+        
+        # جستجوی کارت ملی در پیوست‌های شخص
+        # بررسی attachment های Person که ممکن است کارت ملی باشد
+        # معمولاً در description یا doc_type='other' ذخیره می‌شود
+        national_card_attachment = Attachment.objects.filter(
+            person=driver
+        ).filter(
+            models.Q(description__icontains='کارت ملی') | 
+            models.Q(description__icontains='national card') |
+            models.Q(doc_type='other')
+        ).first()
+        
+        # اگر پیدا نشد، همه attachment ها را بررسی کن
+        if not national_card_attachment:
+            national_card_attachment = Attachment.objects.filter(
+                person=driver,
+                file__isnull=False
+            ).exclude(file='').first()
+        
+        if national_card_attachment and national_card_attachment.file:
+            response_data['national_card_url'] = national_card_attachment.file.url
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        bug_logger.error(f"خطا در دریافت اطلاعات راننده: {str(e)}")
+        return JsonResponse({'error': 'خطا در دریافت اطلاعات'}, status=500)
 
