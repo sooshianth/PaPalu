@@ -27,31 +27,88 @@
     }
     
     .form-section {
-        margin-bottom: 30px;
-        padding-bottom: 30px;
-        border-bottom: 1px solid var(--gray-200);
+        background: var(--gray-100);
+        padding: 0;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+        overflow: hidden;
     }
     
-    .form-section:last-child {
-        border-bottom: none;
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
     }
     
     .form-section-title {
+        color: var(--primary-green);
         font-size: 1.2rem;
         font-weight: 600;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
         color: var(--primary-green);
-        margin-bottom: 20px;
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-body {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    
+    .form-section.collapsed .form-section-body {
+        max-height: 0;
+        padding: 0 25px;
     }
     
     .form-group {
-        margin-bottom: 20px;
+        margin-bottom: 16px;
+    }
+    
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
     }
     
     .form-group label {
         display: block;
         margin-bottom: 8px;
-        font-weight: 600;
+        font-weight: 500;
         color: var(--gray-800);
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
     }
     
     .form-group label.required::after {
@@ -59,19 +116,22 @@
         color: #dc3545;
     }
     
-    .form-control {
-        width: 100%;
-        padding: 10px;
+    .form-control,
+    .form-select {
         border: 1px solid var(--gray-300);
-        border-radius: 6px;
-        font-size: 0.9rem;
-        transition: border-color 0.3s;
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
     }
     
-    .form-control:focus {
-        outline: none;
+    .form-control:focus,
+    .form-select:focus {
         border-color: var(--primary-green);
-        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
     }
     
     .form-control[readonly] {
@@ -97,21 +157,29 @@
     
     .form-actions {
         display: flex;
-        gap: 10px;
-        justify-content: flex-end;
-        margin-top: 25px;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
     }
     
     .readonly-info {
-        background: var(--gray-100);
-        padding: 15px;
-        border-radius: 6px;
-        margin-bottom: 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        border: 1px solid var(--gray-300);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     .readonly-info-item {
-        margin-bottom: 8px;
-        font-size: 0.9rem;
+        margin-bottom: 6px;
+        font-size: 0.875rem;
+    }
+    
+    .readonly-info-item:last-child {
+        margin-bottom: 0;
     }
     
     .readonly-info-label {
@@ -126,47 +194,49 @@
     }
     
     .btn-success {
-        padding: 10px 20px;
+        padding: 8px 16px;
         border-radius: 6px;
         border: none;
         color: white;
-        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
-        transition: all 0.3s;
+        background: var(--primary-green);
+        transition: all 0.2s;
         cursor: pointer;
-        font-size: 1rem;
+        font-size: 0.9rem;
+        font-weight: 500;
     }
     
     .btn-success:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        background: var(--dark-green);
     }
     
     .btn-secondary {
-        padding: 10px 20px;
+        padding: 8px 16px;
         border-radius: 6px;
         border: 1px solid var(--gray-300);
         color: var(--gray-700);
         background: white;
-        transition: all 0.3s;
+        transition: all 0.2s;
         cursor: pointer;
-        font-size: 1rem;
+        font-size: 0.9rem;
         text-decoration: none;
         display: inline-block;
     }
     
     .btn-secondary:hover {
-        background: var(--gray-100);
+        background: var(--gray-50);
+        border-color: var(--gray-400);
     }
     
     .btn-outline-primary {
-        padding: 8px 15px;
+        padding: 6px 12px;
         border-radius: 6px;
         border: 1px solid var(--primary-green);
         color: var(--primary-green);
         background: white;
-        transition: all 0.3s;
+        transition: all 0.2s;
         cursor: pointer;
-        font-size: 0.9rem;
+        font-size: 0.875rem;
+        font-weight: 500;
     }
     
     .btn-outline-primary:hover {
@@ -175,49 +245,57 @@
     }
     
     .alert {
-        padding: 15px;
+        border-radius: 8px;
+        padding: 15px 20px;
         margin-bottom: 20px;
-        border-radius: 6px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
     }
     
     .alert-error {
         background-color: #f8d7da;
         color: #721c24;
-        border: 1px solid #f5c6cb;
     }
     
-    .alert-success {
-        background-color: #d4edda;
-        color: #155724;
-        border: 1px solid #c3e6cb;
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
     }
     
     .product-info-table {
         width: 100%;
-        margin-top: 15px;
+        margin-top: 12px;
         border-collapse: collapse;
         background: white;
+        border: 1px solid var(--gray-200);
         border-radius: 6px;
         overflow: hidden;
     }
     
     .product-info-table thead {
-        background: var(--primary-green);
-        color: white;
+        background: var(--gray-100);
+        color: var(--gray-800);
     }
     
     .product-info-table th {
-        padding: 12px;
+        padding: 10px 12px;
         text-align: right;
         font-weight: 600;
-        font-size: 0.9rem;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--gray-300);
     }
     
     .product-info-table td {
-        padding: 10px 12px;
+        padding: 8px 12px;
         text-align: right;
-        border-bottom: 1px solid var(--gray-200);
-        font-size: 0.9rem;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 0.875rem;
     }
     
     .product-info-table tbody tr:last-child td {
@@ -229,13 +307,19 @@
     }
     
     .products-section {
-        margin-top: 15px;
+        margin-top: 20px;
+        margin-bottom: 25px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 15px 20px;
+        border-radius: 8px;
+        border: 1px solid var(--gray-300);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     }
     
     .products-section-title {
         font-weight: 600;
         color: var(--gray-800);
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         font-size: 0.95rem;
     }
     
@@ -392,7 +476,13 @@
         
         <!-- بخش 1: فیلدهای اجباری وزن -->
         <div class="form-section">
-            <h3 class="form-section-title">اطلاعات وزن (اجباری)</h3>
+            <div class="form-section-header">
+                <h5 class="form-section-title">اطلاعات وزن (اجباری)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body">
             
             <div class="form-group">
                 <label for="{{ form.empty_weight.id_for_label }}" class="required">وزن خالی</label>
@@ -423,11 +513,18 @@
                     </div>
                 {% endif %}
             </div>
+            </div>
         </div>
         
         <!-- بخش 2: فیلدهای اجباری بسته‌بندی و انبار -->
         <div class="form-section">
-            <h3 class="form-section-title">اطلاعات بسته‌بندی و انبار (اجباری)</h3>
+            <div class="form-section-header">
+                <h5 class="form-section-title">اطلاعات بسته‌بندی و انبار (اجباری)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body">
             
             <div class="form-group">
                 <label for="{{ form.packaging_type.id_for_label }}" class="required">نوع بسته‌بندی</label>
@@ -460,7 +557,7 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.driver_account_number.id_for_label }}" class="required">شماره حساب راننده</label>
+                <label for="{{ form.driver_account_number.id_for_label }}">شماره حساب راننده</label>
                 <div style="display: flex; gap: 10px; align-items: flex-end;">
                     <div style="flex: 1;">
                         {{ form.driver_account_number }}
@@ -477,11 +574,18 @@
                     </div>
                 {% endif %}
             </div>
+            </div>
         </div>
         
         <!-- بخش 3: اطلاعات اختیاری راننده -->
-        <div class="form-section">
-            <h3 class="form-section-title">اطلاعات راننده (اختیاری - در صورت ناقص بودن)</h3>
+        <div class="form-section collapsed">
+            <div class="form-section-header">
+                <h5 class="form-section-title">اطلاعات راننده (اختیاری - در صورت ناقص بودن)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body">
             
             <div class="form-group">
                 <label for="{{ form.driver_national_id.id_for_label }}">شماره ملی راننده</label>
@@ -522,11 +626,18 @@
                     </div>
                 {% endif %}
             </div>
+            </div>
         </div>
         
         <!-- بخش 4: اطلاعات اختیاری حمل -->
-        <div class="form-section">
-            <h3 class="form-section-title">اطلاعات حمل (اختیاری - در صورت ناقص بودن)</h3>
+        <div class="form-section collapsed">
+            <div class="form-section-header">
+                <h5 class="form-section-title">اطلاعات حمل (اختیاری - در صورت ناقص بودن)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body">
             
             <div class="form-group">
                 <label>پلاک خودرو</label>
@@ -536,6 +647,8 @@
                     {{ form.plate_part2 }}
                     <span class="plate-separator">|</span>
                     {{ form.plate_part3 }}
+                    <span class="plate-separator">|</span>
+                    {{ form.plate_part4 }}
                 </div>
             </div>
             
@@ -557,6 +670,7 @@
                         {{ form.loading_type.errors }}
                     </div>
                 {% endif %}
+            </div>
             </div>
         </div>
         
@@ -635,6 +749,14 @@
 <script>
     // محاسبه خودکار وزن خالص
     document.addEventListener('DOMContentLoaded', function() {
+        // مدیریت باز و بسته شدن بخش‌های فرم
+        document.querySelectorAll('.form-section-header').forEach(function(header) {
+            header.addEventListener('click', function() {
+                const section = this.closest('.form-section');
+                section.classList.toggle('collapsed');
+            });
+        });
+        
         const emptyWeightInput = document.getElementById('{{ form.empty_weight.id_for_label }}');
         const grossWeightInput = document.getElementById('{{ form.gross_weight.id_for_label }}');
         const netWeightInput = document.getElementById('{{ form.net_weight.id_for_label }}');
@@ -781,7 +903,6 @@
                             // اگر select disabled بود، آن را فعال کن
                             if (driverAccountNumberSelect.disabled) {
                                 driverAccountNumberSelect.disabled = false;
-                                driverAccountNumberSelect.required = true;
                             }
                         }
                         
@@ -807,25 +928,6 @@
                 e.preventDefault();
                 alert('وزن پر باید بیشتر یا مساوی وزن خالی باشد.');
                 return false;
-            }
-            
-            // بررسی شماره حساب
-            const createNewAccount = createNewAccountCheckbox && createNewAccountCheckbox.checked;
-            if (createNewAccount) {
-                const newAccountNumber = document.getElementById('new_account_number').value.trim();
-                const newBankName = document.getElementById('new_bank_name').value.trim();
-                if (!newAccountNumber || !newBankName) {
-                    e.preventDefault();
-                    alert('در صورت انتخاب ایجاد حساب جدید، شماره حساب و نام بانک الزامی است.');
-                    return false;
-                }
-            } else {
-                const driverAccountNumber = driverAccountNumberSelect.value;
-                if (!driverAccountNumber && driverAccountNumberSelect.required) {
-                    e.preventDefault();
-                    alert('انتخاب شماره حساب راننده الزامی است.');
-                    return false;
-                }
             }
         });
     });

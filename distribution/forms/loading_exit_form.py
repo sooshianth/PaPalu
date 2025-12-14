@@ -164,10 +164,21 @@ class LoadingExitForm(forms.Form):
     plate_part3 = forms.CharField(
         required=False,
         label='بخش سوم پلاک',
+        max_length=1,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control plate-input',
+            'placeholder': 'ح',
+            'maxlength': '1'
+        })
+    )
+    
+    plate_part4 = forms.CharField(
+        required=False,
+        label='بخش چهارم پلاک',
         max_length=2,
         widget=forms.TextInput(attrs={
             'class': 'form-control plate-input',
-            'placeholder': '21',
+            'placeholder': '12',
             'maxlength': '2'
         })
     )

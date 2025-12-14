@@ -9,6 +9,14 @@ from core.TransportFolder.TransportModel import Transport
 from sales.views.allocation_list_view import get_delivery_address_info
 
 
+def convert_to_persian_numbers(text):
+    """تبدیل اعداد انگلیسی به فارسی"""
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    translation_table = str.maketrans(english_digits, persian_digits)
+    return str(text).translate(translation_table)
+
+
 class VehicleRecruitmentTable(tables.Table):
     """جدول لیست تخصیص‌های در انتظار جذب خودرو با استفاده از django-tables2"""
     
@@ -568,6 +576,246 @@ class VehicleEntryTable(tables.Table):
                 'ثبت ورود'
                 '</button>',
                 transport.waybill_number
+            )
+        except Exception as e:
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+
+
+class LoadingExitTable(tables.Table):
+    """جدول لیست حمل‌های در انتظار بارگیری با استفاده از django-tables2"""
+    
+    def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
+        self.user = kwargs.pop('user', None)
+        
+        super().__init__(*args, **kwargs)
+        
+        # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
+        if self.accessible_fields is None and self.user is not None:
+            self.accessible_fields = self._get_accessible_fields(self.user)
+        
+        # فیلتر کردن ستون‌ها بر اساس دسترسی
+        if self.accessible_fields:
+            self._filter_columns_by_access()
+    
+    def _get_accessible_fields(self, user):
+        """محاسبه فیلدهای قابل دسترسی برای کاربر"""
+        from core.TransportFolder.TruckInfoModel import TruckInfo as TruckInfoModel
+        
+        # superuser به همه فیلدها دسترسی دارد
+        if user.is_superuser:
+            return {
+                'order_number': True,
+                'product_name': True,
+                'allocated_quantity': True,
+                'unit': True,
+                'plate_number': True,
+                'vehicle_type': True,
+                'actions': True,
+            }
+        
+        # فیلدهایی که در لیست نمایش داده می‌شوند
+        field_mapping = {
+            'order_number': None,  # همیشه نمایش داده می‌شود
+            'product_name': None,  # همیشه نمایش داده می‌شود
+            'allocated_quantity': None,  # همیشه نمایش داده می‌شود
+            'unit': None,  # همیشه نمایش داده می‌شود
+            'plate_number': (TruckInfoModel, 'plate_number'),
+            'vehicle_type': (TruckInfoModel, 'vehicle_type'),
+            'actions': None,  # عملیات همیشه نمایش داده می‌شود
+        }
+        
+        accessible_fields = {}
+        for display_name, mapping in field_mapping.items():
+            if mapping is None:
+                # فیلدهایی که نیازی به بررسی دسترسی ندارند
+                accessible_fields[display_name] = True
+            else:
+                model_class, model_field_name = mapping
+                accessible_fields[display_name] = check_field_access_prefer_edit(
+                    user,
+                    model_class,
+                    model_field_name,
+                )
+        
+        return accessible_fields
+    
+    def _filter_columns_by_access(self):
+        """فیلتر کردن ستون‌ها بر اساس دسترسی کاربر"""
+        if not self.accessible_fields:
+            return
+        
+        # تعیین ستون‌هایی که باید حذف شوند
+        columns_to_exclude = []
+        for column_name in list(self.columns.columns.keys()):
+            if column_name in self.accessible_fields:
+                if not self.accessible_fields[column_name]:
+                    columns_to_exclude.append(column_name)
+        
+        # حذف ستون‌ها از columns
+        for column_name in columns_to_exclude:
+            if column_name in self.columns.columns:
+                del self.columns.columns[column_name]
+        
+        # به‌روزرسانی Meta برای exclude کردن ستون‌ها
+        if columns_to_exclude:
+            # استفاده از exclude در Meta
+            if not hasattr(self._meta, 'exclude') or self._meta.exclude is None:
+                self._meta.exclude = tuple(columns_to_exclude)
+            else:
+                # ترکیب exclude موجود با ستون‌های جدید
+                existing_exclude = set(self._meta.exclude) if self._meta.exclude else set()
+                existing_exclude.update(columns_to_exclude)
+                self._meta.exclude = tuple(existing_exclude)
+            
+            # به‌روزرسانی fields و sequence
+            if hasattr(self._meta, 'fields') and self._meta.fields:
+                self._meta.fields = tuple(
+                    field for field in self._meta.fields 
+                    if field not in columns_to_exclude
+                )
+            
+            if hasattr(self._meta, 'sequence') and self._meta.sequence:
+                self._meta.sequence = tuple(
+                    field for field in self._meta.sequence 
+                    if field not in columns_to_exclude
+                )
+    
+    order_number = tables.Column(
+        verbose_name='شماره سفارش',
+        accessor='order_number',
+        empty_values=(),
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    product_name = tables.Column(
+        verbose_name='نوع محصول',
+        accessor='product_name',
+        empty_values=(),
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    allocated_quantity = tables.Column(
+        verbose_name='مقدار تخصیص‌یافته',
+        accessor='allocated_quantity',
+        empty_values=(),
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    unit = tables.Column(
+        verbose_name='واحد',
+        accessor='unit',
+        empty_values=(),
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    plate_number = tables.Column(
+        verbose_name='پلاک خودرو',
+        accessor='plate_number',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    vehicle_type = tables.Column(
+        verbose_name='نوع ماشین',
+        accessor='vehicle_type',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('order_number', 'product_name', 'allocated_quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('order_number', 'product_name', 'allocated_quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+    
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش به صورت badge"""
+        if value and value != 'نامشخص':
+            return format_html('<span class="code-badge">{}</span>', value)
+        return format_html('<span style="color: var(--gray-400);">-</span>')
+    
+    def render_product_name(self, value, record):
+        """نمایش نام محصول"""
+        if value and value != 'نامشخص':
+            return value
+        return format_html('<span style="color: var(--gray-400);">-</span>')
+    
+    def render_allocated_quantity(self, value, record):
+        """نمایش مقدار تخصیص‌یافته"""
+        if value and value != 'نامشخص':
+            return value
+        return format_html('<span style="color: var(--gray-400);">-</span>')
+    
+    def render_unit(self, value, record):
+        """نمایش واحد"""
+        if value:
+            return value
+        return format_html('<span style="color: var(--gray-400);">-</span>')
+    
+    def render_plate_number(self, value, record):
+        """نمایش پلاک خودرو"""
+        if value:
+            # تبدیل اعداد انگلیسی به فارسی
+            persian_plate = convert_to_persian_numbers(value)
+            # فرمت پلاک: 11|345ح12 -> نمایش: ۱۱|۳۴۵ح۱۲
+            return format_html('<span class="code-badge">{}</span>', persian_plate)
+        return format_html('<span style="color: var(--gray-400);">-</span>')
+    
+    def render_vehicle_type(self, value, record):
+        """نمایش نوع ماشین"""
+        if value:
+            return value
+        return format_html('<span style="color: var(--gray-400);">-</span>')
+    
+    def render_actions(self, record):
+        """نمایش دکمه عملیات"""
+        transport = getattr(record, 'transport', None)
+        if not transport:
+            return '-'
+        
+        try:
+            return format_html(
+                '<a href="{}" class="btn-outline-primary">ورود به جزئیات خروج کالا</a>',
+                reverse('distribution:register_loading_exit', args=[transport.waybill_number])
             )
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))

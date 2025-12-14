@@ -4,6 +4,7 @@ from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django_tables2 import RequestConfig
 import logging
 from core.logging_levels import *
 
@@ -21,6 +22,7 @@ from core.WarehouseFolder.WarehouseModel import Warehouse
 from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
 from distribution.forms.loading_exit_form import LoadingExitForm
+from distribution.tables import LoadingExitTable
 from core.StockEntryFolder.StockEntryModel import StockEntry
 from core.StockEntryFolder.SourceStockModel import SourceStock
 from core.StockEntryFolder.TargetStockModel import TargetStock
@@ -71,82 +73,79 @@ def loading_exit_list_view(request):
     # دریافت حمل‌های در انتظار بارگیری
     transports = Transport.objects.filter(
         status='loading'
-    ).select_related('driver').prefetch_related(
+    ).select_related('driver', 'allocation', 'allocation__order').prefetch_related(
         'truck_infos', 'product_infos'
     ).order_by('-waybill_date', 'waybill_number')
     
-    # آماده‌سازی اطلاعات حمل‌ها
-    transports_with_info = []
-    for transport in transports:
-        # دریافت اطلاعات راننده
-        driver_name = None
-        driver_national_id = None
-        if transport.driver:
-            driver_name = transport.driver.name
-            driver_national_id = transport.driver.national_id
+    # آماده‌سازی اطلاعات حمل‌ها برای جدول
+    # استفاده از یک class ساده که transport و اطلاعات مرتبط را نگه می‌دارد
+    class TransportRow:
+        def __init__(self, transport):
+            self.transport = transport
+            
+            # دریافت اطلاعات کامیون
+            truck_info = transport.truck_infos.first()
+            self.plate_number = None
+            self.vehicle_type = None
+            if truck_info:
+                self.plate_number = truck_info.plate_number
+                self.vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
+            
+            # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
+            if not self.vehicle_type and transport.vehicle_type_official:
+                self.vehicle_type = transport.get_vehicle_type_official_display()
+            
+            # دریافت اطلاعات محصول از ProductInfo
+            product_name = None
+            allocated_quantity = None
+            unit = None
+            
+            # ابتدا از ProductInfo بررسی می‌کنیم
+            product_info = transport.product_infos.first()
+            if product_info:
+                if product_info.product:
+                    product_name = product_info.product.name
+                elif product_info.raw_material:
+                    product_name = product_info.raw_material.name
+                if product_info.weight:
+                    allocated_quantity = product_info.weight
+                unit = 'کیلوگرم'
+            
+            self.product_name = product_name or 'نامشخص'
+            self.allocated_quantity = allocated_quantity or 'نامشخص'
+            self.unit = unit or 'کیلوگرم'
+            
+            # دریافت شماره سفارش
+            order_number = None
+            if transport.allocation:
+                allocation = transport.allocation
+                if allocation and allocation.order:
+                    order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+            
+            self.order_number = order_number or 'نامشخص'
         
-        # دریافت اطلاعات کامیون
-        truck_info = transport.truck_infos.first()
-        plate_number = None
-        vehicle_type = None
-        if truck_info:
-            plate_number = truck_info.plate_number
-            vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
-        
-        # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
-        if not vehicle_type and transport.vehicle_type_official:
-            vehicle_type = transport.get_vehicle_type_official_display()
-        
-        # دریافت اطلاعات محصول از ProductInfo یا Allocation
-        product_name = None
-        allocated_quantity = None
-        unit = None
-        
-        # ابتدا از ProductInfo بررسی می‌کنیم
-        product_info = transport.product_infos.first()
-        if product_info:
-            if product_info.product:
-                product_name = product_info.product.name
-            elif product_info.raw_material:
-                product_name = product_info.raw_material.name
-        
-        # اگر از ProductInfo پیدا نشد، از Allocation بررسی می‌کنیم
-        if not product_name and transport.allocation:
-            allocation = transport.allocation
-            if allocation and allocation.order:
-                # TODO: اگر AllocationItem وجود دارد، از آن استفاده کنیم
-                # برای حالا از order استفاده می‌کنیم
-                pass
-        
-        # دریافت شماره سفارش
-        order_number = None
-        if transport.allocation:
-            allocation = transport.allocation
-            if allocation and allocation.order:
-                order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
-        
-        transports_with_info.append({
-            'transport': transport,
-            'driver_name': driver_name,
-            'driver_national_id': driver_national_id,
-            'plate_number': plate_number,
-            'vehicle_type': vehicle_type,
-            'product_name': product_name or 'نامشخص',
-            'allocated_quantity': allocated_quantity or 'نامشخص',
-            'unit': unit or 'کیلوگرم',
-            'order_number': order_number or 'نامشخص',
-        })
+        def __getattr__(self, name):
+            # اگر attribute در self وجود نداشت، از transport بگیر
+            if hasattr(self.transport, name):
+                return getattr(self.transport, name)
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
     
-    # بررسی دسترسی فیلدها
-    accessible_person_fields = get_accessible_person_fields(request.user)
-    accessible_truck_info_fields = get_accessible_truck_info_fields(request.user)
+    transports_data = [TransportRow(transport) for transport in transports]
     
-    bug_logger.debug(f"تعداد {len(transports_with_info)} حمل در انتظار بارگیری لود شد")
+    # ایجاد جدول
+    table = LoadingExitTable(
+        transports_data,
+        accessible_fields=None,  # table خودش محاسبه می‌کند
+        user=request.user
+    )
+    
+    # تنظیم صفحه‌بندی
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    
+    bug_logger.debug(f"تعداد {len(transports_data)} حمل در انتظار بارگیری لود شد")
     
     context = {
-        'transports_with_info': transports_with_info,
-        'accessible_person_fields': accessible_person_fields,
-        'accessible_truck_info_fields': accessible_truck_info_fields,
+        'table': table,
         'page_title': 'لیست حمل‌های در انتظار بارگیری',
     }
     return render(request, 'distribution/loading_exit_list.html', context)
@@ -208,7 +207,7 @@ def register_loading_exit_view(request, waybill_number):
         # حساب‌های بانکی راننده
         if driver_account_choices:
             form.fields['driver_account_number'].choices = driver_account_choices
-            form.fields['driver_account_number'].required = True
+            form.fields['driver_account_number'].required = False
         else:
             form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
             form.fields['driver_account_number'].required = False
@@ -239,118 +238,6 @@ def register_loading_exit_view(request, waybill_number):
                     origin_warehouse = origin_warehouse_obj.name if origin_warehouse_obj else ''
                     destination_warehouse = destination_warehouse_obj.name if destination_warehouse_obj else ''
                     
-                    # بررسی validation شماره حساب
-                    # اگر راننده وجود دارد، باید حساب بانکی داشته باشد
-                    if transport.driver:
-                        financial_banking = FinancialBanking.objects.filter(person=transport.driver).first()
-                        if financial_banking:
-                            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking)
-                            # اگر حساب موجود است اما انتخاب نشده
-                            if bank_accounts.exists() and not driver_account_number:
-                                # دریافت مجدد driver_account_choices برای نمایش فرم
-                                driver_account_choices = []
-                                for account in bank_accounts:
-                                    account_display = f"{account.account_number}"
-                                    if account.bank_name:
-                                        account_display += f" ({account.bank_name})"
-                                    driver_account_choices.append((account.account_number, account_display))
-                                messages.error(request, 'انتخاب شماره حساب راننده الزامی است.')
-                                # نمایش مجدد فرم با خطا
-                                form.add_error('driver_account_number', 'انتخاب شماره حساب راننده الزامی است.')
-                                # تنظیم مجدد queryset و choices
-                                if customer_warehouse:
-                                    form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
-                                        pk=customer_warehouse.pk
-                                    )
-                                else:
-                                    form.fields['destination_warehouse'].queryset = Warehouse.objects.filter(
-                                        warehouse_type='consumer'
-                                    )
-                                if driver_account_choices:
-                                    form.fields['driver_account_number'].choices = driver_account_choices
-                                    form.fields['driver_account_number'].required = True
-                                else:
-                                    form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
-                                    form.fields['driver_account_number'].required = False
-                                # آماده‌سازی context برای نمایش مجدد فرم با خطا
-                                driver_name = None
-                                driver_national_id = None
-                                driver_mobile = None
-                                if transport.driver:
-                                    driver_name = transport.driver.name
-                                    driver_national_id = transport.driver.national_id
-                                    person_content_type = ContentType.objects.get_for_model(Person)
-                                    mobile_phone = PhoneNumber.objects.filter(
-                                        content_type=person_content_type,
-                                        object_id=transport.driver.national_id,
-                                        phone_type='mobile'
-                                    ).first()
-                                    if mobile_phone:
-                                        driver_mobile = mobile_phone.number
-                                
-                                truck_info = transport.truck_infos.first()
-                                plate_number = None
-                                vehicle_type = None
-                                if truck_info:
-                                    plate_number = truck_info.plate_number
-                                    vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
-                                
-                                if not vehicle_type and transport.vehicle_type_official:
-                                    vehicle_type = transport.get_vehicle_type_official_display()
-                                
-                                product_infos = transport.product_infos.all()
-                                product_info_list = []
-                                product_name = None
-                                
-                                for product_info in product_infos:
-                                    item_name = None
-                                    item_type_display = None
-                                    
-                                    if product_info.product:
-                                        item_name = product_info.product.name
-                                        item_type_display = 'محصول'
-                                    elif product_info.raw_material:
-                                        item_name = product_info.raw_material.name
-                                        item_type_display = 'مواد اولیه'
-                                    
-                                    if item_name:
-                                        packaging_type_display = product_info.get_packaging_type_display() if product_info.packaging_type else None
-                                        product_info_list.append({
-                                            'name': item_name,
-                                            'weight': product_info.weight,
-                                            'packaging_type': packaging_type_display,
-                                            'item_type': item_type_display,
-                                            'unit': 'کیلوگرم',
-                                        })
-                                
-                                if product_info_list:
-                                    product_name = product_info_list[0]['name']
-                                elif product_infos.exists():
-                                    product_name = 'نامشخص'
-                                
-                                order_number = None
-                                if transport.allocation:
-                                    allocation = transport.allocation
-                                    if allocation and allocation.order:
-                                        order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
-                                
-                                accessible_person_fields = get_accessible_person_fields(request.user)
-                                
-                                context = {
-                                    'form': form,
-                                    'transport': transport,
-                                    'driver_name': driver_name,
-                                    'driver_national_id': driver_national_id,
-                                    'driver_mobile': driver_mobile,
-                                    'plate_number': plate_number,
-                                    'vehicle_type': vehicle_type,
-                                    'product_name': product_name or 'نامشخص',
-                                    'product_info_list': product_info_list,
-                                    'order_number': order_number or 'نامشخص',
-                                    'accessible_person_fields': accessible_person_fields,
-                                    'page_title': f'ثبت خروج کالا - {transport.waybill_number}',
-                                }
-                                return render(request, 'distribution/loading_exit_detail.html', context)
                     
                     # اطلاعات اختیاری راننده
                     driver_national_id = form.cleaned_data.get('driver_national_id', '').strip()
@@ -362,6 +249,7 @@ def register_loading_exit_view(request, waybill_number):
                     plate_part1 = form.cleaned_data.get('plate_part1', '').strip()
                     plate_part2 = form.cleaned_data.get('plate_part2', '').strip()
                     plate_part3 = form.cleaned_data.get('plate_part3', '').strip()
+                    plate_part4 = form.cleaned_data.get('plate_part4', '').strip()
                     vehicle_type = form.cleaned_data.get('vehicle_type', '').strip()
                     loading_type = form.cleaned_data.get('loading_type', '').strip()
                     
@@ -420,8 +308,11 @@ def register_loading_exit_view(request, waybill_number):
                             )
                     
                     # اگر اطلاعات کامیون ناقص است، تکمیل می‌کنیم
-                    if plate_part1 and plate_part2 and plate_part3:
-                        plate_number = f"{plate_part1}|{plate_part2}|{plate_part3}"
+                    if plate_part1 and plate_part2 and plate_part3 and plate_part4:
+                        # ساخت پلاک کامل با فرمت: 11|345ح12
+                        # حرف در وسط: 3 رقم + حرف + 2 رقم
+                        plate_middle = f"{plate_part2}{plate_part3}{plate_part4}"  # 345ح12
+                        plate_number = f"{plate_part1}|{plate_middle}"  # 11|345ح12
                         
                         existing_truck = transport.truck_infos.first()
                         if existing_truck:
@@ -570,7 +461,7 @@ def register_loading_exit_view(request, waybill_number):
             
             if driver_account_choices:
                 form.fields['driver_account_number'].choices = driver_account_choices
-                form.fields['driver_account_number'].required = True
+                form.fields['driver_account_number'].required = False
             else:
                 form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
                 form.fields['driver_account_number'].required = False
@@ -728,10 +619,18 @@ def register_loading_exit_view(request, waybill_number):
         truck_info = transport.truck_infos.first()
         if truck_info:
             plate_parts = truck_info.plate_number.split('|')
-            if len(plate_parts) == 3:
-                initial_data['plate_part1'] = plate_parts[0]
-                initial_data['plate_part2'] = plate_parts[1]
-                initial_data['plate_part3'] = plate_parts[2]
+            if len(plate_parts) == 2:
+                plate_part1 = plate_parts[0]  # 11
+                plate_middle = plate_parts[1]  # 345ح12
+                
+                # استخراج حرف و اعداد از وسط: 345ح12 -> 345 و ح و 12
+                # فرمت: 3 رقم + حرف + 2 رقم
+                plate_middle_match = re.match(r'^(\d{3})([ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی])(\d{2})$', plate_middle)
+                if plate_middle_match:
+                    initial_data['plate_part1'] = plate_part1
+                    initial_data['plate_part2'] = plate_middle_match.group(1)  # 345
+                    initial_data['plate_part3'] = plate_middle_match.group(2)  # ح
+                    initial_data['plate_part4'] = plate_middle_match.group(3)   # 12
             initial_data['vehicle_type'] = truck_info.vehicle_type
             initial_data['loading_type'] = truck_info.loading_type
         
@@ -752,7 +651,7 @@ def register_loading_exit_view(request, waybill_number):
         # حساب‌های بانکی راننده
         if driver_account_choices:
             form.fields['driver_account_number'].choices = driver_account_choices
-            form.fields['driver_account_number'].required = True
+            form.fields['driver_account_number'].required = False
         else:
             # اگر حساب وجود ندارد، فیلد را اختیاری می‌کنیم
             form.fields['driver_account_number'].choices = [('', '-- حساب بانکی یافت نشد --')]
