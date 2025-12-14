@@ -296,7 +296,7 @@ def create_transport_view(request, allocation_number):
                             phone_number.save()
                 
                 # ایجاد حمل
-                # وضعیت حمل تا قبل از تکمیل جذب خودرو، pending_recruitment_completion است
+                # وضعیت حمل مستقیماً به pending_vehicle_entry می‌رود
                 transport = Transport.objects.create(
                     waybill_number=waybill_number,
                     allocation=allocation,
@@ -305,7 +305,7 @@ def create_transport_view(request, allocation_number):
                     carrier_recruitment=carrier_recruitment,
                     vehicle_type_official=vehicle_type_official,
                     driver=driver_person,
-                    status='pending_recruitment_completion',
+                    status='pending_vehicle_entry',
                 )
                 
                 # ایجاد ProductInfo برای هر محصول انتخاب شده
@@ -317,10 +317,34 @@ def create_transport_view(request, allocation_number):
                         item_type='product',
                     )
                 
-                # ایجاد LoadingScheduleInfo
+                # ایجاد LoadingScheduleInfo و ثبت زمان جذب خودرو
+                now = timezone.now()
                 LoadingScheduleInfo.objects.create(
-                    transport=transport
+                    transport=transport,
+                    vehicle_attraction_time=now
                 )
+                
+                # بررسی اینکه آیا وزن حمل‌ها با وزن تخصیص برابر شده یا نه
+                # محاسبه وزن کل حمل‌های این تخصیص (شامل حمل جدید)
+                all_transports = Transport.objects.filter(allocation=allocation)
+                total_transports_weight_after = Decimal('0')
+                for t in all_transports:
+                    transport_products = ProductInfo.objects.filter(transport=t)
+                    for tp in transport_products:
+                        if tp.weight:
+                            total_transports_weight_after += tp.weight
+                
+                # بررسی اینکه آیا وزن حمل‌ها با وزن تخصیص برابر شده
+                weight_difference = abs(total_allocation_weight - total_transports_weight_after)
+                if weight_difference <= Decimal('0.001'):  # تحمل خطای 0.001 کیلوگرم
+                    # تغییر وضعیت تخصیص به pending_vehicle_entry
+                    allocation.allocation_status = 'pending_vehicle_entry'
+                    allocation.save(update_fields=['allocation_status'])
+                    
+                    bug_logger.info(f"وضعیت تخصیص {allocation_number} به pending_vehicle_entry تغییر کرد (وزن کامل شد)")
+                    messages.success(request, f'حمل با موفقیت ایجاد شد و وضعیت تخصیص به "در انتظار ورود خودرو به کارخانه" تغییر کرد.')
+                else:
+                    messages.success(request, f'حمل با موفقیت ایجاد شد.')
                 
                 # پردازش فایل‌های پیوست (کارت ملی و روزنامه رسمی)
                 national_card_file = request.FILES.get('national_card_file')
@@ -410,99 +434,4 @@ def create_transport_view(request, allocation_number):
     
     # در غیر این صورت به لیست برگرد
     return redirect('distribution:vehicle_recruitment_list')
-
-
-@login_required
-def complete_vehicle_recruitment_view(request, allocation_number):
-    """
-    تکمیل جذب خودرو برای یک تخصیص
-    """
-    audit_logger.info(f"درخواست تکمیل جذب خودرو برای تخصیص {allocation_number}")
-    
-    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_COMPLETE_VEHICLE_RECRUITMENT.value):
-        audit_logger.activity("تلاش برای تکمیل جذب خودرو بدون دسترسی")
-        messages.error(request, 'شما دسترسی به تکمیل جذب خودرو را ندارید.')
-        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
-    
-    allocation = get_object_or_404(Allocation, allocation_number=allocation_number)
-    
-    if allocation.allocation_status != 'pending_vehicle_recruitment':
-        messages.error(request, 'این تخصیص در وضعیت مناسب برای تکمیل جذب خودرو نیست.')
-        return redirect('distribution:vehicle_recruitment_list')
-    
-    # بررسی اینکه حداقل یک حمل وجود دارد
-    transports = Transport.objects.filter(allocation=allocation)
-    if not transports.exists():
-        messages.error(request, 'برای تکمیل جذب خودرو، حداقل باید یک حمل ایجاد شده باشد.')
-        return redirect('distribution:vehicle_recruitment_list')
-    
-    # محاسبه جمع وزن محصولات تخصیص
-    allocation_product_infos = AllocationProductInfo.objects.filter(
-        allocation=allocation
-    ).select_related('product')
-    
-    total_allocation_weight = Decimal('0')
-    for api in allocation_product_infos:
-        if api.quantity:
-            quantity = Decimal(str(api.quantity))
-            # تبدیل واحد به کیلوگرم (اگر نیاز باشد)
-            if api.unit == 'ton':
-                quantity = quantity * Decimal('1000')  # تن به کیلوگرم
-            elif api.unit == 'gr':
-                quantity = quantity / Decimal('1000')  # گرم به کیلوگرم
-            total_allocation_weight += quantity
-    
-    # محاسبه جمع وزن همه حمل‌های این تخصیص
-    total_transports_weight = Decimal('0')
-    for transport in transports:
-        # جمع وزن محصولات هر حمل
-        transport_products = ProductInfo.objects.filter(transport=transport)
-        for tp in transport_products:
-            if tp.weight:
-                total_transports_weight += tp.weight
-    
-    # بررسی اینکه جمع وزن‌های حمل‌ها باید با جمع وزن محصولات تخصیص برابر باشد
-    weight_difference = abs(total_allocation_weight - total_transports_weight)
-    if weight_difference > Decimal('0.001'):  # تحمل خطای 0.001 کیلوگرم
-        messages.error(
-            request, 
-            f'جمع وزن‌های حمل‌ها ({total_transports_weight} کیلوگرم) باید با جمع وزن محصولات تخصیص ({total_allocation_weight} کیلوگرم) برابر باشد. '
-            f'تفاوت: {weight_difference} کیلوگرم'
-        )
-        return redirect('distribution:vehicle_recruitment_list')
-    
-    try:
-        with transaction.atomic():
-            # تغییر وضعیت همه حمل‌ها به pending_vehicle_entry
-            transports.update(status='pending_vehicle_entry')
-            
-            # ثبت زمان جذب خودرو در LoadingScheduleInfo
-            now = timezone.now()
-            for transport in transports:
-                schedule_info, created = LoadingScheduleInfo.objects.get_or_create(
-                    transport=transport
-                )
-                schedule_info.vehicle_attraction_time = now
-                schedule_info.save(update_fields=['vehicle_attraction_time'])
-            
-            # تغییر وضعیت تخصیص به pending_vehicle_entry (در انتظار ورود خودرو به کارخانه)
-            allocation.allocation_status = 'pending_vehicle_entry'
-            allocation.save(update_fields=['allocation_status'])
-            
-            # وضعیت تخصیص در مراحل مختلف:
-            # 1. هنگام اعلام بار: pending_shipping -> pending_vehicle_recruitment
-            # 2. بعد از تکمیل جذب خودرو: pending_vehicle_recruitment -> pending_vehicle_entry
-            # 3. وقتی همه حمل‌ها به pending_waybill رفتند: pending_vehicle_entry -> pending_loading_completion
-            # 4. وقتی همه حمل‌ها به completed یا loaded رفتند: pending_loading_completion -> delivered
-            
-            bug_logger.info(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد و وضعیت به pending_vehicle_entry تغییر کرد")
-            messages.success(request, f'جذب خودرو برای تخصیص {allocation_number} با موفقیت تکمیل شد و وضعیت به "در انتظار ورود خودرو به کارخانه" تغییر کرد.')
-            audit_logger.activity(f"جذب خودرو برای تخصیص {allocation_number} تکمیل شد و وضعیت به pending_vehicle_entry تغییر کرد توسط کاربر {request.user.username}")
-            
-            return redirect('distribution:vehicle_recruitment_list')
-            
-    except Exception as e:
-        bug_logger.error(f"خطا در تکمیل جذب خودرو: {str(e)}")
-        messages.error(request, f'خطا در تکمیل جذب خودرو: {str(e)}')
-        return redirect('distribution:vehicle_recruitment_list')
 
