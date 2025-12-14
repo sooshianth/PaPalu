@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django import forms
 from django.db import transaction
+from django.db.models import Q
 from django.http import JsonResponse, HttpResponseForbidden
 from django.utils.html import format_html
 from django.utils import timezone
@@ -203,7 +204,7 @@ class CarEntranceTable(PurchaseTransportTable):
 
 @login_required
 def car_entrance_list_view(request):
-    """صفحه لیست ورود خودروها مخصوص نگهبان - فقط حمل‌هایی که در وضعیت "در انتظار ورود خودرو" هستند."""
+    """صفحه لیست ورود خودروها مخصوص نگهبان - حمل‌هایی که وضعیت آنها یا سفارش خرید آنها "در انتظار ورود خودرو" است."""
     audit_logger.info("مشاهده صفحه ورود خودرو (نگهبان)")
     
     if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
@@ -218,7 +219,13 @@ def car_entrance_list_view(request):
     accessible_person_fields = get_accessible_person_fields_for_carentrance(request.user)
     
     try:
-        transports = PurchaseTransport.objects.filter(status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY).select_related('purchase_order', 'driver').order_by('-created_at')
+        # نمایش حمل‌هایی که وضعیت آنها "در انتظار ورود خودرو" است
+        # یا سفارش خرید آنها در وضعیت "در انتظار ورود خودرو" است
+        transports = PurchaseTransport.objects.filter(
+            Q(status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY) |
+            Q(purchase_order__status=ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY)
+        ).select_related('purchase_order', 'driver').order_by('-created_at')
+        bug_logger.debug(f"تعداد حمل‌های پیدا شده برای ورود خودرو: {transports.count()}")
         table = CarEntranceTable(transports, prefix='car-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table)
         
