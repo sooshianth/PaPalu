@@ -282,8 +282,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>{{ page_title|default:"ویرایش محصول" }}</h2>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h2 style="margin: 0;">{{ page_title|default:"ویرایش محصول" }}</h2>
+    <a href="{% url 'sales:product_detail' product.id %}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; text-decoration: none;">
+        <svg style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        بازگشت به جزئیات محصول
+    </a>
 </div>
 
 <div class="form-card">
@@ -644,6 +650,7 @@
             <div class="form-section-content">
             <div id="production-formset-container">
                 {{ production_info_formset.management_form }}
+                {{ bom_formset.management_form }}
                 {% for prod_form in production_info_formset %}
                 <div class="production-bom-group" data-production-index="{{ forloop.counter0 }}" style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border: 2px solid var(--primary-green);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
