@@ -4,6 +4,7 @@ from django.db import transaction
 from django.http import HttpResponseForbidden, HttpResponse, FileResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django_tables2 import RequestConfig
 import logging
 import os
 from core.logging_levels import *
@@ -14,6 +15,7 @@ from core.TransportFolder.TruckInfoModel import TruckInfo
 from core.TransportFolder.ProductInfoModel import ProductInfo
 from core.TransportFolder.TransportAttachmentModel import TransportAttachment
 from core.AllocationFolder.AllocationModel import Allocation
+from distribution.exit_table import ExitTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -34,51 +36,69 @@ def exit_list_view(request):
     # دریافت حمل‌های در انتظار خروج
     transports = Transport.objects.filter(
         status='pending_exit'
-    ).select_related('driver').prefetch_related(
+    ).select_related('driver', 'allocation', 'allocation__order').prefetch_related(
         'truck_infos', 'product_infos'
     ).order_by('-waybill_date', 'waybill_number')
     
-    # آماده‌سازی اطلاعات حمل‌ها
-    transports_with_info = []
-    for transport in transports:
-        # دریافت شماره سفارش
-        order_number = None
-        if transport.allocation:
-            allocation = transport.allocation
-            if allocation and allocation.order:
-                order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+    # آماده‌سازی اطلاعات حمل‌ها برای جدول
+    # استفاده از یک class ساده که transport و اطلاعات مرتبط را نگه می‌دارد
+    class TransportRow:
+        def __init__(self, transport):
+            self.transport = transport
+            
+            # دریافت شماره سفارش
+            order_number = None
+            if transport.allocation:
+                allocation = transport.allocation
+                if allocation and allocation.order:
+                    order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+            
+            self.order_number = order_number or 'نامشخص'
+            
+            # دریافت شناسه تخصیص
+            self.allocation_id = transport.allocation.allocation_number if transport.allocation else 'نامشخص'
+            
+            # دریافت اطلاعات کامیون
+            truck_info = transport.truck_infos.first()
+            plate_number = None
+            if truck_info:
+                plate_number = truck_info.plate_number
+            
+            self.plate_number = plate_number or 'نامشخص'
+            
+            # دریافت اطلاعات محصول
+            product_info = transport.product_infos.first()
+            product_name = None
+            quantity = None
+            if product_info:
+                if product_info.product:
+                    product_name = product_info.product.name
+                elif product_info.raw_material:
+                    product_name = product_info.raw_material.name
+                # مقدار از وزن خالص استفاده می‌شود
+                quantity = transport.net_weight
+            
+            self.product_name = product_name or 'نامشخص'
+            self.quantity = quantity or 0
         
-        # دریافت اطلاعات کامیون
-        truck_info = transport.truck_infos.first()
-        plate_number = None
-        if truck_info:
-            plate_number = truck_info.plate_number
-        
-        # دریافت اطلاعات محصول
-        product_info = transport.product_infos.first()
-        product_name = None
-        quantity = None
-        if product_info:
-            if product_info.product:
-                product_name = product_info.product.name
-            elif product_info.raw_material:
-                product_name = product_info.raw_material.name
-            # مقدار از وزن خالص استفاده می‌شود
-            quantity = transport.net_weight
-        
-        transports_with_info.append({
-            'transport': transport,
-            'order_number': order_number or 'نامشخص',
-            'allocation_id': transport.allocation.allocation_number if transport.allocation else 'نامشخص',
-            'plate_number': plate_number or 'نامشخص',
-            'product_name': product_name or 'نامشخص',
-            'quantity': quantity or 0,
-        })
+        def __getattr__(self, name):
+            # اگر attribute در self وجود نداشت، از transport بگیر
+            if hasattr(self.transport, name):
+                return getattr(self.transport, name)
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
     
-    bug_logger.debug(f"تعداد {len(transports_with_info)} حمل در انتظار خروج لود شد")
+    transports_data = [TransportRow(transport) for transport in transports]
+    
+    # ایجاد جدول
+    table = ExitTable(transports_data)
+    
+    # تنظیم صفحه‌بندی
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    
+    bug_logger.debug(f"تعداد {len(transports_data)} حمل در انتظار خروج لود شد")
     
     context = {
-        'transports_with_info': transports_with_info,
+        'table': table,
         'page_title': 'لیست حمل‌های در انتظار خروج',
     }
     return render(request, 'distribution/exit_list.html', context)
