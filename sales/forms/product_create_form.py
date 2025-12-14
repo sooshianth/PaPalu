@@ -558,37 +558,40 @@ class BOMForm(forms.ModelForm):
 
     class Meta:
         model = BOM
-        fields = ['raw_material', 'quantity']
+        fields = ['raw_material', 'percentage']
         widgets = {
             'raw_material': forms.Select(attrs={
                 'class': 'form-control',
                 'placeholder': 'ماده اولیه'
             }),
-            'quantity': forms.NumberInput(attrs={
+            'percentage': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.001',
-                'placeholder': 'مقدار (کیلوگرم)'
+                'placeholder': 'درصد (0-100)'
             }),
         }
         labels = {
             'raw_material': 'ماده اولیه',
-            'quantity': 'مقدار ماده اولیه (کیلوگرم)',
+            'percentage': 'درصد ماده اولیه',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # تنظیم فیلدهای اجباری - در formset، فیلدها اختیاری هستند
         self.fields['raw_material'].required = False
-        self.fields['quantity'].required = False
+        self.fields['percentage'].required = False
 
-    def clean_quantity(self):
-        """اعتبارسنجی مقدار ماده اولیه"""
-        quantity = self.cleaned_data.get('quantity')
+    def clean_percentage(self):
+        """اعتبارسنجی درصد ماده اولیه"""
+        percentage = self.cleaned_data.get('percentage')
 
-        if quantity and quantity <= 0:
-            raise forms.ValidationError('مقدار ماده اولیه باید بزرگتر از صفر باشد.')
+        if percentage is not None:
+            if percentage < 0:
+                raise forms.ValidationError('درصد ماده اولیه نمی‌تواند منفی باشد.')
+            if percentage > 100:
+                raise forms.ValidationError('درصد ماده اولیه نمی‌تواند بیشتر از 100 باشد.')
 
-        return quantity
+        return percentage
 
     def clean(self):
         """اعتبارسنجی کلی فرم BOM"""
@@ -597,15 +600,19 @@ class BOMForm(forms.ModelForm):
         # بررسی اینکه آیا حداقل یک فیلد پر شده است
         has_data = any([
             cleaned_data.get('raw_material'),
-            cleaned_data.get('quantity'),
+            cleaned_data.get('percentage') is not None,
         ])
         
         # اگر حداقل یک فیلد پر شده باشد، همه فیلدها باید پر شوند
         if has_data:
             if not cleaned_data.get('raw_material'):
                 self.add_error('raw_material', 'ماده اولیه الزامی است.')
-            if not cleaned_data.get('quantity'):
-                self.add_error('quantity', 'مقدار ماده اولیه الزامی است.')
+            if cleaned_data.get('percentage') is None:
+                self.add_error('percentage', 'درصد ماده اولیه الزامی است.')
+        
+        # اگر raw_material وجود دارد، percentage باید وجود داشته باشد
+        if cleaned_data.get('raw_material') and cleaned_data.get('percentage') is None:
+            self.add_error('percentage', 'درصد ماده اولیه الزامی است.')
         
         return cleaned_data
 

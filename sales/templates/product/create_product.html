@@ -712,8 +712,8 @@
                                         </select>
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label class="form-label required-field">مقدار (کیلوگرم)</label>
-                                        <input type="number" name="bom_{{ forloop.counter0 }}_0_quantity" id="id_bom_{{ forloop.counter0 }}_0_quantity" class="form-control" step="0.001" placeholder="مقدار">
+                                        <label class="form-label required-field">درصد</label>
+                                        <input type="number" name="bom_{{ forloop.counter0 }}_0_percentage" id="id_bom_{{ forloop.counter0 }}_0_percentage" class="form-control" step="0.001" placeholder="درصد (0-100)" min="0" max="100">
                                     </div>
                                     <div class="col-md-3 mb-3">
                                         <label class="form-label">&nbsp;</label>
@@ -815,13 +815,15 @@ $(document).ready(function() {
                         </select>
                     </div>
                     <div class="col-md-4 mb-3">
-                        <label class="form-label required-field">مقدار (کیلوگرم)</label>
+                        <label class="form-label required-field">درصد</label>
                         <input type="number" 
-                               name="bom_${productionIndex}_${formCount}_quantity" 
-                               id="id_bom_${productionIndex}_${formCount}_quantity" 
+                               name="bom_${productionIndex}_${formCount}_percentage" 
+                               id="id_bom_${productionIndex}_${formCount}_percentage" 
                                class="form-control" 
                                step="0.001" 
-                               placeholder="مقدار">
+                               placeholder="درصد (0-100)" 
+                               min="0" 
+                               max="100">
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label">&nbsp;</label>
@@ -977,8 +979,8 @@ $(document).ready(function() {
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label required-field">مقدار (کیلوگرم)</label>
-                                    <input type="number" name="bom_${formCount}_0_quantity" id="id_bom_${formCount}_0_quantity" class="form-control" step="0.001" placeholder="مقدار">
+                                    <label class="form-label required-field">درصد</label>
+                                    <input type="number" name="bom_${formCount}_0_percentage" id="id_bom_${formCount}_0_percentage" class="form-control" step="0.001" placeholder="درصد (0-100)" min="0" max="100">
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">&nbsp;</label>
