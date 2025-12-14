@@ -104,7 +104,8 @@ def get_accessible_bom_fields(user):
     """بررسی دسترسی کاربر به فیلدهای BOM - فقط مشاهده"""
     accessible_fields = {}
     accessible_fields['raw_material'] = user_can_access_field(user, BOM, 'raw_material', 'view')
-    accessible_fields['quantity'] = user_can_access_field(user, BOM, 'quantity', 'view')
+    accessible_fields['quantity'] = user_can_access_field(user, BOM, 'quantity', 'view')  # DELETE LATER
+    accessible_fields['percentage'] = user_can_access_field(user, BOM, 'percentage', 'view')
     return accessible_fields
 
 
@@ -264,12 +265,12 @@ def warehouse_production_detail(request, program_id):
             warehouses_dict = {str(w.id): w for w in warehouses_list}
             
             for bom in bom_items:
-                # Calculate total consumption needed based on planned weight
-                min_batch = float(program.production_info.min_batch_production) if program.production_info.min_batch_production else 1
+                # Calculate total consumption needed based on planned weight using percentage
                 planned_weight = float(program.planned_weight_ton) if program.planned_weight_ton else 0
-                quantity = float(bom.quantity) if bom.quantity else 0
+                percentage = float(bom.percentage) if bom.percentage else 0
                 
-                total_consumption = (quantity * planned_weight / min_batch) if planned_weight > 0 else 0
+                # percentage is 0-100, so divide by 100 to get fraction
+                total_consumption = (percentage / 100.0) * planned_weight if planned_weight > 0 else 0
                 
                 # Get actual consumption for this BOM
                 bom_id_str = str(bom.id)
@@ -348,7 +349,7 @@ def warehouse_production_detail(request, program_id):
                 bom_items_data.append({
                     'id': bom.id,
                     'raw_material': bom.raw_material,
-                    'planned_quantity': quantity,
+                    'planned_percentage': percentage,
                     'total_consumption': round(total_consumption, 3),
                     'total_actual_consumption': round(total_actual_consumption, 3),
                     'total_variance': round(total_variance, 3),

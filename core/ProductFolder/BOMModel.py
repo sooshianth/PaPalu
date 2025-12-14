@@ -26,10 +26,18 @@ class BOM(models.Model):
         blank=True,
     )
     
-    quantity = models.DecimalField(
+    quantity = models.DecimalField(  # DELETE LATER
         max_digits=15,
         decimal_places=3,
         verbose_name='مقدار ماده اولیه',
+        null=True,
+        blank=True,
+    )
+    
+    percentage = models.DecimalField(
+        max_digits=6,
+        decimal_places=3,
+        verbose_name='درصد ماده اولیه',
         null=True,
         blank=True,
     )

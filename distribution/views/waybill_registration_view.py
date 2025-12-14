@@ -4,6 +4,7 @@ from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
+from django_tables2 import RequestConfig
 import logging
 import jdatetime
 from datetime import date as datetime_date
@@ -21,6 +22,7 @@ from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
 from distribution.forms.waybill_registration_form import WaybillRegistrationForm
 from core.TransportFolder.TransportAttachmentModel import TransportAttachment
+from distribution.table_waybills import WaybillTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -65,75 +67,91 @@ def waybill_list_view(request):
     # دریافت حمل‌های در انتظار بارنامه
     transports = Transport.objects.filter(
         status='pending_waybill'
-    ).select_related('driver').prefetch_related(
+    ).select_related('driver', 'allocation', 'allocation__order').prefetch_related(
         'truck_infos', 'loading_schedule_infos'
     ).order_by('-waybill_date', 'waybill_number')
     
-    # آماده‌سازی اطلاعات حمل‌ها
-    transports_with_info = []
-    for transport in transports:
-        # دریافت شماره سفارش
-        order_number = None
-        if transport.allocation:
-            allocation = transport.allocation
-            if allocation and allocation.order:
-                order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+    # آماده‌سازی اطلاعات حمل‌ها برای جدول
+    # استفاده از یک class ساده که transport و اطلاعات مرتبط را نگه می‌دارد
+    class TransportRow:
+        def __init__(self, transport):
+            self.transport = transport
+            
+            # دریافت شماره سفارش
+            order_number = None
+            if transport.allocation:
+                allocation = transport.allocation
+                if allocation and allocation.order:
+                    order_number = allocation.order.order_number if hasattr(allocation.order, 'order_number') else None
+            
+            self.order_number = order_number or 'نامشخص'
+            
+            # دریافت شناسه تخصیص
+            self.allocation_id = transport.allocation.allocation_number if transport.allocation else 'نامشخص'
+            
+            # دریافت تاریخ و ساعت ورود
+            vehicle_entry_time = None
+            schedule_info = transport.loading_schedule_infos.first()
+            if schedule_info and schedule_info.vehicle_entry_time:
+                vehicle_entry_time = schedule_info.vehicle_entry_time
+            
+            self.vehicle_entry_time = vehicle_entry_time
+            self.empty_weight = transport.empty_weight
+            self.gross_weight = transport.gross_weight
+            
+            # دریافت اطلاعات راننده
+            driver_name = None
+            driver_national_id = None
+            driver_mobile = None
+            if transport.driver:
+                driver_name = transport.driver.name
+                driver_national_id = transport.driver.national_id
+                person_content_type = ContentType.objects.get_for_model(Person)
+                mobile_phone = PhoneNumber.objects.filter(
+                    content_type=person_content_type,
+                    object_id=transport.driver.national_id,
+                    phone_type='mobile'
+                ).first()
+                if mobile_phone:
+                    driver_mobile = mobile_phone.number
+            
+            self.driver_name = driver_name or 'نامشخص'
+            self.driver_mobile = driver_mobile or 'نامشخص'
+            self.driver_national_id = driver_national_id or 'نامشخص'
+            
+            # دریافت اطلاعات کامیون
+            truck_info = transport.truck_infos.first()
+            plate_number = None
+            if truck_info:
+                plate_number = truck_info.plate_number
+            
+            self.plate_number = plate_number or 'نامشخص'
+            
+            # دریافت اسم باربری
+            self.carrier_name = transport.carrier_recruitment or 'نامشخص'
         
-        # دریافت تاریخ و ساعت ورود
-        vehicle_entry_time = None
-        schedule_info = transport.loading_schedule_infos.first()
-        if schedule_info and schedule_info.vehicle_entry_time:
-            vehicle_entry_time = schedule_info.vehicle_entry_time
-        
-        # دریافت اطلاعات راننده
-        driver_name = None
-        driver_national_id = None
-        driver_mobile = None
-        if transport.driver:
-            driver_name = transport.driver.name
-            driver_national_id = transport.driver.national_id
-            person_content_type = ContentType.objects.get_for_model(Person)
-            mobile_phone = PhoneNumber.objects.filter(
-                content_type=person_content_type,
-                object_id=transport.driver.national_id,
-                phone_type='mobile'
-            ).first()
-            if mobile_phone:
-                driver_mobile = mobile_phone.number
-        
-        # دریافت اطلاعات کامیون
-        truck_info = transport.truck_infos.first()
-        plate_number = None
-        if truck_info:
-            plate_number = truck_info.plate_number
-        
-        # دریافت اسم باربری
-        carrier_name = transport.carrier_recruitment or 'نامشخص'
-        
-        transports_with_info.append({
-            'transport': transport,
-            'order_number': order_number or 'نامشخص',
-            'allocation_id': transport.allocation.allocation_number if transport.allocation else 'نامشخص',
-            'vehicle_entry_time': vehicle_entry_time,
-            'empty_weight': transport.empty_weight,
-            'gross_weight': transport.gross_weight,
-            'driver_name': driver_name or 'نامشخص',
-            'driver_mobile': driver_mobile or 'نامشخص',
-            'plate_number': plate_number or 'نامشخص',
-            'driver_national_id': driver_national_id or 'نامشخص',
-            'carrier_name': carrier_name,
-        })
+        def __getattr__(self, name):
+            # اگر attribute در self وجود نداشت، از transport بگیر
+            if hasattr(self.transport, name):
+                return getattr(self.transport, name)
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
     
-    # بررسی دسترسی فیلدها
-    accessible_person_fields = get_accessible_person_fields(request.user)
-    accessible_truck_info_fields = get_accessible_truck_info_fields(request.user)
+    transports_data = [TransportRow(transport) for transport in transports]
     
-    bug_logger.debug(f"تعداد {len(transports_with_info)} حمل در انتظار بارنامه لود شد")
+    # ایجاد جدول
+    table = WaybillTable(
+        transports_data,
+        accessible_fields=None,  # table خودش محاسبه می‌کند
+        user=request.user
+    )
+    
+    # تنظیم صفحه‌بندی
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    
+    bug_logger.debug(f"تعداد {len(transports_data)} حمل در انتظار بارنامه لود شد")
     
     context = {
-        'transports_with_info': transports_with_info,
-        'accessible_person_fields': accessible_person_fields,
-        'accessible_truck_info_fields': accessible_truck_info_fields,
+        'table': table,
         'page_title': 'لیست حمل‌های در انتظار بارنامه',
     }
     return render(request, 'distribution/waybill_list.html', context)
@@ -175,8 +193,14 @@ def register_waybill_view(request, waybill_number):
     
     truck_info = transport.truck_infos.first()
     plate_number = None
+    vehicle_type = None
     if truck_info:
         plate_number = truck_info.plate_number
+        vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
+    
+    # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
+    if not vehicle_type and transport.vehicle_type_official:
+        vehicle_type = transport.get_vehicle_type_official_display()
     
     # دریافت شماره سفارش
     order_number = None
@@ -213,6 +237,7 @@ def register_waybill_view(request, waybill_number):
                             'driver_national_id': driver_national_id,
                             'driver_mobile': driver_mobile,
                             'plate_number': plate_number,
+                            'vehicle_type': vehicle_type,
                             'order_number': order_number or 'نامشخص',
                             'vehicle_entry_time': vehicle_entry_time,
                             'empty_weight': transport.empty_weight,
@@ -369,6 +394,7 @@ def register_waybill_view(request, waybill_number):
         'driver_national_id': driver_national_id,
         'driver_mobile': driver_mobile,
         'plate_number': plate_number,
+        'vehicle_type': vehicle_type,
         'order_number': order_number or 'نامشخص',
         'vehicle_entry_time': vehicle_entry_time,
         'empty_weight': transport.empty_weight,

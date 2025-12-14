@@ -289,35 +289,21 @@ class VehicleRecruitmentTable(tables.Table):
         try:
             buttons = []
             
-            # دکمه ایجاد حمل
-            buttons.append(
-                format_html(
-                    '<button type="button" '
-                    'class="btn-outline-primary" '
-                    'onclick="showCreateTransportModal(\'{}\')">'
-                    'ایجاد حمل'
-                    '</button>',
-                    allocation.allocation_number
-                )
-            )
-            
-            # دکمه تکمیل جذب خودرو (فقط اگر حمل وجود داشته باشد)
-            transports_count = Transport.objects.filter(allocation=allocation).count()
-            if transports_count > 0:
-                csrf_token = getattr(self, 'csrf_token', '')
+            # دکمه ایجاد حمل (فقط اگر تخصیص هنوز در وضعیت pending_vehicle_recruitment باشد)
+            if allocation.allocation_status == 'pending_vehicle_recruitment':
                 buttons.append(
                     format_html(
-                        '<form method="post" '
-                        'action="{}" '
-                        'style="display: inline;" '
-                        'onsubmit="return confirm(\'آیا از تکمیل جذب خودرو برای این تخصیص اطمینان دارید؟\');">'
-                        '<input type="hidden" name="csrfmiddlewaretoken" value="{}">'
-                        '<button type="submit" class="btn-success">تکمیل جذب خودرو</button>'
-                        '</form>',
-                        reverse('distribution:complete_vehicle_recruitment', args=[allocation.allocation_number]),
-                        csrf_token
+                        '<button type="button" '
+                        'class="btn-outline-primary" '
+                        'onclick="showCreateTransportModal(\'{}\')">'
+                        'ایجاد حمل'
+                        '</button>',
+                        allocation.allocation_number
                     )
                 )
+            
+            if not buttons:
+                return '-'
             
             return format_html(
                 '<div style="display: flex; gap: 10px; flex-wrap: wrap;">{}</div>',

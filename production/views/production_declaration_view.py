@@ -132,7 +132,8 @@ def get_accessible_bom_fields(user):
     """بررسی دسترسی کاربر به فیلدهای BOM - فقط مشاهده"""
     accessible_fields = {}
     accessible_fields['raw_material'] = user_can_access_field(user, BOM, 'raw_material', 'view')
-    accessible_fields['quantity'] = user_can_access_field(user, BOM, 'quantity', 'view')
+    accessible_fields['quantity'] = user_can_access_field(user, BOM, 'quantity', 'view')  # DELETE LATER
+    accessible_fields['percentage'] = user_can_access_field(user, BOM, 'percentage', 'view')
     accessible_fields['unit_used'] = user_can_access_field(user, BOM, 'unit_used', 'view')
     return accessible_fields
 
@@ -1538,11 +1539,11 @@ def production_program_crud_view(request, program_id=None):
                             bom_item_payload['raw_material_id'] = bom.raw_material.raw_material_id if bom.raw_material else '-'
                         if accessible_bom_fields.get('raw_material') and accessible_raw_material_fields.get('name'):
                             bom_item_payload['raw_material_name'] = bom.raw_material.name if bom.raw_material else '-'
-                        if accessible_bom_fields.get('quantity'):
-                            bom_item_payload['quantity'] = str(bom.quantity) if bom.quantity else '0'
+                        if accessible_bom_fields.get('percentage'):
+                            bom_item_payload['percentage'] = str(bom.percentage) if bom.percentage else '0'
                         if accessible_bom_fields.get('unit_used'):
                             bom_item_payload['unit_used'] = bom.raw_material.primary_unit if (bom.raw_material and bom.raw_material.primary_unit) else '-'
-                        if actual_consumption and (accessible_bom_fields.get('quantity') or accessible_bom_fields.get('raw_material')):
+                        if actual_consumption and (accessible_bom_fields.get('percentage') or accessible_bom_fields.get('raw_material')):
                             bom_item_payload['actual_consumption'] = str(actual_consumption) if actual_consumption else ''
                         bom_items.append(bom_item_payload)
                     

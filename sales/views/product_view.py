@@ -5,6 +5,7 @@ from django.db import transaction
 from django.http import JsonResponse, HttpResponseForbidden
 from django.core.paginator import Paginator
 from django.db.models import Q
+from decimal import Decimal
 import logging
 from core.logging_levels import *
 import django_tables2 as tables
@@ -170,11 +171,11 @@ def create_product_view(request):
                             continue
                         
                         raw_material_id = request.POST.get(f'bom_{prod_idx}_{bom_idx}_raw_material', '')
-                        quantity = request.POST.get(f'bom_{prod_idx}_{bom_idx}_quantity', '')
+                        percentage = request.POST.get(f'bom_{prod_idx}_{bom_idx}_percentage', '')
                         
-                        if raw_material_id and quantity:
+                        if raw_material_id and percentage:
                             try:
-                                bom_items.append((int(raw_material_id), float(quantity)))
+                                bom_items.append((int(raw_material_id), float(percentage)))
                             except (ValueError, TypeError):
                                 pass
                     
@@ -234,13 +235,19 @@ def create_product_view(request):
                                         
                                         # ذخیره BOM های مربوط به این ProductionInfo
                                         if prod_idx in production_bom_data:
-                                            for raw_material_id, quantity in production_bom_data[prod_idx]:
+                                            # بررسی اینکه مجموع درصدها برابر 100 باشد
+                                            total_percentage = sum(percentage for _, percentage in production_bom_data[prod_idx])
+                                            if abs(total_percentage - 100.0) > 0.001:  # استفاده از tolerance برای مقایسه اعشاری
+                                                messages.error(request, f'مجموع درصدهای مواد اولیه در فرمول #{prod_idx + 1} باید برابر 100% باشد. مجموع فعلی: {total_percentage:.3f}%')
+                                                raise ValueError(f"مجموع درصدها برابر 100 نیست: {total_percentage}")
+                                            
+                                            for raw_material_id, percentage in production_bom_data[prod_idx]:
                                                 try:
                                                     raw_material = RawMaterial.objects.get(id=raw_material_id)
                                                     BOM.objects.create(
                                                         production_info=production_info,
                                                         raw_material=raw_material,
-                                                        quantity=quantity
+                                                        percentage=percentage
                                                     )
                                                 except RawMaterial.DoesNotExist:
                                                     bug_logger.warning(f"ماده اولیه با ID {raw_material_id} یافت نشد")
@@ -479,12 +486,44 @@ def edit_product_view(request, product_id):
             queryset=boms
         )
         
-        if product_form.is_valid() and production_info_formset.is_valid() and bom_formset.is_valid():
+        # بررسی اعتبار فرم‌ها
+        product_valid = product_form.is_valid()
+        production_info_valid = production_info_formset.is_valid()
+        bom_valid = bom_formset.is_valid()
+        
+        # لاگ تعداد فرم‌ها
+        bug_logger.info(f"تعداد BOM forms: {len(bom_formset)}")
+        bug_logger.info(f"BOM TOTAL_FORMS: {request.POST.get('bom-TOTAL_FORMS')}")
+        bug_logger.info(f"BOM INITIAL_FORMS: {request.POST.get('bom-INITIAL_FORMS')}")
+        for idx, bom_form in enumerate(bom_formset):
+            has_cleaned = bool(bom_form.cleaned_data)
+            raw_material_in_post = request.POST.get(f'bom-{idx}-raw_material')
+            percentage_in_post = request.POST.get(f'bom-{idx}-percentage')
+            bug_logger.info(f"BOM[{idx}]: has_cleaned={has_cleaned}, raw_material={raw_material_in_post}, percentage={percentage_in_post}")
+        
+        bug_logger.info(f"اعتبار فرم‌ها - product: {product_valid}, production_info: {production_info_valid}, bom: {bom_valid}")
+        
+        if product_valid and production_info_valid and bom_valid:
             try:
                 # بررسی اینکه حداقل یک ProductionInfo و BOM وجود دارد
+                # فقط فرم‌های غیرحذف‌شده را بررسی می‌کنیم
                 production_info_count = 0
                 for production_info_form in production_info_formset:
-                    if production_info_form.cleaned_data and not production_info_form.cleaned_data.get('DELETE', False):
+                    # بررسی اینکه آیا فرم حذف شده است یا نه
+                    is_deleted = False
+                    if production_info_form.cleaned_data:
+                        is_deleted = production_info_form.cleaned_data.get('DELETE', False)
+                    elif production_info_form.data:
+                        # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                        delete_key = None
+                        for key in production_info_form.data.keys():
+                            if key.endswith('-DELETE'):
+                                delete_key = key
+                                break
+                        if delete_key and production_info_form.data.get(delete_key):
+                            is_deleted = True
+                    
+                    if not is_deleted and production_info_form.cleaned_data:
                         if all([
                             production_info_form.cleaned_data.get('formula_id'),
                             production_info_form.cleaned_data.get('min_batch_production') is not None,
@@ -497,13 +536,50 @@ def edit_product_view(request, product_id):
                 has_duplicate = False
                 duplicate_material = None
                 
-                for bom_form in bom_formset:
-                    if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
-                        if all([
-                            bom_form.cleaned_data.get('raw_material'),
-                            bom_form.cleaned_data.get('quantity') is not None,
-                        ]):
+                # گروه‌بندی BOM ها بر اساس ProductionInfo برای بررسی مجموع درصدها
+                # فقط BOM های غیرحذف‌شده را بررسی می‌کنیم
+                bom_by_production_info = {}
+                for bom_idx, bom_form in enumerate(bom_formset):
+                    # بررسی اینکه آیا فرم حذف شده است یا نه
+                    is_deleted = False
+                    if bom_form.cleaned_data:
+                        is_deleted = bom_form.cleaned_data.get('DELETE', False)
+                    elif bom_form.data:
+                        # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                        delete_key = None
+                        for key in bom_form.data.keys():
+                            if key.endswith('-DELETE'):
+                                delete_key = key
+                                break
+                        if delete_key and bom_form.data.get(delete_key):
+                            is_deleted = True
+                    
+                    if not is_deleted:
+                        # بررسی اینکه آیا داده‌های لازم وجود دارد
+                        raw_material = None
+                        percentage = None
+                        
+                        if bom_form.cleaned_data:
                             raw_material = bom_form.cleaned_data.get('raw_material')
+                            percentage = bom_form.cleaned_data.get('percentage')
+                        elif bom_form.data:
+                            # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                            raw_material_id = bom_form.data.get(f'bom-{bom_idx}-raw_material')
+                            percentage_str = bom_form.data.get(f'bom-{bom_idx}-percentage')
+                            
+                            if raw_material_id:
+                                try:
+                                    raw_material = RawMaterial.objects.get(id=raw_material_id)
+                                except (RawMaterial.DoesNotExist, ValueError, TypeError):
+                                    pass
+                            
+                            if percentage_str:
+                                try:
+                                    percentage = Decimal(str(percentage_str))
+                                except (ValueError, TypeError):
+                                    pass
+                        
+                        if raw_material and percentage is not None:
                             # بررسی تکراری نبودن ماده اولیه
                             if raw_material in raw_materials_list:
                                 has_duplicate = True
@@ -511,13 +587,73 @@ def edit_product_view(request, product_id):
                                 break
                             raw_materials_list.append(raw_material)
                             bom_count += 1
+                            
+                            # گروه‌بندی بر اساس ProductionInfo
+                            production_info_id = None
+                            if bom_form.instance and bom_form.instance.pk:
+                                production_info_id = bom_form.instance.production_info_id
+                            else:
+                                # برای BOM جدید، باید از فیلد مخفی production_info_id استفاده کنیم
+                                # جستجوی فیلد مخفی production_info_id در POST
+                                for key in request.POST.keys():
+                                    if key.startswith('bom_') and key.endswith('_production_info_id'):
+                                        # استخراج prod_idx و bom_idx
+                                        parts = key.replace('bom_', '').replace('_production_info_id', '').split('_')
+                                        if len(parts) == 2:
+                                            try:
+                                                prod_idx = int(parts[0])
+                                                bom_idx_from_key = int(parts[1])
+                                                if bom_idx_from_key == bom_idx:
+                                                    prod_info_id_str = request.POST.get(key)
+                                                    if prod_info_id_str and prod_info_id_str != 'new':
+                                                        try:
+                                                            production_info_id = int(prod_info_id_str)
+                                                            break
+                                                        except (ValueError, TypeError):
+                                                            pass
+                                                    elif prod_info_id_str == 'new':
+                                                        # ProductionInfo جدید است - باید از index استفاده کنیم
+                                                        production_info_id = 'new'
+                                                        break
+                                            except (ValueError, TypeError):
+                                                pass
+                                
+                                # اگر پیدا نشد، از اولین ProductionInfo استفاده می‌کنیم
+                                if not production_info_id:
+                                    production_info_id = 'new'
+                            
+                            if production_info_id not in bom_by_production_info:
+                                bom_by_production_info[production_info_id] = []
+                            bom_by_production_info[production_info_id].append(percentage)
+                
+                # بررسی مجموع درصدها برای هر ProductionInfo
+                percentage_sum_error = False
+                for prod_info_id, percentages in bom_by_production_info.items():
+                    total_percentage = sum(Decimal(str(p)) for p in percentages)
+                    if abs(total_percentage - Decimal('100')) > Decimal('0.001'):  # استفاده از tolerance برای مقایسه اعشاری
+                        percentage_sum_error = True
+                        messages.error(request, f'مجموع درصدهای مواد اولیه باید برابر 100% باشد. مجموع فعلی: {total_percentage:.3f}%')
+                        break
+                
+                bug_logger.info(f"تعداد ProductionInfo: {production_info_count}, تعداد BOM: {bom_count}, duplicate: {has_duplicate}, percentage_error: {percentage_sum_error}")
                 
                 if production_info_count == 0:
                     messages.error(request, 'حداقل یک اطلاعات تولید کامل (شامل شناسه فرمول، حداقل بچ تولید و دستور العمل) الزامی است.')
+                    bug_logger.warning("تعداد ProductionInfo صفر است")
+                    # اگر validation fail شد، باید از transaction خارج شویم
+                    raise ValueError("تعداد ProductionInfo صفر است")
                 elif has_duplicate:
                     messages.error(request, f'ماده اولیه "{duplicate_material.name}" تکراری است. هر ماده اولیه فقط یک بار قابل تعریف است.')
+                    bug_logger.warning(f"ماده اولیه تکراری: {duplicate_material.name}")
+                    raise ValueError(f"ماده اولیه تکراری: {duplicate_material.name}")
                 elif bom_count == 0:
-                    messages.error(request, 'حداقل یک ماده اولیه کامل (شامل نام ماده اولیه و مقدار به کیلوگرم) در BOM الزامی است.')
+                    messages.error(request, 'حداقل یک ماده اولیه کامل (شامل نام ماده اولیه و درصد) در BOM الزامی است.')
+                    bug_logger.warning("تعداد BOM صفر است")
+                    raise ValueError("تعداد BOM صفر است")
+                elif percentage_sum_error:
+                    # پیام خطا قبلاً اضافه شده است
+                    bug_logger.warning("خطا در مجموع درصدها")
+                    raise ValueError("خطا در مجموع درصدها")
                 else:
                     with transaction.atomic():
                         # ذخیره تغییرات محصول
@@ -546,46 +682,300 @@ def edit_product_view(request, product_id):
                         
                         # حذف ProductionInfo های حذف شده (که DELETE=True هستند)
                         for production_info_form in production_info_formset:
-                            if production_info_form.cleaned_data and production_info_form.cleaned_data.get('DELETE', False):
+                            # بررسی DELETE از cleaned_data یا data
+                            is_deleted = False
+                            if production_info_form.cleaned_data:
+                                is_deleted = production_info_form.cleaned_data.get('DELETE', False)
+                            elif production_info_form.data:
+                                # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                                for key in production_info_form.data.keys():
+                                    if key.endswith('-DELETE') and production_info_form.data.get(key):
+                                        is_deleted = True
+                                        break
+                            
+                            if is_deleted:
                                 if production_info_form.instance and production_info_form.instance.pk:
                                     production_info_form.instance.delete()
                         
                         # ذخیره BOM ها - حفظ لینک به ProductionInfo مربوطه
-                        if production_infos_saved:
-                            for bom_form in bom_formset:
-                                if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
-                                    if all([
-                                        bom_form.cleaned_data.get('raw_material'),
-                                        bom_form.cleaned_data.get('quantity') is not None,
-                                    ]):
-                                        bom = bom_form.save(commit=False)
-                                        
-                                        # اگر instance وجود دارد (ویرایش)، ProductionInfo موجود را حفظ می‌کنیم
-                                        if bom_form.instance and bom_form.instance.pk:
-                                            # ProductionInfo موجود را از instance حفظ می‌کنیم
-                                            # اگر ProductionInfo حذف شده باشد، به اولین ProductionInfo لینک می‌کنیم
-                                            original_production_info = bom_form.instance.production_info
-                                            if original_production_info and original_production_info.product == product:
-                                                # بررسی اینکه آیا این ProductionInfo هنوز وجود دارد
-                                                if original_production_info in production_infos_saved:
-                                                    bom.production_info = original_production_info
-                                                else:
-                                                    # ProductionInfo حذف شده، به اولین ProductionInfo لینک می‌کنیم
-                                                    bom.production_info = production_infos_saved[0]
-                                            else:
-                                                # ProductionInfo موجود معتبر نیست، به اولین ProductionInfo لینک می‌کنیم
-                                                bom.production_info = production_infos_saved[0]
-                                        else:
-                                            # اگر instance وجود ندارد (جدید)، به اولین ProductionInfo لینک می‌کنیم
-                                            bom.production_info = production_infos_saved[0]
-                                        
-                                        bom.save()
                         
-                        # حذف BOM های حذف شده (که DELETE=True هستند)
+                        # ایجاد mapping از production_info_id به ProductionInfo object
+                        production_info_map = {pi.id: pi for pi in production_infos_saved}
+                        
+                        # گروه‌بندی BOM forms بر اساس ProductionInfo
+                        # استفاده از فیلد مخفی production_info_id از POST
+                        bom_forms_by_production_info = {}
+                        for bom_form in bom_formset:
+                            # بررسی اینکه آیا این فرم داده دارد یا نه
+                            has_data = False
+                            bom_idx = None
+                            
+                            # پیدا کردن bom_idx از prefix فرم (مثلاً bom-0)
+                            if hasattr(bom_form, 'prefix') and bom_form.prefix:
+                                prefix = bom_form.prefix
+                                if prefix.startswith('bom-'):
+                                    try:
+                                        bom_idx = int(prefix.split('-')[1])
+                                    except (ValueError, IndexError):
+                                        pass
+                            
+                            # اگر bom_idx پیدا نشد، از data استفاده می‌کنیم
+                            if bom_idx is None and bom_form.data:
+                                for key in bom_form.data.keys():
+                                    if 'raw_material' in key:
+                                        # استخراج index از نام فیلد
+                                        # فرمت: bom-{idx}-raw_material
+                                        parts = key.split('-')
+                                        if len(parts) >= 2 and parts[0] == 'bom':
+                                            try:
+                                                bom_idx = int(parts[1])
+                                                break
+                                            except (ValueError, IndexError):
+                                                pass
+                            
+                            # بررسی اینکه آیا این فرم داده دارد یا نه
+                            if bom_form.cleaned_data:
+                                has_data = any([
+                                    bom_form.cleaned_data.get('raw_material'),
+                                    bom_form.cleaned_data.get('percentage') is not None,
+                                ])
+                            elif bom_form.data and bom_idx is not None:
+                                # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                                has_data = any([
+                                    bom_form.data.get(f'bom-{bom_idx}-raw_material'),
+                                    bom_form.data.get(f'bom-{bom_idx}-percentage'),
+                                ])
+                            
+                            if has_data or (bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False)):
+                                production_info_id = None
+                                
+                                # ابتدا از instance استفاده می‌کنیم (برای BOM های موجود)
+                                if bom_form.instance and bom_form.instance.pk:
+                                    production_info_id = bom_form.instance.production_info_id
+                                    bug_logger.debug(f"BOM[{bom_idx}] موجود - production_info_id: {production_info_id}")
+                                
+                                # اگر production_info_id پیدا نشد، از POST استفاده می‌کنیم
+                                if not production_info_id and bom_idx is not None:
+                                    # جستجوی فیلد مخفی production_info_id در POST
+                                    # فرمت: bom_{prod_idx}_{bom_idx}_production_info_id
+                                    for key in request.POST.keys():
+                                        if key.startswith('bom_') and key.endswith('_production_info_id'):
+                                            # استخراج prod_idx و bom_idx
+                                            parts = key.replace('bom_', '').replace('_production_info_id', '').split('_')
+                                            if len(parts) == 2:
+                                                try:
+                                                    prod_idx = int(parts[0])
+                                                    bom_idx_from_key = int(parts[1])
+                                                    if bom_idx_from_key == bom_idx:
+                                                        prod_info_id_str = request.POST.get(key)
+                                                        bug_logger.debug(f"BOM[{bom_idx}] - پیدا شد key: {key}, value: {prod_info_id_str}")
+                                                        if prod_info_id_str and prod_info_id_str != 'new':
+                                                            try:
+                                                                production_info_id = int(prod_info_id_str)
+                                                                bug_logger.debug(f"BOM[{bom_idx}] - production_info_id از POST: {production_info_id}")
+                                                                break
+                                                            except (ValueError, TypeError):
+                                                                pass
+                                                        elif prod_info_id_str == 'new':
+                                                            # ProductionInfo جدید است - باید از index استفاده کنیم
+                                                            if prod_idx < len(production_infos_saved):
+                                                                production_info_id = production_infos_saved[prod_idx].id
+                                                                bug_logger.debug(f"BOM[{bom_idx}] - production_info_id از ProductionInfo جدید: {production_info_id}")
+                                                                break
+                                                except (ValueError, TypeError):
+                                                    pass
+                                
+                                # اگر production_info_id پیدا نشد و ProductionInfo جدید است، از index استفاده می‌کنیم
+                                if not production_info_id and bom_idx is not None:
+                                    # پیدا کردن ProductionInfo مربوطه بر اساس index
+                                    for prod_idx, production_info_form in enumerate(production_info_formset):
+                                        if production_info_form.cleaned_data and not production_info_form.cleaned_data.get('DELETE', False):
+                                            # بررسی فیلد مخفی
+                                            hidden_field_key = f'bom_{prod_idx}_{bom_idx}_production_info_id'
+                                            if hidden_field_key in request.POST:
+                                                prod_info_id_str = request.POST.get(hidden_field_key)
+                                                if prod_info_id_str == 'new':
+                                                    # این ProductionInfo جدید است
+                                                    # بعد از ذخیره، production_info_id را پیدا می‌کنیم
+                                                    if prod_idx < len(production_infos_saved):
+                                                        production_info_id = production_infos_saved[prod_idx].id
+                                                        bug_logger.debug(f"BOM[{bom_idx}] - production_info_id از ProductionInfo جدید (fallback): {production_info_id}")
+                                                        break
+                                
+                                # اگر production_info_id در mapping وجود دارد، استفاده می‌کنیم
+                                if production_info_id and production_info_id in production_info_map:
+                                    if production_info_id not in bom_forms_by_production_info:
+                                        bom_forms_by_production_info[production_info_id] = []
+                                    bom_forms_by_production_info[production_info_id].append(bom_form)
+                                    bug_logger.debug(f"BOM[{bom_idx}] - اضافه شد به production_info_id: {production_info_id}")
+                                elif not production_info_id and production_infos_saved:
+                                    # برای BOM های جدید که production_info_id ندارند، به اولین ProductionInfo لینک می‌کنیم
+                                    first_prod_id = production_infos_saved[0].id
+                                    if first_prod_id not in bom_forms_by_production_info:
+                                        bom_forms_by_production_info[first_prod_id] = []
+                                    bom_forms_by_production_info[first_prod_id].append(bom_form)
+                                    bug_logger.debug(f"BOM[{bom_idx}] - اضافه شد به اولین ProductionInfo: {first_prod_id} (fallback)")
+                                else:
+                                    bug_logger.warning(f"BOM[{bom_idx}] - production_info_id پیدا نشد و ProductionInfo ذخیره شده‌ای وجود ندارد")
+                        
+                        # بررسی اعتبارسنجی و ذخیره BOM ها برای هر ProductionInfo
+                        bom_validation_errors = []
+                        for production_info in production_infos_saved:
+                            bom_forms = bom_forms_by_production_info.get(production_info.id, [])
+                            
+                            # بررسی مجموع درصدها برای این ProductionInfo
+                            total_percentage = Decimal('0')
+                            valid_bom_count = 0
+                            
+                            for bom_form in bom_forms:
+                                # بررسی DELETE
+                                is_deleted = False
+                                if bom_form.cleaned_data:
+                                    is_deleted = bom_form.cleaned_data.get('DELETE', False)
+                                elif bom_form.data:
+                                    for key in bom_form.data.keys():
+                                        if key.endswith('-DELETE') and bom_form.data.get(key):
+                                            is_deleted = True
+                                            break
+                                
+                                if not is_deleted:
+                                    # بررسی اینکه آیا داده‌های لازم وجود دارد
+                                    raw_material = None
+                                    percentage = None
+                                    
+                                    if bom_form.cleaned_data:
+                                        raw_material = bom_form.cleaned_data.get('raw_material')
+                                        percentage = bom_form.cleaned_data.get('percentage')
+                                    elif bom_form.data:
+                                        # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                                        for key in bom_form.data.keys():
+                                            if key.endswith('-raw_material'):
+                                                raw_material_id = bom_form.data.get(key)
+                                                if raw_material_id:
+                                                    try:
+                                                        raw_material = RawMaterial.objects.get(id=raw_material_id)
+                                                    except (RawMaterial.DoesNotExist, ValueError, TypeError):
+                                                        pass
+                                            elif key.endswith('-percentage'):
+                                                percentage_str = bom_form.data.get(key)
+                                                if percentage_str:
+                                                    try:
+                                                        percentage = Decimal(str(percentage_str))
+                                                    except (ValueError, TypeError):
+                                                        pass
+                                    
+                                    if raw_material and percentage is not None:
+                                        total_percentage += Decimal(str(percentage))
+                                        valid_bom_count += 1
+                            
+                            # بررسی مجموع درصدها
+                            if valid_bom_count > 0:
+                                if abs(total_percentage - Decimal('100')) > Decimal('0.001'):
+                                    bom_validation_errors.append(
+                                        f'فرمول "{production_info.formula_id}": مجموع درصدهای مواد اولیه باید برابر 100% باشد. مجموع فعلی: {total_percentage:.3f}%'
+                                    )
+                            
+                            # ذخیره BOM ها برای این ProductionInfo
+                            for bom_form in bom_forms:
+                                # بررسی DELETE
+                                is_deleted = False
+                                if bom_form.cleaned_data:
+                                    is_deleted = bom_form.cleaned_data.get('DELETE', False)
+                                elif bom_form.data:
+                                    # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                                    for key in bom_form.data.keys():
+                                        if key.endswith('-DELETE') and bom_form.data.get(key):
+                                            is_deleted = True
+                                            break
+                                
+                                if not is_deleted:
+                                    # بررسی اینکه آیا داده‌های لازم وجود دارد
+                                    raw_material = None
+                                    percentage = None
+                                    
+                                    if bom_form.cleaned_data:
+                                        raw_material = bom_form.cleaned_data.get('raw_material')
+                                        percentage = bom_form.cleaned_data.get('percentage')
+                                    elif bom_form.data:
+                                        # اگر cleaned_data وجود ندارد، از data استفاده می‌کنیم
+                                        for key in bom_form.data.keys():
+                                            if key.endswith('-raw_material'):
+                                                raw_material_id = bom_form.data.get(key)
+                                                if raw_material_id:
+                                                    try:
+                                                        raw_material = RawMaterial.objects.get(id=raw_material_id)
+                                                    except (RawMaterial.DoesNotExist, ValueError, TypeError):
+                                                        pass
+                                            elif key.endswith('-percentage'):
+                                                percentage_str = bom_form.data.get(key)
+                                                if percentage_str:
+                                                    try:
+                                                        percentage = Decimal(str(percentage_str))
+                                                    except (ValueError, TypeError):
+                                                        pass
+                                    
+                                    if raw_material and percentage is not None:
+                                        if bom_form.instance and bom_form.instance.pk:
+                                            # BOM موجود - بروزرسانی
+                                            bom = bom_form.save(commit=False)
+                                            bom.production_info = production_info
+                                            bom.raw_material = raw_material
+                                            bom.percentage = percentage
+                                            bom.save()
+                                        else:
+                                            # BOM جدید - ایجاد
+                                            bom = BOM(
+                                                production_info=production_info,
+                                                raw_material=raw_material,
+                                                percentage=percentage
+                                            )
+                                            bom.save()
+                                            bug_logger.debug(f"BOM جدید ایجاد شد: production_info_id={production_info.id}, raw_material_id={raw_material.id}, percentage={percentage}")
+                                elif is_deleted:
+                                    # حذف BOM
+                                    if bom_form.instance and bom_form.instance.pk:
+                                        bom_form.instance.delete()
+                        
+                        # اگر خطای اعتبارسنجی وجود داشت، نمایش می‌دهیم
+                        if bom_validation_errors:
+                            for error_msg in bom_validation_errors:
+                                messages.error(request, error_msg)
+                            # اگر خطا وجود داشت، از transaction خارج می‌شویم
+                            raise ValueError("خطا در اعتبارسنجی BOM")
+                        
+                        # حذف BOM های حذف شده که دیگر به هیچ ProductionInfo تعلق ندارند
+                        for bom in BOM.objects.filter(production_info__product=product):
+                            if bom.production_info not in production_infos_saved:
+                                bom.delete()
+                        
+                        # همچنین BOM های حذف شده از formset اصلی را حذف می‌کنیم
                         for bom_form in bom_formset:
                             if bom_form.cleaned_data and bom_form.cleaned_data.get('DELETE', False):
                                 if bom_form.instance and bom_form.instance.pk:
                                     bom_form.instance.delete()
+                        
+                        # برای BOM های جدید که هنوز به هیچ ProductionInfo لینک نشده‌اند
+                        # (این مورد باید از طریق template حل شود، اما برای اطمینان اینجا هم بررسی می‌کنیم)
+                        for bom_form in bom_formset:
+                            if bom_form.cleaned_data and not bom_form.cleaned_data.get('DELETE', False):
+                                if all([
+                                    bom_form.cleaned_data.get('raw_material'),
+                                    bom_form.cleaned_data.get('percentage') is not None,
+                                ]):
+                                    # اگر instance وجود ندارد (جدید) و هنوز به ProductionInfo لینک نشده
+                                    if not bom_form.instance.pk:
+                                        # بررسی اینکه آیا این BOM در bom_forms_by_production_info وجود دارد
+                                        found = False
+                                        for prod_id, forms in bom_forms_by_production_info.items():
+                                            if bom_form in forms:
+                                                found = True
+                                                break
+                                        
+                                        # اگر پیدا نشد، به اولین ProductionInfo لینک می‌کنیم
+                                        if not found and production_infos_saved:
+                                            bom = bom_form.save(commit=False)
+                                            bom.production_info = production_infos_saved[0]
+                                            bom.save()
                         
                         audit_logger.info(f"محصول {product.code} توسط کاربر {request.user.username} ویرایش شد")
                         messages.success(
@@ -595,6 +985,10 @@ def edit_product_view(request, product_id):
                         
                         return redirect('sales:product_detail', product_id=product.id)
                     
+            except ValueError as e:
+                # خطای اعتبارسنجی - transaction rollback می‌شود
+                bug_logger.warning(f"خطا در اعتبارسنجی: {str(e)}")
+                # پیام خطا قبلاً اضافه شده است
             except Exception as e:
                 bug_logger.error(f"خطا در ویرایش محصول {product_id}: {str(e)}", exc_info=True)
                 messages.error(
@@ -604,16 +998,29 @@ def edit_product_view(request, product_id):
         else:
             # نمایش خطاهای فرم
             bug_logger.warning(f"فرم ویرایش محصول {product_id} معتبر نیست")
-            if not product_form.is_valid():
+            if not product_valid:
+                bug_logger.warning(f"خطاهای product_form: {product_form.errors}")
                 for field, errors in product_form.errors.items():
                     for error in errors:
-                        messages.error(request, f'{field}: {error}')
-            if not production_info_formset.is_valid():
-                for form in production_info_formset:
+                        messages.error(request, f'محصول - {field}: {error}')
+            if not production_info_valid:
+                bug_logger.warning(f"خطاهای production_info_formset: {production_info_formset.errors}")
+                bug_logger.warning(f"خطاهای production_info_formset (non_form_errors): {production_info_formset.non_form_errors()}")
+                for form_idx, form in enumerate(production_info_formset):
                     if form.errors:
+                        bug_logger.warning(f"خطاهای production_info_form[{form_idx}]: {form.errors}")
                         for field, errors in form.errors.items():
                             for error in errors:
-                                messages.error(request, f'اطلاعات تولید: {field}: {error}')
+                                messages.error(request, f'اطلاعات تولید [{form_idx}] - {field}: {error}')
+            if not bom_valid:
+                bug_logger.warning(f"خطاهای bom_formset: {bom_formset.errors}")
+                bug_logger.warning(f"خطاهای bom_formset (non_form_errors): {bom_formset.non_form_errors()}")
+                for form_idx, form in enumerate(bom_formset):
+                    if form.errors:
+                        bug_logger.warning(f"خطاهای bom_form[{form_idx}]: {form.errors}")
+                        for field, errors in form.errors.items():
+                            for error in errors:
+                                messages.error(request, f'BOM [{form_idx}] - {field}: {error}')
     else:
         # ایجاد فرم با داده‌های موجود
         product_form = CreateProductForm(
@@ -634,7 +1041,7 @@ def edit_product_view(request, product_id):
         # دریافت همه BOM های موجود (از همه ProductionInfo های این محصول)
         boms = BOM.objects.filter(production_info__product=product).select_related('production_info')
         
-        # ایجاد modelformset با داده‌های موجود
+        # ایجاد modelformset با داده‌های موجود (برای نمایش در template)
         bom_formset = BOMModelFormSet(
             prefix='bom',
             queryset=boms
@@ -644,10 +1051,12 @@ def edit_product_view(request, product_id):
     for prod_form in production_info_formset:
         prod_form.bom_forms = []
         if prod_form.instance and prod_form.instance.pk:
+            # برای ProductionInfo موجود، BOM های مربوطه را پیدا می‌کنیم
             for bom_form in bom_formset:
                 if bom_form.instance and bom_form.instance.pk:
                     if bom_form.instance.production_info_id == prod_form.instance.id:
                         prod_form.bom_forms.append(bom_form)
+        # برای ProductionInfo جدید، bom_forms خالی است
     
     context = {
         'product_form': product_form,

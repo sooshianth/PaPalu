@@ -220,15 +220,15 @@ class ProductionProgram(models.Model):
 
     def compute_consumption(self):
         """Calculate raw material requirements based on BOM and planned_weight_ton.
-        Simple proportional logic: required = BOM.quantity * planned_weight_ton / min_batch_production (if defined).
+        Uses percentage: required = (BOM.percentage / 100) * planned_weight_ton
         """
         if not self.production_info or not self.planned_weight_ton:
             return {}
         summary = {}
-        min_batch = self.production_info.min_batch_production or Decimal('1')
         for bom in self.production_info.bom_items.all():
-            if bom.quantity and bom.raw_material:
-                required = (bom.quantity * self.planned_weight_ton) / min_batch
+            if bom.percentage and bom.raw_material:
+                # percentage is 0-100, so divide by 100 to get fraction
+                required = (bom.percentage / Decimal('100')) * self.planned_weight_ton
                 summary[bom.raw_material.raw_material_id or str(bom.id)] = str(required.quantize(Decimal('0.001')))
         return summary
 

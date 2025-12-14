@@ -600,7 +600,7 @@ class Command(BaseCommand):
     def create_transports(self, count, allocations):
         """ایجاد حمل‌ها"""
         transports = []
-        statuses = ['pending_recruitment_completion', 'pending_vehicle_entry', 'vehicle_entered', 
+        statuses = ['pending_vehicle_entry', 'vehicle_entered', 
                     'loading', 'loaded', 'in_transit', 'delivered', 'completed']
         directions = ['inbound', 'outbound']
         

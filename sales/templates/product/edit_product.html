@@ -282,8 +282,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h2>{{ page_title|default:"ویرایش محصول" }}</h2>
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <h2 style="margin: 0;">{{ page_title|default:"ویرایش محصول" }}</h2>
+    <a href="{% url 'sales:product_detail' product.id %}" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; text-decoration: none;">
+        <svg style="width: 18px; height: 18px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        بازگشت به جزئیات محصول
+    </a>
 </div>
 
 <div class="form-card">
@@ -644,12 +650,13 @@
             <div class="form-section-content">
             <div id="production-formset-container">
                 {{ production_info_formset.management_form }}
+                {{ bom_formset.management_form }}
                 {% for prod_form in production_info_formset %}
                 <div class="production-bom-group" data-production-index="{{ forloop.counter0 }}" style="background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; border: 2px solid var(--primary-green);">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h6 style="color: var(--primary-green); margin: 0;">فرمول تولید #{{ forloop.counter }}</h6>
                         {{ prod_form.id }}
-                        {{ prod_form.DELETE }}
+                        <div style="display: none;">{{ prod_form.DELETE }}</div>
                         <button type="button" class="btn btn-sm btn-outline-danger delete-production-btn" data-production-index="{{ forloop.counter0 }}" title="حذف این فرمول">
                             <svg style="width: 16px; height: 16px; margin-left: 5px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -698,10 +705,11 @@
                     <!-- BOM های مربوط به این فرمول -->
                     <div style="background: var(--gray-100); padding: 20px; border-radius: 8px; margin-top: 20px;">
                         <h6 style="color: var(--gray-800); margin-bottom: 15px; font-weight: 600;">مواد اولیه این فرمول (BOM)</h6>
-                        <div class="bom-formset" data-production-index="{{ forloop.counter0 }}" data-production-id="{{ prod_form.instance.id }}">
+                        <div class="bom-formset" data-production-index="{{ forloop.counter0 }}" data-production-id="{% if prod_form.instance.id %}{{ prod_form.instance.id }}{% else %}new{% endif %}">
                             {% for bom_form in prod_form.bom_forms %}
-                            <div class="bom-row" data-bom-index="{{ forloop.counter0 }}">
+                            <div class="bom-row" data-bom-index="{{ forloop.counter0 }}" data-production-info-id="{% if prod_form.instance.id %}{{ prod_form.instance.id }}{% else %}new{% endif %}">
                                 {{ bom_form.id }}
+                                <input type="hidden" name="bom_{{ forloop.parentloop.counter0 }}_{{ forloop.counter0 }}_production_info_id" value="{% if prod_form.instance.id %}{{ prod_form.instance.id }}{% else %}new{% endif %}">
                                 <div class="row">
                                     <div class="col-md-5 mb-3">
                                         <label class="form-label required-field">{{ bom_form.raw_material.label }}</label>
@@ -711,16 +719,16 @@
                                         {% endif %}
                                     </div>
                                     <div class="col-md-4 mb-3">
-                                        <label class="form-label required-field">{{ bom_form.quantity.label }}</label>
-                                        {{ bom_form.quantity }}
-                                        {% if bom_form.quantity.errors %}
-                                            <div class="text-danger">{{ bom_form.quantity.errors.0 }}</div>
+                                        <label class="form-label required-field">{{ bom_form.percentage.label }}</label>
+                                        {{ bom_form.percentage }}
+                                        {% if bom_form.percentage.errors %}
+                                            <div class="text-danger">{{ bom_form.percentage.errors.0 }}</div>
                                         {% endif %}
                                     </div>
                                     <div class="col-md-3 mb-3">
                                         <label class="form-label">&nbsp;</label>
                                         <div>
-                                            {{ bom_form.DELETE }}
+                                            <div style="display: none;">{{ bom_form.DELETE }}</div>
                                             <button type="button" class="btn btn-sm btn-outline-danger delete-bom-btn" data-production-index="{{ forloop.parentloop.counter0 }}" data-bom-index="{{ forloop.counter0 }}" title="حذف این ماده اولیه">
                                                 <svg style="width: 14px; height: 14px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                                     <path d="M19 7L18.1327 19.1425C18.0579 20.1891 17.187 21 16.1378 21H7.86224C6.81296 21 5.94208 20.1891 5.86732 19.1425L5 7M10 11V17M14 11V17M15 7V4C15 3.44772 14.5523 3 14 3H10C9.44772 3 9 3.44772 9 4V7M4 7H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -805,8 +813,12 @@ $(document).ready(function() {
         var totalFormsInput = $('#id_bom-TOTAL_FORMS');
         var formCount = parseInt(totalFormsInput.val());
         
+        // دریافت production_info_id از data-production-id
+        var productionInfoId = bomFormset.attr('data-production-id') || 'new';
+        
         var newBomRow = `
-            <div class="bom-row" data-bom-index="${formCount}">
+            <div class="bom-row" data-bom-index="${formCount}" data-production-info-id="${productionInfoId}">
+                <input type="hidden" name="bom_${productionIndex}_${formCount}_production_info_id" value="${productionInfoId}">
                 <div class="row">
                     <div class="col-md-5 mb-3">
                         <label class="form-label required-field">ماده اولیه</label>
@@ -818,13 +830,15 @@ $(document).ready(function() {
                         </select>
                     </div>
                     <div class="col-md-4 mb-3">
-                        <label class="form-label required-field">مقدار (کیلوگرم)</label>
+                        <label class="form-label required-field">درصد</label>
                         <input type="number" 
-                               name="bom-${formCount}-quantity" 
-                               id="id_bom-${formCount}-quantity" 
+                               name="bom-${formCount}-percentage" 
+                               id="id_bom-${formCount}-percentage" 
                                class="form-control" 
                                step="0.001" 
-                               placeholder="مقدار">
+                               placeholder="درصد (0-100)" 
+                               min="0" 
+                               max="100">
                     </div>
                     <div class="col-md-3 mb-3">
                         <label class="form-label">&nbsp;</label>
@@ -857,13 +871,17 @@ $(document).ready(function() {
     $(document).on('click', '.delete-bom-btn', function() {
         var bomRow = $(this).closest('.bom-row');
         var deleteCheckbox = bomRow.find('input[type="checkbox"][name*="-DELETE"]');
+        var bomIdInput = bomRow.find('input[name*="-id"]');
         
-        if (deleteCheckbox.length > 0) {
-            // اگر از دیتابیس بود، checkbox را check کن و ردیف را مخفی کن
-            deleteCheckbox.prop('checked', true);
+        // بررسی اینکه آیا این BOM از دیتابیس است یا نه
+        if (bomIdInput.length > 0 && bomIdInput.val()) {
+            // اگر از دیتابیس بود (id دارد)، checkbox را check کن و ردیف را مخفی کن
+            if (deleteCheckbox.length > 0) {
+                deleteCheckbox.prop('checked', true);
+            }
             bomRow.hide();
         } else {
-            // اگر جدید است، فقط حذفش کن
+            // اگر جدید است (id ندارد)، از DOM حذفش کن
             bomRow.remove();
         }
     });
@@ -874,15 +892,26 @@ $(document).ready(function() {
         var productionIndex = $(this).data('production-index');
         
         // بررسی اینکه آیا این فرمول ذخیره شده در دیتابیس است یا نه
-        var deleteCheckbox = productionGroup.find('input[type="checkbox"][name="production_info-' + productionIndex + '-DELETE"]');
+        var deleteCheckbox = productionGroup.find('input[type="checkbox"][name*="DELETE"]');
+        var productionIdInput = productionGroup.find('input[name*="production_info-' + productionIndex + '-id"]');
         
-        if (deleteCheckbox.length > 0) {
-            // اگر از دیتابیس بود، checkbox را check کن و گروه را مخفی کن
-            deleteCheckbox.prop('checked', true);
+        if (productionIdInput.length > 0 && productionIdInput.val()) {
+            // اگر از دیتابیس بود (id دارد)، checkbox را check کن و گروه را مخفی کن
+            if (deleteCheckbox.length > 0) {
+                deleteCheckbox.prop('checked', true);
+            }
             productionGroup.hide();
         } else {
-            // اگر جدید است، فقط حذفش کن
+            // اگر جدید است (id ندارد)، از DOM حذفش کن و TOTAL_FORMS را کاهش بده
             productionGroup.remove();
+            // کاهش تعداد فرم‌ها در formset
+            var totalFormsInput = $('input[name="production_info-TOTAL_FORMS"]');
+            if (totalFormsInput.length > 0) {
+                var currentTotal = parseInt(totalFormsInput.val()) || 0;
+                if (currentTotal > 0) {
+                    totalFormsInput.val(currentTotal - 1);
+                }
+            }
         }
     });
     
@@ -990,8 +1019,9 @@ $(document).ready(function() {
                 
                 <div style="background: var(--gray-100); padding: 20px; border-radius: 8px; margin-top: 20px;">
                     <h6 style="color: var(--gray-800); margin-bottom: 15px; font-weight: 600;">مواد اولیه این فرمول (BOM)</h6>
-                    <div class="bom-formset" data-production-index="${formCount}">
-                        <div class="bom-row" data-bom-index="0">
+                    <div class="bom-formset" data-production-index="${formCount}" data-production-id="new">
+                        <div class="bom-row" data-bom-index="0" data-production-info-id="new">
+                            <input type="hidden" name="bom_${formCount}_0_production_info_id" value="new">
                             <div class="row">
                                 <div class="col-md-5 mb-3">
                                     <label class="form-label required-field">ماده اولیه</label>
@@ -1000,8 +1030,8 @@ $(document).ready(function() {
                                     </select>
                                 </div>
                                 <div class="col-md-4 mb-3">
-                                    <label class="form-label required-field">مقدار (کیلوگرم)</label>
-                                    <input type="number" name="bom-${formCount}-0-quantity" id="id_bom-${formCount}-0-quantity" class="form-control" step="0.001" placeholder="مقدار">
+                                    <label class="form-label required-field">درصد</label>
+                                    <input type="number" name="bom-${formCount}-0-percentage" id="id_bom-${formCount}-0-percentage" class="form-control" step="0.001" placeholder="درصد (0-100)" min="0" max="100">
                                 </div>
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">&nbsp;</label>
