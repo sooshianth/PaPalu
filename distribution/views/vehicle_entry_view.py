@@ -6,6 +6,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 import logging
 from core.logging_levels import *
+import django_tables2 as tables
+from django_tables2 import RequestConfig
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.TransportFolder.TransportModel import Transport
@@ -17,6 +19,7 @@ from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.AllocationFolder.AllocationModel import Allocation
 from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
+from distribution.tables import VehicleEntryTable
 import re
 
 bug_logger = logging.getLogger("bugs")
@@ -64,73 +67,79 @@ def vehicle_entry_list_view(request):
     # دریافت حمل‌های در انتظار ورود به کارخانه
     transports = Transport.objects.filter(
         status='pending_vehicle_entry'
-    ).select_related('driver').prefetch_related(
+    ).select_related('driver', 'allocation').prefetch_related(
         'truck_infos'
     ).order_by('-waybill_date', 'waybill_number')
     
-    # آماده‌سازی اطلاعات حمل‌ها
-    transports_with_info = []
-    for transport in transports:
-        # دریافت اطلاعات راننده
-        driver_name = None
-        driver_national_id = None
-        driver_mobile = None
-        if transport.driver:
-            driver_name = transport.driver.name
-            driver_national_id = transport.driver.national_id
-            # دریافت شماره همراه راننده
-            person_content_type = ContentType.objects.get_for_model(Person)
-            mobile_phone = PhoneNumber.objects.filter(
-                content_type=person_content_type,
-                object_id=transport.driver.national_id,
-                phone_type='mobile'
-            ).first()
-            if mobile_phone:
-                driver_mobile = mobile_phone.number
+    # آماده‌سازی اطلاعات حمل‌ها برای جدول
+    # استفاده از یک class ساده که transport و اطلاعات مرتبط را نگه می‌دارد
+    class TransportRow:
+        def __init__(self, transport):
+            self.transport = transport
+            
+            # دریافت اطلاعات راننده
+            self.driver_name = None
+            self.driver_national_id = None
+            self.driver_mobile = None
+            if transport.driver:
+                self.driver_name = transport.driver.name
+                self.driver_national_id = transport.driver.national_id
+                # دریافت شماره همراه راننده
+                person_content_type = ContentType.objects.get_for_model(Person)
+                mobile_phone = PhoneNumber.objects.filter(
+                    content_type=person_content_type,
+                    object_id=transport.driver.national_id,
+                    phone_type='mobile'
+                ).first()
+                if mobile_phone:
+                    self.driver_mobile = mobile_phone.number
+            
+            # دریافت اطلاعات کامیون
+            truck_info = transport.truck_infos.first()
+            self.plate_number = None
+            self.vehicle_type = None
+            self.loading_type = None
+            if truck_info:
+                self.plate_number = truck_info.plate_number
+                self.vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
+                self.loading_type = truck_info.get_loading_type_display() if truck_info.loading_type else None
+            
+            # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
+            if not self.vehicle_type and transport.vehicle_type_official:
+                self.vehicle_type = transport.get_vehicle_type_official_display()
         
-        # دریافت اطلاعات کامیون
-        truck_info = transport.truck_infos.first()
-        plate_number = None
-        vehicle_type = None
-        loading_type = None
-        if truck_info:
-            plate_number = truck_info.plate_number
-            vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
-            loading_type = truck_info.get_loading_type_display() if truck_info.loading_type else None
+        @property
+        def waybill_number(self):
+            """دسترسی به waybill_number از transport"""
+            return self.transport.waybill_number if self.transport else None
         
-        # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
-        if not vehicle_type and transport.vehicle_type_official:
-            vehicle_type = transport.get_vehicle_type_official_display()
+        @property
+        def allocation(self):
+            """دسترسی به allocation از transport"""
+            return self.transport.allocation if self.transport else None
         
-        # بررسی کامل بودن اطلاعات
-        is_complete = bool(
-            driver_national_id and 
-            driver_name and 
-            driver_mobile and 
-            plate_number
-        )
-        
-        transports_with_info.append({
-            'transport': transport,
-            'driver_name': driver_name,
-            'driver_national_id': driver_national_id,
-            'driver_mobile': driver_mobile,
-            'plate_number': plate_number,
-            'vehicle_type': vehicle_type,
-            'loading_type': loading_type,
-            'is_complete': is_complete,
-        })
+        def __getattr__(self, name):
+            # اگر attribute در self وجود نداشت، از transport بگیر
+            if hasattr(self.transport, name):
+                return getattr(self.transport, name)
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{name}'")
     
-    # بررسی دسترسی فیلدها
-    accessible_person_fields = get_accessible_person_fields(request.user)
-    accessible_truck_info_fields = get_accessible_truck_info_fields(request.user)
+    transports_data = [TransportRow(transport) for transport in transports]
     
-    bug_logger.debug(f"تعداد {len(transports_with_info)} حمل در انتظار ورود به کارخانه لود شد")
+    # ایجاد جدول
+    table = VehicleEntryTable(
+        transports_data,
+        accessible_fields=None,  # table خودش محاسبه می‌کند
+        user=request.user
+    )
+    
+    # تنظیم صفحه‌بندی
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+    
+    bug_logger.debug(f"تعداد {len(transports_data)} حمل در انتظار ورود به کارخانه لود شد")
     
     context = {
-        'transports_with_info': transports_with_info,
-        'accessible_person_fields': accessible_person_fields,
-        'accessible_truck_info_fields': accessible_truck_info_fields,
+        'table': table,
         'page_title': 'لیست حمل‌های در انتظار ورود به کارخانه',
     }
     return render(request, 'distribution/vehicle_entry_list.html', context)
