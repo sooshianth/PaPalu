@@ -1253,6 +1253,21 @@ const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
 const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
 const warehouseDistributionData = JSON.parse('{{ warehouse_distribution_json|escapejs }}');
 const actualConsumptionGlobal = JSON.parse('{{ actual_consumption_json|escapejs }}');
+// Safely parse product flow data; fallback to empty array when not provided
+const _productFlowRaw = '{{ product_flow_status_json|escapejs }}';
+const productFlowStatusData = _productFlowRaw ? JSON.parse(_productFlowRaw) : [];
+
+// Map product -> {inventory, net_unplanned_requirement}
+const productInventoryMap = {};
+if (productFlowStatusData && Array.isArray(productFlowStatusData)) {
+    productFlowStatusData.forEach(flow => {
+        const key = flow.product_id ? String(flow.product_id) : (flow.product || '');
+        productInventoryMap[key] = {
+            inventory: flow.inventory || '0',
+            net_unplanned_requirement: flow.net_unplanned_requirement || '0'
+        };
+    });
+}
 
 // Accessible fields flags (for client-side rendering of dynamic content)
 const accessibleProductionProgramFields = JSON.parse('{{ accessible_production_program_fields_json|escapejs }}');
@@ -1783,6 +1798,9 @@ function confirmCompleteProduction() {
     const weight = document.getElementById('producedWeight').value;
     const completionDate = document.getElementById('completionDate').value;
     const completionTime = document.getElementById('completionTime').value;
+    // Grab stored start datetime for validation
+    const startDateStr = document.getElementById('actualStartDateField') ? document.getElementById('actualStartDateField').value : '';
+    const startTimeStr = document.getElementById('startedAtField') ? document.getElementById('startedAtField').value : '';
     
     if (!weight || weight <= 0) {
         alert('لطفاً وزن تولید شده را وارد کنید.');
@@ -1796,6 +1814,14 @@ function confirmCompleteProduction() {
     
     if (!completionTime) {
         alert('لطفاً زمان تکمیل را وارد کنید.');
+        return;
+    }
+
+    // Validate end datetime is after start datetime when both are available (client-side)
+    const startDt = (startDateStr && startTimeStr) ? new Date(`${startDateStr}T${startTimeStr}`) : null;
+    const endDt = new Date(`${completionDate}T${completionTime}`);
+    if (startDt && !isNaN(startDt.getTime()) && !isNaN(endDt.getTime()) && endDt <= startDt) {
+        alert('زمان پایان واقعی باید بعد از شروع واقعی ثبت شود.');
         return;
     }
     
@@ -1920,6 +1946,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const productionInfoSelect = document.querySelector('#id_production_info');
     const bomDetailsSection = document.getElementById('bom-details-section');
     const bomDetailsContent = document.getElementById('bom-details-content');
+    const inventorySnapshotInput = document.querySelector('[name="inventory_snapshot"]');
+    const netUnplannedInput = document.querySelector('[name="net_unplanned_requirement"]');
+    const hiddenStartDateField = document.getElementById('actualStartDateField');
+    const hiddenStartTimeField = document.getElementById('startedAtField');
     
     // Initially disable production_info if no product is selected
     if (productSelect && !productSelect.value) {
@@ -1928,10 +1958,32 @@ document.addEventListener('DOMContentLoaded', function() {
         productionInfoSelect.style.cursor = 'not-allowed';
     }
     
+    // Function to update inventory fields based on selected product
+    function updateInventoryFields() {
+        if (!inventorySnapshotInput || !netUnplannedInput || !productSelect) return;
+        
+        const productId = productSelect.value;
+        
+        if (productId && productInventoryMap[productId]) {
+            const data = productInventoryMap[productId];
+            // Values arrive as strings (Decimal); format to 3 decimals for display
+            const inventory = parseFloat(data.inventory || '0');
+            const netUnplanned = parseFloat(data.net_unplanned_requirement || '0');
+            inventorySnapshotInput.value = inventory.toFixed(3);
+            netUnplannedInput.value = netUnplanned.toFixed(3);
+        } else {
+            inventorySnapshotInput.value = '0.000';
+            netUnplannedInput.value = '0.000';
+        }
+    }
+    
     // Filter production_info based on selected product
     if (productSelect) {
         productSelect.addEventListener('change', function() {
             const selectedProductId = this.value;
+            
+            // Update inventory fields
+            updateInventoryFields();
             
             // Clear current options (except the first empty one)
             productionInfoSelect.innerHTML = '<option value="">---------</option>';
@@ -1961,6 +2013,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 productionInfoSelect.style.cursor = 'not-allowed';
             }
         });
+    }
+    
+    // Update inventory fields on initial load if product is already selected
+    if (productSelect && productSelect.value) {
+        updateInventoryFields();
+    }
+
+    // Prefill hidden start datetime fields from existing program (for validations)
+    const existingStartDate = '{{ program.actual_start_date|date:"Y-m-d"|default:"" }}';
+    const existingStartTime = '{{ program.started_at|time:"H:i:s"|default:"" }}';
+    if (hiddenStartDateField && existingStartDate && !hiddenStartDateField.value) {
+        hiddenStartDateField.value = existingStartDate;
+    }
+    if (hiddenStartTimeField && existingStartTime && !hiddenStartTimeField.value) {
+        hiddenStartTimeField.value = existingStartTime;
     }
     
     // Show BOM details when production_info is selected
@@ -2181,6 +2248,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (programProductionInfoId && bomData[programProductionInfoId]) {
             displayBOMDetails(bomData[programProductionInfoId]);
             if (bomDetailsSection) bomDetailsSection.style.display = 'block';
+        }
+    }
+    
+    // Update inventory fields on load & whenever product changes
+    if (productSelect) {
+        productSelect.addEventListener('change', updateInventoryFields);
+        if (productSelect.value) {
+            updateInventoryFields();
         }
     }
     

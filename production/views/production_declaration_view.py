@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, permission_required
 from django.urls import reverse
 from django.utils import timezone
+from datetime import datetime, date, time
+import jdatetime
 from django.http import JsonResponse, HttpResponseForbidden
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.template.loader import render_to_string
@@ -29,6 +31,8 @@ from core.StockEntryFolder.SourceStockModel import SourceStock
 from core.StockEntryFolder.TargetStockModel import TargetStock
 from production.forms.program_form import ProductionProgramForm
 from production.forms.production_form import ProductionForm
+# Reuse dashboard helper for inventory snapshot auto-fill (used in program create)
+from production.views.program_views import _get_dashboard_context
 import json
 
 bug_logger = logging.getLogger("bugs")
@@ -853,6 +857,10 @@ def production_declaration_view(request):
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
         can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
         
+        # Product inventory/requirement data (shared with program create view)
+        dashboard_context = _get_dashboard_context()
+        safe_flow = dashboard_context.get('product_flow_status', [])
+        
         # آماده‌سازی context
         context = {
             'confirmed_programs': confirmed_programs,
@@ -880,6 +888,9 @@ def production_declaration_view(request):
             'can_deny': can_deny,
             'can_revert': can_revert,
             'can_archive': can_archive,
+            # Product inventory snapshot + net unplanned requirement (for auto-fill)
+            'product_flow_status': safe_flow,
+            'product_flow_status_json': json.dumps(safe_flow, default=str),
         }
         
         bug_logger.info("Production declaration page loaded successfully")
@@ -1214,6 +1225,9 @@ def production_program_crud_view(request, program_id=None):
                         actual_end_date_str = request.POST.get('actual_end_date')
                         completed_at_str = request.POST.get('completed_at')
                         product_warehouse_id = request.POST.get('product_warehouse')
+                        # Also read posted start values (hidden fields) to validate chronological order
+                        posted_start_date_str = request.POST.get('actual_start_date') or None
+                        posted_start_time_str = request.POST.get('started_at') or None
                         
                         if produced_weight_str:
                             try:
@@ -1244,6 +1258,75 @@ def production_program_crud_view(request, program_id=None):
                             except Warehouse.DoesNotExist:
                                 bug_logger.warning(f"Warehouse with id {product_warehouse_id} not found")
                                 messages.error(request, 'انبار محصول نهایی نامعتبر است')
+                                return redirect(reverse('production:program_crud', args=[program_id]))
+
+                        # Validate actual start/end chronology
+                        start_date_val = instance.actual_start_date if instance and instance.actual_start_date else posted_start_date_str
+                        start_time_val = instance.started_at if instance and instance.started_at else posted_start_time_str
+
+                        def _normalize_digits(s):
+                            if s is None:
+                                return None
+                            persian = "۰۱۲۳۴۵۶۷۸۹"
+                            normalized = []
+                            for ch in str(s):
+                                if ch in persian:
+                                    normalized.append(str(persian.index(ch)))
+                                else:
+                                    normalized.append(ch)
+                            return ''.join(normalized)
+
+                        def _parse_date(val):
+                            if not val:
+                                return None
+                            raw = _normalize_digits(val)
+                            try:
+                                if hasattr(raw, 'togregorian'):
+                                    return raw.togregorian()
+                            except Exception:
+                                pass
+                            try:
+                                return jdatetime.date.fromisoformat(str(raw)).togregorian()
+                            except Exception:
+                                try:
+                                    return datetime.strptime(str(raw), "%Y-%m-%d").date()
+                                except Exception:
+                                    return None
+
+                        def _parse_time(val):
+                            if not val:
+                                return None
+                            raw = _normalize_digits(val)
+                            raw_str = str(raw).strip().upper()
+                            if isinstance(raw, time):
+                                return raw
+                            for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p", "%I:%M:%S %p"):
+                                try:
+                                    return datetime.strptime(raw_str, fmt).time()
+                                except Exception:
+                                    continue
+                            return None
+
+                        # Fall back to persisted start values if they were not posted again
+                        if (not start_date_val or not start_time_val) and instance and instance.pk:
+                            try:
+                                original_program = ProductionProgram.objects.only('actual_start_date', 'started_at').get(pk=instance.pk)
+                                start_date_val = start_date_val or original_program.actual_start_date
+                                start_time_val = start_time_val or original_program.started_at
+                            except ProductionProgram.DoesNotExist:
+                                pass
+
+                        start_date = _parse_date(start_date_val)
+                        start_time = _parse_time(start_time_val)
+                        end_date = _parse_date(actual_end_date_str)
+                        end_time = _parse_time(completed_at_str)
+
+                        # Only enforce ordering when both datetimes are available
+                        if start_date and start_time and end_date and end_time:
+                            start_dt = datetime.combine(start_date, start_time)
+                            end_dt = datetime.combine(end_date, end_time)
+                            if end_dt <= start_dt:
+                                messages.error(request, 'زمان پایان واقعی باید بعد از شروع واقعی ثبت شود.')
                                 return redirect(reverse('production:program_crud', args=[program_id]))
                     
                     # Handle actual consumption data (for COMPLETED status, warehouse-specific)
@@ -1701,6 +1784,10 @@ def production_program_crud_view(request, program_id=None):
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
         can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
         
+        # Product inventory/requirement data (shared with program create view)
+        dashboard_context = _get_dashboard_context()
+        safe_flow = dashboard_context.get('product_flow_status', [])
+        
         # بررسی دسترسی فیلدها
         accessible_production_program_fields = get_accessible_production_program_fields(request.user)
         accessible_product_fields = get_accessible_product_fields(request.user)
@@ -1737,6 +1824,9 @@ def production_program_crud_view(request, program_id=None):
             'accessible_product_fields_json': json.dumps(accessible_product_fields),
             'accessible_raw_material_fields_json': json.dumps(accessible_raw_material_fields),
             'accessible_warehouse_fields_json': json.dumps(accessible_warehouse_fields),
+            # Product inventory snapshot + net unplanned requirement (for auto-fill)
+            'product_flow_status': safe_flow,
+            'product_flow_status_json': json.dumps(safe_flow, default=str),
         }
         
         if is_create:
@@ -1761,6 +1851,13 @@ def production_program_crud_view(request, program_id=None):
         can_deny = user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value)
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
         can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
+        
+        # Product inventory/requirement data (shared with program create view)
+        try:
+            dashboard_context = _get_dashboard_context()
+            safe_flow = dashboard_context.get('product_flow_status', [])
+        except Exception:
+            safe_flow = []
         
         context = {
             'form': ProductionForm(),
@@ -1789,6 +1886,9 @@ def production_program_crud_view(request, program_id=None):
             'accessible_warehouse_fields_json': json.dumps({}),
             'accessible_production_info_fields_json': json.dumps({}),
             'accessible_bom_fields_json': json.dumps({}),
+            # Product inventory snapshot + net unplanned requirement (for auto-fill)
+            'product_flow_status': safe_flow,
+            'product_flow_status_json': json.dumps(safe_flow, default=str),
         }
         return render(request, 'production_declaration_crud.html', context)
 
