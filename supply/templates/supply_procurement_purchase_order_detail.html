@@ -264,7 +264,6 @@
         <table class="simple-table">
           <thead>
             <tr>
-              <th>شماره حمل</th>
               <th>نوع ماشین</th>
               <th>وضعیت حمل</th>
               <th>تاریخ ثبت</th>
@@ -275,17 +274,22 @@
           <tbody>
             {% for transport in transports %}
               <tr>
-                <td>{{ transport.transport_number }}</td>
-                <td>{{ transport.get_vehicle_type_display }}</td>
+                <td>{{ transport.get_vehicle_type_display|default:"—" }}</td>
                 <td>
-                  <span class="badge badge-{{ transport.status }}">
+                  <span class="status-badge status-{{ transport.status }}">
                     {{ transport.get_status_display }}
                   </span>
                 </td>
-                <td>{{ transport.created_at|date:"Y/m/d H:i" }}</td>
-                <td>{{ transport.freight_cost|default:"—" }}</td>
+                <td>{{ transport.created_at|date:"Y/m/d" }}</td>
                 <td>
-                  <a href="{% url 'supply:purchase_transport_detail' transport.transport_number %}" class="btn-link">مشاهده</a>
+                  {% if transport.total_freight %}
+                    {{ transport.total_freight|floatformat:0|default:"—" }}
+                  {% else %}
+                    —
+                  {% endif %}
+                </td>
+                <td>
+                  <a href="{% url 'supply:purchase_transport_detail' transport.transport_number %}" class="btn btn-secondary btn-sm">جزئیات</a>
                 </td>
               </tr>
             {% endfor %}
@@ -293,7 +297,7 @@
         </table>
       </div>
     {% else %}
-      <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem;">هیچ حمل خریدی برای این سفارش ثبت نشده است.</p>
+      <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem;">هیچ حمل خریدی برای این سفارش ثبت نشده است. برای ایجاد حمل جدید، روی دکمه "ثبت حمل جدید" کلیک کنید.</p>
     {% endif %}
 
     <div class="section-title">تاریخچه وضعیت</div>

@@ -84,6 +84,15 @@ def get_accessible_user_fields_for_transport(user):
 
 
 class PurchaseTransportForm(ModelForm):
+    """فرم ایجاد/ویرایش حمل خرید
+    
+    فیلدهای اجباری:
+    - purchase_order (شماره سفارش)
+    - transport_type (نوع حمل)
+    - vehicle_type (نوع ماشین)
+    
+    بقیه فیلدها اختیاری هستند.
+    """
     class Meta:
         model = PurchaseTransport
         fields = [
@@ -150,6 +159,11 @@ class PurchaseTransportForm(ModelForm):
         super().__init__(*args, **kwargs)
         from core.PersonFolder.PersonModel import Person
         
+        # فیلدهای اجباری
+        self.fields['purchase_order'].required = True
+        self.fields['transport_type'].required = True
+        self.fields['vehicle_type'].required = True
+        
         # Filter purchase orders that are not in draft or completed status
         self.fields['purchase_order'].queryset = ProcurementPurchaseOrder.objects.exclude(
             status__in=[
@@ -162,6 +176,10 @@ class PurchaseTransportForm(ModelForm):
         self.fields['driver'].queryset = Person.objects.filter(type='driver').order_by('name')
         self.fields['driver_account_number'].queryset = Person.objects.filter(type='driver').order_by('name')
         self.fields['driver_sheba_number'].queryset = Person.objects.filter(type='driver').order_by('name')
+        
+        # تنظیم مقدار پیش‌فرض برای transport_type
+        if not self.instance.pk:  # فقط برای ایجاد جدید
+            self.fields['transport_type'].initial = 'inbound'  # دیفالت ورودی در تامین
 
 
 @login_required
@@ -314,15 +332,34 @@ def create_purchase_transport_view(request):
             if form.is_valid():
                 with transaction.atomic():
                     pt = form.save(commit=False)
-                    pt.status = PurchaseTransport.STATUS_DRAFT
                     pt.created_by = request.user
                     pt.save()
-                    # Send notification when created
-                    pt.send_guard_notification()
-                messages.success(request, 'حمل ثبت شد.')
+                    
+                    bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number}")
+                    
+                    # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
+                    pt.transition(
+                        PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY,
+                        user=request.user,
+                        note='ثبت اولیه حمل'
+                    )
+                    
+                    bug_logger.info(f"وضعیت حمل {pt.transport_number} به 'در انتظار ورود خودرو' تغییر یافت")
+                    
+                    # ارسال اعلان به نگهبان
+                    try:
+                        pt.send_guard_notification()
+                        bug_logger.info(f"اعلان نگهبان برای حمل {pt.transport_number} ارسال شد")
+                    except Exception as notif_err:
+                        bug_logger.warning(f"خطا در ارسال اعلان نگهبان برای حمل {pt.transport_number}: {notif_err}")
+                    
+                    audit_logger.info(f"حمل جدید ایجاد شد - شماره: {pt.transport_number} - سفارش: {pt.purchase_order.order_number}")
+                    
+                messages.success(request, f'حمل {pt.transport_number} ثبت شد و اعلان به نگهبان ارسال شد.')
                 return redirect(reverse('supply:purchase_transport_list'))
             else:
                 bug_logger.warning(f"Purchase transport form invalid: {form.errors}")
+                audit_logger.activity(f"فرم نامعتبر برای ایجاد حمل")
         else:
             if initial_order:
                 form = PurchaseTransportForm(initial={'purchase_order': initial_order})

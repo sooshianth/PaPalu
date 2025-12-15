@@ -589,7 +589,8 @@ class PurchaseTransportTable(tables.Table):
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
         model = PurchaseTransport
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('transport_number', 'purchase_order', 'purchase_order_status', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
+        # فیلدهای مورد نیاز برای لیست حمل‌ها
+        fields = ('purchase_order', 'created_at', 'transport_type', 'vehicle_type', 'status', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.85rem'
@@ -597,7 +598,8 @@ class PurchaseTransportTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('transport_number', 'purchase_order', 'purchase_order_status', 'transport_type', 'vehicle_type', 'status', 'plate_number', 'expected_arrival_date', 'created_at', 'actions')
+        # ستون‌های مورد نیاز: شماره سفارش، تاریخ ثبت، نوع حمل، نوع ماشین، وضعیت، جزئیات
+        sequence = ('purchase_order', 'created_at', 'transport_type', 'vehicle_type', 'status', 'actions')
     
     def render_purchase_order_status(self, record):
         """نمایش وضعیت سفارش خرید"""
@@ -1047,8 +1049,18 @@ class LogisticConfirmationTable(tables.Table):
     )
     
     delivery_date = tables.DateColumn(
-        verbose_name='تاریخ تحویل',
+        verbose_name='تاریخ خروج خودرو',
         format='Y-m-d',
+        orderable=True,
+        visible=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    status = tables.Column(
+        verbose_name='وضعیت حمل',
         orderable=True,
         visible=False,
         attrs={
@@ -1087,13 +1099,16 @@ class LogisticConfirmationTable(tables.Table):
             if hasattr(self.base_columns, 'net_weight'):
                 self.base_columns['net_weight'].visible = accessible_fields.get('net_weight', False)
             if hasattr(self.base_columns, 'delivery_date'):
-                self.base_columns['delivery_date'].visible = accessible_fields.get('created_at', False)
+                self.base_columns['delivery_date'].visible = accessible_fields.get('delivery_date', False)
+            if hasattr(self.base_columns, 'status'):
+                self.base_columns['status'].visible = accessible_fields.get('status', False)
     
     class Meta:
         from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
         model = PurchaseTransport
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('transport_number', 'purchase_order', 'supplier', 'raw_materials', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
+        # فیلدهای مورد نیاز برای لیست حمل‌های در انتظار تسویه
+        fields = ('purchase_order', 'raw_materials', 'plate_number', 'net_weight', 'delivery_date', 'status', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'id': 'logisticConfirmationTable',
@@ -1102,7 +1117,8 @@ class LogisticConfirmationTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('transport_number', 'purchase_order', 'supplier', 'raw_materials', 'vehicle_type', 'plate_number', 'driver', 'net_weight', 'delivery_date', 'actions')
+        # ستون‌های مورد نیاز: شماره سفارش، نوع ماده اولیه، پلاک خودرو، مقدار تحویلی (خالص)، تاریخ خروج خودرو، وضعیت حمل، عملیات
+        sequence = ('purchase_order', 'raw_materials', 'plate_number', 'net_weight', 'delivery_date', 'status', 'actions')
     
     def render_raw_materials(self, record):
         """نمایش مواد اولیه سفارش (ممکن چندتا باشد)"""
@@ -1144,26 +1160,35 @@ class LogisticConfirmationTable(tables.Table):
         return value or '—'
     
     def render_net_weight(self, value):
-        """نمایش وزن خالص با فرمت عددی"""
+        """نمایش مقدار تحویلی (خالص) با فرمت عددی"""
         if value:
             # Convert to float and format it as Persian number
             formatted_value = format_number_persian(value, decimal_places=2)
-            return format_html('{}', formatted_value)
+            return format_html('{} کیلوگرم', formatted_value)
         return '—'
     
     def render_delivery_date(self, value):
-        """نمایش تاریخ تحویل"""
+        """نمایش تاریخ خروج خودرو"""
         if value:
             return value.strftime('%Y/%m/%d')
         return '—'
     
+    def render_status(self, value, record):
+        """نمایش وضعیت حمل به صورت badge"""
+        status_class = f'status-{record.status}'
+        return format_html(
+            '<span class="status-badge {}">{}</span>',
+            status_class,
+            record.get_status_display()
+        )
+    
     def render_actions(self, record):
-        """نمایش دکمه‌های عملیات"""
+        """نمایش دکمه جزئیات"""
         if not record.transport_number:
             return format_html('<span class="text-muted">شماره حمل ناموجود</span>')
         detail_url = reverse('supply:logistic_confirmation_detail', kwargs={'transport_number': record.transport_number})
         return format_html(
-            '<a href="{}" class="btn btn-sm btn-primary">تایید لجستیک</a>',
+            '<a href="{}" class="btn btn-sm btn-primary">جزئیات</a>',
             detail_url
         )
 

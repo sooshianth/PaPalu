@@ -6,6 +6,7 @@ from django.http import HttpResponseForbidden
 from django import forms
 from django.forms import ModelForm
 from django_tables2 import RequestConfig
+from django.utils import timezone
 import logging
 from core.logging_levels import *
 
@@ -233,49 +234,62 @@ def logistic_confirmation_detail_view(request, transport_number):
             return redirect('supply:logistic_confirmation_list')
         
         if request.method == 'POST':
-            form = LogisticConfirmationForm(request.POST, instance=transport)
-            
-            if form.is_valid():
-                try:
-                    # Save the transport with financial data
-                    transport = form.save()
-                    
+            # تأیید نهایی بدون نیاز به فرم - همه فیلدها فقط خواندنی هستند
+            try:
+                from django.db import transaction
+                with transaction.atomic():
                     # Transition to awaiting payment doc status
                     transport.transition(
                         new_status=PurchaseTransport.STATUS_AWAITING_PAYMENT_DOC,
                         user=request.user,
-                        note='تایید لجستیک و تکمیل اطلاعات مالی'
+                        note='تایید نهایی لجستیک - تطبیق داده‌های وزنی و مالی با بارنامه'
                     )
+                    
+                    # بررسی وضعیت سفارش خرید
+                    po = transport.purchase_order
+                    # اگر تمام حمل‌های سفارش در وضعیت awaiting_payment_doc یا بالاتر باشند
+                    all_settled = not po.transports.exclude(
+                        status__in=[
+                            PurchaseTransport.STATUS_AWAITING_PAYMENT_DOC,
+                            PurchaseTransport.STATUS_PAYMENT_DOC_UPLOADED,
+                            PurchaseTransport.STATUS_COMPLETED
+                        ]
+                    ).exists()
+                    
+                    # اگر تمام حمل‌های سفارش تسویه شدند، وضعیت سفارش را به "در انتظار تسویه نهایی" تغییر می‌دهیم
+                    if all_settled:
+                        if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                            po.transition(
+                                ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT,
+                                user=request.user,
+                                note='همه حمل‌های سفارش تسویه شدند'
+                            )
+                            bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
+                            audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تسویه همه حمل‌ها به‌روزرسانی شد")
                     
                     # Log successful completion
                     audit_logger.info(
-                        f"تایید لجستیک موفق - حمل {transport_number} | "
-                        f"نوع_کرایه: {transport.freight_payment_type} | "
-                        f"کرایه_کل: {transport.total_freight} | "
-                        f"کرایه_پرداختی: {transport.freight_payment}"
+                        f"تایید نهایی لجستیک - حمل {transport_number} | "
+                        f"کاربر: {request.user.username} | "
+                        f"زمان: {timezone.now()}"
                     )
                     
-                    messages.success(request, 'تایید لجستیک با موفقیت انجام شد و وضعیت به تسویه شده تغییر یافت.')
-                    return redirect('supply:logistic_confirmation_list')
+                    bug_logger.info(f"تایید لجستیک موفق - حمل {transport_number}")
                     
-                except ValueError as ve:
-                    bug_logger.warning(f"خطای تغییر وضعیت در تایید لجستیک - حمل {transport_number}: {str(ve)}")
-                    messages.error(request, f'خطا در تغییر وضعیت: {str(ve)}')
-                except Exception as e:
-                    bug_logger.error(f"خطا در تایید لجستیک - حمل {transport_number}: {str(e)}", exc_info=True)
-                    messages.error(request, 'خطا در ثبت تایید لجستیک')
-            else:
-                bug_logger.warning(f"فرم تایید لجستیک نامعتبر - حمل {transport_number}: {form.errors}")
-                messages.error(request, 'لطفا خطاهای فرم را بررسی کنید.')
-        else:
-            form = LogisticConfirmationForm(instance=transport)
+                messages.success(request, 'تایید نهایی لجستیک با موفقیت انجام شد و وضعیت به "در انتظار بارگذاری اسناد پرداخت کرایه" تغییر یافت.')
+                return redirect('supply:logistic_confirmation_list')
+                    
+            except ValueError as ve:
+                bug_logger.warning(f"خطای تغییر وضعیت در تایید لجستیک - حمل {transport_number}: {str(ve)}")
+                messages.error(request, f'خطا در تغییر وضعیت: {str(ve)}')
+            except Exception as e:
+                bug_logger.error(f"خطا در تایید لجستیک - حمل {transport_number}: {str(e)}", exc_info=True)
+                messages.error(request, 'خطا در ثبت تایید لجستیک')
         
         context = {
             'transport': transport,
-            'form': form,
             'purchase_order': transport.purchase_order,
-            'accessible_transport_fields': accessible_transport_fields,
-            'accessible_transport_fields_view': accessible_transport_fields_view,
+            'accessible_transport_fields': accessible_transport_fields_view,
             'accessible_po_fields': accessible_po_fields,
             'accessible_person_fields': accessible_person_fields,
         }

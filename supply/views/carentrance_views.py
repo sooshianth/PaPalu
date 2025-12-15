@@ -146,12 +146,46 @@ def get_accessible_user_fields_for_carentrance(user):
 
 
 class CarEntranceDriverForm(forms.Form):
-    phone = forms.CharField(label='شماره تلفن راننده', required=True, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    name = forms.CharField(label='نام راننده', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    national_id = forms.CharField(label='کد ملی', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    plate_number = forms.CharField(label='پلاک', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    account = forms.CharField(label='شماره حساب', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    sheba = forms.CharField(label='شماره شبا', required=False, widget=forms.TextInput(attrs={'class': 'form-control'}))
+    """فرم ثبت اطلاعات راننده برای ورود خودرو
+    
+    فیلدهای اجباری:
+    - نام راننده
+    - شماره تلفن راننده
+    - شماره حساب راننده
+    - شماره شبا راننده
+    - پلاک
+    - کد ملی راننده
+    """
+    phone = forms.CharField(
+        label='شماره تلفن راننده',
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '09123456789'})
+    )
+    name = forms.CharField(
+        label='نام راننده',
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'نام و نام خانوادگی راننده'})
+    )
+    national_id = forms.CharField(
+        label='کد ملی راننده',
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'کد ملی 10 رقمی'})
+    )
+    plate_number = forms.CharField(
+        label='پلاک',
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12الف34567'})
+    )
+    account = forms.CharField(
+        label='شماره حساب راننده',
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'شماره حساب بانکی'})
+    )
+    sheba = forms.CharField(
+        label='شماره شبا راننده',
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'IR123456789012345678901234'})
+    )
 
 
 class CarEntranceTable(PurchaseTransportTable):
@@ -187,19 +221,16 @@ class CarEntranceTable(PurchaseTransportTable):
         return '—'
     
     def render_actions(self, record):
+        """نمایش دکمه ثبت راننده برای هر رکورد"""
         register_url = reverse('supply:carentrance_register_driver', args=[record.transport_number])
-        enter_url = reverse('supply:carentrance_mark_entered', args=[record.transport_number])
         return format_html(
-            '<div class="btn-group">'
-            '<a href="{}" class="btn btn-primary btn-sm">ثبت راننده</a>'
-            '<a href="{}" class="btn btn-success btn-sm" style="margin-left:6px">ثبت ورود</a>'
-            '</div>',
-            register_url,
-            enter_url
+            '<a href="{}" class="btn btn-primary btn-sm">ثبت راننده</a>',
+            register_url
         )
     
     class Meta(PurchaseTransportTable.Meta):
-        sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'status', 'created_at', 'actions')
+        sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
 
 @login_required
@@ -219,22 +250,14 @@ def car_entrance_list_view(request):
     accessible_person_fields = get_accessible_person_fields_for_carentrance(request.user)
     
     try:
-        # نمایش حمل‌های ورودی (inbound) که در وضعیت "در انتظار ورود خودرو" هستند
-        # یا سفارش خرید آنها در وضعیت "در انتظار ورود خودرو" است
-        # همچنین حمل‌هایی که transport_ref دارند و direction آنها inbound و status آنها pending_vehicle_entry است
-        from core.TransportFolder.TransportModel import Transport
+        # نمایش فقط حمل‌هایی که در وضعیت "در انتظار ورود خودرو" هستند
+        # این حمل‌ها باید دارای اطلاعات پایه (نوع ماشین، نوع حمل) باشند
+        # ولی فاقد داده‌های کامل راننده باشند
         transports = PurchaseTransport.objects.filter(
-            (
-                Q(transport_type='inbound') & (
-                    Q(status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY) |
-                    Q(purchase_order__status=ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY)
-                )
-            ) | Q(
-                transport_ref__direction='inbound',
-                transport_ref__status='pending_vehicle_entry'
-            )
-        ).select_related('purchase_order', 'driver', 'transport_ref').order_by('-created_at')
-        bug_logger.debug(f"تعداد حمل‌های ورودی پیدا شده برای ورود خودرو: {transports.count()}")
+            status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY,
+            transport_type='inbound'
+        ).select_related('purchase_order', 'driver', 'purchase_order__supplier').order_by('-created_at')
+        bug_logger.debug(f"تعداد حمل‌های در انتظار ورود خودرو: {transports.count()}")
         table = CarEntranceTable(transports, prefix='car-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table)
         
@@ -289,68 +312,73 @@ def register_driver_for_transport_view(request, transport_number):
             audit_logger.info(f"شروع ثبت راننده برای حمل {transport_number}")
             try:
                 with transaction.atomic():
-                    # try to find driver by phone
+                    # جستجوی راننده با شماره تلفن
                     driver = Person.objects.filter(phone_number=phone, type='driver').first()
                     if not driver:
-                        bug_logger.info(f"راننده جدید با شماره تلفن ایجاد شد برای حمل {transport_number}")
-                        # create a minimal driver record
+                        bug_logger.info(f"ایجاد راننده جدید با شماره تلفن {phone} برای حمل {transport_number}")
+                        # ایجاد رکورد راننده جدید
                         driver = Person.objects.create(
-                            name=data.get('name') or 'راننده ثبت نشده',
+                            name=data.get('name'),
                             phone_number=phone,
-                            national_id=data.get('national_id') or None,
+                            national_id=data.get('national_id'),
                             type='driver'
                         )
-                        audit_logger.info(f"راننده جدید ایجاد شد برای حمل {transport_number}")
+                        audit_logger.info(f"راننده جدید ایجاد شد - شناسه: {driver.pk} - نام: {driver.name}")
                     else:
-                        bug_logger.debug(f"راننده موجود یافت شد برای حمل {transport_number}")
+                        bug_logger.debug(f"راننده موجود یافت شد - شناسه: {driver.pk} - نام: {driver.name}")
+                        # به‌روزرسانی اطلاعات راننده در صورت نیاز
+                        if driver.name != data.get('name'):
+                            driver.name = data.get('name')
+                        if driver.national_id != data.get('national_id'):
+                            driver.national_id = data.get('national_id')
+                        driver.save()
                     
-                    # Update transport fields
+                    # به‌روزرسانی فیلدهای حمل
                     pt.driver = driver
-                    if data.get('plate_number'):
-                        pt.plate_number = data.get('plate_number')
-                    # Store account/sheba as actual values
-                    if data.get('account'):
-                        pt.driver_account_number = data.get('account')
-                    if data.get('sheba'):
-                        pt.driver_sheba_number = data.get('sheba')
+                    pt.plate_number = data.get('plate_number')
+                    pt.driver_account_number = data.get('account')
+                    pt.driver_sheba_number = data.get('sheba')
                     
-                    # Record actual arrival time (gate entry time)
+                    # ثبت زمان ورود خودرو (GateEntryTime)
                     today_jalali = jdatetime.date.today()
                     pt.actual_arrival_date = today_jalali
                     pt.save()
                     
                     bug_logger.info(f"اطلاعات راننده و زمان ورود برای حمل {transport_number} ثبت شد")
                     
-                    # Transition to awaiting_unloading (در انتظار تخلیه)
+                    # تغییر وضعیت به "در انتظار تخلیه"
                     try:
                         pt.transition(
                             PurchaseTransport.STATUS_AWAITING_UNLOADING,
                             user=request.user,
-                            note=f'ثبت ورود خودرو توسط نگهبان - راننده: {driver.name} - پلاک: {pt.plate_number or "ثبت نشده"}'
+                            note=f'ثبت ورود خودرو توسط نگهبان - راننده: {driver.name} - پلاک: {pt.plate_number}'
                         )
                         bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تخلیه' تغییر یافت")
                     except Exception as trans_err:
                         bug_logger.error(f"خطا در تغییر وضعیت حمل {transport_number}: {trans_err}")
                         raise
                     
-                    # Update purchase order status to awaiting_delivery (در انتظار تحویل بار)
+                    # تغییر وضعیت سفارش خرید به "در انتظار تحویل بار"
                     po = pt.purchase_order
-                    if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY:
-                        po.transition(
-                            ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY,
-                            user=request.user,
-                            note='ورود خودرو ثبت شد'
-                        )
-                        bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
-                        audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال ورود خودرو به‌روزرسانی شد")
+                    if po and po.status == ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY:
+                        try:
+                            po.transition(
+                                ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY,
+                                user=request.user,
+                                note=f'ورود خودرو ثبت شد - حمل: {transport_number}'
+                            )
+                            bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
+                            audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال ورود خودرو به‌روزرسانی شد")
+                        except Exception as po_err:
+                            bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number}: {po_err}")
                     
-                    audit_logger.info(f"ورود خودرو ثبت شد - حمل: {transport_number} - راننده: {driver.name}")
+                    audit_logger.info(f"ورود خودرو ثبت شد - حمل: {transport_number} - راننده: {driver.name} - پلاک: {pt.plate_number}")
                     
                 messages.success(request, 'اطلاعات راننده ثبت شد و ورود خودرو ثبت گردید.')
                 return redirect(reverse('supply:carentrance'))
             except Exception as e:
-                bug_logger.error(f"خطا در ثبت راننده برای حمل {transport_number}: {e}")
-                messages.error(request, 'خطا در ثبت اطلاعات راننده.')
+                bug_logger.error(f"خطا در ثبت راننده برای حمل {transport_number}: {e}", exc_info=True)
+                messages.error(request, f'خطا در ثبت اطلاعات راننده: {str(e)}')
         else:
             bug_logger.warning(f"فرم ثبت راننده نامعتبر برای حمل {transport_number}: {form.errors}")
             audit_logger.activity(f"فرم نامعتبر برای ثبت راننده حمل {transport_number}")
@@ -375,92 +403,78 @@ def register_driver_for_transport_view(request, transport_number):
     return render(request, 'supply_carentrance_register.html', context)
 
 
-@login_required
-def mark_vehicle_entered_view(request, transport_number):
-    """علامت‌گذاری سریع ورود خودرو بدون اطلاعات راننده کامل - انتقال مستقیم به در انتظار تخلیه"""
-    audit_logger.info(f"ثبت سریع ورود خودرو برای حمل {transport_number}")
-    
-    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
-        audit_logger.activity(f"تلاش برای ثبت سریع ورود بدون دسترسی - حمل {transport_number}")
-        messages.error(request, 'شما دسترسی به این عملیات را ندارید.')
-        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
-    
-    # Check field access for actual_arrival_date before updating
-    accessible_transport_fields = get_accessible_purchase_transport_fields_edit(request.user)
-    if not accessible_transport_fields.get('actual_arrival_date'):
-        audit_logger.activity(f"تلاش برای ثبت سریع ورود بدون دسترسی به فیلد actual_arrival_date - حمل {transport_number}")
-        messages.error(request, 'شما دسترسی به تغییر تاریخ ورود را ندارید.')
-        return HttpResponseForbidden('شما دسترسی به تغییر این فیلد را ندارید.')
-    
-    pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
-    
-    if pt.status != PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY:
-        audit_logger.activity(f"تلاش برای ثبت سریع ورود برای حمل {transport_number} با وضعیت نامعتبر: {pt.status}")
-        messages.error(request, 'این حمل در وضعیت قابل ثبت ورود نیست.')
-        return redirect(reverse('supply:carentrance'))
-    
-    try:
-        with transaction.atomic():
-            # Record actual arrival time
-            today_jalali = jdatetime.date.today()
-            pt.actual_arrival_date = today_jalali
-            pt.save(update_fields=['actual_arrival_date'])
-            
-            # Transition to awaiting_unloading
-            pt.transition(
-                PurchaseTransport.STATUS_AWAITING_UNLOADING,
-                user=request.user,
-                note='ثبت سریع ورود خودرو توسط نگهبان (بدون ثبت کامل راننده)'
-            )
-            
-            # Update purchase order status
-            po = pt.purchase_order
-            if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY:
-                po.transition(
-                    ProcurementPurchaseOrder.STATUS_AWAITING_DELIVERY,
-                    user=request.user,
-                    note='ثبت سریع ورود خودرو'
-                )
-                bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
-            
-            audit_logger.info(f"ورود سریع خودرو ثبت شد - حمل: {transport_number}")
-            
-        messages.success(request, 'ورود خودرو ثبت شد.')
-    except ValueError as ve:
-        bug_logger.warning(f"انتقال نامعتبر برای حمل {transport_number}: {ve}")
-        messages.error(request, str(ve))
-    except Exception as e:
-        bug_logger.error(f"خطا در ثبت سریع ورود برای حمل {transport_number}: {e}")
-        messages.error(request, 'خطا در ثبت ورود خودرو.')
-    return redirect(reverse('supply:carentrance'))
 
 
 @login_required
 def driver_lookup_api(request):
-    """API ساده برای جستجوی راننده با شماره تلفن (برای autofill)"""
+    """API برای جستجوی راننده با شماره تلفن (برای autofill)
+    
+    اطلاعات راننده را از آخرین حمل او نیز استخراج می‌کند (account و sheba)
+    """
     phone = request.GET.get('phone')
     if not phone:
         return JsonResponse({'error': 'phone_required'}, status=400)
+    
     try:
         driver = Person.objects.filter(phone_number=phone, type='driver').first()
         if not driver:
             return JsonResponse({'found': False})
+        
+        # جستجوی آخرین حمل راننده برای دریافت account و sheba
+        last_transport = PurchaseTransport.objects.filter(
+            driver=driver
+        ).exclude(
+            driver_account_number__isnull=True,
+            driver_sheba_number__isnull=True
+        ).order_by('-created_at').first()
+        
         data = {
             'found': True,
-            'name': driver.name,
-            'national_id': getattr(driver, 'national_id', ''),
-            'phone': driver.phone_number,
+            'name': driver.name or '',
+            'national_id': getattr(driver, 'national_id', '') or '',
+            'phone': driver.phone_number or '',
+            'account': last_transport.driver_account_number if last_transport and last_transport.driver_account_number else '',
+            'sheba': last_transport.driver_sheba_number if last_transport and last_transport.driver_sheba_number else '',
         }
+        
+        bug_logger.debug(f"Driver lookup successful for phone {phone}: {data.get('name')}")
         return JsonResponse(data)
     except Exception as e:
-        bug_logger.error(f"Driver lookup error for phone {phone}: {e}")
+        bug_logger.error(f"Driver lookup error for phone {phone}: {e}", exc_info=True)
         return JsonResponse({'error': 'lookup_failed'}, status=500)
 
 
 class CarExitTable(PurchaseTransportTable):
-    """جدول برای خودروهای در انتظار خروج"""
+    """جدول برای خودروهای در انتظار تخلیه"""
+    raw_materials = tables.Column(
+        verbose_name='نام مواد اولیه',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    def __init__(self, *args, accessible_fields=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if accessible_fields:
+            if hasattr(self.base_columns, 'raw_materials'):
+                self.base_columns['raw_materials'].visible = accessible_fields.get('purchase_order', False)
+    
+    def render_raw_materials(self, record):
+        """نمایش لیست مواد اولیه از سفارش خرید"""
+        if not record.purchase_order:
+            return '—'
+        materials = record.purchase_order.materials.select_related('raw_material').all()
+        if materials:
+            names = [m.raw_material.name for m in materials if m.raw_material]
+            return format_html('<br>'.join(names)) if names else '—'
+        return '—'
+    
     def render_actions(self, record):
-        # خروج خودرو فقط بعد از تکمیل تحویل انبار فعال است
+        """نمایش دکمه خروج ماشین - فقط برای حمل‌های تکمیل شده فعال است"""
+        # خروج خودرو فقط بعد از تکمیل تحویل انبار (وضعیت completed) فعال است
         if record.status == PurchaseTransport.STATUS_COMPLETED:
             exit_url = reverse('supply:carexit_mark_exited', args=[record.transport_number])
             return format_html(
@@ -471,30 +485,59 @@ class CarExitTable(PurchaseTransportTable):
             return format_html(
                 '<span class="badge badge-secondary" style="font-size:0.7rem">در انتظار تحویل انبار</span>'
             )
+    
+    class Meta(PurchaseTransportTable.Meta):
+        sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
 
 @login_required
 def car_exit_list_view(request):
-    """صفحه لیست خروج خودروها مخصوص نگهبان - خودروهایی که وارد شده‌اند و در حال فرآیند تخلیه و تحویل هستند."""
-    audit_logger.info("مشاهده صفحه خروج خودرو (نگهبان)")
+    """صفحه لیست خودروهای در انتظار تخلیه مخصوص نگهبان - خودروهایی که وارد شده‌اند و در حال فرآیند تخلیه هستند."""
+    audit_logger.info("مشاهده صفحه خودروهای در انتظار تخلیه (نگهبان)")
+    
+    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
+        audit_logger.activity("تلاش برای دسترسی به صفحه خروج خودرو بدون دسترسی")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions
+    accessible_transport_fields = get_accessible_purchase_transport_fields(request.user)
+    accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_carentrance(request.user)
+    accessible_raw_material_fields = get_accessible_raw_material_fields_for_carentrance(request.user)
+    accessible_person_fields = get_accessible_person_fields_for_carentrance(request.user)
+    
     try:
-        # نمایش حمل‌هایی که از مرحله تخلیه به بعد هستند و هنوز خارج نشده‌اند
+        # نمایش فقط حمل‌هایی که در وضعیت "در انتظار تخلیه" هستند
+        # این حمل‌ها پس از ثبت ورود خودرو وارد این لیست می‌شوند
         transports = PurchaseTransport.objects.filter(
-            status__in=[
-                PurchaseTransport.STATUS_AWAITING_UNLOADING,
-                PurchaseTransport.STATUS_AWAITING_DELIVERY,
-                PurchaseTransport.STATUS_AWAITING_WH_RECONCILIATION,
-                PurchaseTransport.STATUS_COMPLETED
-            ]
-        ).select_related('purchase_order', 'driver').order_by('status', 'created_at')
+            status=PurchaseTransport.STATUS_AWAITING_UNLOADING,
+            transport_type='inbound'
+        ).select_related('purchase_order', 'driver', 'purchase_order__supplier').order_by('-created_at')
         
-        table = CarExitTable(transports, prefix='exit-')
+        bug_logger.debug(f"تعداد حمل‌های در انتظار تخلیه: {transports.count()}")
+        
+        table = CarExitTable(transports, prefix='exit-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table)
-        return render(request, 'supply_carexit_list.html', {'table': table})
+        
+        context = {
+            'table': table,
+            'accessible_transport_fields': accessible_transport_fields,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_person_fields': accessible_person_fields,
+        }
+        return render(request, 'supply_carexit_list.html', context)
     except Exception as e:
-        bug_logger.error(f"Car exit list error: {e}")
-        messages.error(request, 'خطا در بارگذاری لیست خروج خودروها.')
-        return render(request, 'supply_carexit_list.html', {'table': CarExitTable([], prefix='exit-')})
+        bug_logger.error(f"Car exit list error: {e}", exc_info=True)
+        messages.error(request, 'خطا در بارگذاری لیست خودروهای در انتظار تخلیه.')
+        return render(request, 'supply_carexit_list.html', {
+            'table': CarExitTable([], prefix='exit-'),
+            'accessible_transport_fields': accessible_transport_fields,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_raw_material_fields': accessible_raw_material_fields,
+            'accessible_person_fields': accessible_person_fields,
+        })
 
 
 @login_required

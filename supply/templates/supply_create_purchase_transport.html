@@ -30,56 +30,70 @@
 {% block content %}
 <form method="post" class="form-wrapper">
   {% csrf_token %}
-  <h4>ایجاد حمل خرید جدید</h4>
+  <h4>تعریف حمل خرید</h4>
   
-  <div class="section-title">اطلاعات اصلی حمل</div>
+  <div class="section-title">داده پررکردنی اجباری</div>
   
   {% if accessible_transport_fields.purchase_order %}
   <div class="form-group">
-    <label>{{ form.purchase_order.label }}{% if form.purchase_order.field.required %} *{% endif %}</label>
-    {{ form.purchase_order }}
+    <label>{{ form.purchase_order.label }} <span style="color:#d32f2f">*</span></label>
+    {% if initial_order %}
+      <input type="text" class="form-control" value="{{ initial_order.order_number }}" readonly style="background:#f5f5f5;cursor:not-allowed">
+      <input type="hidden" name="purchase_order" value="{{ initial_order.pk }}">
+    {% else %}
+      {{ form.purchase_order }}
+    {% endif %}
     {% if form.purchase_order.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.purchase_order.errors|join:'، ' }}</div>{% endif %}
     <small style="font-size:.65rem;color:#666;margin-top:2px">انتخاب سفارش خرید که در وضعیت "در انتظار تعریف حمل" یا بعد از آن است</small>
   </div>
   {% endif %}
   
-  {% if initial_order %}
-  <div id="order-info-display" style="grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px">
-    <div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div>
-    <div style="font-size:.75rem;color:#546e7a">
-      <div><strong>تاریخ سفارش:</strong> {{ initial_order.created_at|date:"Y/m/d" }}</div>
-      <div><strong>تأمین‌کننده:</strong> {{ initial_order.supplier.name }}</div>
-      <div style="margin-top:6px"><strong>مواد اولیه:</strong></div>
-      <ul style="margin:4px 0 0 20px;padding:0">
-        {% for material in initial_order.materials.all %}
-          <li>{{ material.raw_material.name }} - {{ material.quantity }} {{ material.unit }}</li>
-        {% endfor %}
-      </ul>
-    </div>
-  </div>
-  {% endif %}
-  
   {% if accessible_transport_fields.transport_type %}
   <div class="form-group">
-    <label>{{ form.transport_type.label }}{% if form.transport_type.field.required %} *{% endif %}</label>
+    <label>{{ form.transport_type.label }} <span style="color:#d32f2f">*</span></label>
     {{ form.transport_type }}
     {% if form.transport_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.transport_type.errors|join:'، ' }}</div>{% endif %}
+    <small style="font-size:.65rem;color:#666;margin-top:2px">دیفالت: ورودی در تامین</small>
   </div>
   {% endif %}
   
   <div class="section-divider"></div>
-  <div class="section-title">اطلاعات خودرو و راننده</div>
+  <div class="section-title">داده دیدنی</div>
   
-  <div class="form-row-2">
-    {% if accessible_transport_fields.vehicle_type %}
-    <div class="form-group" style="order:1">
-      <label>{{ form.vehicle_type.label }}{% if form.vehicle_type.field.required %} *{% endif %}</label>
-      {{ form.vehicle_type }}
-      {% if form.vehicle_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.vehicle_type.errors|join:'، ' }}</div>{% endif %}
+  {% if initial_order %}
+  <div id="order-info-display" style="grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px;border-right:4px solid var(--primary-green)">
+    <div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div>
+    <div style="font-size:.75rem;color:#546e7a">
+      <div><strong>تاریخ سفارش:</strong> {{ initial_order.created_at|date:"Y/m/d" }}</div>
+      <div style="margin-top:6px"><strong>مواد اولیه:</strong></div>
+      <ul style="margin:4px 0 0 20px;padding:0">
+        {% for material in initial_order.materials.all %}
+          <li><strong>نام ماده اولیه:</strong> {{ material.raw_material.name }} | <strong>مقدار:</strong> {{ material.quantity }} | <strong>واحد:</strong> {{ material.unit }}</li>
+        {% endfor %}
+      </ul>
     </div>
-    {% endif %}
-    
-    {% if accessible_transport_fields.plate_number %}
+  </div>
+  {% else %}
+  <div id="order-info-display" style="grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px;border-right:4px solid var(--primary-green);display:none">
+    <div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div>
+    <div style="font-size:.75rem;color:#546e7a" id="order-info-content">
+      <!-- محتوا به صورت داینامیک پر می‌شود -->
+    </div>
+  </div>
+  {% endif %}
+  
+  <div class="section-divider"></div>
+  <div class="section-title">داده پر کردنی اختیاری</div>
+  
+  {% if accessible_transport_fields.vehicle_type %}
+  <div class="form-group">
+    <label>{{ form.vehicle_type.label }} <span style="color:#d32f2f">*</span></label>
+    {{ form.vehicle_type }}
+    {% if form.vehicle_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.vehicle_type.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  {% endif %}
+  
+  {% if accessible_transport_fields.plate_number %}
     <div class="form-group" style="order:2">
       <label>{{ form.plate_number.label }}</label>
       <!-- Segmented license plate input -->
@@ -97,7 +111,6 @@
       {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
     </div>
     {% endif %}
-  </div>
   
   {% if accessible_transport_fields.driver %}
   <div class="form-group">
@@ -109,7 +122,7 @@
   {% endif %}
   
   <div class="section-divider"></div>
-  <div class="section-title">اطلاعات کرایه</div>
+  <div class="section-title">اطلاعات کرایه (اختیاری)</div>
   
   {% if accessible_transport_fields.freight_payment_type %}
   <div class="form-group">
@@ -178,7 +191,7 @@
   {% endif %}
   
   <div class="section-divider"></div>
-  <div class="section-title">تاریخ‌های حمل</div>
+  <div class="section-title">تاریخ‌های حمل (اختیاری)</div>
   
   {% if accessible_transport_fields.expected_arrival_date %}
   <div class="form-group">
@@ -213,7 +226,7 @@
   {% endif %}
   
   <div class="section-divider"></div>
-  <div class="section-title">اطلاعات وزنی</div>
+  <div class="section-title">اطلاعات وزنی (اختیاری)</div>
   
   {% if accessible_transport_fields.gross_weight %}
   <div class="form-group">
@@ -240,7 +253,7 @@
   {% endif %}
   
   <div class="section-divider"></div>
-  <div class="section-title">سایر اطلاعات</div>
+  <div class="section-title">سایر اطلاعات (اختیاری)</div>
   
   {% if accessible_transport_fields.waybill_number %}
   <div class="form-group">
@@ -280,36 +293,29 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/supply/api/purchase-order-info/${orderNumber}/`)
           .then(response => response.json())
           .then(data => {
-            // Remove existing order info display if any
-            const existingDisplay = document.getElementById('order-info-display');
-            if (existingDisplay) {
-              existingDisplay.remove();
+            // نمایش یا به‌روزرسانی اطلاعات سفارش
+            let orderInfoDiv = document.getElementById('order-info-display');
+            if (!orderInfoDiv) {
+              orderInfoDiv = document.createElement('div');
+              orderInfoDiv.id = 'order-info-display';
+              orderInfoDiv.style.cssText = 'grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px;border-right:4px solid var(--primary-green)';
+              orderInfoDiv.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div><div style="font-size:.75rem;color:#546e7a" id="order-info-content"></div>';
+              // Insert after transport_type field
+              const transportTypeGroup = orderSelect.closest('.form-group').nextElementSibling;
+              transportTypeGroup.parentNode.insertBefore(orderInfoDiv, transportTypeGroup.nextSibling);
             }
             
-            // Create new order info display
-            const orderInfoDiv = document.createElement('div');
-            orderInfoDiv.id = 'order-info-display';
-            orderInfoDiv.style.cssText = 'grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px';
-            
-            let materialsHtml = '<ul style="margin:4px 0 0 20px;padding:0">';
+            const orderInfoContent = document.getElementById('order-info-content');
+            let materialsHtml = '<div><strong>تاریخ سفارش:</strong> ' + data.order_date + '</div>';
+            materialsHtml += '<div style="margin-top:6px"><strong>مواد اولیه:</strong></div>';
+            materialsHtml += '<ul style="margin:4px 0 0 20px;padding:0">';
             data.materials.forEach(mat => {
-              materialsHtml += `<li>${mat.name} - ${mat.quantity} ${mat.unit}</li>`;
+              materialsHtml += `<li><strong>نام ماده اولیه:</strong> ${mat.name} | <strong>مقدار:</strong> ${mat.quantity} | <strong>واحد:</strong> ${mat.unit}</li>`;
             });
             materialsHtml += '</ul>';
             
-            orderInfoDiv.innerHTML = `
-              <div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div>
-              <div style="font-size:.75rem;color:#546e7a">
-                <div><strong>تاریخ سفارش:</strong> ${data.order_date}</div>
-                <div><strong>تأمین‌کننده:</strong> ${data.supplier}</div>
-                <div style="margin-top:6px"><strong>مواد اولیه:</strong></div>
-                ${materialsHtml}
-              </div>
-            `;
-            
-            // Insert after transport_type field
-            const transportTypeGroup = orderSelect.closest('.form-group').nextElementSibling;
-            transportTypeGroup.parentNode.insertBefore(orderInfoDiv, transportTypeGroup.nextSibling);
+            orderInfoContent.innerHTML = materialsHtml;
+            orderInfoDiv.style.display = 'block';
           })
           .catch(error => {
             console.error('Error fetching order info:', error);

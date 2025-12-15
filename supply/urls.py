@@ -36,7 +36,6 @@ from .views import (
     # Car Entrance Views
     car_entrance_list_view,
     register_driver_for_transport_view,
-    mark_vehicle_entered_view,
     driver_lookup_api,
     car_exit_list_view,
     mark_vehicle_exited_view,
@@ -82,7 +81,6 @@ urlpatterns = [
     # Car Entrance (Gatekeeper)
     path('carentrance/', car_entrance_list_view, name='carentrance'),
     path('carentrance/<str:transport_number>/register/', register_driver_for_transport_view, name='carentrance_register_driver'),
-    path('carentrance/<str:transport_number>/mark-entered/', mark_vehicle_entered_view, name='carentrance_mark_entered'),
     path('api/driver-lookup/', driver_lookup_api, name='driver_lookup_api'),
     # Car Exit (Gatekeeper)
     path('carexit/', car_exit_list_view, name='carexit'),

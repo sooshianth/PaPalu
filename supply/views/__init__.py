@@ -47,7 +47,6 @@ from .purchase_transport_views import (
 from .carentrance_views import (
     car_entrance_list_view,
     register_driver_for_transport_view,
-    mark_vehicle_entered_view,
     driver_lookup_api,
     car_exit_list_view,
     mark_vehicle_exited_view,
@@ -99,7 +98,6 @@ __all__ = [
     # Car Entrance Views
     'car_entrance_list_view',
     'register_driver_for_transport_view',
-    'mark_vehicle_entered_view',
     'driver_lookup_api',
     'car_exit_list_view',
     'mark_vehicle_exited_view',

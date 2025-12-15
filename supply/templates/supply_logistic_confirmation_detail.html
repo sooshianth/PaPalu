@@ -248,7 +248,7 @@
             <circle cx="7" cy="18" r="2" stroke="currentColor" stroke-width="2"/>
             <circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="2"/>
         </svg>
-        اطلاعات پایه حمل و بارنامه
+        اطلاعات پایه سفارش و حمل (داده دیدنی)
     </div>
     
     <div class="info-grid">
@@ -307,7 +307,7 @@
             <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div>
-            <strong>هشدار:</strong> فایل بارنامه پیوست نشده است. لطفاً در صورت نیاز، فایل بارنامه را در مراحل قبلی پیوست کنید.
+            <strong>هشدار:</strong> فایل بارنامه پیوست نشده است. این هشدار مانع تأیید نهایی نمی‌شود، اما توصیه می‌شود فایل بارنامه را در مراحل قبلی پیوست کنید.
         </div>
     </div>
     {% endif %}
@@ -316,56 +316,39 @@
 <div class="detail-card">
     <div class="section-title">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 7H4C2.89543 7 2 7.89543 2 9V19C2 20.1046 2.89543 21 4 21H20C21.1046 21 22 20.1046 22 19V9C22 7.89543 21.1046 7 20 7Z" stroke="currentColor" stroke-width="2"/>
-            <path d="M16 7V5C16 3.89543 15.1046 3 14 3H10C8.89543 3 8 3.89543 8 5V7" stroke="currentColor" stroke-width="2"/>
+            <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        مواد اولیه سفارش
+        اطلاعات ثبت‌شده تحویل (داده دیدنی)
     </div>
     
     <div class="info-grid">
         {% for material in purchase_order.materials.all %}
         <div class="info-item">
-            <span class="info-label">ماده اولیه {{ forloop.counter }}</span>
-            <span class="info-value">{{ material.raw_material.name }} - {{ material.quantity }} {{ material.raw_material.unit|default:"کیلوگرم" }}</span>
-        </div>
-        {% empty %}
-        <div class="info-item">
-            <span class="info-value">—</span>
+            <span class="info-label">نام ماده اولیه</span>
+            <span class="info-value">{{ material.raw_material.name|default:"—" }}</span>
         </div>
         {% endfor %}
-    </div>
-</div>
-
-<div class="detail-card">
-    <div class="section-title">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M3 6H21M3 12H21M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        اطلاعات وزنی و تحویل
-    </div>
-    
-    <div class="info-grid">
+        
         <div class="info-item">
             <span class="info-label">واحد</span>
             <span class="info-value">کیلوگرم</span>
         </div>
+        
         <div class="info-item">
-            <span class="info-label">وزن ناخالص</span>
+            <span class="info-label">وزن پر</span>
             <span class="info-value">{{ transport.gross_weight|persian_number:2|default:"—" }} کیلوگرم</span>
         </div>
+        
         <div class="info-item">
             <span class="info-label">وزن خالی</span>
             <span class="info-value">{{ transport.tare_weight|persian_number:2|default:"—" }} کیلوگرم</span>
         </div>
-        <div class="info-item">
-            <span class="info-label">وزن خالص (مقدار تحویلی)</span>
-            <span class="info-value" style="border-right-color: #28a745; font-weight: 700; color: #28a745;">
+        
+        <div class="info-item" style="grid-column: 1/-1;">
+            <span class="info-label">تفاضل وزن پر و وزن خالی (مقدار خالص تحویلی)</span>
+            <span class="info-value" style="border-right-color: #28a745; font-weight: 700; color: #28a745; font-size: 1.1rem;">
                 {{ transport.net_weight|persian_number:2|default:"—" }} کیلوگرم
             </span>
-        </div>
-        <div class="info-item">
-            <span class="info-label">تاریخ تحویل</span>
-            <span class="info-value">{{ transport.delivery_date|default:"—" }}</span>
         </div>
     </div>
 </div>
@@ -375,7 +358,7 @@
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM13 17H11V15H13V17ZM13 13H11V7H13V13Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        تکمیل اطلاعات مالی حمل
+        محاسبات مالی کرایه حمل (داده دیدنی)
     </div>
     
     <div class="alert alert-warning">
@@ -383,112 +366,93 @@
             <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div>
-            <strong>توجه:</strong> لطفاً تمام اطلاعات مالی را با دقت کامل وارد کنید. پس از تایید، وضعیت حمل به «تسویه شده» تغییر می‌یابد و دیگر قابل ویرایش نخواهد بود.
+            <strong>توجه:</strong> این فیلدها فقط خواندنی هستند و باید با اسناد فیزیکی بارنامه/فاکتور کرایه تطبیق داده شوند. هرگونه مغایرت باید با بازگرداندن تسک به مرحله قبلی (با اجازه ادمین) رفع شود.
         </div>
     </div>
     
-    <form method="post" novalidate>
-        {% csrf_token %}
-        
-        <div class="info-grid">
-            {% if accessible_transport_fields.freight_payment_type %}
-            <div class="form-group">
-                <label for="{{ form.freight_payment_type.id_for_label }}">
-                    <span class="required">*</span>
-                    {{ form.freight_payment_type.label }}
-                </label>
-                {{ form.freight_payment_type }}
-                {% if form.freight_payment_type.errors %}
-                    {% for error in form.freight_payment_type.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            {% endif %}
-            
-            {% if accessible_transport_fields.initial_freight %}
-            <div class="form-group">
-                <label for="{{ form.initial_freight.id_for_label }}">
-                    <span class="required">*</span>
-                    {{ form.initial_freight.label }}
-                </label>
-                {{ form.initial_freight }}
-                {% if form.initial_freight.errors %}
-                    {% for error in form.initial_freight.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            {% endif %}
-            
-            {% if accessible_transport_fields.total_freight %}
-            <div class="form-group">
-                <label for="{{ form.total_freight.id_for_label }}">
-                    <span class="required">*</span>
-                    {{ form.total_freight.label }}
-                </label>
-                {{ form.total_freight }}
-                {% if form.total_freight.errors %}
-                    {% for error in form.total_freight.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            {% endif %}
-            
-            {% if accessible_transport_fields.discount %}
-            <div class="form-group">
-                <label for="{{ form.discount.id_for_label }}">
-                    <span class="required">*</span>
-                    {{ form.discount.label }}
-                </label>
-                {{ form.discount }}
-                {% if form.discount.errors %}
-                    {% for error in form.discount.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            {% endif %}
-            
-            {% if accessible_transport_fields.surplus %}
-            <div class="form-group">
-                <label for="{{ form.surplus.id_for_label }}">
-                    <span class="required">*</span>
-                    {{ form.surplus.label }}
-                </label>
-                {{ form.surplus }}
-                {% if form.surplus.errors %}
-                    {% for error in form.surplus.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            {% endif %}
-            
-            {% if accessible_transport_fields.freight_payment %}
-            <div class="form-group">
-                <label for="{{ form.freight_payment.id_for_label }}">
-                    <span class="required">*</span>
-                    {{ form.freight_payment.label }}
-                </label>
-                {{ form.freight_payment }}
-                {% if form.freight_payment.errors %}
-                    {% for error in form.freight_payment.errors %}
-                        <div class="invalid-feedback">{{ error }}</div>
-                    {% endfor %}
-                {% endif %}
-            </div>
-            {% endif %}
+    <div class="info-grid">
+        {% if accessible_transport_fields.freight_payment_type %}
+        <div class="info-item">
+            <span class="info-label">نوع کرایه</span>
+            <span class="info-value">{{ transport.freight_payment_type|default:"—" }}</span>
         </div>
+        {% endif %}
         
+        {% if accessible_transport_fields.initial_freight %}
+        <div class="info-item">
+            <span class="info-label">کرایه اولیه</span>
+            <span class="info-value">{{ transport.initial_freight|persian_number:2|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_transport_fields.total_freight %}
+        <div class="info-item">
+            <span class="info-label">کرایه کل</span>
+            <span class="info-value">{{ transport.total_freight|persian_number:2|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_transport_fields.discount %}
+        <div class="info-item">
+            <span class="info-label">تخفیف</span>
+            <span class="info-value">{{ transport.discount|persian_number:2|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_transport_fields.surplus %}
+        <div class="info-item">
+            <span class="info-label">مازاد</span>
+            <span class="info-value">{{ transport.surplus|persian_number:2|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_transport_fields.freight_payment %}
+        <div class="info-item">
+            <span class="info-label">کرایه پرداختی</span>
+            <span class="info-value" style="border-right-color: #28a745; font-weight: 700; color: #28a745;">
+                {{ transport.freight_payment|persian_number:2|default:"—" }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="detail-card">
+    <div class="section-title">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        اسناد و عملیات
+    </div>
+    
+    {% if transport.bill_of_lading_file %}
+    <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px; border-right: 4px solid #4caf50;">
+        <strong style="color: #2e7d32;">📄 فایل بارنامه:</strong>
+        <a href="{{ transport.bill_of_lading_file.url }}" target="_blank" style="color: #1976d2; text-decoration: none; font-weight: 600; margin-right: 10px;">
+            مشاهده / دانلود فایل بارنامه
+        </a>
+    </div>
+    {% else %}
+    <div class="alert alert-warning" style="margin-top: 20px;">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+            <strong>هشدار:</strong> فایل بارنامه پیوست نشده است. این هشدار مانع تأیید نهایی نمی‌شود، اما توصیه می‌شود فایل بارنامه را در مراحل قبلی پیوست کنید.
+        </div>
+    </div>
+    {% endif %}
+    
+    <form method="post" style="margin-top: 30px;">
+        {% csrf_token %}
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('آیا از تأیید نهایی لجستیک و تغییر وضعیت به «در انتظار بارگذاری اسناد پرداخت کرایه» اطمینان دارید؟')">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                     <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
-                تایید نهایی و تسویه
+                تأیید نهایی
             </button>
             
             <a href="{% url 'supply:logistic_confirmation_list' %}" class="btn btn-secondary">
