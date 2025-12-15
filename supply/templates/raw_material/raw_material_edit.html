@@ -1,0 +1,482 @@
+{% extends 'base.html' %}
+{% block title %}ویرایش ماده اولیه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h1 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+        margin-bottom: 32px;
+    }
+    
+    .detail-card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+    
+    .detail-card-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #343a40;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .detail-row:last-child {
+        border-bottom: none;
+    }
+    
+    .detail-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .detail-value {
+        color: #343a40;
+        font-size: 0.9rem;
+        text-align: left;
+        flex: 1;
+    }
+    
+    .detail-value input,
+    .detail-value select,
+    .detail-value textarea,
+    .detail-value input[type=file] {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        transition: border-color 0.3s ease;
+    }
+    
+    .detail-value input:focus,
+    .detail-value select:focus,
+    .detail-value textarea:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    /* استایل فیلدهای readonly و disabled */
+    .detail-value input[readonly],
+    .detail-value select[readonly],
+    .detail-value select[disabled] {
+        background-color: var(--gray-100);
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    
+    .detail-value textarea {
+        min-height: 90px;
+        resize: vertical;
+    }
+    
+    .card {
+        background: #fff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+        overflow: hidden;
+        margin-bottom: 32px;
+    }
+    
+    .card-body {
+        padding: 20px;
+    }
+    
+    .required-marker {
+        color: #c62828;
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-right: 4px;
+    }
+    
+    .optional-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: #0d6efd;
+        background: #e9f2ff;
+        padding: 8px 15px;
+        border-radius: 20px;
+        cursor: pointer;
+        user-select: none;
+        border: 1px solid #b5d5ff;
+        margin: 5px 0 15px;
+        transition: all 0.3s;
+        font-weight: 600;
+    }
+    
+    .optional-toggle:hover {
+        background: #d4e9ff;
+    }
+    
+    .optional-section {
+        display: block;
+    }
+    
+    .submit-row {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--dark-green);
+        color: white;
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        border-color: var(--gray-600);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+<!-- Persian Datepicker CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>ویرایش ماده اولیه</h1>
+    <a href="{% url 'supply:raw_material_list' %}" class="btn-secondary">بازگشت به فهرست</a>
+</div>
+
+{% if messages %}
+  {% for m in messages %}<div class="alert alert-{{ m.tags }}" role="alert">{{ m }}</div>{% endfor %}
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <form method="post" action="" novalidate enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if rm_form.errors or pi_form.errors %}
+            <div class="alert alert-error" style="margin-bottom: 20px;">
+                <strong>خطاهای فرم:</strong>
+                <ul style="margin: 10px 0 0 20px;">
+                    {% for field, errors in rm_form.errors.items %}
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% for field, errors in pi_form.errors.items %}
+                        {% for error in errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endfor %}
+                    {% if rm_form.non_field_errors %}
+                        {% for error in rm_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endif %}
+                    {% if pi_form.non_field_errors %}
+                        {% for error in pi_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
+            
+            <div class="detail-grid">
+                <div class="detail-card">
+                    <div class="detail-card-title">اطلاعات پایه</div>
+                    {% if accessible_raw_material_fields.name %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.name.label }}:{% if rm_form.name.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ rm_form.name }}
+                            {% if rm_form.name.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.name.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.physical_form %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.physical_form.label }}:{% if rm_form.physical_form.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ rm_form.physical_form }}
+                            {% if rm_form.physical_form.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.physical_form.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.status %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.status.label }}:{% if rm_form.status.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ rm_form.status }}
+                            {% if rm_form.status.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.status.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.main_supplier and accessible_person_fields.name %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.main_supplier.label }}:</span>
+                        <span class="detail-value">
+                            {{ rm_form.main_supplier }}
+                            {% if rm_form.main_supplier.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.main_supplier.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-card-title">واحدها و تبدیل</div>
+                    {% if accessible_raw_material_fields.primary_unit %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.primary_unit.label }}:{% if rm_form.primary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ rm_form.primary_unit }}
+                            {% if rm_form.primary_unit.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.primary_unit.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.secondary_unit %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.secondary_unit.label }}:{% if rm_form.secondary_unit.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ rm_form.secondary_unit }}
+                            {% if rm_form.secondary_unit.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.secondary_unit.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if accessible_raw_material_fields.conversion_factor %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.conversion_factor.label }}:{% if rm_form.conversion_factor.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ rm_form.conversion_factor }}
+                            {% if rm_form.conversion_factor.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.conversion_factor.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="detail-card">
+                    <div class="detail-card-title">شرایط نگهداری و حمل</div>
+                    {% if accessible_purchase_info_fields.transportation_conditions %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ pi_form.transportation_conditions.label }}:{% if pi_form.transportation_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ pi_form.transportation_conditions }}
+                            {% if pi_form.transportation_conditions.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ pi_form.transportation_conditions.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                    {% if accessible_purchase_info_fields.storage_conditions %}
+                    <div class="detail-row">
+                        <span class="detail-label">{{ pi_form.storage_conditions.label }}:{% if pi_form.storage_conditions.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ pi_form.storage_conditions }}
+                            {% if pi_form.storage_conditions.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ pi_form.storage_conditions.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if accessible_raw_material_fields.technical_description %}
+                <div class="detail-card" style="grid-column: 1/-1;">
+                    <div class="detail-card-title">توضیحات فنی</div>
+                    <div class="detail-row">
+                        <span class="detail-label">{{ rm_form.technical_description.label }}:{% if rm_form.technical_description.field.required %}<span class="required-marker">*</span>{% endif %}</span>
+                        <span class="detail-value">
+                            {{ rm_form.technical_description }}
+                            {% if rm_form.technical_description.errors %}<div style="color: #c62828; font-size: 0.85rem; margin-top: 4px;">{{ rm_form.technical_description.errors.0 }}</div>{% endif %}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="optional-toggle" id="toggleOptional">اطلاعات تکمیلی (اختیاری) ▼</div>
+            
+            <div class="optional-section" id="optionalSection">
+                <div class="detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-card-title">اطلاعات اضافی</div>
+                        {% if accessible_raw_material_fields.expiration_date %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ rm_form.expiration_date.label }}:</span>
+                            <span class="detail-value">{{ rm_form.expiration_date }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_raw_material_fields.hs_code %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ rm_form.hs_code.label }}:</span>
+                            <span class="detail-value">{{ rm_form.hs_code }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_raw_material_fields.veterinary_health_id %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ rm_form.veterinary_health_id.label }}:</span>
+                            <span class="detail-value">{{ rm_form.veterinary_health_id }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_raw_material_fields.standard_loss_percentage %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ rm_form.standard_loss_percentage.label }}:</span>
+                            <span class="detail-value">{{ rm_form.standard_loss_percentage }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_raw_material_fields.attachments %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ rm_form.attachments.label }}:</span>
+                            <span class="detail-value">{{ rm_form.attachments }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="detail-card">
+                        <div class="detail-card-title">اطلاعات خرید</div>
+                        {% if accessible_purchase_info_fields.minimum_order_quantity %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ pi_form.minimum_order_quantity.label }}:</span>
+                            <span class="detail-value">{{ pi_form.minimum_order_quantity }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_purchase_info_fields.vat_percentage %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ pi_form.vat_percentage.label }}:</span>
+                            <span class="detail-value">{{ pi_form.vat_percentage }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_purchase_info_fields.accounting_code %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ pi_form.accounting_code.label }}:</span>
+                            <span class="detail-value">{{ pi_form.accounting_code }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_purchase_info_fields.tax_code %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ pi_form.tax_code.label }}:</span>
+                            <span class="detail-value">{{ pi_form.tax_code }}</span>
+                        </div>
+                        {% endif %}
+                        {% if accessible_purchase_info_fields.supplier and accessible_person_fields.name %}
+                        <div class="detail-row">
+                            <span class="detail-label">{{ pi_form.supplier.label }}:</span>
+                            <span class="detail-value">{{ pi_form.supplier }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="submit-row">
+                <button type="submit" class="btn-primary">ذخیره تغییرات</button>
+                <a href="{% url 'supply:raw_material_detail' material.raw_material_id %}" class="btn-secondary">انصراف</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Optional fields toggle
+    const toggle = document.getElementById('toggleOptional');
+    const section = document.getElementById('optionalSection');
+    if(toggle && section){
+        toggle.addEventListener('click',()=>{
+            const active = section.style.display === 'none';
+            section.style.display = active ? 'block' : 'none';
+            toggle.textContent = active ? 'بستن اطلاعات تکمیلی ▲' : 'اطلاعات تکمیلی (اختیاری) ▼';
+        });
+        // Initially hide optional section
+        section.style.display = 'none';
+    }
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<!-- jQuery (needed for Persian Datepicker) -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<!-- Persian Date core + Datepicker JS -->
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+{% endblock %}

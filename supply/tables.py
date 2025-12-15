@@ -841,8 +841,8 @@ class RawMaterialTable(tables.Table):
         orderable=True,
         visible=False,  # Will be set dynamically
         attrs={
-            'td': {'class': 'text-center muted'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -851,8 +851,8 @@ class RawMaterialTable(tables.Table):
         orderable=True,
         visible=False,  # Will be set dynamically
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -861,8 +861,8 @@ class RawMaterialTable(tables.Table):
         orderable=True,
         visible=False,  # Will be set dynamically
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -871,8 +871,8 @@ class RawMaterialTable(tables.Table):
         orderable=True,
         visible=False,  # Will be set dynamically
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -881,8 +881,8 @@ class RawMaterialTable(tables.Table):
         orderable=True,
         visible=False,  # Will be set dynamically
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -891,8 +891,8 @@ class RawMaterialTable(tables.Table):
         orderable=True,
         visible=False,  # Will be set dynamically
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -901,8 +901,8 @@ class RawMaterialTable(tables.Table):
         orderable=True,
         visible=False,  # Will be set dynamically
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -911,6 +911,16 @@ class RawMaterialTable(tables.Table):
         format='Y-m-d H:i',
         orderable=True,
         visible=False,  # Will be set dynamically
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -929,21 +939,23 @@ class RawMaterialTable(tables.Table):
             self.columns['conversion_factor'].column.visible = accessible_fields.get('conversion_factor', False)
             self.columns['status'].column.visible = accessible_fields.get('status', False)
             self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
+            # Always show actions column if any field is visible
+            self.columns['actions'].column.visible = any(accessible_fields.values()) if accessible_fields else True
     
     class Meta:
         from core.RawMaterialFolder.RawMaterialModel import RawMaterial
         model = RawMaterial
-        template_name = 'django_tables2/bootstrap4.html'
-        fields = ('raw_material_id', 'name', 'physical_form', 'primary_unit', 'secondary_unit', 'conversion_factor', 'status', 'created_at')
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('raw_material_id', 'name', 'physical_form', 'primary_unit', 'secondary_unit', 'conversion_factor', 'status', 'created_at', 'actions')
         attrs = {
-            'class': 'table table-hover table-bordered datatable',
+            'class': 'data-table',
             'id': 'materialsTable',
-            'style': 'border-collapse:collapse;font-size:.8rem'
+            'thead': {'class': ''}
         }
         row_attrs = {
-            'style': 'cursor:pointer;transition: background-color 0.2s ease;'
+            'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('raw_material_id', 'name', 'physical_form', 'primary_unit', 'secondary_unit', 'conversion_factor', 'status', 'created_at')
+        sequence = ('raw_material_id', 'name', 'physical_form', 'primary_unit', 'secondary_unit', 'conversion_factor', 'status', 'created_at', 'actions')
     
     def render_physical_form(self, record):
         return record.get_physical_form_display() or '—'
@@ -956,6 +968,20 @@ class RawMaterialTable(tables.Table):
     
     def render_status(self, record):
         return format_html('<span class="status-chip">{}</span>', record.get_status_display() or '—')
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        detail_url = reverse('supply:raw_material_detail', args=[record.raw_material_id])
+        edit_url = reverse('supply:raw_material_edit', args=[record.raw_material_id])
+        return format_html(
+            '<div class="btn-group">'
+            '<a href="{}" class="btn-outline-info raw-material-detail-link" data-raw-material-id="{}" title="جزئیات">جزئیات</a>'
+            '<a href="{}" class="btn-outline-warning" title="ویرایش" style="margin-right: 5px;">ویرایش</a>'
+            '</div>',
+            detail_url,
+            record.raw_material_id,
+            edit_url
+        )
 
 
 class LogisticConfirmationTable(tables.Table):

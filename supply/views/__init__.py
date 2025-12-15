@@ -15,8 +15,10 @@ from .supplier_views import (
 
 # Raw Material Views
 from .raw_material_views import (
-    define_basic_material_view,
+    raw_material_list_view,
     price_inquiry_modal_view,
+    raw_material_detail_view,
+    raw_material_edit_view,
 )
 
 # Purchase Order Views
@@ -76,8 +78,10 @@ __all__ = [
     'supplier_detail_view',
     'supplier_edit_view',
     # Raw Material Views
-    'define_basic_material_view',
+    'raw_material_list_view',
     'price_inquiry_modal_view',
+    'raw_material_detail_view',
+    'raw_material_edit_view',
     # Purchase Order Views
     'purchase_order_management_view',
     'create_procurement_purchase_order_view',
