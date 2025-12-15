@@ -494,7 +494,7 @@ def purchase_order_management_view(request):
             'accessible_person_fields': accessible_person_fields,
             'accessible_user_fields': accessible_user_fields,
         }
-        return render(request, 'supply_purchase_order_management.html', context)
+        return render(request, 'purchase/procurement_order_list.html', context)
     except Exception as e:
         bug_logger.error(f"Purchase order management error: {e}")
         messages.error(request, 'خطا در بارگذاری سفارش‌های خرید.')
@@ -509,7 +509,7 @@ def purchase_order_management_view(request):
         }
         open_table = ProcurementPurchaseOrderTable([], prefix='open-', accessible_fields=table_accessible_fields)
         completed_table = ProcurementPurchaseOrderTable([], prefix='completed-', accessible_fields=table_accessible_fields)
-        return render(request, 'supply_purchase_order_management.html', {
+        return render(request, 'purchase/procurement_order_list.html', {
             'open_table': open_table,
             'completed_table': completed_table,
             'accessible_po_fields': accessible_po_fields,
@@ -605,7 +605,7 @@ def create_procurement_purchase_order_view(request):
                             po.delete()
                         except Exception:
                             pass
-                        return render(request, 'supply_create_procurement_purchase_order.html', {
+                        return render(request, 'purchase/create_procurement_order.html', {
                             'form': form,
                             'material_formset': material_formset,
                             'accessible_po_fields': accessible_po_fields,
@@ -619,7 +619,7 @@ def create_procurement_purchase_order_view(request):
         else:
             form = ProcurementPurchaseOrderForm()
             material_formset = MaterialFormSet(prefix='mat')
-        return render(request, 'supply_create_procurement_purchase_order.html', {
+        return render(request, 'purchase/create_procurement_order.html', {
             'form': form,
             'material_formset': material_formset,
             'accessible_po_fields': accessible_po_fields,
@@ -628,7 +628,7 @@ def create_procurement_purchase_order_view(request):
     except Exception as e:
         bug_logger.error(f"Create procurement PO error: {e}")
         messages.error(request, 'خطا در ایجاد سفارش خرید.')
-        return render(request, 'supply_create_procurement_purchase_order.html', {
+        return render(request, 'purchase/create_procurement_order.html', {
             'form': ProcurementPurchaseOrderForm(),
             'material_formset': MaterialFormSet(prefix='mat'),
             'accessible_po_fields': accessible_po_fields,
@@ -657,7 +657,7 @@ def procurement_purchase_order_detail_view(request, order_number):
     allowed_next_statuses = po.WORKFLOW_ALLOWED.get(po.status, set())
     next_status_choices = [(code, label) for code, label in po.STATUS_CHOICES if code in allowed_next_statuses]
     
-    return render(request, 'supply_procurement_purchase_order_detail.html', {
+    return render(request, 'purchase/procurement_purchase_detail.html', {
         'po': po,
         'materials': materials,
         'logs': logs,
@@ -691,7 +691,7 @@ def edit_procurement_purchase_order_view(request, order_number):
         else:
             form = ProcurementPurchaseOrderForm(instance=po)
             material_formset = MaterialFormSet(instance=po, prefix='mat')
-        return render(request, 'supply_edit_procurement_purchase_order.html', {
+        return render(request, 'purchase/edit_procurement_order.html', {
             'form': form,
             'material_formset': material_formset,
             'po': po,
