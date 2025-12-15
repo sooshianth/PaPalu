@@ -15,6 +15,7 @@ from production.forms.program_form import ProductionProgramForm
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.ProductFolder.BOMModel import BOM
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
+from core.ProductFolder.ProductModel import Product
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
@@ -48,6 +49,44 @@ def get_accessible_raw_material_fields(user):
     accessible_fields['raw_material_id'] = user_can_access_field(user, RawMaterial, 'raw_material_id', 'view')
     accessible_fields['name'] = user_can_access_field(user, RawMaterial, 'name', 'view')
     return accessible_fields
+
+
+def _calculate_product_inventory_and_requirement(product):
+    """
+    Calculate inventory_snapshot and net_unplanned_requirement for a product.
+    Returns: (inventory_snapshot, net_unplanned_requirement)
+    """
+    if not product:
+        return Decimal('0'), Decimal('0')
+    
+    try:
+        # Get content type for Product
+        product_ct = ContentType.objects.get_for_model(Product)
+        
+        # Calculate inventory: sum of all InventoryItem quantities for this product across all warehouses
+        inventory_result = InventoryItem.objects.filter(
+            content_type=product_ct,
+            object_id=str(product.id)
+        ).aggregate(total=Sum('quantity'))['total']
+        inventory = Decimal(str(inventory_result)) if inventory_result else Decimal('0')
+        
+        # Calculate planned_inventory: sum of planned_weight_ton for CONFIRMED and IN_PROGRESS statuses
+        # Exclude COMPLETED status
+        planned_result = ProductionProgram.objects.filter(
+            product=product,
+            status__in=[ProductionProgram.Status.CONFIRMED, ProductionProgram.Status.IN_PROGRESS]
+        ).aggregate(total=Sum('planned_weight_ton'))['total']
+        planned_inventory = Decimal(str(planned_result)) if planned_result else Decimal('0')
+        
+        # Calculate net_unplanned_requirement: logistic_confirmed - (inventory + planned_inventory)
+        # Currently logistic_confirmed is 0, so it's -(inventory + planned_inventory)
+        logistic_confirmed = Decimal('0')
+        net_unplanned = logistic_confirmed - (inventory + planned_inventory)
+        
+        return inventory, net_unplanned
+    except Exception as e:
+        bug_logger.warning(f"Error calculating inventory for product {product.id}: {str(e)}")
+        return Decimal('0'), Decimal('0')
 
 
 def _get_dashboard_context():
@@ -153,33 +192,69 @@ def _get_dashboard_context():
             raw_materials_inventory = []
 
         product_flow_status = []
-        production_infos = ProductionInfo.objects.select_related('product').all()
         db_issue = False
-        for prod_info in production_infos:
+        
+        # Get content type for Product to query InventoryItem
+        try:
+            product_ct = ContentType.objects.get_for_model(Product)
+        except ContentType.DoesNotExist:
+            bug_logger.warning("ContentType for Product not found")
+            product_ct = None
+        
+        # Pre-compute inventory totals for products across ALL warehouses
+        inventory_totals = {}
+        if product_ct:
             try:
-                planned_inventory = ProductionProgram.objects.filter(
-                    production_info=prod_info,
-                    status=ProductionProgram.Status.CONFIRMED
-                ).aggregate(total=Sum('planned_weight_ton'))['total'] or 0
-            except OperationalError:
-                planned_inventory = 0
-                db_issue = True
-                bug_logger.warning("خطای عملیاتی هنگام محاسبه موجودی برنامه‌ریزی شده")
-
-            inventory = 0
-            logistic_confirmed = 0
+                inventory_qs = InventoryItem.objects.filter(content_type=product_ct) \
+                    .values('object_id').annotate(total=Sum('quantity'))
+                for row in inventory_qs:
+                    # Ensure Decimal precision
+                    total = row['total'] if row['total'] is not None else Decimal('0')
+                    inventory_totals[str(row['object_id'])] = Decimal(str(total))
+            except Exception as e:
+                bug_logger.warning(f"Error aggregating product inventory: {str(e)}")
+                inventory_totals = {}
+        
+        # Pre-compute planned inventory for products (confirmed + in progress only)
+        try:
+            planned_qs = ProductionProgram.objects.filter(
+                status__in=[ProductionProgram.Status.CONFIRMED, ProductionProgram.Status.IN_PROGRESS]
+            ).values('product').annotate(total=Sum('planned_weight_ton'))
+            planned_totals = {}
+            for row in planned_qs:
+                if row['product']:
+                    # Ensure Decimal precision
+                    total = row['total'] if row['total'] is not None else Decimal('0')
+                    planned_totals[str(row['product'])] = Decimal(str(total))
+        except OperationalError:
+            planned_totals = {}
+            db_issue = True
+            bug_logger.warning("خطای عملیاتی هنگام محاسبه موجودی برنامه‌ریزی شده")
+        except Exception as e:
+            planned_totals = {}
+            bug_logger.warning(f"Error aggregating planned inventory: {str(e)}")
+        
+        # Build flow status per product (unique), ignoring formula differences
+        products = Product.objects.filter(production_infos__isnull=False).distinct()
+        for product in products:
+            product_id = str(product.id)
+            planned_inventory = Decimal(str(planned_totals.get(product_id, 0)))
+            inventory = Decimal(str(inventory_totals.get(product_id, 0)))
+            logistic_confirmed = Decimal('0')  # placeholder until logistic integration
             net_unplanned = logistic_confirmed - (inventory + planned_inventory)
-
+            
             product_flow_status.append({
-                'product': prod_info.product.name if prod_info.product else '-',
-                'program_id': prod_info.formula_id or '-',
-                'inventory': inventory,
-                'planned_inventory': planned_inventory,
-                'net_unplanned_requirement': net_unplanned,
+                'product_id': product.id,
+                'product': product.name if product else '-',
+                'program_id': '-',  # formula ignored in dashboard view
+                'inventory': str(inventory),  # Keep as string for JSON to preserve Decimal precision
+                'planned_inventory': str(planned_inventory),  # Keep as string for JSON to preserve Decimal precision
+                'net_unplanned_requirement': str(net_unplanned),  # Keep as string for JSON to preserve Decimal precision
                 'status': 'نیازمند برنامه‌ریزی' if net_unplanned > 0 else 'کافی'
             })
 
-        product_flow_status.sort(key=lambda x: x['net_unplanned_requirement'], reverse=True)
+        # Sort by numeric value (convert string back to Decimal for comparison)
+        product_flow_status.sort(key=lambda x: Decimal(x['net_unplanned_requirement']), reverse=True)
         allocations = []
         return {
             'raw_material_inventory': raw_material_inventory,
@@ -311,6 +386,12 @@ def create_program_view(request):
                         context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
                         return render(request, 'program_form.html', context)
                 
+                # Calculate and set inventory_snapshot and net_unplanned_requirement
+                if instance.product:
+                    inventory_snapshot, net_unplanned = _calculate_product_inventory_and_requirement(instance.product)
+                    instance.inventory_snapshot = inventory_snapshot
+                    instance.net_unplanned_requirement = net_unplanned
+                
                 # Status already set from form data
                 instance.save()
                 bug_logger.info(f"برنامه با موفقیت ذخیره شد. ID={instance.id}, Status={instance.status}")
@@ -336,6 +417,9 @@ def create_program_view(request):
         context.update(_prepare_bom_data(request))
         # Add field access permissions
         context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
+        # Add product inventory data for JavaScript auto-fill
+        safe_flow = context.get('product_flow_status', [])
+        context['product_flow_status_json'] = json.dumps(safe_flow, default=str)
         return render(request, 'program_form.html', context)
     except Exception as e:
         bug_logger.error(f"Create program error: {e}")
@@ -371,6 +455,12 @@ def edit_program_view(request, program_id):
                         context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
                         return render(request, 'program_form.html', context)
                 
+                # Calculate and set inventory_snapshot and net_unplanned_requirement
+                if instance.product:
+                    inventory_snapshot, net_unplanned = _calculate_product_inventory_and_requirement(instance.product)
+                    instance.inventory_snapshot = inventory_snapshot
+                    instance.net_unplanned_requirement = net_unplanned
+                
                 if action == 'confirm' and instance.status == ProductionProgram.Status.DRAFT:
                     instance.status = ProductionProgram.Status.CONFIRMED
                 elif action == 'start' and instance.status == ProductionProgram.Status.CONFIRMED:
@@ -388,6 +478,9 @@ def edit_program_view(request, program_id):
         context.update(_prepare_bom_data(request))
         # Add field access permissions
         context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
+        # Add product inventory data for JavaScript auto-fill
+        safe_flow = context.get('product_flow_status', [])
+        context['product_flow_status_json'] = json.dumps(safe_flow, default=str)
         return render(request, 'program_form.html', context)
     except Exception as e:
         bug_logger.error(f"Edit program error: {e}")

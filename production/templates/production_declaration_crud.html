@@ -1561,6 +1561,7 @@ function showCompleteProductionModal() {
         // Get program_id to fetch warehouse distribution if edit mode
         const programId = '{{ program.id|default:"" }}';
         const existingWarehouseDist = programId ? (warehouseDistributionData || {}) : {};
+        const existingActualConsumption = actualConsumptionGlobal || {};
         
         if (bomItems.length > 0) {
             let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
@@ -1605,8 +1606,11 @@ function showCompleteProductionModal() {
                     
                     warehousesWithAmount.forEach(wh => {
                         const plannedAmount = new Decimal(wh.amount || '0').toFixed(3);
-                        // Default actual withdrawal = planned amount
-                        const defaultActual = plannedAmount;
+                        const bomActuals = existingActualConsumption[bomIdStr] || {};
+                        let defaultActual = '';
+                        if (Object.prototype.hasOwnProperty.call(bomActuals, wh.warehouse)) {
+                            defaultActual = bomActuals[wh.warehouse];
+                        }
                         
                         html += `
                             <tr class="warehouse-actual-row" style="background: #ffffff; border: 1px solid #e9ecef;">

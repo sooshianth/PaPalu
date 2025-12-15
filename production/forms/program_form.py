@@ -93,13 +93,13 @@ class ProductionProgramForm(forms.ModelForm):
         max_digits=12, decimal_places=3,
         required=False,
         label='موجودی لحظه ثبت (کیلوگرم)',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'readonly': True, 'disabled': True})
     )
     net_unplanned_requirement = forms.DecimalField(
         max_digits=12, decimal_places=3,
         required=False,
         label='نیاز برنامه ریزی نشده (کیلوگرم)',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'readonly': True, 'disabled': True})
     )
     produced_weight_ton = forms.DecimalField(
         max_digits=12, decimal_places=3,
@@ -120,13 +120,21 @@ class ProductionProgramForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Always lock inventory_snapshot and net_unplanned_requirement (auto-calculated)
+        if 'inventory_snapshot' in self.fields:
+            self.fields['inventory_snapshot'].widget.attrs['readonly'] = True
+            self.fields['inventory_snapshot'].widget.attrs['disabled'] = True
+        if 'net_unplanned_requirement' in self.fields:
+            self.fields['net_unplanned_requirement'].widget.attrs['readonly'] = True
+            self.fields['net_unplanned_requirement'].widget.attrs['disabled'] = True
+        
         # Lock fields when not draft
         instance: ProductionProgram | None = getattr(self, 'instance', None)
         if instance and instance.pk and instance.status != ProductionProgram.Status.DRAFT:
             lock_names = [
                 'production_info', 'product', 'program_id', 'planned_weight_ton',
                 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time', 'packaging_type',
-                'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
+                'extra_description'
             ]
             for name in lock_names:
                 if name in self.fields:
@@ -186,9 +194,11 @@ class ProductionProgramForm(forms.ModelForm):
             for attr in [
                 'production_info', 'product', 'program_id', 'planned_weight_ton',
                 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
-                'packaging_type', 'inventory_snapshot', 'net_unplanned_requirement', 'extra_description'
+                'packaging_type', 'extra_description'
             ]:
                 setattr(instance, attr, getattr(orig, attr))
+            # inventory_snapshot and net_unplanned_requirement are always auto-calculated, so preserve them
+            # but they will be recalculated in the view if product changed
         if commit:
             instance.save()
         return instance

@@ -712,7 +712,6 @@
 							<thead>
 								<tr>
 									<th>محصول</th>
-									<th>فرمول</th>
 									<th>موجودی انبار</th>
 									<th>موجودی برنامه‌ریزی شده</th>
 									<th>نیاز برنامه‌ریزی نشده</th>
@@ -723,14 +722,13 @@
 								{% for flow in product_flow_status %}
 								<tr>
 									<td>{{ flow.product }}</td>
-									<td>{{ flow.formula_id }}</td>
 									<td>{{ flow.inventory }}</td>
 									<td>{{ flow.planned_inventory }}</td>
 									<td>{{ flow.net_unplanned_requirement }}</td>
 									<td>{{ flow.status }}</td>
 								</tr>
 								{% empty %}
-								<tr><td colspan="6"><div class="empty-state">داده‌ای موجود نیست.</div></td></tr>
+								<tr><td colspan="5"><div class="empty-state">داده‌ای موجود نیست.</div></td></tr>
 								{% endfor %}
 							</tbody>
 						</table>
@@ -781,41 +779,6 @@
 		</div>
 
 		<!-- Batch creation section removed; replaced by tabbed multi-form UI above -->
-
-		{% if program %}
-		<div class="section">
-			<div class="section-title">خلاصه مصرف مواد اولیه</div>
-			<div class="card">
-				<div class="card-body">
-					<div class="table-wrap">
-						<table id="consumptionTable" class="data-table">
-					<thead>
-						<tr>
-							<th>کد ماده اولیه</th>
-							<th>مقدار مورد نیاز</th>
-						</tr>
-					</thead>
-					<tbody>
-						{% if program.consumption_summary %}
-							{% for key, val in program.consumption_summary.items %}
-								<tr>
-									<td>{{ key }}</td>
-									<td>{{ val }}</td>
-								</tr>
-							{% endfor %}
-								{% else %}
-									<tr><td colspan="2"><div class="empty-state">هنوز محاسبه نشده است. پس از تایید یا شروع تولید محاسبه میشود.</div></td></tr>
-								{% endif %}
-							</tbody>
-						</table>
-					</div>
-					<div style="margin-top: 16px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
-						<strong>ساعت برنامه:</strong> {% if program.planned_hours %}{{ program.planned_hours }}{% else %}-{% endif %}
-					</div>
-				</div>
-			</div>
-		</div>
-		{% endif %}
 	</div>
 </div>
 {% endblock %}
@@ -888,6 +851,20 @@
 	const accessibleProductionInfoFields = JSON.parse('{{ accessible_production_info_fields_json|escapejs }}');
 	const accessibleBomFields = JSON.parse('{{ accessible_bom_fields_json|escapejs }}');
 	const accessibleRawMaterialFields = JSON.parse('{{ accessible_raw_material_fields_json|escapejs }}');
+	const productFlowStatusData = JSON.parse('{{ product_flow_status_json|escapejs }}');
+	
+// Create a map of product ID to inventory data for quick lookup
+// Values come as strings from server to preserve Decimal precision
+const productInventoryMap = {};
+if (productFlowStatusData) {
+	productFlowStatusData.forEach(flow => {
+		const key = flow.product_id ? String(flow.product_id) : flow.product || '';
+		productInventoryMap[key] = {
+			inventory: flow.inventory || '0',
+			net_unplanned_requirement: flow.net_unplanned_requirement || '0'
+		};
+	});
+}
 
 	function setupProductionInfoFiltering(pane) {
 		const productSelect = pane.querySelector('[name="product"]');
@@ -929,7 +906,9 @@
 				html += `<strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>`;
 			}
 			if (showMinBatch) {
-				html += `<strong>حداقل تناژ تولید:</strong> ${data.min_batch_production || '-'} تن<br>`;
+				// Display as kg (no conversion, just change unit)
+				const minBatchKg = data.min_batch_production ? parseFloat(data.min_batch_production).toFixed(2) : '-';
+				html += `<strong>حداقل وزن تولید:</strong> ${minBatchKg} کیلوگرم<br>`;
 			}
 			if (showSpecificInstruction) {
 				html += `<strong>دستورالعمل تولید:</strong> ${data.specific_production_instruction || '-'}`;
@@ -940,7 +919,7 @@
 					<tr>`;
 			if (showRawMaterialId) html += `<th>کد ماده اولیه</th>`;
 			if (showRawMaterialName) html += `<th>نام ماده اولیه</th>`;
-			html += `<th>مقدار (در فرمول)</th>
+			html += `<th>درصد</th>
 						<th>مقدار مصرف کل</th>`;
 			if (showUnit) html += `<th>واحد</th>`;
 			html += `</tr>
@@ -948,14 +927,15 @@
 				<tbody>`;
 			
 			data.bom_items.forEach(item => {
-				const quantity = parseFloat(item.quantity) || 0;
-				const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(3) : '-';
+				// Calculate total consumption: percentage * plannedWeight / 100
+				const percentage = parseFloat(item.percentage || '0');
+				const totalConsumption = plannedWeight > 0 ? ((percentage * plannedWeight) / 100).toFixed(3) : '-';
 				
 				html += `
 					<tr>
 						${showRawMaterialId ? `<td>${item.raw_material_id || '-'}</td>` : ''}
 						${showRawMaterialName ? `<td>${item.raw_material_name || '-'}</td>` : ''}
-						<td>${item.quantity || 0}</td>
+						<td>${percentage.toFixed(3)}%</td>
 						<td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
 						${showUnit ? `<td>${item.unit_used || '-'}</td>` : ''}
 					</tr>
@@ -969,9 +949,34 @@
 			bomDetailsContent.innerHTML = html;
 		}
 		
+		// Function to update inventory fields based on selected product
+		function updateInventoryFields() {
+			const inventorySnapshotInput = pane.querySelector('[name="inventory_snapshot"]');
+			const netUnplannedInput = pane.querySelector('[name="net_unplanned_requirement"]');
+			
+			if (!inventorySnapshotInput || !netUnplannedInput) return;
+			
+			const productId = productSelect.value;
+			
+			if (productId && productInventoryMap[productId]) {
+				const data = productInventoryMap[productId];
+				// Values arrive as strings (Decimal); format to 3 decimals for display
+				const inventory = parseFloat(data.inventory || '0');
+				const netUnplanned = parseFloat(data.net_unplanned_requirement || '0');
+				inventorySnapshotInput.value = inventory.toFixed(3);
+				netUnplannedInput.value = netUnplanned.toFixed(3);
+			} else {
+				inventorySnapshotInput.value = '0.000';
+				netUnplannedInput.value = '0.000';
+			}
+		}
+		
 		// Filter production_info based on selected product
 		productSelect.addEventListener('change', function() {
 			const selectedProductId = this.value;
+			
+			// Update inventory fields
+			updateInventoryFields();
 			
 			// Clear current options (except the first empty one)
 			productionInfoSelect.innerHTML = '<option value="">---------</option>';
@@ -1007,6 +1012,11 @@
 				productionInfoSelect.style.cursor = 'not-allowed';
 			}
 		});
+		
+		// Update inventory fields on initial load if product is already selected
+		if (productSelect.value) {
+			updateInventoryFields();
+		}
 		
 		// Show BOM details when production_info is selected
 		productionInfoSelect.addEventListener('change', function() {
@@ -1230,19 +1240,12 @@
 	// Initialize DataTables and bootstrap first form tab
 	document.addEventListener('DOMContentLoaded', function(){
 		if (window.jQuery && jQuery.fn && jQuery.fn.DataTable) {
-			jQuery('#consumptionTable').DataTable({
-				paging: false,
-				searching: false,
-				info: false,
-				language: { url: '/static/i18n/datatables/fa.json' }
-			});
-			
 			// Product Flow Table with sorting by Net Unplanned Requirement
 			jQuery('#productFlowTable').DataTable({
 				paging: false,
 				searching: true,
 				info: false,
-				order: [[4, 'desc']], // Sort by column 4 (Net Unplanned Requirement) descending
+				order: [[3, 'desc']], // Sort by Net Unplanned Requirement descending
 				language: { url: '/static/i18n/datatables/fa.json' }
 			});
 			
@@ -1269,7 +1272,25 @@
 		setTimeout(function() {
 			const firstPane = document.querySelector('#tabContents .tab-pane');
 			if (firstPane) {
+				const productSelect = firstPane.querySelector('[name="product"]');
 				const productionInfoSelect = firstPane.querySelector('[name="production_info"]');
+				// Update inventory fields if product is selected
+				if (productSelect && productSelect.value) {
+					const selectedOption = productSelect.options[productSelect.selectedIndex];
+				const productId = productSelect.value;
+				if (productId && productInventoryMap[productId]) {
+						const inventorySnapshotInput = firstPane.querySelector('[name="inventory_snapshot"]');
+						const netUnplannedInput = firstPane.querySelector('[name="net_unplanned_requirement"]');
+						if (inventorySnapshotInput && netUnplannedInput) {
+						const data = productInventoryMap[productId];
+						// Values are strings from server (Decimal), format to 3 decimal places for display
+						const inventory = parseFloat(data.inventory || '0');
+						const netUnplanned = parseFloat(data.net_unplanned_requirement || '0');
+						inventorySnapshotInput.value = inventory.toFixed(3);
+						netUnplannedInput.value = netUnplanned.toFixed(3);
+						}
+					}
+				}
 				if (productionInfoSelect && productionInfoSelect.value) {
 					productionInfoSelect.dispatchEvent(new Event('change'));
 				}
