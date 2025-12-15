@@ -478,16 +478,16 @@
 							<div class="detail-card-title">زمان‌بندی</div>
 							<div class="detail-row" style="flex-direction: column; gap: 8px;">
 								<span class="detail-label">شروع پیشبینی شده:{% if form.predicted_start_date.field.required or form.predicted_start_time.field.required %}<span style="color: red;">*</span>{% endif %}</span>
-								<div style="display: flex; gap: 8px; width: 100%;">
-									<div style="flex: 1;">{{ form.predicted_start_date }}</div>
-									<div style="flex: 1;">{{ form.predicted_start_time }}</div>
+								<div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+									<div style="flex: 1; min-width: 150px;">{{ form.predicted_start_date }}</div>
+									<div style="flex: 1; min-width: 120px;">{{ form.predicted_start_time }}</div>
 								</div>
 							</div>
 							<div class="detail-row" style="flex-direction: column; gap: 8px;">
 								<span class="detail-label">پایان پیشبینی شده:{% if form.predicted_end_date.field.required or form.predicted_end_time.field.required %}<span style="color: red;">*</span>{% endif %}</span>
-								<div style="display: flex; gap: 8px; width: 100%;">
-									<div style="flex: 1;">{{ form.predicted_end_date }}</div>
-									<div style="flex: 1;">{{ form.predicted_end_time }}</div>
+								<div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+									<div style="flex: 1; min-width: 150px;">{{ form.predicted_end_date }}</div>
+									<div style="flex: 1; min-width: 120px;">{{ form.predicted_end_time }}</div>
 								</div>
 							</div>
 						</div>
@@ -1102,6 +1102,25 @@
 		if (!form) return;
 		// Clear previous errors
 		clearErrors(pane);
+		
+		// Validate planned weight against min_batch_production (for all actions that create/modify program)
+		if (action && ['draft', 'confirm', 'start'].includes(action)) {
+			const productionInfoSelect = form.querySelector('[name="production_info"]');
+			const plannedWeightInput = form.querySelector('[name="planned_weight_ton"]');
+			const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+			const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value || '0') : 0;
+			
+			if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
+				const data = bomData[selectedProductionInfoId];
+				const minBatch = parseFloat(data.min_batch_production || '0');
+				
+				if (minBatch > 0 && plannedWeight < minBatch) {
+					alert(`تناژ برنامه (${plannedWeight.toFixed(3)} کیلوگرم) کمتر از حداقل وزن تولید (${minBatch.toFixed(3)} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.`);
+					return;
+				}
+			}
+		}
+		
 		// Log date values (now from hidden fields that have Gregorian dates)
 		const startDate = form.querySelector('[name="predicted_start_date"]')?.value;
 		const startTime = form.querySelector('[name="predicted_start_time"]')?.value;

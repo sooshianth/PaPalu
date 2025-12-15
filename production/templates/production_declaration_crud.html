@@ -842,9 +842,9 @@
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">شروع پیشبینی شده: <span style="color: red;">*</span></span>
                 {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' and program.status != 'completed' %}
-                    <div style="display: flex; gap: 8px; width: 100%;">
-                        <div style="flex: 1;">{{ form.predicted_start_date }}</div>
-                        <div style="flex: 1;">{{ form.predicted_start_time }}</div>
+                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">{{ form.predicted_start_date }}</div>
+                        <div style="flex: 1; min-width: 120px;">{{ form.predicted_start_time }}</div>
                     </div>
                 {% else %}
                     <div style="width: 100%;">
@@ -859,9 +859,9 @@
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">پایان پیشبینی شده: <span style="color: red;">*</span></span>
                 {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_end_time_edit and program.status == 'confirmed' and program.status != 'completed' %}
-                    <div style="display: flex; gap: 8px; width: 100%;">
-                        <div style="flex: 1;">{{ form.predicted_end_date }}</div>
-                        <div style="flex: 1;">{{ form.predicted_end_time }}</div>
+                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">{{ form.predicted_end_date }}</div>
+                        <div style="flex: 1; min-width: 120px;">{{ form.predicted_end_time }}</div>
                     </div>
                 {% else %}
                     <div style="width: 100%;">
@@ -875,64 +875,42 @@
             
             <!-- تاریخ و زمان شروع واقعی (visible when in_progress or completed) -->
             {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
-            {% if accessible_production_program_fields.actual_start_date %}
+            {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">{{ form.actual_start_date.label }}:</span>
-                <div style="width: 100%;">
-                    {% if accessible_production_program_fields.actual_start_date_edit and program.status != 'completed' %}
-                        {{ form.actual_start_date }}
-                    {% else %}
-                        {% if program and program.actual_start_date %}
-                            {{ program.actual_start_date.year }}-{{ program.actual_start_date.month|stringformat:"02d" }}-{{ program.actual_start_date.day|stringformat:"02d" }}
+                <span class="detail-label">شروع واقعی:</span>
+                {% if accessible_production_program_fields.actual_start_date_edit and accessible_production_program_fields.started_at_edit and program.status != 'completed' %}
+                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">{{ form.actual_start_date }}</div>
+                        <div style="flex: 1; min-width: 120px;">{{ form.started_at }}</div>
+                    </div>
+                {% else %}
+                    <div style="width: 100%;">
+                        {% if program and program.actual_start_date and program.started_at %}
+                            {{ program.actual_start_date.year }}-{{ program.actual_start_date.month|stringformat:"02d" }}-{{ program.actual_start_date.day|stringformat:"02d" }} {{ program.started_at|time:"H:i" }}
                         {% else %}-{% endif %}
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {% if accessible_production_program_fields.started_at %}
-            <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">{{ form.started_at.label }}:</span>
-                <div style="width: 100%;">
-                    {% if accessible_production_program_fields.started_at_edit and program.status != 'completed' %}
-                        {{ form.started_at }}
-                    {% else %}
-                        {% if program and program.started_at %}
-                            {{ program.started_at|time:"H:i" }}
-                        {% else %}-{% endif %}
-                    {% endif %}
-                </div>
+                    </div>
+                {% endif %}
             </div>
             {% endif %}
             {% endif %}
             
             <!-- تاریخ و زمان پایان واقعی (visible only when completed) -->
             {% if not is_create and program and program.status == 'completed' %}
-            {% if accessible_production_program_fields.actual_end_date %}
+            {% if accessible_production_program_fields.actual_end_date and accessible_production_program_fields.completed_at %}
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">{{ form.actual_end_date.label }}:</span>
-                <div style="width: 100%;">
-                    {% if accessible_production_program_fields.actual_end_date_edit and program.status != 'completed' %}
-                        {{ form.actual_end_date }}
-                    {% else %}
-                        {% if program and program.actual_end_date %}
-                            {{ program.actual_end_date.year }}-{{ program.actual_end_date.month|stringformat:"02d" }}-{{ program.actual_end_date.day|stringformat:"02d" }}
+                <span class="detail-label">پایان واقعی:</span>
+                {% if accessible_production_program_fields.actual_end_date_edit and accessible_production_program_fields.completed_at_edit and program.status != 'completed' %}
+                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 150px;">{{ form.actual_end_date }}</div>
+                        <div style="flex: 1; min-width: 120px;">{{ form.completed_at }}</div>
+                    </div>
+                {% else %}
+                    <div style="width: 100%;">
+                        {% if program and program.actual_end_date and program.completed_at %}
+                            {{ program.actual_end_date.year }}-{{ program.actual_end_date.month|stringformat:"02d" }}-{{ program.actual_end_date.day|stringformat:"02d" }} {{ program.completed_at|time:"H:i" }}
                         {% else %}-{% endif %}
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-            {% if accessible_production_program_fields.completed_at %}
-            <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">{{ form.completed_at.label }}:</span>
-                <div style="width: 100%;">
-                    {% if accessible_production_program_fields.completed_at_edit and program.status != 'completed' %}
-                        {{ form.completed_at }}
-                    {% else %}
-                        {% if program and program.completed_at %}
-                            {{ program.completed_at|time:"H:i" }}
-                        {% else %}-{% endif %}
-                    {% endif %}
-                </div>
+                    </div>
+                {% endif %}
             </div>
             {% endif %}
             {% endif %}
@@ -1327,19 +1305,18 @@ function updateTotalDifference(bomId) {
         const absValue = difference.abs();
         const unit = totalDifferenceDisplay.textContent.split(' ').pop() || 'تن';
         
-        if (difference.gt(new Decimal('0.001'))) {
-            totalDifferenceDisplay.textContent = `+${absValue.toFixed(3)} ${unit} (بیش از حد)`;
+        // Use very small tolerance for decimal comparison (0.0001 kg)
+        const tolerance = new Decimal('0.0001');
+        if (difference.abs().gt(tolerance)) {
+            if (difference.gt(new Decimal('0'))) {
+                totalDifferenceDisplay.textContent = `+${absValue.toFixed(3)} ${unit} (بیش از حد ✗)`;
+            } else {
+                totalDifferenceDisplay.textContent = `-${absValue.toFixed(3)} ${unit} (کمبود ✗)`;
+            }
             totalDifferenceDisplay.style.color = '#dc3545';
             if (differenceContainer) {
                 differenceContainer.style.background = '#f8d7da';
                 differenceContainer.style.borderLeft = '4px solid #dc3545';
-            }
-        } else if (difference.lt(new Decimal('-0.001'))) {
-            totalDifferenceDisplay.textContent = `-${absValue.toFixed(3)} ${unit} (کمبود)`;
-            totalDifferenceDisplay.style.color = '#ffc107';
-            if (differenceContainer) {
-                differenceContainer.style.background = '#fff3cd';
-                differenceContainer.style.borderLeft = '4px solid #ffc107';
             }
         } else {
             totalDifferenceDisplay.textContent = `0.000 ${unit} (دقیق ✓)`;
@@ -1697,6 +1674,21 @@ function confirmStartProduction() {
         return;
     }
     
+    // Validate planned weight against min_batch_production
+    const productionInfoSelect = document.querySelector('#id_production_info');
+    const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+    const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
+    const plannedWeight = plannedWeightInput ? new Decimal(plannedWeightInput.value || '0') : new Decimal('0');
+    
+    if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
+        const data = bomData[selectedProductionInfoId];
+        const minBatch = new Decimal(data.min_batch_production || '0');
+        
+        if (minBatch.gt(new Decimal('0')) && plannedWeight.lt(minBatch)) {
+            alert(`تناژ برنامه (${plannedWeight.toFixed(3)} کیلوگرم) کمتر از حداقل تناژ تولید (${minBatch.toFixed(3)} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.`);
+            return;
+        }
+    }
     
     // Validate warehouse distribution if section is visible
     const warehouseSection = document.getElementById('warehouseDistributionSection');
@@ -1707,9 +1699,11 @@ function confirmStartProduction() {
         
         distributionItems.forEach(item => {
             const bomId = item.dataset.bomId;
+            const totalNeeded = new Decimal(item.dataset.totalNeeded || '0');
             const amountInputs = item.querySelectorAll('.warehouse-amount-input');
             const distributions = [];
             let hasAnyAmount = false;
+            let totalWithdrawal = new Decimal('0');
             
             amountInputs.forEach(input => {
                 const warehouse = input.dataset.warehouse;
@@ -1717,6 +1711,7 @@ function confirmStartProduction() {
                 
                 if (amount.gt(new Decimal('0'))) {
                     hasAnyAmount = true;
+                    totalWithdrawal = totalWithdrawal.plus(amount);
                     distributions.push({
                         warehouse: warehouse,
                         amount: amount.toFixed(3)
@@ -1728,6 +1723,19 @@ function confirmStartProduction() {
             if (!hasAnyAmount) {
                 const materialName = item.querySelector('strong').textContent;
                 errors.push(`${materialName}: لطفاً مقدار برداشت را از حداقل یک انبار وارد کنید`);
+            } else {
+                // Validate that sum equals total needed (with small tolerance for decimal comparison)
+                const tolerance = new Decimal('0.0001');
+                const difference = totalWithdrawal.minus(totalNeeded).abs();
+                if (difference.gt(tolerance)) {
+                    const materialName = item.querySelector('strong').textContent;
+                    const diffValue = totalWithdrawal.minus(totalNeeded);
+                    if (diffValue.gt(new Decimal('0'))) {
+                        errors.push(`${materialName}: مجموع برداشت (${totalWithdrawal.toFixed(3)}) بیشتر از مقدار مورد نیاز (${totalNeeded.toFixed(3)}) است. تفاوت: +${diffValue.toFixed(3)}`);
+                    } else {
+                        errors.push(`${materialName}: مجموع برداشت (${totalWithdrawal.toFixed(3)}) کمتر از مقدار مورد نیاز (${totalNeeded.toFixed(3)}) است. تفاوت: ${diffValue.toFixed(3)}`);
+                    }
+                }
             }
             
             warehouseData[bomId] = distributions;
@@ -1857,6 +1865,24 @@ function confirmCompleteProduction() {
 }
 
 function submitFormWithAction(action) {
+    // Validate planned weight against min_batch_production (for all actions that create/modify program)
+    if (['save_draft', 'confirm', 'start'].includes(action)) {
+        const productionInfoSelect = document.querySelector('#id_production_info');
+        const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+        const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
+        const plannedWeight = plannedWeightInput ? new Decimal(plannedWeightInput.value || '0') : new Decimal('0');
+        
+        if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
+            const data = bomData[selectedProductionInfoId];
+            const minBatch = new Decimal(data.min_batch_production || '0');
+            
+            if (minBatch.gt(new Decimal('0')) && plannedWeight.lt(minBatch)) {
+                alert(`تناژ برنامه (${plannedWeight.toFixed(3)} کیلوگرم) کمتر از حداقل وزن تولید (${minBatch.toFixed(3)} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.`);
+                return;
+            }
+        }
+    }
+    
     document.getElementById('actionField').value = action;
     document.getElementById('productionForm').submit();
 }
@@ -1992,7 +2018,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (showMinBatch) {
             // Display as kg (no conversion, just change unit)
             const minBatchKg = data.min_batch_production ? new Decimal(data.min_batch_production).toFixed(2) : '-';
-            html += `                <strong>حداکثر وزن تولید:</strong> ${minBatchKg} کیلوگرم<br>\n`;
+            html += `                <strong>حداقل وزن تولید:</strong> ${minBatchKg} کیلوگرم<br>\n`;
         }
         if (showSpecificInstruction) {
             html += `                <strong>دستورالعمل تولید:</strong> ${data.specific_production_instruction || '-'}\n`;
@@ -2209,6 +2235,27 @@ document.addEventListener('DOMContentLoaded', function() {
                             productionForm.appendChild(hiddenInput);
                         }
                     });
+                }
+                
+                // Validate planned weight against min_batch_production (for all actions)
+                const actionField = document.querySelector('#actionField');
+                const action = actionField ? actionField.value : (e.submitter ? e.submitter.value : '');
+                if (action && ['save_draft', 'confirm', 'start'].includes(action)) {
+                    const productionInfoSelect = document.querySelector('#id_production_info');
+                    const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+                    const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
+                    const plannedWeight = plannedWeightInput ? new Decimal(plannedWeightInput.value || '0') : new Decimal('0');
+                    
+                    if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
+                        const data = bomData[selectedProductionInfoId];
+                        const minBatch = new Decimal(data.min_batch_production || '0');
+                        
+                        if (minBatch.gt(new Decimal('0')) && plannedWeight.lt(minBatch)) {
+                            e.preventDefault();
+                            alert(`تناژ برنامه (${plannedWeight.toFixed(3)} کیلوگرم) کمتر از حداقل وزن تولید (${minBatch.toFixed(3)} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.`);
+                            return false;
+                        }
+                    }
                 }
                 
                 // Form validation

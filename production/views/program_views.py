@@ -295,6 +295,22 @@ def create_program_view(request):
             form = ProductionProgramForm(post_data)
             if form.is_valid():
                 instance = form.save(commit=False)
+                
+                # Validate planned weight against min_batch_production (for all actions that create/modify program)
+                if action in ['draft', 'confirm', 'start'] and instance.production_info and instance.production_info.min_batch_production:
+                    min_batch = instance.production_info.min_batch_production
+                    if instance.planned_weight_ton and instance.planned_weight_ton < min_batch:
+                        error_msg = f'تناژ برنامه ({instance.planned_weight_ton} کیلوگرم) کمتر از حداقل وزن تولید ({min_batch} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.'
+                        bug_logger.warning(f"Validation failed: {error_msg}")
+                        if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                            return JsonResponse({'ok': False, 'errors': {'planned_weight_ton': [error_msg]}}, status=400)
+                        messages.error(request, error_msg)
+                        context = {'form': form, 'mode': 'create'}
+                        context.update(_get_dashboard_context())
+                        context.update(_prepare_bom_data(request))
+                        context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
+                        return render(request, 'program_form.html', context)
+                
                 # Status already set from form data
                 instance.save()
                 bug_logger.info(f"برنامه با موفقیت ذخیره شد. ID={instance.id}, Status={instance.status}")
@@ -341,6 +357,20 @@ def edit_program_view(request, program_id):
             form = ProductionProgramForm(request.POST, instance=program)
             if form.is_valid():
                 instance = form.save(commit=False)
+                
+                # Validate planned weight against min_batch_production (for all actions that create/modify program)
+                if action in ['draft', 'confirm', 'start'] and instance.production_info and instance.production_info.min_batch_production:
+                    min_batch = instance.production_info.min_batch_production
+                    if instance.planned_weight_ton and instance.planned_weight_ton < min_batch:
+                        error_msg = f'تناژ برنامه ({instance.planned_weight_ton} کیلوگرم) کمتر از حداقل وزن تولید ({min_batch} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.'
+                        bug_logger.warning(f"Validation failed: {error_msg}")
+                        messages.error(request, error_msg)
+                        context = {'form': form, 'program': program, 'mode': 'edit'}
+                        context.update(_get_dashboard_context())
+                        context.update(_prepare_bom_data(request))
+                        context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
+                        return render(request, 'program_form.html', context)
+                
                 if action == 'confirm' and instance.status == ProductionProgram.Status.DRAFT:
                     instance.status = ProductionProgram.Status.CONFIRMED
                 elif action == 'start' and instance.status == ProductionProgram.Status.CONFIRMED:

@@ -1017,6 +1017,34 @@ def production_program_crud_view(request, program_id=None):
                 try:
                     instance = form.save(commit=False)
                     
+                    # Validate planned weight against min_batch_production (for all actions that create/modify program)
+                    if action in ['save_draft', 'confirm', 'start'] and instance.production_info and instance.production_info.min_batch_production:
+                        min_batch = instance.production_info.min_batch_production
+                        if instance.planned_weight_ton and instance.planned_weight_ton < min_batch:
+                            error_msg = f'تناژ برنامه ({instance.planned_weight_ton} کیلوگرم) کمتر از حداقل وزن تولید ({min_batch} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.'
+                            messages.error(request, error_msg)
+                            # Return to form with errors
+                            warehouse_dist_data = program.warehouse_distribution if program and program.warehouse_distribution else {}
+                            available_warehouses = Warehouse.objects.filter(
+                                warehouse_type='secondary'
+                            ).order_by('name')
+                            production_warehouses = Warehouse.objects.filter(
+                                warehouse_type='production'
+                            ).order_by('name')
+                            context = {
+                                'form': form,
+                                'program': program,
+                                'is_create': is_create,
+                                'raw_materials_inventory': raw_materials_inventory,
+                                'raw_materials_inventory_json': json.dumps(raw_materials_inventory),
+                                'production_infos_json': json.dumps(production_infos_data),
+                                'bom_data_json': json.dumps(bom_data),
+                                'warehouse_distribution_json': json.dumps(warehouse_dist_data),
+                                'warehouses': available_warehouses,
+                                'production_warehouses': production_warehouses,
+                            }
+                            return render(request, 'production_declaration_crud.html', context)
+                    
                     # تنظیم وضعیت بر اساس اکشن
                     if action == 'save_draft':
                         instance.status = ProductionProgram.Status.DRAFT
@@ -1090,6 +1118,65 @@ def production_program_crud_view(request, program_id=None):
                                         bug_logger.warning(f"Error converting amount for BOM {bom_id}: {str(e)}")
                         
                         bug_logger.debug(f"Warehouse distribution received: {len(clean_distribution)} BOM items")
+                        
+                        # Validate warehouse distribution: sum must equal total needed for each BOM
+                        if clean_distribution and instance.production_info and instance.planned_weight_ton:
+                            validation_errors = []
+                            tolerance = Decimal('0.0001')  # Small tolerance for decimal comparison
+                            
+                            for bom in instance.production_info.bom_items.all():
+                                bom_id_str = str(bom.id)
+                                if bom_id_str in clean_distribution:
+                                    # Calculate total needed: (percentage / 100) * planned_weight_ton
+                                    if bom.percentage is not None:
+                                        total_needed = (Decimal(str(bom.percentage)) / Decimal('100')) * instance.planned_weight_ton
+                                        
+                                        # Sum all warehouse amounts for this BOM
+                                        total_withdrawal = Decimal('0')
+                                        for dist in clean_distribution[bom_id_str]:
+                                            total_withdrawal += Decimal(str(dist['amount']))
+                                        
+                                        # Check if sum equals total needed (with tolerance)
+                                        difference = abs(total_withdrawal - total_needed)
+                                        if difference > tolerance:
+                                            material_name = bom.raw_material.name if bom.raw_material else f"BOM #{bom.id}"
+                                            if total_withdrawal > total_needed:
+                                                validation_errors.append(
+                                                    f'{material_name}: مجموع برداشت ({total_withdrawal.quantize(Decimal("0.001"))}) '
+                                                    f'بیشتر از مقدار مورد نیاز ({total_needed.quantize(Decimal("0.001"))}) است. '
+                                                    f'تفاوت: +{(total_withdrawal - total_needed).quantize(Decimal("0.001"))}'
+                                                )
+                                            else:
+                                                validation_errors.append(
+                                                    f'{material_name}: مجموع برداشت ({total_withdrawal.quantize(Decimal("0.001"))}) '
+                                                    f'کمتر از مقدار مورد نیاز ({total_needed.quantize(Decimal("0.001"))}) است. '
+                                                    f'تفاوت: {(total_withdrawal - total_needed).quantize(Decimal("0.001"))}'
+                                                )
+                            
+                            if validation_errors:
+                                bug_logger.warning(f"Warehouse distribution validation failed: {validation_errors}")
+                                messages.error(request, 'خطا در توزیع انبارها:\n\n' + '\n'.join(validation_errors))
+                                # Return to form with errors
+                                warehouse_dist_data = program.warehouse_distribution if program and program.warehouse_distribution else {}
+                                available_warehouses = Warehouse.objects.filter(
+                                    warehouse_type='secondary'
+                                ).order_by('name')
+                                production_warehouses = Warehouse.objects.filter(
+                                    warehouse_type='production'
+                                ).order_by('name')
+                                context = {
+                                    'form': form,
+                                    'program': program,
+                                    'is_create': is_create,
+                                    'raw_materials_inventory': raw_materials_inventory,
+                                    'raw_materials_inventory_json': json.dumps(raw_materials_inventory),
+                                    'production_infos_json': json.dumps(production_infos_data),
+                                    'bom_data_json': json.dumps(bom_data),
+                                    'warehouse_distribution_json': json.dumps(warehouse_dist_data),
+                                    'warehouses': available_warehouses,
+                                    'production_warehouses': production_warehouses,
+                                }
+                                return render(request, 'production_declaration_crud.html', context)
                         
                         # Store warehouse distribution with amounts (amounts directly from user input)
                         if clean_distribution and instance.production_info:
