@@ -752,7 +752,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.product.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.product_edit and is_create or accessible_production_program_fields.product_edit and program.status == 'draft' or accessible_production_program_fields.product_edit and program.status == 'confirmed' %}
+                    {% if accessible_production_program_fields.product_edit and is_create or accessible_production_program_fields.product_edit and program.status == 'draft' or accessible_production_program_fields.product_edit and program.status == 'confirmed' and program.status != 'completed' %}
                         {{ form.product }}
                     {% else %}
                         {% if program and program.product and accessible_product_fields.name %}{{ program.product.name|default:"-" }}{% else %}-{% endif %}
@@ -764,7 +764,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.production_info.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.production_info_edit and is_create or accessible_production_program_fields.production_info_edit and program.status == 'draft' or accessible_production_program_fields.production_info_edit and program.status == 'confirmed' %}
+                    {% if accessible_production_program_fields.production_info_edit and is_create or accessible_production_program_fields.production_info_edit and program.status == 'draft' or accessible_production_program_fields.production_info_edit and program.status == 'confirmed' and program.status != 'completed' %}
                         {{ form.production_info }}
                     {% else %}
                         {% if program and program.production_info and accessible_production_info_fields.formula_id %}{{ program.production_info.formula_id|default:"-" }}{% else %}-{% endif %}
@@ -776,7 +776,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.program_id.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.program_id_edit and is_create or accessible_production_program_fields.program_id_edit and program.status == 'draft' or accessible_production_program_fields.program_id_edit and program.status == 'confirmed' %}
+                    {% if accessible_production_program_fields.program_id_edit and is_create or accessible_production_program_fields.program_id_edit and program.status == 'draft' or accessible_production_program_fields.program_id_edit and program.status == 'confirmed' and program.status != 'completed' %}
                         {{ form.program_id }}
                     {% else %}
                         {% if program and accessible_production_program_fields.program_id %}{{ program.program_id|default:"-" }}{% else %}-{% endif %}
@@ -792,7 +792,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.planned_weight_ton.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.planned_weight_ton_edit and is_create or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'draft' or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'confirmed' %}
+                    {% if accessible_production_program_fields.planned_weight_ton_edit and is_create or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'draft' or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'confirmed' and program.status != 'completed' %}
                         {{ form.planned_weight_ton }}
                     {% else %}
                         {% if program %}{{ program.planned_weight_ton|default:"-" }}{% else %}-{% endif %}
@@ -805,7 +805,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.produced_weight_ton.label }}:</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.produced_weight_ton_edit %}
+                    {% if accessible_production_program_fields.produced_weight_ton_edit and program.status != 'completed' %}
                         {{ form.produced_weight_ton }}
                     {% else %}
                         {{ program.produced_weight_ton|default:"-" }}
@@ -826,7 +826,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.packaging_type.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.packaging_type_edit and is_create or accessible_production_program_fields.packaging_type_edit and program.status == 'draft' or accessible_production_program_fields.packaging_type_edit and program.status == 'confirmed' %}
+                    {% if accessible_production_program_fields.packaging_type_edit and is_create or accessible_production_program_fields.packaging_type_edit and program.status == 'draft' or accessible_production_program_fields.packaging_type_edit and program.status == 'confirmed' and program.status != 'completed' %}
                         {{ form.packaging_type }}
                     {% else %}
                         {% if program %}{{ program.get_packaging_type_display|default:"-" }}{% else %}-{% endif %}
@@ -841,7 +841,7 @@
             {% if accessible_production_program_fields.predicted_start_time %}
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">شروع پیشبینی شده: <span style="color: red;">*</span></span>
-                {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' %}
+                {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' and program.status != 'completed' %}
                     <div style="display: flex; gap: 8px; width: 100%;">
                         <div style="flex: 1;">{{ form.predicted_start_date }}</div>
                         <div style="flex: 1;">{{ form.predicted_start_time }}</div>
@@ -858,7 +858,7 @@
             {% if accessible_production_program_fields.predicted_end_time %}
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">پایان پیشبینی شده: <span style="color: red;">*</span></span>
-                {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_end_time_edit and program.status == 'confirmed' %}
+                {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_end_time_edit and program.status == 'confirmed' and program.status != 'completed' %}
                     <div style="display: flex; gap: 8px; width: 100%;">
                         <div style="flex: 1;">{{ form.predicted_end_date }}</div>
                         <div style="flex: 1;">{{ form.predicted_end_time }}</div>
@@ -879,7 +879,7 @@
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">{{ form.actual_start_date.label }}:</span>
                 <div style="width: 100%;">
-                    {% if accessible_production_program_fields.actual_start_date_edit %}
+                    {% if accessible_production_program_fields.actual_start_date_edit and program.status != 'completed' %}
                         {{ form.actual_start_date }}
                     {% else %}
                         {% if program and program.actual_start_date %}
@@ -893,7 +893,7 @@
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">{{ form.started_at.label }}:</span>
                 <div style="width: 100%;">
-                    {% if accessible_production_program_fields.started_at_edit %}
+                    {% if accessible_production_program_fields.started_at_edit and program.status != 'completed' %}
                         {{ form.started_at }}
                     {% else %}
                         {% if program and program.started_at %}
@@ -911,7 +911,7 @@
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">{{ form.actual_end_date.label }}:</span>
                 <div style="width: 100%;">
-                    {% if accessible_production_program_fields.actual_end_date_edit %}
+                    {% if accessible_production_program_fields.actual_end_date_edit and program.status != 'completed' %}
                         {{ form.actual_end_date }}
                     {% else %}
                         {% if program and program.actual_end_date %}
@@ -925,7 +925,7 @@
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">{{ form.completed_at.label }}:</span>
                 <div style="width: 100%;">
-                    {% if accessible_production_program_fields.completed_at_edit %}
+                    {% if accessible_production_program_fields.completed_at_edit and program.status != 'completed' %}
                         {{ form.completed_at }}
                     {% else %}
                         {% if program and program.completed_at %}
@@ -944,7 +944,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.inventory_snapshot.label }}:</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.inventory_snapshot_edit and is_create or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'draft' or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'confirmed' %}
+                    {% if accessible_production_program_fields.inventory_snapshot_edit and is_create or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'draft' or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'confirmed' and program.status != 'completed' %}
                         {{ form.inventory_snapshot }}
                     {% else %}
                         {% if program %}{{ program.inventory_snapshot|default:"-" }}{% else %}-{% endif %}
@@ -956,7 +956,7 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.net_unplanned_requirement.label }}:</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.net_unplanned_requirement_edit and is_create or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'draft' or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'confirmed' %}
+                    {% if accessible_production_program_fields.net_unplanned_requirement_edit and is_create or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'draft' or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'confirmed' and program.status != 'completed' %}
                         {{ form.net_unplanned_requirement }}
                     {% else %}
                         {% if program %}{{ program.net_unplanned_requirement|default:"-" }}{% else %}-{% endif %}
@@ -996,7 +996,7 @@
         <div class="section-title">{{ form.extra_description.label }}</div>
         <div class="card">
             <div class="card-body">
-                {% if accessible_production_program_fields.extra_description_edit and is_create or accessible_production_program_fields.extra_description_edit and program.status == 'draft' or accessible_production_program_fields.extra_description_edit and program.status == 'confirmed' %}
+                {% if accessible_production_program_fields.extra_description_edit and is_create or accessible_production_program_fields.extra_description_edit and program.status == 'draft' or accessible_production_program_fields.extra_description_edit and program.status == 'confirmed' and program.status != 'completed' %}
                     {{ form.extra_description }}
                 {% else %}
                     <div style="white-space: pre-wrap; padding: 8px;">{% if program %}{{ program.extra_description|default:"-" }}{% else %}-{% endif %}</div>
@@ -1258,6 +1258,7 @@
 {% block extra_js %}
 <!-- jQuery (needed for persian-datepicker) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
 
 <!-- Persian Date Picker -->
 <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
@@ -1303,15 +1304,15 @@ function updateTotalDifference(bomId) {
     const item = document.querySelector(`.warehouse-distribution-item[data-bom-id="${bomId}"]`);
     if (!item) return;
     
-    const totalNeeded = parseFloat(item.dataset.totalNeeded);
+    const totalNeeded = new Decimal(item.dataset.totalNeeded || '0');
     const amountInputs = item.querySelectorAll('.warehouse-amount-input');
     
-    let totalWithdrawal = 0;
+    let totalWithdrawal = new Decimal('0');
     amountInputs.forEach(input => {
-        totalWithdrawal += parseFloat(input.value) || 0;
+        totalWithdrawal = totalWithdrawal.plus(new Decimal(input.value || '0'));
     });
     
-    const difference = totalWithdrawal - totalNeeded;
+    const difference = totalWithdrawal.minus(totalNeeded);
     
     // Update display
     const totalWithdrawalDisplay = item.querySelector('.total-withdrawal');
@@ -1323,17 +1324,17 @@ function updateTotalDifference(bomId) {
     }
     
     if (totalDifferenceDisplay) {
-        const absValue = Math.abs(difference);
+        const absValue = difference.abs();
         const unit = totalDifferenceDisplay.textContent.split(' ').pop() || 'تن';
         
-        if (difference > 0.001) {
+        if (difference.gt(new Decimal('0.001'))) {
             totalDifferenceDisplay.textContent = `+${absValue.toFixed(3)} ${unit} (بیش از حد)`;
             totalDifferenceDisplay.style.color = '#dc3545';
             if (differenceContainer) {
                 differenceContainer.style.background = '#f8d7da';
                 differenceContainer.style.borderLeft = '4px solid #dc3545';
             }
-        } else if (difference < -0.001) {
+        } else if (difference.lt(new Decimal('-0.001'))) {
             totalDifferenceDisplay.textContent = `-${absValue.toFixed(3)} ${unit} (کمبود)`;
             totalDifferenceDisplay.style.color = '#ffc107';
             if (differenceContainer) {
@@ -1384,7 +1385,7 @@ function showStartProductionModal() {
     
     // Get planned weight for calculation
     const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
-    const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
+    const plannedWeight = plannedWeightInput ? new Decimal(plannedWeightInput.value || '0') : new Decimal('0');
     
     // Populate warehouse distribution
     const warehouseSection = document.getElementById('warehouseDistributionSection');
@@ -1393,7 +1394,7 @@ function showStartProductionModal() {
     if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
         const data = bomData[selectedProductionInfoId];
         const bomItems = data.bom_items || [];
-        const minBatch = parseFloat(data.min_batch_production) || 1;
+        const minBatch = new Decimal(data.min_batch_production || '1');
         
         // Get raw materials inventory (passed from context)
         const rawMaterialsInventory = JSON.parse('{{ raw_materials_inventory_json|escapejs }}');
@@ -1402,9 +1403,9 @@ function showStartProductionModal() {
             let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
             
             bomItems.forEach(item => {
-                // Calculate total consumption needed
-                const quantity = parseFloat(item.quantity) || 0;
-                const totalConsumption = ((quantity * plannedWeight) / minBatch).toFixed(3);
+                // Calculate total consumption needed: percentage * plannedWeight / 100
+                const percentage = new Decimal(item.percentage || '0');
+                const totalConsumption = percentage.mul(plannedWeight).div(new Decimal('100')).toFixed(3);
                 
                 // Find raw material with matching ID and get its warehouses
                 const rmInventory = rawMaterialsInventory.find(inv => 
@@ -1443,7 +1444,7 @@ function showStartProductionModal() {
                     `;
                     
                     warehouses.forEach((wh, index) => {
-                        const defaultAmount = index === 0 ? parseFloat(totalConsumption).toFixed(3) : '0';
+                        const defaultAmount = index === 0 ? totalConsumption : '0';
                         const warehouseName = wh.warehouse_name || wh.warehouse_id || '-';
                         const quantity = wh.quantity || '0';
                         const unit = rmInventory.unit || item.unit_used || 'تن';
@@ -1565,7 +1566,7 @@ function showCompleteProductionModal() {
     
     // Get planned weight for calculation
     const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
-    const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
+    const plannedWeight = plannedWeightInput ? new Decimal(plannedWeightInput.value || '0') : new Decimal('0');
     
     // Populate BOM actual consumption fields (warehouse-specific)
     const bomSection = document.getElementById('bomActualConsumptionSection');
@@ -1575,7 +1576,7 @@ function showCompleteProductionModal() {
     if (selectedProductionInfoId && bomData[selectedProductionInfoId]) {
         const data = bomData[selectedProductionInfoId];
         const bomItems = data.bom_items || [];
-        const minBatch = parseFloat(data.min_batch_production) || 1;
+        const minBatch = new Decimal(data.min_batch_production || '1');
         
         // Get raw materials inventory (passed from context)
         const rawMaterialsInventory = JSON.parse('{{ raw_materials_inventory_json|escapejs }}');
@@ -1588,16 +1589,16 @@ function showCompleteProductionModal() {
             let html = '<div style="display: flex; flex-direction: column; gap: 20px;">';
             
             bomItems.forEach(item => {
-                // Calculate total consumption needed
-                const quantity = parseFloat(item.quantity) || 0;
-                const totalConsumption = ((quantity * plannedWeight) / minBatch).toFixed(3);
+                // Calculate total consumption needed: percentage * plannedWeight / 100
+                const percentage = new Decimal(item.percentage || '0');
+                const totalConsumption = percentage.mul(plannedWeight).div(new Decimal('100')).toFixed(3);
                 
                 // Find warehouses that have this raw material and non-zero amounts in distribution
                 const bomIdStr = String(item.id);
                 const warehousesForBom = existingWarehouseDist[bomIdStr] || [];
                 
                 // Filter to only warehouses with non-zero amounts
-                const warehousesWithAmount = warehousesForBom.filter(wh => parseFloat(wh.amount || 0) > 0);
+                const warehousesWithAmount = warehousesForBom.filter(wh => new Decimal(wh.amount || '0').gt(new Decimal('0')));
                 
                 if (warehousesWithAmount.length > 0) {
                     html += `
@@ -1626,7 +1627,7 @@ function showCompleteProductionModal() {
                     `;
                     
                     warehousesWithAmount.forEach(wh => {
-                        const plannedAmount = parseFloat(wh.amount || 0).toFixed(3);
+                        const plannedAmount = new Decimal(wh.amount || '0').toFixed(3);
                         // Default actual withdrawal = planned amount
                         const defaultActual = plannedAmount;
                         
@@ -1712,9 +1713,9 @@ function confirmStartProduction() {
             
             amountInputs.forEach(input => {
                 const warehouse = input.dataset.warehouse;
-                const amount = parseFloat(input.value) || 0;
+                const amount = new Decimal(input.value || '0');
                 
-                if (amount > 0) {
+                if (amount.gt(new Decimal('0'))) {
                     hasAnyAmount = true;
                     distributions.push({
                         warehouse: warehouse,
@@ -1800,9 +1801,9 @@ function confirmCompleteProduction() {
         
         actualInputs.forEach(input => {
             const warehouse = input.dataset.warehouse;
-            const amount = parseFloat(input.value) || 0;
+            const amount = new Decimal(input.value || '0');
             
-            if (amount > 0) {
+            if (amount.gt(new Decimal('0'))) {
                 hasAnyAmount = true;
                 warehouseActuals[warehouse] = amount.toFixed(3);
             }
@@ -1957,8 +1958,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
     // Get planned_weight_ton from the form
         const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
-        const plannedWeight = plannedWeightInput ? parseFloat(plannedWeightInput.value) || 0 : 0;
-        const minBatch = parseFloat(data.min_batch_production) || 1;
+        const plannedWeight = plannedWeightInput ? new Decimal(plannedWeightInput.value || '0') : new Decimal('0');
+        const minBatch = new Decimal(data.min_batch_production || '1');
         
     // Get current status from the hidden status field or program context
     let currentStatus = '{{ program.status|default:"draft" }}';
@@ -1989,7 +1990,9 @@ document.addEventListener('DOMContentLoaded', function() {
             html += `                <strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>\n`;
         }
         if (showMinBatch) {
-            html += `                <strong>حداقل تناژ تولید:</strong> ${data.min_batch_production || '-'} تن<br>\n`;
+            // Display as kg (no conversion, just change unit)
+            const minBatchKg = data.min_batch_production ? new Decimal(data.min_batch_production).toFixed(2) : '-';
+            html += `                <strong>حداکثر وزن تولید:</strong> ${minBatchKg} کیلوگرم<br>\n`;
         }
         if (showSpecificInstruction) {
             html += `                <strong>دستورالعمل تولید:</strong> ${data.specific_production_instruction || '-'}\n`;
@@ -1999,23 +2002,23 @@ document.addEventListener('DOMContentLoaded', function() {
         if (showRawMaterialId) html += `                        <th>کد ماده اولیه</th>\n`;
         if (showRawMaterialName) html += `                        <th>نام ماده اولیه</th>\n`;
     if (showWarehouseName) html += `                        <th>انبار</th>\n`;
-    html += `                        <th>مقدار (در فرمول)</th>\n                        <th>مقدار مصرف کل</th>\n`;
+    html += `                        <th>درصد</th>\n                        <th>مقدار مصرف کل</th>\n`;
         if (showActualConsumption) html += `                        <th style="background: #fff6db;">برداشت واقعی</th>\n`;
         if (showUnit) html += `                        <th>واحد</th>\n`;
         html += `                    </tr>\n                </thead>\n                <tbody>\n`;
         
     data.bom_items.forEach(item => {
-            const quantity = parseFloat(item.quantity) || 0;
+            const percentage = new Decimal(item.percentage || '0');
             const bomIdStr = String(item.id);
             
             // Check if this BOM has warehouse distribution
             const warehousesForBom = existingWarehouseDist[bomIdStr] || [];
-            const warehousesWithAmount = warehousesForBom.filter(wh => parseFloat(wh.amount || 0) > 0);
+            const warehousesWithAmount = warehousesForBom.filter(wh => new Decimal(wh.amount || '0').gt(new Decimal('0')));
             
                 if (warehousesWithAmount.length > 0) {
                 // Show one row per warehouse
                 warehousesWithAmount.forEach((wh, whIndex) => {
-                    const plannedAmount = parseFloat(wh.amount || 0).toFixed(3);
+                    const plannedAmount = new Decimal(wh.amount || '0').toFixed(3);
                     
                     // Get actual consumption for this warehouse
                     let actualAmount = '';
@@ -2028,16 +2031,33 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${whIndex === 0 && showRawMaterialId ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_id || '-'}</td>` : ''}
                             ${whIndex === 0 && showRawMaterialName ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_name || '-'}</td>` : ''}
                             ${showWarehouseName ? `<td style="background: #f0f8ff; font-weight: 600;">${wh.warehouse}</td>` : ''}
-                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${item.quantity || 0}</td>` : ''}
+                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${percentage.toFixed(3)}%</td>` : ''}
                             <td style="font-weight: 600; color: var(--primary-green);">${plannedAmount}</td>
                     `;
                     
                     if (showActualConsumption) {
-                        html += `
-                            <td style="background: #fff6db;">
-                                <span style="font-weight: 600; color: #b95c00;">${actualAmount || '-'}</span>
-                            </td>
-                        `;
+                        // در وضعیت in_progress قابل ویرایش، در completed فقط نمایش
+                        if (currentStatus === 'in_progress' && hasActualConsumptionPermission) {
+                            html += `
+                                <td style="background: #fff6db; text-align: center;">
+                                    <input type="number" 
+                                           class="warehouse-actual-input form-control" 
+                                           data-bom-id="${item.id}"
+                                           data-warehouse="${wh.warehouse}"
+                                           min="0" 
+                                           step="0.001"
+                                           value="${actualAmount || ''}"
+                                           placeholder="برداشت واقعی"
+                                           style="width: 120px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
+                                </td>
+                            `;
+                        } else {
+                            html += `
+                                <td style="background: #fff6db;">
+                                    <span style="font-weight: 600; color: #b95c00;">${actualAmount || '-'}</span>
+                                </td>
+                            `;
+                        }
                     }
                     
                     html += `
@@ -2047,7 +2067,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } else {
                 // No warehouse distribution - show single row
-                const totalConsumption = plannedWeight > 0 ? ((quantity * plannedWeight) / minBatch).toFixed(3) : '-';
+                // Calculate total consumption: percentage * plannedWeight / 100
+                const totalConsumption = plannedWeight.gt(new Decimal('0')) ? percentage.mul(plannedWeight).div(new Decimal('100')).toFixed(3) : '-';
                 // Check for existing actual consumption (global) and prefill if available
                 let existingGlobalActual = '';
                 if (existingActualConsumption && existingActualConsumption[bomIdStr]) {
@@ -2059,24 +2080,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         ${showRawMaterialId ? `<td>${item.raw_material_id || '-'}</td>` : ''}
                         ${showRawMaterialName ? `<td>${item.raw_material_name || '-'}</td>` : ''}
                         ${showWarehouseName ? `<td style="color: #6c757d; font-style: italic;">-</td>` : ''}
-                        <td>${item.quantity || 0}</td>
+                        <td>${percentage.toFixed(3)}%</td>
                         <td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
                 `;
                 
                 if (showActualConsumption) {
                     // For BOM items without warehouse distribution, present a single global actual consumption input so user can enter real use
                     const defaultValue = existingGlobalActual || totalConsumption || '';
-                    html += `<td style="background: #f8f9fa; text-align: center;">
-                        <input type="number" 
-                               class="warehouse-actual-input form-control" 
-                               data-bom-id="${item.id}"
-                               data-warehouse="global"
-                               min="0" 
-                               step="0.001"
-                               value="${defaultValue}"
-                               placeholder="برداشت واقعی"
-                               style="width: 140px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
-                    </td>`;
+                    // در وضعیت in_progress قابل ویرایش، در completed فقط نمایش
+                    if (currentStatus === 'in_progress' && hasActualConsumptionPermission) {
+                        html += `<td style="background: #f8f9fa; text-align: center;">
+                            <input type="number" 
+                                   class="warehouse-actual-input form-control" 
+                                   data-bom-id="${item.id}"
+                                   data-warehouse="global"
+                                   min="0" 
+                                   step="0.001"
+                                   value="${defaultValue}"
+                                   placeholder="برداشت واقعی"
+                                   style="width: 140px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
+                        </td>`;
+                    } else {
+                        html += `<td style="background: #f8f9fa; text-align: center;">
+                            <span style="font-weight: 600; color: #b95c00;">${defaultValue || '-'}</span>
+                        </td>`;
+                    }
                 }
                 
                 html += `
@@ -2162,9 +2190,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Combine datetime fields first
                 combineDateTimeFields();
                 
+                // Get program status
+                const programStatus = '{{ program.status|default:"draft" }}';
+                
+                // Collect actual consumption data for in_progress status
+                if (programStatus === 'in_progress') {
+                    const actualInputs = document.querySelectorAll('.warehouse-actual-input');
+                    actualInputs.forEach(input => {
+                        const bomId = input.dataset.bomId;
+                        const warehouse = input.dataset.warehouse;
+                        const amount = new Decimal(input.value || '0');
+                        
+                        if (amount.gt(new Decimal('0'))) {
+                            const hiddenInput = document.createElement('input');
+                            hiddenInput.type = 'hidden';
+                            hiddenInput.name = `actual_consumption_${bomId}_${warehouse}`;
+                            hiddenInput.value = amount.toFixed(3);
+                            productionForm.appendChild(hiddenInput);
+                        }
+                    });
+                }
+                
                 // Form validation
                 const isCreate = {{ is_create|yesno:"true,false" }};
-                const programStatus = '{{ program.status|default:"draft" }}';
                 
                 // Only validate required fields for new programs or draft status
                 if (isCreate || programStatus === 'draft') {

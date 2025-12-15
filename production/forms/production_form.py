@@ -99,7 +99,7 @@ class ProductionForm(forms.ModelForm):
     started_at = forms.TimeField(
         required=False,
         label='زمان شروع واقعی',
-        widget=forms.TimeInput(attrs={'class': 'form-control time-picker-input', 'type': 'text', 'placeholder': 'HH:MM'})
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
     actual_end_date = jDateField(
         required=False,
@@ -109,7 +109,7 @@ class ProductionForm(forms.ModelForm):
     completed_at = forms.TimeField(
         required=False,
         label='زمان تکمیل',
-        widget=forms.TimeInput(attrs={'class': 'form-control time-picker-input', 'type': 'text', 'placeholder': 'HH:MM'})
+        widget=forms.TimeInput(attrs={'class': 'form-control', 'type': 'time'})
     )
     status = forms.CharField(widget=forms.HiddenInput(), required=False)
 

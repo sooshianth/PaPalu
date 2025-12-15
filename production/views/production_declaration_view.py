@@ -1282,6 +1282,38 @@ def production_program_crud_view(request, program_id=None):
                         audit_logger.activity(f"Production program {program_id} denied by user. reason: {reason}")
                         messages.success(request, 'برنامه تولید با موفقیت رد شد')
                         return redirect(reverse('production:production_declaration'))
+                    elif action == 'save':
+                        # Save action - allow updating actual consumption for in_progress programs
+                        if instance.status == ProductionProgram.Status.IN_PROGRESS:
+                            # Parse actual consumption data from form
+                            actual_consumption = {}
+                            for key in request.POST.keys():
+                                if key.startswith('actual_consumption_'):
+                                    # Format: actual_consumption_{bom_id}_{warehouse}
+                                    parts = key.replace('actual_consumption_', '').split('_', 1)
+                                    if len(parts) == 2:
+                                        bom_id = parts[0]
+                                        warehouse = parts[1]
+                                        amount_str = request.POST.get(key, '').strip()
+                                        if amount_str:
+                                            try:
+                                                amount = Decimal(str(amount_str))
+                                                if amount >= 0:  # Only accept non-negative values
+                                                    if bom_id not in actual_consumption:
+                                                        actual_consumption[bom_id] = {}
+                                                    actual_consumption[bom_id][warehouse] = str(amount)
+                                            except (ValueError, TypeError) as e:
+                                                bug_logger.warning(f"Error parsing actual consumption amount for {key}: {str(e)}")
+                            
+                            # Update actual consumption if provided
+                            if actual_consumption:
+                                instance.actual_consumption = actual_consumption
+                                bug_logger.debug(f"Actual consumption updated for program {program_id}: {len(actual_consumption)} BOM items")
+                        
+                        instance.save()
+                        bug_logger.info(f"Production program {program_id} saved")
+                        messages.success(request, 'برنامه تولید با موفقیت ذخیره شد.')
+                        return redirect(reverse('production:program_crud', args=[program_id]))
                     elif action == 'revert':
                         # Revert an in-progress program back to confirmed
                         if not user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value):
