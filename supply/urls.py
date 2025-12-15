@@ -13,8 +13,10 @@ from .views import (
     supplier_detail_view,
     supplier_edit_view,
     # Raw Material Views
-    define_basic_material_view,
+    raw_material_list_view,
     price_inquiry_modal_view,
+    raw_material_detail_view,
+    raw_material_edit_view,
     # Purchase Order Views
     purchase_order_management_view,
     create_procurement_purchase_order_view,
@@ -53,7 +55,9 @@ app_name = 'supply'
 
 urlpatterns = [
     path('', supply_home_view, name='home'),
-    path('definebasicmat/', define_basic_material_view, name='define_basic_material'),
+    path('raw-materials/', raw_material_list_view, name='raw_material_list'),
+    path('raw-materials/<str:raw_material_id>/', raw_material_detail_view, name='raw_material_detail'),
+    path('raw-materials/<str:raw_material_id>/edit/', raw_material_edit_view, name='raw_material_edit'),
     path('price-inquiries/<str:raw_material_id>/', price_inquiry_modal_view, name='price_inquiry_modal'),
     path('suppliers/', supplier_list_view, name='supplier_list'),
     path('suppliers/<str:national_id>/', supplier_detail_view, name='supplier_detail'),

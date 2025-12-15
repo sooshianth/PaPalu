@@ -2,7 +2,7 @@
 View های مربوط به مدیریت مواد اولیه
 این ماژول شامل تمام view های مربوط به تعریف، نمایش و مدیریت مواد اولیه و استعلام قیمت است
 """
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
 from django.db import transaction
@@ -72,7 +72,7 @@ def get_accessible_person_fields(user):
 
 
 @login_required
-def define_basic_material_view(request):
+def raw_material_list_view(request):
 	"""تعریف مواد اولیه - نمایش و عملیات"""
 	audit_logger.info("تعریف مواد اولیه - نمایش و عملیات")
 	
@@ -104,7 +104,7 @@ def define_basic_material_view(request):
 					pi.save()
 				messages.success(request, 'ماده اولیه ثبت شد.')
 				bug_logger.info(f"RawMaterial saved rid={instance.raw_material_id}")
-				return redirect(reverse('supply:define_basic_material'))
+				return redirect(reverse('raw_material:raw_material_list'))
 			else:
 				bug_logger.warning(f"فرم تعریف ماده اولیه نامعتبر است. rm_errors={rm_form.errors} pi_errors={pi_form.errors}")
 				messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
@@ -129,14 +129,14 @@ def define_basic_material_view(request):
 			'accessible_purchase_info_fields': accessible_purchase_info_fields,
 			'accessible_person_fields': accessible_person_fields,
 		}
-		return render(request, 'supply_define_basic_material.html', context)
+		return render(request, 'raw_material/raw_material_list.html', context)
 	except Exception as e:
 		bug_logger.error(f"Define basic material error: {e}")
 		if request.method == 'POST':
 			messages.error(request, 'خطا در ثبت. لطفاً مجدداً تلاش کنید.')
 		from supply.tables import RawMaterialTable
 		table = RawMaterialTable(RawMaterial.objects.none(), accessible_fields=accessible_raw_material_fields)
-		return render(request, 'supply_define_basic_material.html', {
+		return render(request, 'raw_material/raw_material_list.html', {
 			'rm_form': RawMaterialDefineForm(),
 			'pi_form': PurchaseInfoInlineForm(),
 			'table': table,
@@ -186,4 +186,116 @@ def price_inquiry_modal_view(request, raw_material_id: str):
 	except Exception as e:
 		bug_logger.error(f"PriceInquiry modal error: {e}")
 		return HttpResponseBadRequest("error")
+
+
+@login_required
+def raw_material_detail_view(request, raw_material_id: str):
+	"""مشاهده جزئیات ماده اولیه"""
+	audit_logger.info(f"مشاهده جزئیات ماده اولیه rid={raw_material_id}")
+	
+	# Check task permission
+	if not user_has_task(request.user, TaskChoices.SUPPLY_DEFINE_RAW_MATERIAL.value):
+		audit_logger.activity(f"تلاش برای مشاهده جزئیات ماده اولیه بدون مجوز - کاربر: {request.user.username}")
+		messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+		return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+	
+	try:
+		material = get_object_or_404(RawMaterial, raw_material_id=raw_material_id)
+		
+		# Get purchase info
+		purchase_info = None
+		try:
+			purchase_info = RawMaterialPurchaseInfo.objects.get(raw_material=material)
+		except RawMaterialPurchaseInfo.DoesNotExist:
+			pass
+		
+		# Get field access permissions
+		accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
+		accessible_purchase_info_fields = get_accessible_purchase_info_fields(request.user)
+		accessible_person_fields = get_accessible_person_fields(request.user)
+		
+		context = {
+			'material': material,
+			'purchase_info': purchase_info,
+			'accessible_raw_material_fields': accessible_raw_material_fields,
+			'accessible_purchase_info_fields': accessible_purchase_info_fields,
+			'accessible_person_fields': accessible_person_fields,
+		}
+		
+		return render(request, 'raw_material/raw_material_detail.html', context)
+	except Exception as e:
+		bug_logger.error(f"Raw material detail error: {e}")
+		messages.error(request, 'خطا در بارگذاری جزئیات.')
+		return redirect(reverse('supply:raw_material_list'))
+
+
+@login_required
+def raw_material_edit_view(request, raw_material_id: str):
+	"""ویرایش ماده اولیه"""
+	audit_logger.info(f"ویرایش ماده اولیه rid={raw_material_id}")
+	
+	# Check task permission
+	if not user_has_task(request.user, TaskChoices.SUPPLY_DEFINE_RAW_MATERIAL.value):
+		audit_logger.activity(f"تلاش برای ویرایش ماده اولیه بدون مجوز - کاربر: {request.user.username}")
+		messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+		return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+	
+	try:
+		material = get_object_or_404(RawMaterial, raw_material_id=raw_material_id)
+		
+		# Get purchase info
+		purchase_info, _ = RawMaterialPurchaseInfo.objects.get_or_create(raw_material=material)
+		
+		# Get field access permissions
+		accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
+		accessible_purchase_info_fields = get_accessible_purchase_info_fields(request.user)
+		accessible_person_fields = get_accessible_person_fields(request.user)
+		
+		if request.method == 'POST':
+			# In POST, restore values from instance for readonly/disabled fields
+			post_data = request.POST.copy()
+			post_data['primary_unit'] = str(material.primary_unit) if material.primary_unit else ''
+			post_data['secondary_unit'] = str(material.secondary_unit) if material.secondary_unit else ''
+			post_data['name'] = material.name
+			post_data['conversion_factor'] = str(material.conversion_factor) if material.conversion_factor else ''
+			
+			rm_form = RawMaterialDefineForm(post_data, request.FILES, instance=material)
+			pi_form = PurchaseInfoInlineForm(request.POST, instance=purchase_info)
+		else:
+			rm_form = RawMaterialDefineForm(instance=material)
+			pi_form = PurchaseInfoInlineForm(instance=purchase_info)
+		
+		# Set readonly/disabled fields for edit mode (both GET and POST)
+		# For text fields, use readonly
+		rm_form.fields['name'].widget.attrs['readonly'] = True
+		rm_form.fields['conversion_factor'].widget.attrs['readonly'] = True
+		# For select fields, use disabled (values are restored from instance in POST)
+		rm_form.fields['primary_unit'].widget.attrs['disabled'] = True
+		rm_form.fields['secondary_unit'].widget.attrs['disabled'] = True
+		
+		if request.method == 'POST':
+			if rm_form.is_valid() and pi_form.is_valid():
+				with transaction.atomic():
+					rm_form.save()
+					pi_form.save()
+				messages.success(request, 'ماده اولیه با موفقیت به‌روزرسانی شد.')
+				bug_logger.info(f"RawMaterial updated rid={material.raw_material_id}")
+				return redirect(reverse('raw_material:raw_material_detail', args=[material.raw_material_id]))
+			else:
+				bug_logger.warning(f"فرم ویرایش ماده اولیه نامعتبر است. rm_errors={rm_form.errors} pi_errors={pi_form.errors}")
+				messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
+		
+		context = {
+			'material': material,
+			'rm_form': rm_form,
+			'pi_form': pi_form,
+			'accessible_raw_material_fields': accessible_raw_material_fields,
+			'accessible_purchase_info_fields': accessible_purchase_info_fields,
+			'accessible_person_fields': accessible_person_fields,
+		}
+		return render(request, 'raw_material/raw_material_edit.html', context)
+	except Exception as e:
+		bug_logger.error(f"Raw material edit error: {e}")
+		messages.error(request, 'خطا در ویرایش.')
+		return redirect(reverse('raw_material:raw_material_list'))
 

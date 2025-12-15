@@ -5,19 +5,19 @@
 {% block extra_css %}
 <style>
     .page-header {
-        margin-bottom: 24px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid #e9ecef;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 15px;
     }
     
     .page-header h1 {
-        font-size: 1.75rem;
-        color: #343a40;
+        color: var(--gray-800);
+        font-size: 1.8rem;
         font-weight: 600;
         margin: 0;
     }
@@ -196,56 +196,140 @@
         gap: 10px;
     }
     
-    /* Remove old data-table rules and mirror suppliers table styles */
+    /* استایل جدول مشابه sales app */
+    .table-container {
+        overflow-x: auto;
+    }
     
-    .table-container .table {
+    .data-table {
         width: 100%;
         border-collapse: collapse;
         background: white;
-        margin-bottom: 0;
+        border: none !important;
     }
     
-    .table-container .table thead {
+    .data-table,
+    .data-table table {
+        border: none !important;
+    }
+    
+    .data-table thead {
         background: var(--gray-100);
     }
     
-    .table-container .table thead th {
-      padding: 12px 15px;
-      text-align: center;
-      font-weight: 600;
-      color: var(--gray-800);
-      border: 1px solid var(--gray-300);
-      vertical-align: middle;
-      white-space: nowrap;
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border: none !important;
     }
     
-    .table-container .table tbody tr {
-      transition: background-color 0.2s;
-      cursor: pointer;
+    /* حذف کامل border از سرستون‌ها - override تمام استایل‌های bootstrap و django-tables2 */
+    .data-table thead th,
+    .data-table thead tr th,
+    .table-container .data-table thead th,
+    .table-container .data-table thead tr th,
+    #materialsTable thead th,
+    #materialsTable thead tr th,
+    table.data-table thead th,
+    table.data-table thead tr th,
+    table.table thead th,
+    table.table thead tr th,
+    .table thead th,
+    .table thead tr th,
+    .table-bordered thead th,
+    .table-bordered thead tr th {
+        border: none !important;
+        border-bottom: none !important;
+        border-top: none !important;
+        border-left: none !important;
+        border-right: none !important;
     }
     
-    .table-container .table tbody tr:hover {
-      background-color: var(--light-green);
+    /* Override bootstrap table borders */
+    .data-table,
+    table.data-table,
+    table.table {
+        border: none !important;
     }
     
-    .table-container .table tbody td {
-      padding: 12px 15px;
-      color: var(--gray-600);
-      border: 1px solid var(--gray-300);
-      text-align: center;
-      vertical-align: middle;
+    .data-table thead,
+    table.data-table thead,
+    table.table thead {
+        border: none !important;
+        border-bottom: none !important;
     }
-    /* Match suppliers table button variants inside cells (if any) */
-    .table-container .btn-warning {
-      color: #ffc107 !important;
-      border-color: #ffc107 !important;
-      background-color: transparent !important;
+    
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
     }
-    .table-container .btn-warning:hover {
-      background-color: #ffc107 !important;
-      color: #212529 !important;
+    
+    /* فقط سطرهایی که actions ندارند، cursor: pointer داشته باشند */
+    .data-table tbody tr:not(:has(.btn-group)) {
+        cursor: pointer;
     }
-    /* Pagination styles to match suppliers page */
+    
+    .data-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .data-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
+    /* استایل دکمه‌های actions */
+    .data-table .btn-group {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .data-table .btn-outline-info,
+    .table-container .btn-outline-info {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #17a2b8;
+        transition: all 0.3s;
+        color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .data-table .btn-outline-info:hover,
+    .table-container .btn-outline-info:hover {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
+    }
+    
+    .data-table .btn-outline-warning,
+    .table-container .btn-outline-warning {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #ffc107;
+        transition: all 0.3s;
+        color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .data-table .btn-outline-warning:hover,
+    .table-container .btn-outline-warning:hover {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+        border-color: #ffc107 !important;
+    }
+    /* استایل notice برای راهنمایی */
     .table-notice {
       display: flex;
       align-items: center;
@@ -268,57 +352,7 @@
       color: #1976d2;
     }
     
-    .pagination {
-      margin-top: 30px;
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-      list-style: none;
-      padding: 0;
-      direction: ltr;
-    }
-    .pagination li {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-      order: 0;
-    }
-    .pagination li:last-child { order: -1; }
-    .pagination li:first-child { order: 999; }
-    .pagination a,
-    .pagination span {
-      display: inline-block;
-      padding: 10px 16px;
-      border: 1px solid var(--gray-300);
-      border-radius: 8px;
-      color: var(--gray-700);
-      text-decoration: none;
-      transition: all 0.3s ease;
-      font-size: 0.9rem;
-      font-weight: 500;
-      min-width: 40px;
-      text-align: center;
-      background-color: white;
-      margin: 0 2px;
-    }
-    .pagination a:hover {
-      background-color: var(--primary-green);
-      color: white !important;
-      border-color: var(--primary-green);
-      transform: translateY(-2px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-    .pagination .current {
-      background-color: var(--primary-green) !important;
-      color: white !important;
-      border-color: var(--primary-green) !important;
-      font-weight: 600;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-    
+    /* استایل صفحه‌بندی مشابه sales app */
     .pagination {
         margin-top: 30px;
         margin-bottom: 20px;
@@ -329,7 +363,7 @@
         flex-wrap: wrap;
         list-style: none;
         padding: 0;
-        direction: ltr;
+        direction: ltr !important;
     }
     
     .pagination li {
@@ -364,6 +398,15 @@
         margin: 0 2px;
     }
     
+    .pagination li:first-child a,
+    .pagination li:first-child span,
+    .pagination li:last-child a,
+    .pagination li:last-child span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
     .pagination a:hover {
         background-color: var(--primary-green);
         color: white !important;
@@ -378,6 +421,87 @@
         border-color: var(--primary-green) !important;
         font-weight: 600;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .pagination .disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .pagination .disabled a,
+    .pagination .disabled span {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+    }
+    
+    .pagination .ellipsis {
+        padding: 10px 8px;
+        color: var(--gray-600);
+        border: none !important;
+        background: transparent !important;
+    }
+    
+    /* Override برای استایل‌های bootstrap */
+    .pagination > li > a,
+    .pagination > li > span {
+        border: 1px solid var(--gray-300) !important;
+        border-radius: 8px !important;
+        color: var(--gray-700) !important;
+        background-color: white !important;
+        padding: 10px 16px !important;
+        margin: 0 2px !important;
+        min-width: 40px !important;
+    }
+    
+    .table-container + .pagination,
+    .table-container .pagination,
+    div.pagination {
+        direction: ltr !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+    }
+    
+    .pagination > li:first-child > a,
+    .pagination > li:first-child > span,
+    .pagination > li:last-child > a,
+    .pagination > li:last-child > span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .pagination > li > a:hover,
+    .pagination > li > a:focus {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+    }
+    
+    .pagination > .active > a,
+    .pagination > .active > span,
+    .pagination > .active > a:hover,
+    .pagination > .active > span:hover,
+    .pagination > .active > a:focus,
+    .pagination > .active > span:focus {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+        font-weight: 600;
+    }
+    
+    .pagination > .disabled > a,
+    .pagination > .disabled > span,
+    .pagination > .disabled > a:hover,
+    .pagination > .disabled > span:hover,
+    .pagination > .disabled > a:focus,
+    .pagination > .disabled > span:focus {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+        opacity: 0.5;
+        cursor: not-allowed;
     }
     
     .alert {
@@ -1258,6 +1382,10 @@
 
         if (table){
           table.querySelector('tbody')?.addEventListener('click', function(e){
+            // اگر کلیک روی دکمه‌های actions بود، row click را ignore کن
+            if (e.target.closest('.btn-group') || e.target.closest('a')) {
+              return;
+            }
             const tr = e.target.closest('tr');
             if (!tr) return;
             const firstTd = tr.querySelector('td');

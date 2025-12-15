@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+{% block title %}جزئیات ماده اولیه{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h1 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .detail-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .section-title {
+        font-size: 1.1rem;
+        margin: 25px 0 15px 0;
+        color: var(--gray-800);
+        font-weight: 600;
+        border-bottom: 2px solid var(--primary-green);
+        padding-bottom: 8px;
+    }
+    
+    .section-title:first-child {
+        margin-top: 0;
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-bottom: 25px;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 15px;
+        background: var(--gray-100);
+        border-radius: 8px;
+    }
+    
+    .info-label {
+        font-size: 0.85rem;
+        color: var(--gray-600);
+        font-weight: 600;
+    }
+    
+    .info-value {
+        font-size: 1rem;
+        color: var(--gray-800);
+        font-weight: 500;
+    }
+    
+    .info-value.empty {
+        color: var(--gray-500);
+        font-style: italic;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-green);
+        border-color: var(--primary-green);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        font-weight: 600;
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--dark-green);
+        color: white;
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        border-color: var(--gray-600);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        font-weight: 600;
+        border: none;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .detail-card {
+            padding: 20px;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>جزئیات ماده اولیه</h1>
+    <div style="display: flex; gap: 10px;">
+        <a href="{% url 'supply:raw_material_edit' material.raw_material_id %}" class="btn-primary">ویرایش</a>
+        <a href="{% url 'supply:raw_material_list' %}" class="btn-secondary">بازگشت به فهرست</a>
+    </div>
+</div>
+
+{% if messages %}
+  {% for m in messages %}<div class="alert alert-{{ m.tags }}" role="alert">{{ m }}</div>{% endfor %}
+{% endif %}
+
+<div class="detail-card">
+    <div class="section-title">اطلاعات پایه</div>
+    <div class="info-grid">
+        {% if accessible_raw_material_fields.raw_material_id %}
+        <div class="info-item">
+            <span class="info-label">شناسه</span>
+            <span class="info-value">{{ material.raw_material_id }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.name %}
+        <div class="info-item">
+            <span class="info-label">نام ماده اولیه</span>
+            <span class="info-value">{{ material.name|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.physical_form %}
+        <div class="info-item">
+            <span class="info-label">شکل فیزیکی</span>
+            <span class="info-value">{{ material.get_physical_form_display|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.status %}
+        <div class="info-item">
+            <span class="info-label">وضعیت</span>
+            <span class="info-value">{{ material.get_status_display|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.main_supplier and accessible_person_fields.name %}
+        <div class="info-item">
+            <span class="info-label">تامین‌کننده اصلی</span>
+            <span class="info-value">{{ material.main_supplier.name|default:"—" }}</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="section-title">واحدها و تبدیل</div>
+    <div class="info-grid">
+        {% if accessible_raw_material_fields.primary_unit %}
+        <div class="info-item">
+            <span class="info-label">واحد اصلی</span>
+            <span class="info-value">{{ material.get_primary_unit_display|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.secondary_unit %}
+        <div class="info-item">
+            <span class="info-label">واحد فرعی</span>
+            <span class="info-value">{{ material.get_secondary_unit_display|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.conversion_factor %}
+        <div class="info-item">
+            <span class="info-label">ضریب تبدیل (اصلی→فرعی)</span>
+            <span class="info-value">{{ material.conversion_factor|default:"—" }}</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if accessible_raw_material_fields.technical_description %}
+    <div class="section-title">توضیحات فنی</div>
+    <div class="info-item" style="margin-bottom: 25px;">
+        <span class="info-value">{{ material.technical_description|default:"—" }}</span>
+    </div>
+    {% endif %}
+    
+    {% if purchase_info %}
+    <div class="section-title">شرایط حمل و نگهداری</div>
+    <div class="info-grid">
+        {% if accessible_purchase_info_fields.transportation_conditions %}
+        <div class="info-item">
+            <span class="info-label">شرایط حمل</span>
+            <span class="info-value">{{ purchase_info.transportation_conditions|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_purchase_info_fields.storage_conditions %}
+        <div class="info-item">
+            <span class="info-label">شرایط نگهداری</span>
+            <span class="info-value">{{ purchase_info.storage_conditions|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_purchase_info_fields.minimum_order_quantity %}
+        <div class="info-item">
+            <span class="info-label">حداقل مقدار سفارش (کیلوگرم)</span>
+            <span class="info-value">{{ purchase_info.minimum_order_quantity|default:"—" }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <div class="section-title">سایر اطلاعات</div>
+    <div class="info-grid">
+        {% if accessible_raw_material_fields.hs_code %}
+        <div class="info-item">
+            <span class="info-label">HS Code</span>
+            <span class="info-value">{{ material.hs_code|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.veterinary_health_id %}
+        <div class="info-item">
+            <span class="info-label">شناسه دامپزشکی/بهداشت</span>
+            <span class="info-value">{{ material.veterinary_health_id|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.standard_loss_percentage %}
+        <div class="info-item">
+            <span class="info-label">درصد افت استاندارد</span>
+            <span class="info-value">{{ material.standard_loss_percentage|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.expiration_date %}
+        <div class="info-item">
+            <span class="info-label">تاریخ انقضا</span>
+            <span class="info-value">{{ material.expiration_date|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.created_at %}
+        <div class="info-item">
+            <span class="info-label">تاریخ ایجاد</span>
+            <span class="info-value">{{ material.created_at|date:"Y-m-d H:i"|default:"—" }}</span>
+        </div>
+        {% endif %}
+        
+        {% if accessible_raw_material_fields.updated_at %}
+        <div class="info-item">
+            <span class="info-label">آخرین ویرایش</span>
+            <span class="info-value">{{ material.updated_at|date:"Y-m-d H:i"|default:"—" }}</span>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
