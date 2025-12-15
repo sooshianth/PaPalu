@@ -397,11 +397,18 @@ class PurchaseTransport(models.Model):
             # When transport moves to awaiting_vehicle_entry
             if old_status == self.STATUS_DRAFT and new_status == self.STATUS_AWAITING_VEHICLE_ENTRY:
                 if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_TRANSPORT_DEFINITION:
-                    po.transition(
-                        ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY,
-                        user=user,
-                        note=f'حمل {self.transport_number} تغییر وضعیت داد'
-                    )
+                    try:
+                        po.transition(
+                            ProcurementPurchaseOrder.STATUS_AWAITING_VEHICLE_ENTRY,
+                            user=user,
+                            note=f'حمل {self.transport_number} تغییر وضعیت داد'
+                        )
+                    except ValueError as po_trans_err:
+                        # اگر transition سفارش خطا داد، فقط لاگ می‌کنیم و ادامه می‌دهیم
+                        import logging
+                        bug_logger = logging.getLogger("bugs")
+                        bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number}: {po_trans_err}")
+                        # این خطا نباید باعث rollback کل transaction شود
             
             # When vehicle enters (vehicle_entered or awaiting_unloading)
             elif new_status in [self.STATUS_VEHICLE_ENTERED, self.STATUS_AWAITING_UNLOADING]:

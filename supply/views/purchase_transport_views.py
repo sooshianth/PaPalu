@@ -142,8 +142,8 @@ class PurchaseTransportForm(ModelForm):
             'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'surplus': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'freight_payment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'driver_account_number': forms.Select(attrs={'class': 'form-control'}),
-            'driver_sheba_number': forms.Select(attrs={'class': 'form-control'}),
+            'driver_account_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'driver_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
             'expected_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
             'actual_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
             'loading_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
@@ -174,8 +174,6 @@ class PurchaseTransportForm(ModelForm):
         
         # Filter drivers only
         self.fields['driver'].queryset = Person.objects.filter(type='driver').order_by('name')
-        self.fields['driver_account_number'].queryset = Person.objects.filter(type='driver').order_by('name')
-        self.fields['driver_sheba_number'].queryset = Person.objects.filter(type='driver').order_by('name')
         
         # تنظیم مقدار پیش‌فرض برای transport_type
         if not self.instance.pk:  # فقط برای ایجاد جدید
@@ -330,33 +328,70 @@ def create_purchase_transport_view(request):
         if request.method == 'POST':
             form = PurchaseTransportForm(request.POST)
             if form.is_valid():
-                with transaction.atomic():
-                    pt = form.save(commit=False)
-                    pt.created_by = request.user
-                    pt.save()
+                try:
+                    with transaction.atomic():
+                        pt = form.save(commit=False)
+                        pt.created_by = request.user
+                        # اطمینان از اینکه وضعیت پیش‌فرض draft است
+                        if not pt.status:
+                            pt.status = PurchaseTransport.STATUS_DRAFT
+                        pt.save()
+                        
+                        # Refresh از دیتابیس برای اطمینان از اینکه وضعیت به درستی ذخیره شده
+                        pt.refresh_from_db()
+                        
+                        bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number} - وضعیت: {pt.status} - ID: {pt.transport_id}")
+                        
+                        # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
+                        # ابتدا بررسی می‌کنیم که وضعیت فعلی draft است
+                        bug_logger.debug(f"وضعیت فعلی حمل قبل از transition: {pt.status}")
+                        bug_logger.debug(f"وضعیت مورد نظر: {PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY}")
+                        bug_logger.debug(f"WORKFLOW_ALLOWED برای {pt.status}: {pt.WORKFLOW_ALLOWED.get(pt.status, set())}")
+                        
+                        # بررسی اینکه آیا transition مجاز است
+                        allowed_statuses = pt.WORKFLOW_ALLOWED.get(pt.status, set())
+                        if PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY not in allowed_statuses:
+                            error_msg = f'مسیر تغییر وضعیت غیرمجاز است. وضعیت فعلی: {pt.get_status_display()}, وضعیت مجاز: {[s for s in allowed_statuses]}'
+                            bug_logger.error(f"خطا در transition حمل {pt.transport_number}: {error_msg}")
+                            messages.error(request, error_msg)
+                            raise ValueError(error_msg)
+                        
+                        try:
+                            pt.transition(
+                                PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY,
+                                user=request.user,
+                                note='ثبت اولیه حمل'
+                            )
+                            # Refresh بعد از transition
+                            pt.refresh_from_db()
+                            bug_logger.info(f"وضعیت حمل {pt.transport_number} به 'در انتظار ورود خودرو' تغییر یافت - وضعیت فعلی: {pt.status}")
+                        except ValueError as ve:
+                            bug_logger.error(f"خطا در تغییر وضعیت حمل {pt.transport_number}: {ve}", exc_info=True)
+                            messages.error(request, f'خطا در تغییر وضعیت حمل: {str(ve)}')
+                            raise  # Re-raise to rollback transaction
+                        except Exception as trans_err:
+                            bug_logger.error(f"خطای غیرمنتظره در تغییر وضعیت حمل {pt.transport_number}: {trans_err}", exc_info=True)
+                            messages.error(request, f'خطای غیرمنتظره در تغییر وضعیت: {str(trans_err)}')
+                            raise  # Re-raise to rollback transaction
+                        
+                        # ارسال اعلان به نگهبان
+                        try:
+                            pt.send_guard_notification()
+                            bug_logger.info(f"اعلان نگهبان برای حمل {pt.transport_number} ارسال شد")
+                        except Exception as notif_err:
+                            bug_logger.warning(f"خطا در ارسال اعلان نگهبان برای حمل {pt.transport_number}: {notif_err}")
+                            # این خطا نباید باعث rollback شود
+                        
+                        audit_logger.info(f"حمل جدید ایجاد شد - شماره: {pt.transport_number} - سفارش: {pt.purchase_order.order_number}")
                     
-                    bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number}")
-                    
-                    # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
-                    pt.transition(
-                        PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY,
-                        user=request.user,
-                        note='ثبت اولیه حمل'
-                    )
-                    
-                    bug_logger.info(f"وضعیت حمل {pt.transport_number} به 'در انتظار ورود خودرو' تغییر یافت")
-                    
-                    # ارسال اعلان به نگهبان
-                    try:
-                        pt.send_guard_notification()
-                        bug_logger.info(f"اعلان نگهبان برای حمل {pt.transport_number} ارسال شد")
-                    except Exception as notif_err:
-                        bug_logger.warning(f"خطا در ارسال اعلان نگهبان برای حمل {pt.transport_number}: {notif_err}")
-                    
-                    audit_logger.info(f"حمل جدید ایجاد شد - شماره: {pt.transport_number} - سفارش: {pt.purchase_order.order_number}")
-                    
-                messages.success(request, f'حمل {pt.transport_number} ثبت شد و اعلان به نگهبان ارسال شد.')
-                return redirect(reverse('supply:purchase_transport_list'))
+                    messages.success(request, f'حمل {pt.transport_number} ثبت شد و اعلان به نگهبان ارسال شد.')
+                    return redirect(reverse('supply:purchase_transport_list'))
+                except ValueError as ve:
+                    bug_logger.error(f"خطا در ایجاد حمل: {ve}", exc_info=True)
+                    messages.error(request, f'خطا در ایجاد حمل: {str(ve)}')
+                except Exception as e:
+                    bug_logger.error(f"خطا در ایجاد حمل: {e}", exc_info=True)
+                    messages.error(request, f'خطا در ایجاد حمل: {str(e)}')
             else:
                 bug_logger.warning(f"Purchase transport form invalid: {form.errors}")
                 audit_logger.activity(f"فرم نامعتبر برای ایجاد حمل")
