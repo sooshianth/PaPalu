@@ -145,6 +145,12 @@ class ProcurementPurchaseOrderForm(ModelForm):
         supplier_id = cleaned_data.get('supplier_id', '').strip()
         supplier_text = cleaned_data.get('supplier', '').strip()
         
+        # اگر supplier_id در cleaned_data نیست، از data اصلی بگیر
+        if not supplier_id and hasattr(self, 'data'):
+            supplier_id = self.data.get('supplier_id', '').strip()
+            if supplier_id:
+                cleaned_data['supplier_id'] = supplier_id
+        
         # اگر supplier_id وجود ندارد اما متن وارد شده، سعی کن از متن استخراج کن
         if not supplier_id and supplier_text:
             # استخراج کد ملی از متن (فرمت: "نام (کد ملی)")
@@ -235,8 +241,50 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
         if self.cleaned_data.get('DELETE', False):
             return cleaned_data
         
-        raw_material_id = cleaned_data.get('raw_material_id', '').strip()
-        raw_material_text = cleaned_data.get('raw_material', '').strip()
+        # دریافت raw_material_id مستقیماً از POST data
+        raw_material_id = None
+        raw_material_text = None
+        
+        if hasattr(self, 'data') and self.data:
+            # استفاده از add_prefix برای ساخت نام کامل فیلد
+            if hasattr(self, 'add_prefix'):
+                field_name = self.add_prefix('raw_material_id')
+                raw_material_id = self.data.get(field_name, '').strip() or None
+            
+            # اگر پیدا نشد، با prefix دستی امتحان کن
+            if not raw_material_id and hasattr(self, 'prefix') and self.prefix:
+                field_name = f'{self.prefix}-raw_material_id'
+                raw_material_id = self.data.get(field_name, '').strip() or None
+            
+            # اگر هنوز پیدا نشد، همه key های مربوط را بررسی کن
+            if not raw_material_id:
+                for key in self.data.keys():
+                    if key.endswith('-raw_material_id'):
+                        if hasattr(self, 'prefix') and self.prefix:
+                            if key.startswith(self.prefix + '-'):
+                                raw_material_id = self.data.get(key, '').strip() or None
+                                if raw_material_id:
+                                    break
+                        else:
+                            raw_material_id = self.data.get(key, '').strip() or None
+                            if raw_material_id:
+                                break
+            
+            # دریافت raw_material_text برای fallback
+            if hasattr(self, 'add_prefix'):
+                field_name = self.add_prefix('raw_material')
+                raw_material_text = self.data.get(field_name, '').strip() or None
+        
+        # اگر raw_material_id نداریم، از cleaned_data بگیر
+        if not raw_material_id:
+            raw_material_id_value = cleaned_data.get('raw_material_id', '')
+            raw_material_id = raw_material_id_value.strip() if isinstance(raw_material_id_value, str) and raw_material_id_value.strip() else None
+        
+        # اگر raw_material_text نداریم، از cleaned_data بگیر
+        if not raw_material_text:
+            raw_material_value = cleaned_data.get('raw_material', '')
+            raw_material_text = raw_material_value.strip() if isinstance(raw_material_value, str) and raw_material_value.strip() else None
+        
         unit = cleaned_data.get('unit')
         quantity = cleaned_data.get('quantity')
         unit_price = cleaned_data.get('unit_price')
@@ -244,42 +292,47 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
         
         # اگر فرم خالی است (بدون raw_material و quantity)، آن را نادیده بگیر
         if not raw_material_text and not raw_material_id and not quantity:
-            # فرم خالی است، خطا نده - همه فیلدها را خالی کن تا formset آن را نادیده بگیرد
             cleaned_data = {}
             return cleaned_data
         
         # تبدیل raw_material_id به raw_material
         if not raw_material_id and raw_material_text:
-            # استخراج ID از متن - ممکن است در ابتدای متن باشد
+            # استخراج ID از متن
             import re
-            # سعی کن ID را از ابتدای متن یا از داخل پرانتز پیدا کن
-            # فرمت: "1-2025-0027 - نام ماده" یا فقط "1-2025-0027"
-            match = re.search(r'(\d+)', raw_material_text)
+            # سعی کن ID عددی را از ابتدای متن پیدا کن
+            match = re.match(r'^(\d+)', raw_material_text)
             if match:
-                # اگر raw_material_id به صورت عدد ساده است
                 potential_id = match.group(1)
-                # بررسی کن که آیا این ID معتبر است
                 try:
                     test_rm = RawMaterial.objects.get(id=potential_id, status='active')
-                    raw_material_id = potential_id
-                    cleaned_data['raw_material_id'] = raw_material_id
+                    raw_material_id = str(test_rm.id)
                 except (RawMaterial.DoesNotExist, ValueError):
                     pass
+            
+            # اگر هنوز پیدا نشد، سعی کن از raw_material_id در متن پیدا کن
+            if not raw_material_id:
+                raw_id_match = re.search(r'RM-\d+-\d+', raw_material_text)
+                if raw_id_match:
+                    try:
+                        test_rm = RawMaterial.objects.get(raw_material_id=raw_id_match.group(0), status='active')
+                        raw_material_id = str(test_rm.id)
+                    except (RawMaterial.DoesNotExist, ValueError):
+                        pass
         
         # اگر هنوز raw_material_id نداریم
         if not raw_material_id:
             if not raw_material_text and not quantity:
-                # اگر همه فیلدها خالی هستند، فرم خالی است - خطا نده
                 cleaned_data = {}
                 return cleaned_data
-            # اگر raw_material_text وجود دارد اما raw_material_id نداریم
             self.add_error('raw_material', 'لطفاً یک ماده اولیه را از لیست انتخاب کنید.')
             return cleaned_data
         
+        # تبدیل raw_material_id به RawMaterial object
         try:
             raw_material = RawMaterial.objects.get(id=raw_material_id, status='active')
-            # تنظیم raw_material در cleaned_data برای استفاده در save
+            # حذف raw_material از cleaned_data اگر string است و جایگزین با object
             cleaned_data['raw_material'] = raw_material
+            cleaned_data['raw_material_id'] = raw_material_id
         except (RawMaterial.DoesNotExist, ValueError):
             self.add_error('raw_material', 'ماده اولیه انتخاب شده یافت نشد.')
             return cleaned_data
@@ -313,14 +366,19 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
     
     def save(self, commit=True):
         """ذخیره فرم با تبدیل raw_material_id به raw_material"""
-        # اگر raw_material در cleaned_data نیست، از raw_material_id استفاده کن
-        if 'raw_material' not in self.cleaned_data or not isinstance(self.cleaned_data['raw_material'], RawMaterial):
-            raw_material_id = self.cleaned_data.get('raw_material_id', '').strip()
+        # اطمینان از اینکه raw_material یک RawMaterial object است
+        raw_material = self.cleaned_data.get('raw_material')
+        if not isinstance(raw_material, RawMaterial):
+            # اگر raw_material یک string است یا نیست، از raw_material_id استفاده کن
+            raw_material_id_value = self.cleaned_data.get('raw_material_id', '')
+            raw_material_id = raw_material_id_value.strip() if isinstance(raw_material_id_value, str) else ''
             if raw_material_id:
                 try:
                     self.cleaned_data['raw_material'] = RawMaterial.objects.get(id=raw_material_id, status='active')
-                except RawMaterial.DoesNotExist:
-                    pass
+                except (RawMaterial.DoesNotExist, ValueError):
+                    # اگر پیدا نشد، خطا بده
+                    from django.core.exceptions import ValidationError
+                    raise ValidationError('ماده اولیه انتخاب شده یافت نشد.')
         
         return super().save(commit=commit)
 
@@ -341,8 +399,10 @@ class MaterialFormSetBase(BaseInlineFormSet):
             cleaned_data = form.cleaned_data
             if cleaned_data:
                 # بررسی اینکه آیا فرم خالی است
-                raw_material_id = cleaned_data.get('raw_material_id', '').strip()
-                raw_material_text = cleaned_data.get('raw_material', '').strip()
+                raw_material_id_value = cleaned_data.get('raw_material_id', '')
+                raw_material_id = raw_material_id_value.strip() if isinstance(raw_material_id_value, str) else ''
+                raw_material_value = cleaned_data.get('raw_material', '')
+                raw_material_text = raw_material_value.strip() if isinstance(raw_material_value, str) else ''
                 quantity = cleaned_data.get('quantity')
                 
                 # اگر همه فیلدهای اصلی خالی هستند، فرم را خالی در نظر بگیر
@@ -509,8 +569,10 @@ def create_procurement_purchase_order_view(request):
                         for material_form in material_formset:
                             if material_form.cleaned_data and not material_form.cleaned_data.get('DELETE', False):
                                 # بررسی اینکه آیا فرم خالی است
-                                raw_material_id = material_form.cleaned_data.get('raw_material_id', '').strip()
-                                raw_material_text = material_form.cleaned_data.get('raw_material', '').strip()
+                                raw_material_id_value = material_form.cleaned_data.get('raw_material_id', '')
+                                raw_material_id = raw_material_id_value.strip() if isinstance(raw_material_id_value, str) else ''
+                                raw_material_value = material_form.cleaned_data.get('raw_material', '')
+                                raw_material_text = raw_material_value.strip() if isinstance(raw_material_value, str) else ''
                                 quantity = material_form.cleaned_data.get('quantity')
                                 
                                 # اگر فرم خالی است، آن را نادیده بگیر
@@ -755,3 +817,74 @@ def raw_material_search_api(request):
         })
     
     return JsonResponse({'results': results})
+
+
+@login_required
+@require_http_methods(["GET"])
+def raw_material_info_api(request, raw_material_id):
+    """
+    API endpoint برای دریافت اطلاعات کامل ماده اولیه شامل:
+    - واحدهای اصلی و فرعی
+    - آخرین استعلام قیمت
+    - درصد مالیات بر ارزش افزوده از اطلاعات خرید
+    """
+    if not raw_material_id:
+        return JsonResponse({'error': 'شناسه ماده اولیه الزامی است'}, status=400)
+    
+    try:
+        raw_material = RawMaterial.objects.get(id=raw_material_id, status='active')
+        
+        # دریافت آخرین استعلام قیمت
+        from core.SupplyFolder.RawMaterialPriceInquiryModel import RawMaterialPriceInquiry
+        latest_inquiry = RawMaterialPriceInquiry.objects.filter(
+            raw_material=raw_material
+        ).order_by('-inquiry_date', '-created_at').first()
+        
+        # دریافت اطلاعات خرید (برای vat_percentage)
+        from core.RawMaterialFolder.RawMaterialPurchaseInfoModel import RawMaterialPurchaseInfo
+        purchase_info = RawMaterialPurchaseInfo.objects.filter(
+            raw_material=raw_material
+        ).first()
+        
+        # ساخت لیست واحدهای قابل استفاده
+        # استفاده از display name برای value چون unit در ProcurementPurchaseOrderMaterial یک CharField است
+        available_units = []
+        if raw_material.primary_unit:
+            primary_display = raw_material.get_primary_unit_display()
+            available_units.append({
+                'value': primary_display,
+                'display': primary_display,
+                'is_main': True
+            })
+        if raw_material.secondary_unit:
+            secondary_display = raw_material.get_secondary_unit_display()
+            # فقط اگر با واحد اصلی متفاوت باشد اضافه کن
+            if secondary_display != (raw_material.get_primary_unit_display() if raw_material.primary_unit else ''):
+                available_units.append({
+                    'value': secondary_display,
+                    'display': secondary_display,
+                    'is_main': False
+                })
+        
+        # اگر هیچ واحدی وجود نداشت، پیش‌فرض کیلوگرم
+        if not available_units:
+            available_units.append({
+                'value': 'کیلوگرم',
+                'display': 'کیلوگرم',
+                'is_main': True
+            })
+        
+        data = {
+            'primary_unit': raw_material.get_primary_unit_display() if raw_material.primary_unit else '',
+            'secondary_unit': raw_material.get_secondary_unit_display() if raw_material.secondary_unit else '',
+            'available_units': available_units,
+            'latest_price': str(latest_inquiry.price) if latest_inquiry else None,
+            'vat_percentage': f'{purchase_info.vat_percentage:.2f}' if purchase_info and purchase_info.vat_percentage is not None else '0.00',
+        }
+        
+        return JsonResponse(data)
+    except RawMaterial.DoesNotExist:
+        return JsonResponse({'error': 'ماده اولیه یافت نشد'}, status=404)
+    except Exception as e:
+        bug_logger.error(f"خطا در دریافت اطلاعات ماده اولیه {raw_material_id}: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)

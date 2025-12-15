@@ -269,7 +269,6 @@ class ProcurementPurchaseOrderMaterial(models.Model):
     class Meta:
         verbose_name = 'آیتم سفارش خرید'
         verbose_name_plural = 'آیتم‌های سفارش خرید'
-        unique_together = ('purchase_order', 'raw_material')
 
     def __str__(self):
         return f"{self.purchase_order.order_number} - {self.raw_material.name}" if self.purchase_order_id else 'PO Material'

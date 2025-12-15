@@ -1,772 +1,1024 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}ایجاد سفارش خرید{% endblock %}
+
 {% block extra_css %}
 <style>
-  .form-wrapper {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
-    background: #fff;
-    padding: 25px;
-    border: 1px solid #e0e5e8;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  }
-  .form-wrapper h4 {
-    grid-column: 1/-1;
-    font-size: 1.1rem;
-    margin: 0 0 20px;
-    font-weight: 600;
-    color: #2d3e50;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #e0e5e8;
-  }
-  .form-group {
-    display: flex;
-    flex-direction: column;
-  }
-  .form-group label {
-    font-size: 0.85rem;
-    margin-bottom: 6px;
-    font-weight: 600;
-    color: #37474f;
-  }
-  .form-group input, .form-group select, .form-group textarea {
-    padding: 10px 12px;
-    font-size: 0.9rem;
-    border: 1px solid #cfd8dc;
-    border-radius: 8px;
-    background: #fdfdfd;
-    transition: border-color 0.2s;
-  }
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-    outline: none;
-    border-color: #2196F3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
-  }
-  .form-group input[readonly] {
-    background: #f5f5f5;
-    cursor: not-allowed;
-  }
-  .materials-block {
-    grid-column: 1/-1;
-    border-top: 2px solid #e0e5e8;
-    padding-top: 20px;
-    margin-top: 20px;
-    width: 100%;
-  }
-  .materials-block h4 {
-    margin-bottom: 15px;
-    border-bottom: none;
-    padding-bottom: 0;
-  }
-  .table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: visible;
-    margin-bottom: 15px;
-    border: 1px solid #e0e5e8;
-    border-radius: 8px;
-    background: #fff;
-    position: relative;
-  }
-  table.inline-set {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.85rem;
-    background: #fff;
-    margin: 0;
-  }
-  table.inline-set thead {
-    background: #f5f7fa;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  table.inline-set th {
-    border: 1px solid #e0e5e8;
-    padding: 12px 8px;
-    text-align: center;
-    font-weight: 600;
-    color: #37474f;
-    font-size: 0.8rem;
-    white-space: nowrap;
-    background: #f5f7fa;
-  }
-  table.inline-set td {
-    border: 1px solid #e0e5e8;
-    padding: 8px;
-    text-align: center;
-    vertical-align: middle;
-    position: relative;
-    background: #fff;
-  }
-  table.inline-set input, table.inline-set select, table.inline-set textarea {
-    width: 100%;
-    padding: 6px 8px;
-    font-size: 0.8rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #fff;
-    box-sizing: border-box;
-  }
-  table.inline-set input[readonly] {
-    background: #f5f5f5;
-    cursor: not-allowed;
-  }
-  .btn-row {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-  }
-  .add-row-btn {
-    background: #28a745;
-    color: #fff;
-    padding: 8px 16px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.85rem;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .add-row-btn:hover {
-    background: #218838;
-  }
-  .del-row-btn {
-    background: #dc3545;
-    color: #fff;
-    padding: 4px 10px;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .del-row-btn:hover {
-    background: #c82333;
-  }
-  /* Autocomplete styles */
-  .supplier-autocomplete, .raw-material-autocomplete {
-    position: relative;
-  }
-  .suggestions-container {
-    position: absolute;
-    background: white;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    max-height: 250px;
-    overflow-y: auto;
-    z-index: 10000;
-    display: none;
-    width: 100%;
-    min-width: 300px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    margin-top: 2px;
-    top: 100%;
-    left: 0;
-  }
-  .raw-material-suggestions {
-    z-index: 10001;
-  }
-  table.inline-set td {
-    overflow: visible;
-  }
-  .suggestion-item {
-    padding: 10px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-    transition: background 0.2s;
-  }
-  .suggestion-item:hover {
-    background: #f0f0f0;
-  }
-  .suggestion-item:last-child {
-    border-bottom: none;
-  }
-  .form-group {
-    position: relative;
-  }
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+        position: relative;
+        z-index: 1;
+        overflow: visible;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 0;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+        overflow: visible;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-content {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: visible;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .form-section.collapsed .form-section-content {
+        max-height: 0;
+        padding: 0 25px;
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .mb-3 { margin-bottom: 1rem; }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-4 {
+        flex: 0 0 33.3333%;
+        max-width: 33.3333%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-6, .col-md-4, .col-md-3 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        .form-card { padding: 20px; }
+        .form-section-header {
+            padding: 18px 20px;
+            min-height: 50px;
+        }
+        .form-section-content {
+            padding: 0 20px 20px 20px;
+        }
+        .form-section.collapsed .form-section-content {
+            padding: 0 20px;
+        }
+        .form-actions { flex-direction: column; }
+        .btn { width: 100%; }
+    }
+    
+    .item-form-row {
+        transition: opacity 0.3s;
+        border: 1px dashed #dee2e6;
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        position: relative;
+        z-index: 1;
+        overflow: visible;
+    }
+    
+    .item-form-row.deleted {
+        opacity: 0.5;
+        background-color: #f8f9fa;
+    }
+    
+    /* Autocomplete styles */
+    .supplier-autocomplete, .raw-material-autocomplete {
+        position: relative;
+    }
+    .suggestions-container {
+        position: absolute;
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        max-height: 250px;
+        overflow-y: auto;
+        z-index: 999999 !important;
+        display: none;
+        width: 100%;
+        min-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        margin-top: 2px;
+        top: 100%;
+        left: 0;
+    }
+    .raw-material-suggestions {
+        z-index: 999999 !important;
+    }
+    .suggestion-item {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        transition: background 0.2s;
+    }
+    .suggestion-item:hover {
+        background: #f0f0f0;
+    }
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+    .form-group {
+        position: relative;
+    }
 </style>
 {% endblock %}
-{% block content %}
-<form method="post" enctype="multipart/form-data" class="form-wrapper">
-  {% csrf_token %}
-  <h4>ایجاد سفارش خرید</h4>
-  
-  {% for field in form %}
-    {% if field.name == 'supplier' and accessible_po_fields.supplier %}
-      <div class="form-group">
-        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-        {{ field }}
-        <input type="hidden" name="supplier_id" id="id_supplier_id" value="">
-        <div class="suggestions-container" id="supplier-suggestions"></div>
-        {% if field.errors %}<div style="color:#d32f2f;font-size:.7rem;margin-top:4px">{{ field.errors|join:'، ' }}</div>{% endif %}
-      </div>
-    {% elif field.name == 'freight_payment_type' and accessible_po_fields.freight_payment_type %}
-      <div class="form-group">
-        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-        {{ field }}
-        {% if field.errors %}<div style="color:#d32f2f;font-size:.7rem;margin-top:4px">{{ field.errors|join:'، ' }}</div>{% endif %}
-      </div>
-    {% elif field.name == 'subtotal_without_freight' and accessible_po_fields.subtotal_without_freight %}
-      <div class="form-group">
-        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-        {{ field }}
-        {% if field.errors %}<div style="color:#d32f2f;font-size:.7rem;margin-top:4px">{{ field.errors|join:'، ' }}</div>{% endif %}
-      </div>
-    {% elif field.name == 'freight_cost' and accessible_po_fields.freight_cost %}
-      <div class="form-group">
-        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-        {{ field }}
-        {% if field.errors %}<div style="color:#d32f2f;font-size:.7rem;margin-top:4px">{{ field.errors|join:'، ' }}</div>{% endif %}
-      </div>
-    {% elif field.name == 'external_system_id' and accessible_po_fields.external_system_id %}
-      <div class="form-group">
-        <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-        {{ field }}
-        {% if field.errors %}<div style="color:#d32f2f;font-size:.7rem;margin-top:4px">{{ field.errors|join:'، ' }}</div>{% endif %}
-      </div>
-    {% endif %}
-  {% endfor %}
-  
-  <div class="materials-block">
-    <h4>مواد اولیه</h4>
-    {% if material_formset.non_form_errors %}
-      <div style="color:#d32f2f;font-size:.85rem;margin-bottom:10px;padding:10px;background:#ffebee;border-radius:4px">
-        {{ material_formset.non_form_errors|join:'، ' }}
-      </div>
-    {% endif %}
-    {{ material_formset.management_form }}
-    <div class="table-wrapper">
-      <table class="inline-set" id="materialsTable">
-        <thead>
-          <tr>
-            {% if accessible_po_material_fields.raw_material %}<th>ماده اولیه</th>{% endif %}
-            {% if accessible_po_material_fields.quantity %}<th>مقدار</th>{% endif %}
-            {% if accessible_po_material_fields.unit %}<th>واحد</th>{% endif %}
-            {% if accessible_po_material_fields.unit_price %}<th>قیمت واحد</th>{% endif %}
-            {% if accessible_po_material_fields.total_price %}<th>قیمت کل</th>{% endif %}
-            {% if accessible_po_material_fields.freight_included %}<th>بدون کرایه؟</th>{% endif %}
-            {% if accessible_po_material_fields.vat_on_material %}<th>مالیات</th>{% endif %}
-            {% if accessible_po_material_fields.freight_cost_completed %}<th>کرایه تمام شده</th>{% endif %}
-            {% if accessible_po_material_fields.total_cost_completed %}<th>بهای تمام شده</th>{% endif %}
-            {% if accessible_po_material_fields.notes %}<th>توضیحات</th>{% endif %}
-            <th>حذف</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for form in material_formset.forms %}
-          <tr class="material-row">
-            {% if accessible_po_material_fields.raw_material %}
-            <td style="position:relative;">
-              {{ form.raw_material }}
-              {% if form.raw_material_id %}
-                <input type="hidden" name="{{ form.raw_material_id.name }}" class="raw-material-id-input" value="{{ form.raw_material_id.value|default:'' }}">
-              {% else %}
-                <input type="hidden" name="mat-{{ forloop.counter0 }}-raw_material_id" class="raw-material-id-input" value="">
-              {% endif %}
-              <div class="suggestions-container raw-material-suggestions"></div>
-            </td>
-            {% endif %}
-            {% if accessible_po_material_fields.quantity %}
-            <td><input type="number" step="0.001" name="{{ form.quantity.name }}" value="{{ form.quantity.value|default:'' }}" class="form-control qty-input"/></td>
-            {% endif %}
-            {% if accessible_po_material_fields.unit %}
-            <td>
-              <select name="{{ form.unit.name }}" class="form-control material-unit-select">
-                <option value="">-- انتخاب واحد --</option>
-              </select>
-            </td>
-            {% endif %}
-            {% if accessible_po_material_fields.unit_price %}
-            <td><input type="number" step="0.01" name="{{ form.unit_price.name }}" value="{{ form.unit_price.value|default:'' }}" class="form-control price-input"/></td>
-            {% endif %}
-            {% if accessible_po_material_fields.total_price %}
-            <td><input type="number" step="0.01" name="{{ form.total_price.name }}" value="{{ form.total_price.value|default:'' }}" class="form-control total-input" readonly/></td>
-            {% endif %}
-            {% if accessible_po_material_fields.freight_included %}
-            <td>{{ form.freight_included }}</td>
-            {% endif %}
-            {% if accessible_po_material_fields.vat_on_material %}
-            <td><input type="number" step="0.01" name="{{ form.vat_on_material.name }}" value="{{ form.vat_on_material.value|default:'' }}" class="form-control"/></td>
-            {% endif %}
-            {% if accessible_po_material_fields.freight_cost_completed %}
-            <td><input type="number" step="0.01" name="{{ form.freight_cost_completed.name }}" value="{{ form.freight_cost_completed.value|default:'' }}" class="form-control"/></td>
-            {% endif %}
-            {% if accessible_po_material_fields.total_cost_completed %}
-            <td><input type="number" step="0.01" name="{{ form.total_cost_completed.name }}" value="{{ form.total_cost_completed.value|default:'' }}" class="form-control"/></td>
-            {% endif %}
-            {% if accessible_po_material_fields.notes %}
-            <td><textarea name="{{ form.notes.name }}" class="form-control" rows="2">{{ form.notes.value|default:'' }}</textarea></td>
-            {% endif %}
-            <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
-          </tr>
-          {% if form.non_field_errors %}
-          <tr>
-            <td colspan="{% if accessible_po_material_fields.raw_material %}1{% endif %}{% if accessible_po_material_fields.quantity %}1{% endif %}{% if accessible_po_material_fields.unit %}1{% endif %}{% if accessible_po_material_fields.unit_price %}1{% endif %}{% if accessible_po_material_fields.total_price %}1{% endif %}{% if accessible_po_material_fields.freight_included %}1{% endif %}{% if accessible_po_material_fields.vat_on_material %}1{% endif %}{% if accessible_po_material_fields.freight_cost_completed %}1{% endif %}{% if accessible_po_material_fields.total_cost_completed %}1{% endif %}{% if accessible_po_material_fields.notes %}1{% endif %}1" style="color:#d32f2f;text-align:right;font-size:.75rem;padding:10px">
-              {{ form.non_field_errors|join:'، ' }}
-            </td>
-          </tr>
-          {% endif %}
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <template id="material-empty-row">
-      <tr class="material-row">
-        {% if accessible_po_material_fields.raw_material %}
-        <td style="position:relative">
-          <input type="text" name="mat-__prefix__-raw_material" class="form-control raw-material-autocomplete" placeholder="جستجوی ماده اولیه..." autocomplete="off"/>
-          <input type="hidden" name="mat-__prefix__-raw_material_id" class="raw-material-id-input" value="">
-          <div class="suggestions-container raw-material-suggestions"></div>
-        </td>
-        {% endif %}
-        {% if accessible_po_material_fields.quantity %}
-        <td><input type="number" step="0.001" name="mat-__prefix__-quantity" class="form-control qty-input"/></td>
-        {% endif %}
-        {% if accessible_po_material_fields.unit %}
-        <td>
-          <select name="mat-__prefix__-unit" class="form-control material-unit-select">
-            <option value="">-- انتخاب واحد --</option>
-          </select>
-        </td>
-        {% endif %}
-        {% if accessible_po_material_fields.unit_price %}
-        <td><input type="number" step="0.01" name="mat-__prefix__-unit_price" class="form-control price-input"/></td>
-        {% endif %}
-        {% if accessible_po_material_fields.total_price %}
-        <td><input type="number" step="0.01" name="mat-__prefix__-total_price" class="form-control total-input" readonly/></td>
-        {% endif %}
-        {% if accessible_po_material_fields.freight_included %}
-        <td><input type="checkbox" name="mat-__prefix__-freight_included" class="form-check-input"/></td>
-        {% endif %}
-        {% if accessible_po_material_fields.vat_on_material %}
-        <td><input type="number" step="0.01" name="mat-__prefix__-vat_on_material" class="form-control"/></td>
-        {% endif %}
-        {% if accessible_po_material_fields.freight_cost_completed %}
-        <td><input type="number" step="0.01" name="mat-__prefix__-freight_cost_completed" class="form-control"/></td>
-        {% endif %}
-        {% if accessible_po_material_fields.total_cost_completed %}
-        <td><input type="number" step="0.01" name="mat-__prefix__-total_cost_completed" class="form-control"/></td>
-        {% endif %}
-        {% if accessible_po_material_fields.notes %}
-        <td><textarea name="mat-__prefix__-notes" class="form-control" rows="2"></textarea></td>
-        {% endif %}
-        <td><button type="button" class="del-row-btn" onclick="removeRow(this)">✕</button></td>
-      </tr>
-    </template>
-    <div class="btn-row">
-      <button type="button" class="add-row-btn" onclick="addMaterialRow()">+ افزودن ماده</button>
-    </div>
-  </div>
-  
-  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:20px">
-    <a href="{% url 'supply:purchase_order_management' %}" class="btn btn-secondary btn-sm">بازگشت</a>
-    <button type="submit" class="btn btn-primary btn-sm">ثبت سفارش</button>
-  </div>
-</form>
-{% endblock %}
+
 {% block extra_js %}
 <script>
-// مدیریت autocomplete برای تأمین‌کننده
-(function() {
-  const supplierInput = document.querySelector('input[name="supplier"]');
-  const supplierIdInput = document.getElementById('id_supplier_id');
-  const suggestionsContainer = document.getElementById('supplier-suggestions');
-  let supplierSuggestions = [];
-  let searchTimeout;
-  
-  if (supplierInput) {
-    supplierInput.addEventListener('input', function() {
-      const query = this.value.trim();
-      clearTimeout(searchTimeout);
-      
-      if (query.length < 2) {
-        suggestionsContainer.style.display = 'none';
-        supplierSuggestions = [];
-        if (supplierIdInput) supplierIdInput.value = '';
-        return;
-      }
-      
-      searchTimeout = setTimeout(function() {
-        fetch('{% url "supply:supplier_search_api" %}?q=' + encodeURIComponent(query))
-          .then(response => response.json())
-          .then(data => {
-            supplierSuggestions = data.results || [];
-            displaySupplierSuggestions();
-          })
-          .catch(error => {
-            console.error('خطا در جستجوی تأمین‌کننده:', error);
-          });
-      }, 300);
-    });
-    
-    function displaySupplierSuggestions() {
-      suggestionsContainer.innerHTML = '';
-      
-      if (supplierSuggestions.length === 0) {
-        suggestionsContainer.style.display = 'none';
-        return;
-      }
-      
-      supplierSuggestions.forEach(function(item) {
-        const suggestionItem = document.createElement('div');
-        suggestionItem.className = 'suggestion-item';
-        suggestionItem.textContent = item.text;
-        suggestionItem.addEventListener('click', function() {
-          supplierInput.value = item.text;
-          if (supplierIdInput) supplierIdInput.value = item.id;
-          suggestionsContainer.style.display = 'none';
-        });
-        suggestionsContainer.appendChild(suggestionItem);
-      });
-      
-      suggestionsContainer.style.display = 'block';
-    }
-    
-    // بستن پیشنهادات با کلیک خارج
-    document.addEventListener('click', function(e) {
-      if (!supplierInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-        suggestionsContainer.style.display = 'none';
-      }
-    });
-  }
-})();
-
-// مدیریت autocomplete برای مواد اولیه
-function setupRawMaterialAutocomplete(row) {
-  const rawMaterialInput = row.querySelector('.raw-material-autocomplete');
-  if (!rawMaterialInput) {
-    console.log('Raw material input not found in row');
-    return;
-  }
-  
-  const rawMaterialIdInput = row.querySelector('.raw-material-id-input');
-  const unitSelect = row.querySelector('.material-unit-select');
-  const suggestionsContainer = row.querySelector('.raw-material-suggestions');
-  
-  if (!suggestionsContainer) {
-    console.log('Suggestions container not found in row');
-    return;
-  }
-  
-  // اگر raw_material_id input وجود ندارد، ایجاد کن
-  let hiddenInput = rawMaterialIdInput;
-  if (!hiddenInput) {
-    hiddenInput = document.createElement('input');
-    hiddenInput.type = 'hidden';
-    hiddenInput.className = 'raw-material-id-input';
-    // استخراج prefix از نام raw_material input
-    const rawMaterialName = rawMaterialInput.name;
-    const match = rawMaterialName.match(/^(mat-\d+)-raw_material$/);
-    if (match) {
-      hiddenInput.name = match[1] + '-raw_material_id';
-    } else {
-      hiddenInput.name = rawMaterialName.replace('-raw_material', '-raw_material_id');
-    }
-    rawMaterialInput.parentElement.appendChild(hiddenInput);
-  }
-  
-  if (!unitSelect) {
-    console.log('Unit select not found in row');
-    return;
-  }
-  
-  let rawMaterialSuggestions = [];
-  let searchTimeout;
-  
-  // حذف event listener قبلی اگر وجود دارد
-  const newInputHandler = function() {
-    const query = this.value.trim();
-    clearTimeout(searchTimeout);
-    
-    if (query.length < 2) {
-      if (suggestionsContainer) suggestionsContainer.style.display = 'none';
-      rawMaterialSuggestions = [];
-      if (hiddenInput) hiddenInput.value = '';
-      if (unitSelect) unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
-      return;
-    }
-    
-    searchTimeout = setTimeout(function() {
-      fetch('{% url "supply:raw_material_search_api" %}?q=' + encodeURIComponent(query))
-        .then(response => response.json())
-        .then(data => {
-          rawMaterialSuggestions = data.results || [];
-          displayRawMaterialSuggestions();
-        })
-        .catch(error => {
-          console.error('خطا در جستجوی ماده اولیه:', error);
-        });
-    }, 300);
-  };
-  
-  // حذف listener قبلی
-  if (rawMaterialInput._oldInputHandler) {
-    rawMaterialInput.removeEventListener('input', rawMaterialInput._oldInputHandler);
-  }
-  rawMaterialInput._oldInputHandler = newInputHandler;
-  rawMaterialInput.addEventListener('input', newInputHandler);
-  
-  function displayRawMaterialSuggestions() {
-    if (!suggestionsContainer) return;
-    
-    suggestionsContainer.innerHTML = '';
-    
-    if (rawMaterialSuggestions.length === 0) {
-      suggestionsContainer.style.display = 'none';
-      return;
-    }
-    
-    rawMaterialSuggestions.forEach(function(item) {
-      const suggestionItem = document.createElement('div');
-      suggestionItem.className = 'suggestion-item';
-      suggestionItem.textContent = item.text;
-      suggestionItem.addEventListener('click', function() {
-        if (rawMaterialInput) rawMaterialInput.value = item.text;
-        if (hiddenInput) {
-          hiddenInput.value = item.id;
-          console.log('Raw material ID set to:', item.id, 'for input:', hiddenInput.name);
-        }
-        if (suggestionsContainer) suggestionsContainer.style.display = 'none';
-        
-        // پر کردن dropdown واحد
-        if (unitSelect) {
-          unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
-          if (item.primary_unit_display) {
-            const option1 = document.createElement('option');
-            option1.value = item.primary_unit_display;
-            option1.textContent = item.primary_unit_display;
-            unitSelect.appendChild(option1);
-          }
-          if (item.secondary_unit_display && item.secondary_unit_display !== item.primary_unit_display) {
-            const option2 = document.createElement('option');
-            option2.value = item.secondary_unit_display;
-            option2.textContent = item.secondary_unit_display;
-            unitSelect.appendChild(option2);
-          }
-        }
-      });
-      suggestionsContainer.appendChild(suggestionItem);
-    });
-    
-    suggestionsContainer.style.display = 'block';
-  }
-  
-  // بستن پیشنهادات با کلیک خارج
-  const clickHandler = function(e) {
-    if (rawMaterialInput && suggestionsContainer && 
-        !rawMaterialInput.contains(e.target) && 
-        !suggestionsContainer.contains(e.target)) {
-      suggestionsContainer.style.display = 'none';
-    }
-  };
-  
-  // حذف handler قبلی اگر وجود دارد
-  if (row._rawMaterialClickHandler) {
-    document.removeEventListener('click', row._rawMaterialClickHandler);
-  }
-  row._rawMaterialClickHandler = clickHandler;
-  document.addEventListener('click', clickHandler);
-}
-
-// محاسبه قیمت کل هر ردیف
-function calculateRowTotal(row) {
-  const qtyInput = row.querySelector('.qty-input');
-  const priceInput = row.querySelector('.price-input');
-  const totalInput = row.querySelector('.total-input');
-  
-  if (qtyInput && priceInput && totalInput) {
-    const qty = parseFloat(qtyInput.value) || 0;
-    const price = parseFloat(priceInput.value) || 0;
-    const total = qty * price;
-    totalInput.value = total.toFixed(2);
-    
-    // محاسبه مجموع کل
-    calculateSubtotal();
-  }
-}
-
-// محاسبه مجموع بدون کرایه
-function calculateSubtotal() {
-  const totalInputs = document.querySelectorAll('.total-input');
-  let subtotal = 0;
-  
-  totalInputs.forEach(function(input) {
-    const row = input.closest('tr');
-    if (row && !row.classList.contains('deleted')) {
-      const value = parseFloat(input.value) || 0;
-      subtotal += value;
-    }
-  });
-  
-  const subtotalInput = document.querySelector('input[name="subtotal_without_freight"]');
-  if (subtotalInput) {
-    subtotalInput.value = subtotal.toFixed(2);
-  }
-}
-
-// همگام‌سازی ایندکس‌های فرمست
-function syncIndexes() {
-  const rows = document.querySelectorAll('#materialsTable tbody tr.material-row');
-  rows.forEach(function(row, idx) {
-    row.querySelectorAll('input, select, textarea').forEach(function(inp) {
-      if (inp.name) {
-        const oldName = inp.name;
-        inp.name = inp.name.replace(/mat-(\d+|__prefix__)-/, 'mat-' + idx + '-');
-        inp.id = inp.name;
-        
-        // اگر raw_material_id input وجود ندارد، ایجاد کن
-        if (oldName.includes('-raw_material') && !oldName.includes('-raw_material_id')) {
-          const hiddenInput = row.querySelector('.raw-material-id-input');
-          if (!hiddenInput || !hiddenInput.name || hiddenInput.name.includes('__prefix__')) {
-            const newHiddenInput = document.createElement('input');
-            newHiddenInput.type = 'hidden';
-            newHiddenInput.className = 'raw-material-id-input';
-            newHiddenInput.name = 'mat-' + idx + '-raw_material_id';
-            newHiddenInput.value = hiddenInput ? hiddenInput.value : '';
-            if (hiddenInput && hiddenInput.parentElement) {
-              hiddenInput.parentElement.replaceChild(newHiddenInput, hiddenInput);
-            } else {
-              const rawMaterialInput = row.querySelector('.raw-material-autocomplete');
-              if (rawMaterialInput && rawMaterialInput.parentElement) {
-                rawMaterialInput.parentElement.appendChild(newHiddenInput);
-              }
-            }
-          }
-        }
-      }
-    });
-  });
-  const totalFormsInput = document.getElementById('id_mat-TOTAL_FORMS');
-  if (totalFormsInput) {
-    totalFormsInput.value = rows.length;
-  }
-}
-
-// افزودن ردیف جدید
-function addMaterialRow() {
-  const max = parseInt(document.getElementById('id_mat-MAX_NUM_FORMS').value || 1000);
-  const tbody = document.querySelector('#materialsTable tbody');
-  if (tbody.children.length >= max) return;
-  
-  const template = document.getElementById('material-empty-row');
-  const newRow = template.content.cloneNode(true);
-  tbody.appendChild(newRow);
-  
-  syncIndexes();
-  
-  // تنظیم autocomplete برای ردیف جدید
-  const newRowElement = tbody.lastElementChild;
-  if (newRowElement) {
-    // پیدا کردن input ماده اولیه
-    let input = newRowElement.querySelector('.raw-material-autocomplete');
-    if (!input) {
-      const allInputs = newRowElement.querySelectorAll('input[type="text"]');
-      for (let inp of allInputs) {
-        if (inp.name && inp.name.includes('raw_material') && !inp.name.includes('raw_material_id')) {
-          input = inp;
-          input.classList.add('raw-material-autocomplete');
-          input.setAttribute('placeholder', 'جستجوی ماده اولیه...');
-          input.setAttribute('autocomplete', 'off');
-          break;
-        }
-      }
-    }
-    if (input) {
-      console.log('Setting up autocomplete for new row with input:', input.name);
-      setupRawMaterialAutocomplete(newRowElement);
-    }
-  }
-  
-  attachCalculationListeners();
-}
-
-// حذف ردیف
-function removeRow(btn) {
-  const tbody = document.querySelector('#materialsTable tbody');
-  const rows = tbody.querySelectorAll('tr.material-row');
-  if (rows.length <= 1) return; // حداقل یک ردیف نگه دار
-  
-  const row = btn.closest('tr');
-  row.classList.add('deleted');
-  row.style.display = 'none';
-  
-  // علامت‌گذاری برای حذف
-  const deleteInput = row.querySelector('input[name*="-DELETE"]');
-  if (!deleteInput) {
-    const deleteInput = document.createElement('input');
-    deleteInput.type = 'hidden';
-    deleteInput.name = row.querySelector('input').name.replace(/mat-\d+-.*/, 'mat-' + Array.from(rows).indexOf(row) + '-DELETE');
-    deleteInput.value = 'on';
-    row.appendChild(deleteInput);
-  } else {
-    deleteInput.value = 'on';
-  }
-  
-  syncIndexes();
-  calculateSubtotal();
-}
-
-// اتصال event listener ها برای محاسبه
-function attachCalculationListeners() {
-  document.querySelectorAll('#materialsTable tbody tr.material-row').forEach(function(row) {
-    const qtyInput = row.querySelector('.qty-input');
-    const priceInput = row.querySelector('.price-input');
-    
-    if (qtyInput) {
-      qtyInput.removeEventListener('input', calculateRowTotal);
-      qtyInput.addEventListener('input', function() {
-        calculateRowTotal(row);
-      });
-    }
-    
-    if (priceInput) {
-      priceInput.removeEventListener('input', calculateRowTotal);
-      priceInput.addEventListener('input', function() {
-        calculateRowTotal(row);
-      });
-    }
-  });
-}
-
-// مقداردهی اولیه
 document.addEventListener('DOMContentLoaded', function() {
-  syncIndexes();
-  attachCalculationListeners();
-  
-  // تنظیم autocomplete برای تمام ردیف‌های موجود
-  const rows = document.querySelectorAll('#materialsTable tbody tr.material-row');
-  console.log('Found', rows.length, 'material rows');
-  rows.forEach(function(row) {
-    // پیدا کردن input ماده اولیه - ممکن است class نداشته باشد
-    let input = row.querySelector('.raw-material-autocomplete');
-    if (!input) {
-      // اگر class نداشت، سعی کن input با name شامل raw_material پیدا کن
-      const allInputs = row.querySelectorAll('input[type="text"]');
-      for (let inp of allInputs) {
-        if (inp.name && inp.name.includes('raw_material') && !inp.name.includes('raw_material_id')) {
-          input = inp;
-          // اضافه کردن class
-          input.classList.add('raw-material-autocomplete');
-          input.setAttribute('placeholder', 'جستجوی ماده اولیه...');
-          input.setAttribute('autocomplete', 'off');
-          break;
+    // مدیریت autocomplete برای تأمین‌کننده
+    const supplierInput = document.querySelector('input[name="supplier"]');
+    const supplierIdInput = document.querySelector('input[name="supplier_id"]');
+    let supplierSuggestions = [];
+    let searchTimeout;
+    
+    if (supplierInput) {
+        // ایجاد container برای پیشنهادات
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'suggestions-container';
+        suggestionsContainer.id = 'supplier-suggestions';
+        supplierInput.parentElement.style.position = 'relative';
+        supplierInput.parentElement.appendChild(suggestionsContainer);
+        
+        supplierInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                suggestionsContainer.style.display = 'none';
+                supplierSuggestions = [];
+                if (supplierIdInput) supplierIdInput.value = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "supply:supplier_search_api" %}?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        supplierSuggestions = data.results || [];
+                        displaySupplierSuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی تأمین‌کننده:', error);
+                    });
+            }, 300);
+        });
+        
+        function displaySupplierSuggestions() {
+            suggestionsContainer.innerHTML = '';
+            
+            if (supplierSuggestions.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            supplierSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f0f0f0';
+                });
+                suggestionItem.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+                suggestionItem.addEventListener('click', function() {
+                    supplierInput.value = item.text;
+                    if (supplierIdInput) {
+                        supplierIdInput.value = item.id;
+                    }
+                    suggestionsContainer.style.display = 'none';
+                });
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            
+            suggestionsContainer.style.display = 'block';
         }
-      }
+        
+        // بستن پیشنهادات با کلیک خارج
+        document.addEventListener('click', function(e) {
+            if (!supplierInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
     }
     
-    if (input) {
-      console.log('Setting up autocomplete for row with input:', input.name);
-      setupRawMaterialAutocomplete(row);
-    } else {
-      console.log('No raw-material input found in row');
+    // تابع برای پر کردن خودکار واحد هنگام انتخاب ماده اولیه
+    function setupRawMaterialAutoFill(formRow) {
+        const rawMaterialInput = formRow.querySelector('.raw-material-autocomplete');
+        if (!rawMaterialInput) {
+            // اگر با class پیدا نشد، با name پیدا کن
+            const allInputs = formRow.querySelectorAll('input[type="text"]');
+            for (let inp of allInputs) {
+                if (inp.name && inp.name.includes('raw_material') && !inp.name.includes('raw_material_id')) {
+                    inp.classList.add('raw-material-autocomplete');
+                    inp.setAttribute('placeholder', 'جستجوی ماده اولیه...');
+                    inp.setAttribute('autocomplete', 'off');
+                    break;
+                }
+            }
+            // دوباره پیدا کن
+            const foundInput = formRow.querySelector('.raw-material-autocomplete');
+            if (!foundInput) return;
+        }
+        
+        const rawMaterialInputFinal = formRow.querySelector('.raw-material-autocomplete');
+        if (!rawMaterialInputFinal) return;
+        
+        // بررسی اینکه آیا قبلاً setup شده است
+        if (rawMaterialInputFinal._rawMaterialSetupDone) {
+            return;
+        }
+        rawMaterialInputFinal._rawMaterialSetupDone = true;
+        
+        // پیدا کردن hidden input برای raw_material_id
+        let rawMaterialIdInput = formRow.querySelector('.raw-material-id-input');
+        if (!rawMaterialIdInput) {
+            rawMaterialIdInput = formRow.querySelector('input[name*="-raw_material_id"]');
+        }
+        if (!rawMaterialIdInput && rawMaterialInputFinal) {
+            rawMaterialIdInput = document.createElement('input');
+            rawMaterialIdInput.type = 'hidden';
+            rawMaterialIdInput.className = 'raw-material-id-input';
+            const rawMaterialName = rawMaterialInputFinal.name;
+            const match = rawMaterialName.match(/^(mat-\d+)-raw_material$/);
+            if (match) {
+                rawMaterialIdInput.name = match[1] + '-raw_material_id';
+            } else {
+                rawMaterialIdInput.name = rawMaterialName.replace('-raw_material', '-raw_material_id');
+            }
+            rawMaterialInputFinal.parentElement.appendChild(rawMaterialIdInput);
+        }
+        
+        const unitSelect = formRow.querySelector('.material-unit-select');
+        if (!unitSelect) return;
+        
+        // ایجاد container برای پیشنهادات
+        let suggestionsDiv = formRow.querySelector('.raw-material-suggestions');
+        if (!suggestionsDiv) {
+            suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'suggestions-container raw-material-suggestions';
+            rawMaterialInputFinal.parentElement.style.position = 'relative';
+            rawMaterialInputFinal.parentElement.appendChild(suggestionsDiv);
+        }
+        
+        let rawMaterialSuggestions = [];
+        let searchTimeout;
+        
+        rawMaterialInputFinal.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+                rawMaterialSuggestions = [];
+                if (rawMaterialIdInput) rawMaterialIdInput.value = '';
+                if (unitSelect) unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "supply:raw_material_search_api" %}?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        rawMaterialSuggestions = data.results || [];
+                        displayRawMaterialSuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی ماده اولیه:', error);
+                    });
+            }, 300);
+        });
+        
+        function displayRawMaterialSuggestions() {
+            if (!suggestionsDiv) return;
+            
+            suggestionsDiv.innerHTML = '';
+            
+            if (rawMaterialSuggestions.length === 0) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            rawMaterialSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = '#f0f0f0';
+                });
+                suggestionItem.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = 'white';
+                });
+                suggestionItem.addEventListener('click', function() {
+                    if (rawMaterialInputFinal) rawMaterialInputFinal.value = item.text;
+                    if (rawMaterialIdInput) {
+                        rawMaterialIdInput.value = item.id;
+                    }
+                    if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+                    
+                    // دریافت اطلاعات کامل ماده اولیه از API
+                    const url = '{% url "supply:raw_material_info_api" raw_material_id=0 %}'.replace('0', item.id);
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                console.error('خطا در دریافت اطلاعات ماده اولیه:', data.error);
+                                return;
+                            }
+                            
+                            // پر کردن dropdown واحد
+                            if (unitSelect && data.available_units) {
+                                unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
+                                data.available_units.forEach(function(unit) {
+                                    const option = document.createElement('option');
+                                    option.value = unit.value;
+                                    option.textContent = unit.display;
+                                    if (unit.is_main) {
+                                        option.setAttribute('data-main', 'true');
+                                    }
+                                    unitSelect.appendChild(option);
+                                });
+                                
+                                // انتخاب واحد اصلی به صورت پیش‌فرض
+                                const mainUnit = data.available_units.find(u => u.is_main) || data.available_units[0];
+                                if (mainUnit) {
+                                    unitSelect.value = mainUnit.value;
+                                }
+                            }
+                            
+                            // پر کردن قیمت واحد از آخرین استعلام
+                            const unitPriceInput = formRow.querySelector('input[name*="-unit_price"]');
+                            if (unitPriceInput && data.latest_price) {
+                                unitPriceInput.value = data.latest_price;
+                                // محاسبه قیمت کل
+                                calculateRowTotal(formRow);
+                            }
+                            
+                            // پر کردن مالیات بر ارزش افزوده (با 2 رقم اعشار)
+                            const vatInput = formRow.querySelector('input[name*="-vat_on_material"]');
+                            if (vatInput && data.vat_percentage) {
+                                // اطمینان از اینکه مقدار با 2 رقم اعشار باشد
+                                const vatValue = parseFloat(data.vat_percentage);
+                                if (!isNaN(vatValue)) {
+                                    vatInput.value = vatValue.toFixed(2);
+                                } else {
+                                    vatInput.value = '0.00';
+                                }
+                            }
+                            
+                            // محاسبه بهای تمام شده خرید
+                            calculateTotalCostCompleted(formRow);
+                        })
+                        .catch(error => {
+                            console.error('خطا در دریافت اطلاعات ماده اولیه:', error);
+                        });
+                });
+                suggestionsDiv.appendChild(suggestionItem);
+            });
+            
+            suggestionsDiv.style.display = 'block';
+        }
+        
+        // بستن پیشنهادات با کلیک خارج
+        document.addEventListener('click', function(e) {
+            if (rawMaterialInputFinal && suggestionsDiv && 
+                !rawMaterialInputFinal.contains(e.target) && 
+                !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
     }
-  });
-  
-  // محاسبه اولیه
-  calculateSubtotal();
+    
+    // محاسبه قیمت کل هر ردیف
+    function calculateRowTotal(formRow) {
+        const qtyInput = formRow.querySelector('input[name*="-quantity"]');
+        const priceInput = formRow.querySelector('input[name*="-unit_price"]');
+        const totalInput = formRow.querySelector('input[name*="-total_price"]');
+        
+        if (qtyInput && priceInput && totalInput) {
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            const total = qty * price;
+            totalInput.value = total.toFixed(2);
+            
+            // محاسبه مجموع کل
+            calculateSubtotal();
+            
+            // محاسبه بهای تمام شده خرید
+            calculateTotalCostCompleted(formRow);
+        }
+    }
+    
+    // محاسبه بهای تمام شده خرید (قیمت کل + مالیات + کرایه)
+    function calculateTotalCostCompleted(formRow) {
+        const totalPriceInput = formRow.querySelector('input[name*="-total_price"]');
+        const vatInput = formRow.querySelector('input[name*="-vat_on_material"]');
+        const freightCostInput = formRow.querySelector('input[name*="-freight_cost_completed"]');
+        const totalCostInput = formRow.querySelector('input[name*="-total_cost_completed"]');
+        
+        if (!totalCostInput) return;
+        
+        const totalPrice = parseFloat(totalPriceInput.value) || 0;
+        const vatPercent = parseFloat(vatInput.value) || 0;
+        const freightCost = parseFloat(freightCostInput.value) || 0;
+        
+        // محاسبه مالیات
+        const vatAmount = (totalPrice * vatPercent) / 100;
+        
+        // بهای تمام شده = قیمت کل + مالیات + کرایه
+        const totalCost = totalPrice + vatAmount + freightCost;
+        
+        totalCostInput.value = totalCost.toFixed(2);
+    }
+    
+    // محاسبه مجموع بدون کرایه
+    function calculateSubtotal() {
+        const totalInputs = document.querySelectorAll('input[name*="-total_price"]');
+        let subtotal = 0;
+        
+        totalInputs.forEach(function(input) {
+            const formRow = input.closest('.item-form-row');
+            if (formRow && !formRow.classList.contains('deleted')) {
+                const value = parseFloat(input.value) || 0;
+                subtotal += value;
+            }
+        });
+        
+        const subtotalInput = document.querySelector('input[name="subtotal_without_freight"]');
+        if (subtotalInput) {
+            subtotalInput.value = subtotal.toFixed(2);
+        }
+    }
+    
+    // مدیریت formset مواد اولیه
+    const formsetContainer = document.getElementById('materials-container');
+    const addButton = document.getElementById('add-material-btn');
+    
+    // پیدا کردن فیلد TOTAL_FORMS در management form
+    const totalFormsInput = document.querySelector('input[name$="-TOTAL_FORMS"]');
+    if (!totalFormsInput) {
+        console.error('فیلد TOTAL_FORMS پیدا نشد');
+        return;
+    }
+    
+    // استخراج prefix از نام فیلد (مثلاً "mat" از "mat-TOTAL_FORMS")
+    const prefix = totalFormsInput.name.replace('-TOTAL_FORMS', '');
+    let formCount = parseInt(totalFormsInput.value) || 0;
+    
+    // تابع برای افزودن ماده جدید
+    if (addButton) {
+        addButton.addEventListener('click', function() {
+            const firstForm = formsetContainer.querySelector('.item-form-row');
+            if (!firstForm) {
+                console.error('فرم اولیه پیدا نشد');
+                return;
+            }
+            
+            // کلون کردن فرم اول
+            const newForm = firstForm.cloneNode(true);
+            newForm.classList.add('item-form-row');
+            
+            // به‌روزرسانی تمام فیلدها با شماره جدید
+            const formIndex = formCount;
+            const regex = new RegExp(`${prefix}-(\\d+)-`, 'g');
+            
+            // به‌روزرسانی name و id فیلدها
+            newForm.querySelectorAll('input, select, textarea, label').forEach(function(element) {
+                if (element.name) {
+                    element.name = element.name.replace(regex, `${prefix}-${formIndex}-`);
+                }
+                if (element.id) {
+                    element.id = element.id.replace(regex, `${prefix}-${formIndex}-`);
+                }
+                if (element.getAttribute('for')) {
+                    element.setAttribute('for', element.getAttribute('for').replace(regex, `${prefix}-${formIndex}-`));
+                }
+            });
+            
+            // پاک کردن مقادیر فیلدها
+            newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                if (input.type === 'checkbox') {
+                    // برای checkbox حذف، مقدار را false کن
+                    if (input.name.includes('-DELETE')) {
+                        input.checked = false;
+                    }
+                } else if (input.type !== 'hidden') {
+                    input.value = '';
+                }
+            });
+            
+            // پاک کردن پیام‌های خطا
+            newForm.querySelectorAll('.text-danger').forEach(function(error) {
+                error.remove();
+            });
+            
+            // اضافه کردن به container
+            formsetContainer.appendChild(newForm);
+            
+            // اعمال autocomplete به فرم جدید
+            setupRawMaterialAutoFill(newForm);
+            
+            // اتصال event listener برای محاسبه
+            const qtyInput = newForm.querySelector('input[name*="-quantity"]');
+            const priceInput = newForm.querySelector('input[name*="-unit_price"]');
+            const vatInput = newForm.querySelector('input[name*="-vat_on_material"]');
+            const freightCostInput = newForm.querySelector('input[name*="-freight_cost_completed"]');
+            const totalCostInput = newForm.querySelector('input[name*="-total_cost_completed"]');
+            
+            if (qtyInput) {
+                qtyInput.addEventListener('input', function() {
+                    calculateRowTotal(newForm);
+                });
+            }
+            if (priceInput) {
+                priceInput.addEventListener('input', function() {
+                    calculateRowTotal(newForm);
+                });
+            }
+            if (vatInput) {
+                vatInput.addEventListener('input', function() {
+                    calculateTotalCostCompleted(newForm);
+                });
+            }
+            if (freightCostInput) {
+                freightCostInput.readOnly = true;
+                freightCostInput.style.backgroundColor = '#f5f5f5';
+                freightCostInput.style.cursor = 'not-allowed';
+            }
+            if (totalCostInput) {
+                totalCostInput.readOnly = true;
+                totalCostInput.style.backgroundColor = '#f5f5f5';
+                totalCostInput.style.cursor = 'not-allowed';
+            }
+            
+            // به‌روزرسانی تعداد فرم‌ها
+            formCount++;
+            totalFormsInput.value = formCount;
+        });
+    }
+    
+    // مدیریت checkbox حذف
+    if (formsetContainer) {
+        formsetContainer.addEventListener('change', function(e) {
+            if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
+                const formRow = e.target.closest('.item-form-row');
+                if (e.target.checked) {
+                    formRow.classList.add('deleted');
+                } else {
+                    formRow.classList.remove('deleted');
+                }
+                calculateSubtotal();
+            }
+        });
+    }
+    
+    // اتصال event listener ها برای محاسبه به فرم‌های موجود
+    document.querySelectorAll('.item-form-row').forEach(function(formRow) {
+        setupRawMaterialAutoFill(formRow);
+        
+        const qtyInput = formRow.querySelector('input[name*="-quantity"]');
+        const priceInput = formRow.querySelector('input[name*="-unit_price"]');
+        const vatInput = formRow.querySelector('input[name*="-vat_on_material"]');
+        const freightCostInput = formRow.querySelector('input[name*="-freight_cost_completed"]');
+        const totalCostInput = formRow.querySelector('input[name*="-total_cost_completed"]');
+        
+        if (qtyInput) {
+            qtyInput.addEventListener('input', function() {
+                calculateRowTotal(formRow);
+            });
+        }
+        if (priceInput) {
+            priceInput.addEventListener('input', function() {
+                calculateRowTotal(formRow);
+            });
+        }
+        if (vatInput) {
+            vatInput.addEventListener('input', function() {
+                calculateTotalCostCompleted(formRow);
+            });
+        }
+        if (freightCostInput) {
+            freightCostInput.readOnly = true;
+            freightCostInput.style.backgroundColor = '#f5f5f5';
+            freightCostInput.style.cursor = 'not-allowed';
+        }
+        if (totalCostInput) {
+            totalCostInput.readOnly = true;
+            totalCostInput.style.backgroundColor = '#f5f5f5';
+            totalCostInput.style.cursor = 'not-allowed';
+        }
+        if (freightCostInput) {
+            freightCostInput.readOnly = true;
+            freightCostInput.style.backgroundColor = '#f5f5f5';
+            freightCostInput.style.cursor = 'not-allowed';
+        }
+        
+        // محاسبه اولیه بهای تمام شده
+        calculateTotalCostCompleted(formRow);
+    });
+    
+    // readonly کردن فیلد freight_cost در فرم اصلی
+    const freightCostInputMain = document.querySelector('input[name="freight_cost"]');
+    if (freightCostInputMain) {
+        freightCostInputMain.readOnly = true;
+        freightCostInputMain.style.backgroundColor = '#f5f5f5';
+        freightCostInputMain.style.cursor = 'not-allowed';
+    }
+    
+    // محاسبه اولیه
+    calculateSubtotal();
+    
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const section = this.closest('.form-section');
+            section.classList.toggle('collapsed');
+        });
+    });
 });
 </script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>ایجاد سفارش خرید جدید</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- بخش اطلاعات اجباری -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>اطلاعات اجباری</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                {% if accessible_po_fields.supplier %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">تأمین‌کننده</label>
+                    {{ form.supplier }}
+                    <input type="hidden" name="supplier_id" value="">
+                    {% if form.supplier.errors %}
+                        <div class="text-danger">{{ form.supplier.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_po_fields.freight_payment_type %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.freight_payment_type.label }}</label>
+                    {{ form.freight_payment_type }}
+                    {% if form.freight_payment_type.errors %}
+                        <div class="text-danger">{{ form.freight_payment_type.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- بخش اطلاعات اختیاری -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>اطلاعات اختیاری</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                {% if accessible_po_fields.subtotal_without_freight %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.subtotal_without_freight.label }}</label>
+                    {{ form.subtotal_without_freight }}
+                    {% if form.subtotal_without_freight.errors %}
+                        <div class="text-danger">{{ form.subtotal_without_freight.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_po_fields.freight_cost %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.freight_cost.label }}</label>
+                    <input type="number" step="0.01" name="{{ form.freight_cost.name }}" value="{{ form.freight_cost.value|default:'' }}" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                    {% if form.freight_cost.errors %}
+                        <div class="text-danger">{{ form.freight_cost.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if accessible_po_fields.external_system_id %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">{{ form.external_system_id.label }}</label>
+                    {{ form.external_system_id }}
+                    {% if form.external_system_id.errors %}
+                        <div class="text-danger">{{ form.external_system_id.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- بخش مواد اولیه -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>مواد اولیه</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div></div>
+                    <button type="button" id="add-material-btn" class="btn btn-success" style="padding: 8px 16px;">
+                        <span>+ افزودن ماده اولیه</span>
+                    </button>
+                </div>
+
+                {{ material_formset.management_form }}
+                <div id="materials-container">
+                    {% for f in material_formset.forms %}
+                        <div class="item-form-row">
+                            {% if f.DELETE %}
+                                <div style="position: absolute; left: 10px; top: 10px;">
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        {{ f.DELETE }}
+                                        <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
+                                    </label>
+                                </div>
+                            {% endif %}
+                            <div class="row">
+                                <!-- اجباری های ماده -->
+                                {% if accessible_po_material_fields.raw_material %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label required-field">ماده اولیه</label>
+                                    {{ f.raw_material }}
+                                    {% for hidden in f.hidden_fields %}
+                                        {% if 'raw_material_id' in hidden.name %}
+                                            {{ hidden }}
+                                        {% endif %}
+                                    {% endfor %}
+                                    {% if f.raw_material.errors %}
+                                        <div class="text-danger">{{ f.raw_material.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.quantity %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label required-field">مقدار</label>
+                                    {{ f.quantity }}
+                                    {% if f.quantity.errors %}
+                                        <div class="text-danger">{{ f.quantity.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.unit %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label required-field">واحد</label>
+                                    {{ f.unit }}
+                                    {% if f.unit.errors %}
+                                        <div class="text-danger">{{ f.unit.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.unit_price %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label required-field">قیمت واحد</label>
+                                    {{ f.unit_price }}
+                                    {% if f.unit_price.errors %}
+                                        <div class="text-danger">{{ f.unit_price.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.total_price %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">قیمت کل</label>
+                                    {{ f.total_price }}
+                                    {% if f.total_price.errors %}
+                                        <div class="text-danger">{{ f.total_price.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                <!-- اختیاری های ماده -->
+                                {% if accessible_po_material_fields.freight_included %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">بدون احتساب کرایه؟</label>
+                                    <div style="display: flex; align-items: center; margin-top: 8px;">
+                                        {{ f.freight_included }}
+                                        <span style="margin-right: 5px;">بله</span>
+                                    </div>
+                                    {% if f.freight_included.errors %}
+                                        <div class="text-danger">{{ f.freight_included.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.vat_on_material %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">مالیات بر ارزش افزوده</label>
+                                    {{ f.vat_on_material }}
+                                    {% if f.vat_on_material.errors %}
+                                        <div class="text-danger">{{ f.vat_on_material.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.freight_cost_completed %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">بهای تمام شده کرایه خرید</label>
+                                    <input type="number" step="0.01" name="{{ f.freight_cost_completed.name }}" value="{{ f.freight_cost_completed.value|default:'' }}" class="form-control freight-cost-completed-input" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                                    {% if f.freight_cost_completed.errors %}
+                                        <div class="text-danger">{{ f.freight_cost_completed.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.total_cost_completed %}
+                                <div class="col-md-3 mb-3">
+                                    <label class="form-label">بهای تمام شده خرید</label>
+                                    <input type="number" step="0.01" name="{{ f.total_cost_completed.name }}" value="{{ f.total_cost_completed.value|default:'' }}" class="form-control total-cost-completed-input" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                                    {% if f.total_cost_completed.errors %}
+                                        <div class="text-danger">{{ f.total_cost_completed.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                {% if accessible_po_material_fields.notes %}
+                                <div class="col-md-12 mb-3">
+                                    <label class="form-label">توضیحات</label>
+                                    {{ f.notes }}
+                                    {% if f.notes.errors %}
+                                        <div class="text-danger">{{ f.notes.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% for hidden in f.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if material_formset.non_form_errors %}
+                    {% for err in material_formset.non_form_errors %}
+                        <div class="text-danger">{{ err }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- دکمه‌ها -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ثبت سفارش</button>
+            <a href="{% url 'supply:purchase_order_management' %}" class="btn btn-secondary">انصراف</a>
+        </div>
+    </form>
+</div>
 {% endblock %}

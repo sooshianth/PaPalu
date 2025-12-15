@@ -104,7 +104,7 @@ def raw_material_list_view(request):
 					pi.save()
 				messages.success(request, 'ماده اولیه ثبت شد.')
 				bug_logger.info(f"RawMaterial saved rid={instance.raw_material_id}")
-				return redirect(reverse('raw_material:raw_material_list'))
+				return redirect(reverse('supply:raw_material_list'))
 			else:
 				bug_logger.warning(f"فرم تعریف ماده اولیه نامعتبر است. rm_errors={rm_form.errors} pi_errors={pi_form.errors}")
 				messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
@@ -280,7 +280,7 @@ def raw_material_edit_view(request, raw_material_id: str):
 					pi_form.save()
 				messages.success(request, 'ماده اولیه با موفقیت به‌روزرسانی شد.')
 				bug_logger.info(f"RawMaterial updated rid={material.raw_material_id}")
-				return redirect(reverse('raw_material:raw_material_detail', args=[material.raw_material_id]))
+				return redirect(reverse('supply:raw_material_detail', args=[material.raw_material_id]))
 			else:
 				bug_logger.warning(f"فرم ویرایش ماده اولیه نامعتبر است. rm_errors={rm_form.errors} pi_errors={pi_form.errors}")
 				messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
@@ -297,5 +297,5 @@ def raw_material_edit_view(request, raw_material_id: str):
 	except Exception as e:
 		bug_logger.error(f"Raw material edit error: {e}")
 		messages.error(request, 'خطا در ویرایش.')
-		return redirect(reverse('raw_material:raw_material_list'))
+		return redirect(reverse('supply:raw_material_list'))
 
