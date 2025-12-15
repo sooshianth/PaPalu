@@ -422,10 +422,12 @@
 			<div class="sticky-actions" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap">
 				<div id="formTabs" class="nav nav-pills" style="gap:6px;overflow:auto;white-space:nowrap"></div>
 				<div class="form-actions" style="display:flex;gap:6px">
-					<button class="btn btn-secondary btn-sm" type="button" onclick="bulkDraftAll()">پیش‌نویس همه</button>
-					<button class="btn btn-primary btn-sm" type="button" onclick="bulkAcceptAll()">تأیید همه</button>
-					<button class="btn btn-danger btn-sm" type="button" onclick="bulkClearAll()">پاک کردن همه</button>
-					<button class="btn btn-outline-secondary btn-sm" type="button" onclick="addNewFormTab()">+ افزودن فرم</button>
+					{% if not program %}
+						<button class="btn btn-secondary btn-sm" type="button" onclick="bulkDraftAll()">پیش‌نویس همه</button>
+						<button class="btn btn-primary btn-sm" type="button" onclick="bulkAcceptAll()">تأیید همه</button>
+						<button class="btn btn-danger btn-sm" type="button" onclick="bulkClearAll()">پاک کردن همه</button>
+						<button class="btn btn-outline-secondary btn-sm" type="button" onclick="addNewFormTab()">+ افزودن فرم</button>
+					{% endif %}
 					<a class="btn btn-outline-dark btn-sm" href="{% url 'production:program_list' %}">بازگشت به لیست</a>
 				</div>
 			</div>
@@ -693,11 +695,25 @@
 					<!-- Hidden fields -->
 					<div style="display:none">{{ form.status }}{{ form.produced_weight_ton }}</div>
 					
+					{% with status=program.status|default_if_none:"" %}
+					{% if not program or status == 'draft' %}
 					<div class="form-actions">
 						<button class="btn btn-secondary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'draft')">پیش‌نویس</button>
 						<button class="btn btn-primary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'confirm')">تأیید</button>
 						<button class="btn btn-outline-danger btn-sm" type="button" onclick="clearForm(this.closest('.tab-pane'))">پاک کردن</button>
+						{% if program and status == 'draft' %}
+						<button class="btn btn-danger btn-sm" type="button" onclick="deleteDraft()">حذف پیش‌نویس</button>
+						{% endif %}
 					</div>
+					{% elif status == 'confirmed' %}
+					<div class="form-actions">
+						<button class="btn btn-secondary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'draft')">پیش‌نویس</button>
+						<button class="btn btn-primary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'confirm')">تأیید</button>
+					</div>
+					{% else %}
+					<!-- In progress / completed: no actions -->
+					{% endif %}
+					{% endwith %}
 				</form>
 			</template>
 
@@ -852,6 +868,10 @@
 	const accessibleBomFields = JSON.parse('{{ accessible_bom_fields_json|escapejs }}');
 	const accessibleRawMaterialFields = JSON.parse('{{ accessible_raw_material_fields_json|escapejs }}');
 	const productFlowStatusData = JSON.parse('{{ product_flow_status_json|escapejs }}');
+	const PROGRAM_ID = {% if program %}{{ program.id }}{% else %}null{% endif %};
+	const IS_EDIT_MODE = {% if program %}true{% else %}false{% endif %};
+	const PROGRAM_STATUS = '{{ program.status|default_if_none:"" }}';
+	const FORM_ENDPOINT = (IS_EDIT_MODE && PROGRAM_ID) ? `/production/program/${PROGRAM_ID}/edit/` : '/production/program/create/';
 	
 // Create a map of product ID to inventory data for quick lookup
 // Values come as strings from server to preserve Decimal precision
@@ -1112,6 +1132,12 @@ if (productFlowStatusData) {
 		if (!form) return;
 		// Clear previous errors
 		clearErrors(pane);
+
+		// Block edits when status is in progress or completed (frontend guard)
+		if (IS_EDIT_MODE && ['in_progress','completed','completed '].includes(PROGRAM_STATUS)) {
+			alert('ویرایش در این وضعیت مجاز نیست.');
+			return;
+		}
 		
 		// Validate planned weight against min_batch_production (for all actions that create/modify program)
 		if (action && ['draft', 'confirm', 'start'].includes(action)) {
@@ -1142,7 +1168,7 @@ if (productFlowStatusData) {
 		data.set('action', action);
 		const csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
 		try{
-			const resp = await fetch('/production/program/create/', {
+			const resp = await fetch(FORM_ENDPOINT, {
 				method: 'POST',
 				headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
 				body: data,
@@ -1169,6 +1195,30 @@ if (productFlowStatusData) {
 			}
 		} catch(err){
 			alert('خطای شبکه');
+		}
+	}
+
+	async function deleteDraft(){
+		if (!IS_EDIT_MODE || !PROGRAM_ID) return;
+		if (!confirm('آیا از حذف این پیش‌نویس مطمئن هستید؟')) return;
+		const csrf = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+		const data = new FormData();
+		data.set('action', 'delete_draft');
+		try{
+			const resp = await fetch(FORM_ENDPOINT, {
+				method: 'POST',
+				headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+				body: data,
+				credentials: 'same-origin'
+			});
+			if (resp.ok) {
+				alert('پیش‌نویس حذف شد.');
+				window.location.href = '/production/program/list/';
+			} else {
+				alert('حذف پیش‌نویس ناموفق بود.');
+			}
+		} catch(err){
+			alert('خطای شبکه در حذف پیش‌نویس');
 		}
 	}
 

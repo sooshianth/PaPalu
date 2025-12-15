@@ -13,12 +13,14 @@ from core.logging_levels import *
 from core.RBACModel import user_can_access_field
 from production.forms.program_form import ProductionProgramForm
 from core.ProductionFolder.ProductionProgramModel import ProductionProgram
+from production.tables import ProductionProgramTable
 from core.ProductFolder.BOMModel import BOM
 from core.ProductFolder.ProductionInfoModel import ProductionInfo
 from core.ProductFolder.ProductModel import Product
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
+from django_tables2 import RequestConfig
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -436,8 +438,31 @@ def edit_program_view(request, program_id):
     audit_logger.info("دسترسی به ویرایش برنامه تولید")
     program = get_object_or_404(ProductionProgram, id=program_id)
     try:
+        # Hard guard: no edits allowed when in progress or completed
+        if request.method == 'POST' and program.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
+            msg = 'ویرایش در این وضعیت مجاز نیست.'
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                return JsonResponse({'ok': False, 'errors': {'__all__': [msg]}}, status=400)
+            messages.error(request, msg)
+            return redirect(reverse('production:program_edit', args=[program.id]))
+
         if request.method == 'POST':
             action = request.POST.get('action')
+
+            # Delete draft action (only allowed for draft)
+            if action == 'delete_draft':
+                if program.status != ProductionProgram.Status.DRAFT:
+                    msg = 'حذف پیش‌نویس فقط در وضعیت پیش‌نویس مجاز است.'
+                    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                        return JsonResponse({'ok': False, 'errors': {'__all__': [msg]}}, status=400)
+                    messages.error(request, msg)
+                    return redirect(reverse('production:program_edit', args=[program.id]))
+                program.delete()
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                    return JsonResponse({'ok': True, 'deleted': True})
+                messages.success(request, 'پیش‌نویس حذف شد.')
+                return redirect(reverse('production:program_list'))
+
             form = ProductionProgramForm(request.POST, instance=program)
             if form.is_valid():
                 instance = form.save(commit=False)
@@ -461,12 +486,26 @@ def edit_program_view(request, program_id):
                     instance.inventory_snapshot = inventory_snapshot
                     instance.net_unplanned_requirement = net_unplanned
                 
-                if action == 'confirm' and instance.status == ProductionProgram.Status.DRAFT:
+                # State transitions: allow draft/confirm edits; block start/complete unless existing rules
+                if action == 'confirm' and instance.status in [ProductionProgram.Status.DRAFT, ProductionProgram.Status.CONFIRMED]:
                     instance.status = ProductionProgram.Status.CONFIRMED
+                elif action == 'draft' and instance.status == ProductionProgram.Status.DRAFT:
+                    instance.status = ProductionProgram.Status.DRAFT  # no change, just save
+                elif action == 'draft' and instance.status == ProductionProgram.Status.CONFIRMED:
+                    instance.status = ProductionProgram.Status.DRAFT  # change from confirmed to draft
                 elif action == 'start' and instance.status == ProductionProgram.Status.CONFIRMED:
                     instance.status = ProductionProgram.Status.IN_PROGRESS
                 elif action == 'complete' and instance.status == ProductionProgram.Status.IN_PROGRESS:
                     instance.status = ProductionProgram.Status.COMPLETED
+                elif action == 'confirm' and instance.status == ProductionProgram.Status.CONFIRMED:
+                    # permit saving confirmed without changing status
+                    pass
+                else:
+                    msg = 'این اقدام برای وضعیت فعلی مجاز نیست.'
+                    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                        return JsonResponse({'ok': False, 'errors': {'__all__': [msg]}}, status=400)
+                    messages.error(request, msg)
+                    return redirect(reverse('production:program_edit', args=[instance.id]))
                 instance.save()
                 messages.success(request, 'برنامه به‌روز شد.')
                 return redirect(reverse('production:program_edit', args=[instance.id]))
@@ -497,11 +536,23 @@ def program_list_view(request):
     audit_logger.info("نمایش لیست برنامه‌های تولید")
     try:
         programs = ProductionProgram.objects.all().select_related('product', 'production_info')
+
+        search_query = request.GET.get('q', '').strip()
+        if search_query:
+            programs = programs.filter(
+                Q(product__name__icontains=search_query) |
+                Q(program_id__icontains=search_query) |
+                Q(production_info__formula_id__icontains=search_query)
+            )
+
+        table = ProductionProgramTable(programs)
+        RequestConfig(request, paginate={'per_page': 20}).configure(table)
+
         bug_logger.debug(f"Programs list count={programs.count()}")
-        return render(request, 'program_list.html', {'programs': programs})
+        return render(request, 'program_list.html', {'table': table, 'search_query': search_query})
     except Exception as e:
         bug_logger.error(f"List programs error: {e}")
-        return render(request, 'program_list.html', {'programs': []})
+        return render(request, 'program_list.html', {'table': None, 'search_query': ''})
 
 
 def program_drafts_view(request):

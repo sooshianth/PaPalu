@@ -128,9 +128,9 @@ class ProductionProgramForm(forms.ModelForm):
             self.fields['net_unplanned_requirement'].widget.attrs['readonly'] = True
             self.fields['net_unplanned_requirement'].widget.attrs['disabled'] = True
         
-        # Lock fields when not draft
+        # Lock fields only when status is in progress or completed; confirmed remains editable
         instance: ProductionProgram | None = getattr(self, 'instance', None)
-        if instance and instance.pk and instance.status != ProductionProgram.Status.DRAFT:
+        if instance and instance.pk and instance.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
             lock_names = [
                 'production_info', 'product', 'program_id', 'planned_weight_ton',
                 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time', 'packaging_type',
@@ -187,9 +187,8 @@ class ProductionProgramForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance: ProductionProgram = super().save(commit=False)
-        # Preserve original locked values if form disabled fields dropped from POST
-        if instance.pk and instance.status != ProductionProgram.Status.DRAFT:
-            # Re-fetch from DB for locked fields to avoid accidental overwrite to None
+        # Preserve original locked values if form disabled fields dropped from POST (only when locked)
+        if instance.pk and instance.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
             orig = ProductionProgram.objects.get(pk=instance.pk)
             for attr in [
                 'production_info', 'product', 'program_id', 'planned_weight_ton',
@@ -197,8 +196,7 @@ class ProductionProgramForm(forms.ModelForm):
                 'packaging_type', 'extra_description'
             ]:
                 setattr(instance, attr, getattr(orig, attr))
-            # inventory_snapshot and net_unplanned_requirement are always auto-calculated, so preserve them
-            # but they will be recalculated in the view if product changed
+            # inventory_snapshot and net_unplanned_requirement are always auto-calculated in views
         if commit:
             instance.save()
         return instance
