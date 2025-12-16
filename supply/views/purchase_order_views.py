@@ -13,11 +13,8 @@ import logging
 from core.logging_levels import *
 from django_tables2 import RequestConfig
 
-from core.SupplyFolder.ProcurementPurchaseOrderModel import (
-    ProcurementPurchaseOrder,
-    ProcurementPurchaseOrderMaterial,
-    ProcurementPurchaseOrderStatusLog,
-)
+from core.OrderFolder.OrderModel import Order, OrderStatusLog
+from core.OrderFolder.OrderItemModel import OrderItem
 from core.PersonFolder.PersonModel import Person
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
@@ -30,37 +27,36 @@ audit_logger = logging.getLogger("audit")
 
 
 def get_accessible_procurement_purchase_order_fields(user):
-    """دریافت فیلدهای قابل دسترس برای مدل ProcurementPurchaseOrder"""
+    """دریافت فیلدهای قابل دسترس برای مدل Order (سفارش خرید)"""
     return {
-        'order_number': user_can_access_field(user, ProcurementPurchaseOrder, 'order_number', 'view'),
-        'supplier': user_can_access_field(user, ProcurementPurchaseOrder, 'supplier', 'view'),
-        'status': user_can_access_field(user, ProcurementPurchaseOrder, 'status', 'view'),
-        'freight_payment_type': user_can_access_field(user, ProcurementPurchaseOrder, 'freight_payment_type', 'view'),
-        'subtotal_without_freight': user_can_access_field(user, ProcurementPurchaseOrder, 'subtotal_without_freight', 'view'),
-        'freight_cost': user_can_access_field(user, ProcurementPurchaseOrder, 'freight_cost', 'view'),
-        'vat_percentage': user_can_access_field(user, ProcurementPurchaseOrder, 'vat_percentage', 'view'),
-        'payment_confirmed': user_can_access_field(user, ProcurementPurchaseOrder, 'payment_confirmed', 'view'),
-        'external_system_id': user_can_access_field(user, ProcurementPurchaseOrder, 'external_system_id', 'view'),
-        'created_by': user_can_access_field(user, ProcurementPurchaseOrder, 'created_by', 'view'),
-        'created_at': user_can_access_field(user, ProcurementPurchaseOrder, 'created_at', 'view'),
-        'updated_at': user_can_access_field(user, ProcurementPurchaseOrder, 'updated_at', 'view'),
+        'order_number': user_can_access_field(user, Order, 'order_number', 'view'),
+        'customer': user_can_access_field(user, Order, 'customer', 'view'),  # supplier در Order به نام customer است
+        'status': user_can_access_field(user, Order, 'status', 'view'),
+        'freight_payment_type': user_can_access_field(user, Order, 'freight_payment_type', 'view'),
+        'subtotal_without_freight': user_can_access_field(user, Order, 'subtotal_without_freight', 'view'),
+        'freight_cost': user_can_access_field(user, Order, 'freight_cost', 'view'),
+        'vat_percentage': user_can_access_field(user, Order, 'vat_percentage', 'view'),
+        'payment_confirmed': user_can_access_field(user, Order, 'payment_confirmed', 'view'),
+        'external_system_id': user_can_access_field(user, Order, 'external_system_id', 'view'),
+        'registered_by': user_can_access_field(user, Order, 'registered_by', 'view'),
+        'created_at': user_can_access_field(user, Order, 'created_at', 'view'),
+        'updated_at': user_can_access_field(user, Order, 'updated_at', 'view'),
     }
 
 
 def get_accessible_procurement_purchase_order_material_fields(user):
-    """دریافت فیلدهای قابل دسترس برای مدل ProcurementPurchaseOrderMaterial"""
+    """دریافت فیلدهای قابل دسترس برای مدل OrderItem"""
     return {
-        'raw_material': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'raw_material', 'view'),
-        'quantity': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'quantity', 'view'),
-        'unit': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'unit', 'view'),
-        'notes': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'notes', 'view'),
-        'unit_price': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'unit_price', 'view'),
-        'total_price': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'total_price', 'view'),
-        'freight_included': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'freight_included', 'view'),
-        'vat_on_material': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'vat_on_material', 'view'),
-        'freight_cost_completed': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'freight_cost_completed', 'view'),
-        'total_cost_completed': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'total_cost_completed', 'view'),
-        'external_allocation_id': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'external_allocation_id', 'view'),
+        'raw_material': user_can_access_field(user, OrderItem, 'raw_material', 'view'),
+        'quantity': user_can_access_field(user, OrderItem, 'quantity', 'view'),
+        'weight_unit': user_can_access_field(user, OrderItem, 'weight_unit', 'view'),
+        'notes': user_can_access_field(user, OrderItem, 'notes', 'view'),
+        'unit_price': user_can_access_field(user, OrderItem, 'unit_price', 'view'),
+        'total_purchase_cost': user_can_access_field(user, OrderItem, 'total_purchase_cost', 'view'),
+        'vat_percent': user_can_access_field(user, OrderItem, 'vat_percent', 'view'),
+        'freight_cost': user_can_access_field(user, OrderItem, 'freight_cost', 'view'),
+        'total_purchase_cost': user_can_access_field(user, OrderItem, 'total_purchase_cost', 'view'),
+        'external_allocation_id': user_can_access_field(user, OrderItem, 'external_allocation_id', 'view'),
     }
 
 
@@ -92,21 +88,21 @@ def get_accessible_user_fields_for_po(user):
 
 class ProcurementPurchaseOrderForm(ModelForm):
     class Meta:
-        model = ProcurementPurchaseOrder
+        model = Order
         fields = [
-            'supplier', 'freight_payment_type',
+            'customer', 'freight_payment_type',
             'subtotal_without_freight', 'freight_cost',
             'external_system_id'
         ]
         labels = {
-            'supplier': 'تأمین‌کننده',
+            'customer': 'تأمین‌کننده',
             'freight_payment_type': 'نوع پرداخت کرایه',
             'subtotal_without_freight': 'جمع بدون کرایه',
             'freight_cost': 'هزینه کرایه',
             'external_system_id': 'شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت',
         }
         widgets = {
-            'supplier': forms.Select(attrs={'class': 'form-control'}),
+            'customer': forms.Select(attrs={'class': 'form-control'}),
             'freight_payment_type': forms.Select(attrs={'class': 'form-control'}),
             'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
             'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -114,10 +110,25 @@ class ProcurementPurchaseOrderForm(ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        # استخراج instance قبل از super().__init__
+        instance = kwargs.get('instance', None)
+        
+        # اگر instance وجود دارد و customer دارد، مقدار initial را تنظیم کن
+        if instance and instance.pk and instance.customer:
+            # تنظیم initial قبل از super().__init__ تا Django از آن استفاده کند
+            if 'initial' not in kwargs:
+                kwargs['initial'] = {}
+            kwargs['initial']['customer'] = f"{instance.customer.name} ({instance.customer.national_id})"
+            kwargs['initial']['supplier_id'] = instance.customer.national_id
+        
+        # حذف customer از fields قبل از super().__init__ تا Django آن را از instance نگیرد
+        # این کار را با تغییر Meta.fields انجام می‌دهیم
+        original_fields = self._meta.fields if hasattr(self, '_meta') else None
+        
         super().__init__(*args, **kwargs)
         
-        # تبدیل supplier به autocomplete
-        self.fields['supplier'] = forms.CharField(
+        # تبدیل customer (supplier) به autocomplete
+        self.fields['customer'] = forms.CharField(
             required=True,
             label='تأمین‌کننده',
             widget=forms.TextInput(attrs={
@@ -133,17 +144,32 @@ class ProcurementPurchaseOrderForm(ModelForm):
             widget=forms.HiddenInput()
         )
         
+        # اگر instance وجود دارد (ویرایش)، مقدار اولیه را تنظیم کن
+        if instance and instance.pk and instance.customer:
+            customer_display = f"{instance.customer.name} ({instance.customer.national_id})"
+            # تنظیم initial برای نمایش در فرم
+            self.initial['customer'] = customer_display
+            self.initial['supplier_id'] = instance.customer.national_id
+            # همچنین مقدار value را مستقیماً تنظیم کن
+            self.fields['customer'].initial = customer_display
+            self.fields['supplier_id'].initial = instance.customer.national_id
+        
         # Lock financial fields if payment confirmed
         if self.instance and self.instance.payment_confirmed:
             for f in ['subtotal_without_freight', 'freight_cost']:
                 if f in self.fields:
                     self.fields[f].disabled = True
+        
+        # هزینه کرایه همیشه read-only است
+        if 'freight_cost' in self.fields:
+            self.fields['freight_cost'].widget.attrs['readonly'] = True
+            self.fields['freight_cost'].widget.attrs['style'] = 'background-color: #f5f5f5; cursor: not-allowed;'
     
     def clean(self):
         cleaned_data = super().clean()
-        # تبدیل supplier_id به supplier
+        # تبدیل supplier_id به customer
         supplier_id = cleaned_data.get('supplier_id', '').strip()
-        supplier_text = cleaned_data.get('supplier', '').strip()
+        supplier_text = cleaned_data.get('customer', '').strip()
         
         # اگر supplier_id در cleaned_data نیست، از data اصلی بگیر
         if not supplier_id and hasattr(self, 'data'):
@@ -161,55 +187,62 @@ class ProcurementPurchaseOrderForm(ModelForm):
                 cleaned_data['supplier_id'] = supplier_id
         
         if not supplier_id:
-            self.add_error('supplier', 'لطفاً یک تأمین‌کننده را از لیست انتخاب کنید.')
+            self.add_error('customer', 'لطفاً یک تأمین‌کننده را از لیست انتخاب کنید.')
             return cleaned_data
         
         try:
             supplier = Person.objects.get(national_id=supplier_id, type='supplier')
-            cleaned_data['supplier'] = supplier
+            cleaned_data['customer'] = supplier
         except Person.DoesNotExist:
-            self.add_error('supplier', 'تأمین‌کننده انتخاب شده یافت نشد.')
+            self.add_error('customer', 'تأمین‌کننده انتخاب شده یافت نشد.')
         
         return cleaned_data
 
 
 class ProcurementPurchaseOrderMaterialForm(ModelForm):
     class Meta:
-        model = ProcurementPurchaseOrderMaterial
+        model = OrderItem
         fields = [
-            'raw_material', 'quantity', 'unit', 'notes',
-            'unit_price', 'total_price', 'freight_included',
-            'vat_on_material', 'freight_cost_completed',
-            'total_cost_completed', 'external_allocation_id'
+            'raw_material', 'quantity', 'weight_unit', 'notes',
+            'unit_price', 'total_purchase_cost',
+            'vat_percent', 'freight_cost',
+            'total_purchase_cost', 'external_allocation_id'
         ]
         labels = {
             'raw_material': 'ماده اولیه',
             'quantity': 'مقدار',
-            'unit': 'واحد',
+            'weight_unit': 'واحد',
             'notes': 'توضیحات',
             'unit_price': 'قیمت واحد',
-            'total_price': 'قیمت کل',
-            'freight_included': 'بهای تمام شده بدون احتساب کرایه',
-            'vat_on_material': 'مالیات بر ارزش افزوده',
-            'freight_cost_completed': 'بهای تمام شده کرایه خرید',
-            'total_cost_completed': 'بهای تمام شده خرید',
+            'total_purchase_cost': 'قیمت کل',
+            'vat_percent': 'مالیات بر ارزش افزوده',
+            'freight_cost': 'بهای تمام شده کرایه خرید',
             'external_allocation_id': 'شناسه تخصیص',
         }
         widgets = {
             'raw_material': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
-            'unit': forms.Select(attrs={'class': 'form-control'}),
+            'weight_unit': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
             'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'total_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
-            'freight_included': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'vat_on_material': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'freight_cost_completed': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'total_cost_completed': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'total_purchase_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
+            'vat_percent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'external_allocation_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': True}),
         }
 
     def __init__(self, *args, **kwargs):
+        # استخراج instance قبل از super().__init__
+        instance = kwargs.get('instance', None)
+        
+        # اگر instance وجود دارد و raw_material دارد، مقدار initial را تنظیم کن
+        if instance and instance.pk and instance.raw_material:
+            # تنظیم initial قبل از super().__init__ تا Django از آن استفاده کند
+            if 'initial' not in kwargs:
+                kwargs['initial'] = {}
+            kwargs['initial']['raw_material'] = f"{instance.raw_material.raw_material_id or ''} - {instance.raw_material.name}"
+            kwargs['initial']['raw_material_id'] = str(instance.raw_material.id)
+        
         super().__init__(*args, **kwargs)
         
         # تبدیل raw_material به autocomplete
@@ -229,9 +262,56 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             widget=forms.HiddenInput()
         )
         
+        # اگر instance وجود دارد (ویرایش)، مقدار اولیه را تنظیم کن
+        if instance and instance.pk and instance.raw_material:
+            raw_material_display = f"{instance.raw_material.raw_material_id or ''} - {instance.raw_material.name}"
+            # تنظیم initial برای نمایش در فرم
+            self.initial['raw_material'] = raw_material_display
+            self.initial['raw_material_id'] = str(instance.raw_material.id)
+            # همچنین مقدار value را مستقیماً تنظیم کن
+            self.fields['raw_material'].initial = raw_material_display
+            self.fields['raw_material_id'].initial = str(instance.raw_material.id)
+        
+        # کرایه تمام شده همیشه read-only است
+        if 'freight_cost' in self.fields:
+            self.fields['freight_cost'].widget.attrs['readonly'] = True
+            self.fields['freight_cost'].widget.attrs['style'] = 'background-color: #f5f5f5; cursor: not-allowed;'
+        
         # واحد به صورت dropdown که بعداً با JavaScript پر می‌شود
-        self.fields['unit'].widget = forms.Select(attrs={'class': 'form-control material-unit-select'})
-        self.fields['unit'].choices = [('', '-- انتخاب واحد --')]
+        self.fields['weight_unit'].widget = forms.Select(attrs={'class': 'form-control material-unit-select'})
+        # اجازه دادن به تمام choices ممکن (هم value و هم display name)
+        # این کار را در clean_weight_unit انجام می‌دهیم
+        self.fields['weight_unit'].choices = OrderItem.WEIGHT_UNIT_CHOICES + [
+            ('کیلوگرم', 'کیلوگرم'),
+            ('تن', 'تن'),
+            ('کیسه', 'کیسه'),
+            ('عدد', 'عدد'),
+        ]
+    
+    def clean_weight_unit(self):
+        """تبدیل display name به value قبل از validation"""
+        weight_unit = self.cleaned_data.get('weight_unit')
+        if not weight_unit:
+            return weight_unit
+        
+        # mapping display name به value
+        display_to_value = {
+            'کیلوگرم': 'kg',
+            'تن': 'ton',
+            'کیسه': 'bag',
+            'عدد': 'piece',
+        }
+        
+        # اگر display name است، به value تبدیل کن
+        if weight_unit in display_to_value:
+            return display_to_value[weight_unit]
+        
+        # اگر value است، همان را برگردان
+        if weight_unit in ['kg', 'ton', 'bag', 'piece']:
+            return weight_unit
+        
+        # اگر هیچکدام نبود، خطا بده
+        return weight_unit
     
     def clean(self):
         """اعتبارسنجی: واحد باید با واحد اصلی یا فرعی ماده اولیه مطابقت داشته باشد"""
@@ -280,15 +360,23 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             raw_material_id_value = cleaned_data.get('raw_material_id', '')
             raw_material_id = raw_material_id_value.strip() if isinstance(raw_material_id_value, str) and raw_material_id_value.strip() else None
         
+        # اگر هنوز raw_material_id نداریم و instance وجود دارد، از instance بگیر
+        if not raw_material_id and self.instance and self.instance.pk and self.instance.raw_material:
+            raw_material_id = str(self.instance.raw_material.id)
+        
         # اگر raw_material_text نداریم، از cleaned_data بگیر
         if not raw_material_text:
             raw_material_value = cleaned_data.get('raw_material', '')
             raw_material_text = raw_material_value.strip() if isinstance(raw_material_value, str) and raw_material_value.strip() else None
         
-        unit = cleaned_data.get('unit')
+        # اگر raw_material_text نداریم و instance وجود دارد، از instance بگیر
+        if not raw_material_text and self.instance and self.instance.pk and self.instance.raw_material:
+            raw_material_text = f"{self.instance.raw_material.raw_material_id or ''} - {self.instance.raw_material.name}"
+        
+        weight_unit = cleaned_data.get('weight_unit')
         quantity = cleaned_data.get('quantity')
         unit_price = cleaned_data.get('unit_price')
-        total_price = cleaned_data.get('total_price')
+        total_purchase_cost = cleaned_data.get('total_purchase_cost')
         
         # اگر فرم خالی است (بدون raw_material و quantity)، آن را نادیده بگیر
         if not raw_material_text and not raw_material_id and not quantity:
@@ -337,41 +425,74 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             self.add_error('raw_material', 'ماده اولیه انتخاب شده یافت نشد.')
             return cleaned_data
         
-        # اعتبارسنجی واحد
-        if raw_material and unit:
-            # Get allowed units from raw material
-            allowed_units = []
-            if raw_material.primary_unit:
-                allowed_units.append(raw_material.get_primary_unit_display())
-            if raw_material.secondary_unit:
-                allowed_units.append(raw_material.get_secondary_unit_display())
+        # اعتبارسنجی واحد - weight_unit قبلاً در clean_weight_unit به value تبدیل شده است
+        # حالا فقط بررسی می‌کنیم که آیا با واحدهای ماده اولیه مطابقت دارد یا نه
+        if raw_material and weight_unit:
+            # Get allowed units from raw material (به value تبدیل شده)
+            allowed_order_item_units = []  # لیست واحدهای OrderItem که مجاز هستند
+            # تبدیل واحدهای RawMaterial به واحد OrderItem
+            raw_to_order_mapping = {
+                'gr': 'kg',   # گرم به کیلوگرم
+                'm3': 'kg',   # متر مکعب به کیلوگرم
+                'ltr': 'kg',  # لیتر به کیلوگرم
+                'cc': 'kg',   # میلی لیتر به کیلوگرم
+                'kg': 'kg',
+                'ton': 'ton',
+                'bag': 'bag',
+                'piece': 'piece',
+            }
             
-            # Check if entered unit matches
-            if unit not in allowed_units and allowed_units:
-                self.add_error('unit', f'واحد "{unit}" برای ماده اولیه "{raw_material.name}" معتبر نیست. واحدهای مجاز: {" یا ".join(allowed_units)}')
+            if raw_material.primary_unit:
+                raw_unit = raw_material.primary_unit
+                order_unit = raw_to_order_mapping.get(raw_unit, 'kg')
+                if order_unit not in allowed_order_item_units:
+                    allowed_order_item_units.append(order_unit)
+                    
+            if raw_material.secondary_unit:
+                raw_unit = raw_material.secondary_unit
+                order_unit = raw_to_order_mapping.get(raw_unit, 'kg')
+                if order_unit not in allowed_order_item_units:
+                    allowed_order_item_units.append(order_unit)
+            
+            # اگر هیچ واحدی وجود نداشت، پیش‌فرض کیلوگرم
+            if not allowed_order_item_units:
+                allowed_order_item_units = ['kg']
+            
+            # بررسی اینکه weight_unit (که حالا value است) در لیست مجاز است یا نه
+            if weight_unit not in allowed_order_item_units:
+                # نمایش display name برای خطا
+                primary_display = raw_material.get_primary_unit_display() if raw_material.primary_unit else ''
+                secondary_display = raw_material.get_secondary_unit_display() if raw_material.secondary_unit else ''
+                allowed_display = [d for d in [primary_display, secondary_display] if d]
+                if not allowed_display:
+                    allowed_display = ['کیلوگرم']
+                self.add_error('weight_unit', f'واحد انتخاب شده برای ماده اولیه "{raw_material.name}" معتبر نیست. واحدهای مجاز: {" یا ".join(allowed_display)}')
+            else:
+                # اطمینان از اینکه weight_unit در cleaned_data است
+                cleaned_data['weight_unit'] = weight_unit
         
         # Validate total price calculation
         if quantity and unit_price:
             calculated_total = quantity * unit_price
             
             # اضافه کردن مالیات به قیمت کل (اگر مالیات وجود داشته باشد)
-            vat_on_material = cleaned_data.get('vat_on_material')
+            vat_percent = cleaned_data.get('vat_percent')
             # اگر در cleaned_data نبود، از data اصلی بگیر
-            if not vat_on_material and hasattr(self, 'data') and self.data:
+            if not vat_percent and hasattr(self, 'data') and self.data:
                 if hasattr(self, 'add_prefix'):
-                    field_name = self.add_prefix('vat_on_material')
+                    field_name = self.add_prefix('vat_percent')
                     vat_value = self.data.get(field_name, '').strip() or None
                     if vat_value:
                         try:
-                            vat_on_material = Decimal(str(vat_value))
+                            vat_percent = Decimal(str(vat_value))
                         except (ValueError, TypeError):
-                            vat_on_material = None
+                            vat_percent = None
             
-            if vat_on_material:
+            if vat_percent:
                 try:
-                    vat_percent = Decimal(str(vat_on_material))
-                    if vat_percent > 0:
-                        vat_amount = (calculated_total * vat_percent) / Decimal('100')
+                    vat_percent_decimal = Decimal(str(vat_percent))
+                    if vat_percent_decimal > 0:
+                        vat_amount = (calculated_total * vat_percent_decimal) / Decimal('100')
                         calculated_total = calculated_total + vat_amount
                 except (ValueError, TypeError):
                     # اگر مالیات معتبر نبود، فقط قیمت کل را بدون مالیات محاسبه کن
@@ -379,8 +500,8 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             
             # گرد کردن به 2 رقم اعشار برای مطابقت با محدودیت فیلد
             calculated_total = calculated_total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            cleaned_data['total_price'] = calculated_total
-            if total_price and abs(float(total_price) - float(calculated_total)) > 0.01:
+            cleaned_data['total_purchase_cost'] = calculated_total
+            if total_purchase_cost and abs(float(total_purchase_cost) - float(calculated_total)) > 0.01:
                 # فقط هشدار می‌دهیم، مقدار را اصلاح می‌کنیم
                 pass
         
@@ -424,6 +545,10 @@ class MaterialFormSetBase(BaseInlineFormSet):
             
             cleaned_data = form.cleaned_data
             if cleaned_data:
+                # اگر فرم دارای id است (یعنی instance موجود است)، آن را نگه دار
+                if cleaned_data.get('id'):
+                    continue
+                
                 # بررسی اینکه آیا فرم خالی است
                 raw_material_id_value = cleaned_data.get('raw_material_id', '')
                 raw_material_id = raw_material_id_value.strip() if isinstance(raw_material_id_value, str) else ''
@@ -440,15 +565,15 @@ class MaterialFormSetBase(BaseInlineFormSet):
 
 
 MaterialFormSet = inlineformset_factory(
-    ProcurementPurchaseOrder,
-    ProcurementPurchaseOrderMaterial,
+    Order,
+    OrderItem,
     form=ProcurementPurchaseOrderMaterialForm,
     formset=MaterialFormSetBase,
     fields=[
-        'raw_material', 'quantity', 'unit', 'notes',
-        'unit_price', 'total_price', 'freight_included',
-        'vat_on_material', 'freight_cost_completed',
-        'total_cost_completed', 'external_allocation_id'
+        'raw_material', 'quantity', 'weight_unit', 'notes',
+        'unit_price', 'total_purchase_cost',
+        'vat_percent', 'freight_cost',
+        'external_allocation_id'
     ],
     extra=1,
     can_delete=True
@@ -475,19 +600,22 @@ def purchase_order_management_view(request):
     
     try:
         from supply.tables import ProcurementPurchaseOrderTable
-        open_orders = ProcurementPurchaseOrder.objects.exclude(
-            status=ProcurementPurchaseOrder.STATUS_COMPLETED
-        ).select_related('supplier', 'created_by').prefetch_related(
-            'materials__raw_material'
+        open_orders = Order.objects.filter(
+            order_type='purchase'
+        ).exclude(
+            status=Order.STATUS_COMPLETED
+        ).select_related('customer', 'registered_by').prefetch_related(
+            'order_items__raw_material'
         ).order_by('-created_at')
-        completed_orders = ProcurementPurchaseOrder.objects.filter(
-            status=ProcurementPurchaseOrder.STATUS_COMPLETED
-        ).select_related('supplier', 'created_by').prefetch_related(
-            'materials__raw_material'
+        completed_orders = Order.objects.filter(
+            order_type='purchase',
+            status=Order.STATUS_COMPLETED
+        ).select_related('customer', 'registered_by').prefetch_related(
+            'order_items__raw_material'
         ).order_by('-created_at')
         
         # Prepare table accessible fields dict
-        # materials_list requires both PO material and raw material access
+        # materials_list requires both OrderItem and raw material access
         table_accessible_fields = {
             'order_number': accessible_po_fields.get('order_number', False),
             'status': accessible_po_fields.get('status', False),
@@ -496,10 +624,10 @@ def purchase_order_management_view(request):
                 accessible_raw_material_fields.get('name', False)
             ),
             'supplier': (
-                accessible_po_fields.get('supplier', False) and
+                accessible_po_fields.get('customer', False) and
                 accessible_person_fields.get('name', False)
             ),
-            'created_by': accessible_po_fields.get('created_by', False),
+            'created_by': accessible_po_fields.get('registered_by', False),
             'created_at': accessible_po_fields.get('created_at', False),
         }
         
@@ -559,24 +687,23 @@ def create_procurement_purchase_order_view(request):
     
     # Get field access permissions (edit permissions for form)
     accessible_po_fields = {
-        'supplier': user_can_access_field(request.user, ProcurementPurchaseOrder, 'supplier', 'edit'),
-        'freight_payment_type': user_can_access_field(request.user, ProcurementPurchaseOrder, 'freight_payment_type', 'edit'),
-        'subtotal_without_freight': user_can_access_field(request.user, ProcurementPurchaseOrder, 'subtotal_without_freight', 'edit'),
-        'freight_cost': user_can_access_field(request.user, ProcurementPurchaseOrder, 'freight_cost', 'edit'),
-        'external_system_id': user_can_access_field(request.user, ProcurementPurchaseOrder, 'external_system_id', 'edit'),
+        'customer': user_can_access_field(request.user, Order, 'customer', 'edit'),
+        'freight_payment_type': user_can_access_field(request.user, Order, 'freight_payment_type', 'edit'),
+        'subtotal_without_freight': user_can_access_field(request.user, Order, 'subtotal_without_freight', 'edit'),
+        'freight_cost': user_can_access_field(request.user, Order, 'freight_cost', 'edit'),
+        'external_system_id': user_can_access_field(request.user, Order, 'external_system_id', 'edit'),
     }
     
     accessible_po_material_fields = {
-        'raw_material': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'raw_material', 'edit'),
-        'quantity': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'quantity', 'edit'),
-        'unit': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'unit', 'edit'),
-        'notes': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'notes', 'edit'),
-        'unit_price': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'unit_price', 'edit'),
-        'total_price': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'total_price', 'edit'),
-        'freight_included': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'freight_included', 'edit'),
-        'vat_on_material': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'vat_on_material', 'edit'),
-        'freight_cost_completed': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'freight_cost_completed', 'edit'),
-        'total_cost_completed': user_can_access_field(request.user, ProcurementPurchaseOrderMaterial, 'total_cost_completed', 'edit'),
+        'raw_material': user_can_access_field(request.user, OrderItem, 'raw_material', 'edit'),
+        'quantity': user_can_access_field(request.user, OrderItem, 'quantity', 'edit'),
+        'weight_unit': user_can_access_field(request.user, OrderItem, 'weight_unit', 'edit'),
+        'notes': user_can_access_field(request.user, OrderItem, 'notes', 'edit'),
+        'unit_price': user_can_access_field(request.user, OrderItem, 'unit_price', 'edit'),
+        'total_purchase_cost': user_can_access_field(request.user, OrderItem, 'total_purchase_cost', 'edit'),
+        'vat_percent': user_can_access_field(request.user, OrderItem, 'vat_percent', 'edit'),
+        'freight_cost': user_can_access_field(request.user, OrderItem, 'freight_cost', 'edit'),
+        'external_allocation_id': user_can_access_field(request.user, OrderItem, 'external_allocation_id', 'edit'),
     }
     
     try:
@@ -585,9 +712,11 @@ def create_procurement_purchase_order_view(request):
             if form.is_valid():
                 with transaction.atomic():
                     po = form.save(commit=False)
-                    po.created_by = request.user
+                    po.order_type = 'purchase'
+                    po.status = Order.STATUS_DRAFT  # تنظیم وضعیت به پیش‌نویس
+                    po.registered_by = request.user
                     
-                    # محاسبه خودکار subtotal_without_freight از مجموع total_price اقلام
+                    # محاسبه خودکار subtotal_without_freight از مجموع total_purchase_cost اقلام
                     material_formset = MaterialFormSet(request.POST, prefix='mat')
                     if material_formset.is_valid():
                         # محاسبه مجموع قبل از ذخیره
@@ -605,16 +734,16 @@ def create_procurement_purchase_order_view(request):
                                 if not raw_material_id and not raw_material_text and not quantity:
                                     continue
                                 
-                                total_price = material_form.cleaned_data.get('total_price')
-                                if total_price:
-                                    total_subtotal += Decimal(str(total_price))
+                                total_purchase_cost = material_form.cleaned_data.get('total_purchase_cost')
+                                if total_purchase_cost:
+                                    total_subtotal += Decimal(str(total_purchase_cost))
                         
                         po.subtotal_without_freight = total_subtotal
                         po.save()  # triggers order_number generation, status defaults to DRAFT
                         
                         # Create initial status log
-                        ProcurementPurchaseOrderStatusLog.objects.create(
-                            purchase_order=po,
+                        OrderStatusLog.objects.create(
+                            order=po,
                             old_status='',
                             new_status=po.status,
                             changed_by=request.user,
@@ -669,12 +798,13 @@ def procurement_purchase_order_detail_view(request, order_number):
     from supply.tables import ProcurementPurchaseOrderStatusLogTable
     from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
     
-    po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
-    materials = po.materials.select_related('raw_material').all()
+    po = get_object_or_404(Order, order_number=order_number, order_type='purchase')
+    materials = po.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
     logs = po.status_logs.all().order_by('-changed_at')
     log_table = ProcurementPurchaseOrderStatusLogTable(logs)
     RequestConfig(request, paginate=False).configure(log_table)
     can_edit_financial = not po.payment_confirmed
+    can_delete = po.can_delete()  # محاسبه مقدار can_delete برای استفاده در template
     
     # Get transports for this purchase order
     transports = PurchaseTransport.objects.filter(purchase_order=po).order_by('-created_at')
@@ -689,6 +819,7 @@ def procurement_purchase_order_detail_view(request, order_number):
         'logs': logs,
         'log_table': log_table,
         'can_edit_financial': can_edit_financial,
+        'can_delete': can_delete,
         'next_status_choices': next_status_choices,
         'transports': transports,
     })
@@ -698,8 +829,8 @@ def procurement_purchase_order_detail_view(request, order_number):
 def edit_procurement_purchase_order_view(request, order_number):
     """ویرایش سفارش خرید (فقط قبل از تایید پرداخت برای داده مالی)"""
     audit_logger.info(f"ویرایش سفارش خرید {order_number}")
-    po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
-    if po.status == ProcurementPurchaseOrder.STATUS_COMPLETED:
+    po = get_object_or_404(Order, order_number=order_number, order_type='purchase')
+    if po.status == Order.STATUS_COMPLETED:
         messages.error(request, 'سفارش تکمیل شده قابل ویرایش نیست.')
         return redirect(reverse('supply:procurement_purchase_order_detail', kwargs={'order_number': order_number}))
     try:
@@ -731,7 +862,7 @@ def edit_procurement_purchase_order_view(request, order_number):
 @login_required
 def delete_procurement_purchase_order_view(request, order_number):
     audit_logger.activity(f"حذف سفارش خرید {order_number}")
-    po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
+    po = get_object_or_404(Order, order_number=order_number, order_type='purchase')
     if not po.can_delete():
         messages.error(request, 'حذف فقط در وضعیت پیش‌نویس مجاز است.')
         return redirect(reverse('supply:procurement_purchase_order_detail', kwargs={'order_number': order_number}))
@@ -747,7 +878,7 @@ def delete_procurement_purchase_order_view(request, order_number):
 @login_required
 def transition_procurement_purchase_order_status_view(request, order_number, new_status):
     audit_logger.activity(f"درخواست تغییر وضعیت سفارش خرید {order_number} -> {new_status}")
-    po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
+    po = get_object_or_404(Order, order_number=order_number, order_type='purchase')
     try:
         po.transition(new_status, user=request.user)
         messages.success(request, 'وضعیت سفارش بروزرسانی شد.')
@@ -764,15 +895,15 @@ def transition_procurement_purchase_order_status_view(request, order_number, new
 def confirm_procurement_purchase_order_payment_view(request, order_number):
     """تایید پرداخت سفارش خرید و قفل شدن داده‌های مالی"""
     audit_logger.activity(f"تایید پرداخت سفارش خرید {order_number}")
-    po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
+    po = get_object_or_404(Order, order_number=order_number, order_type='purchase')
     if po.payment_confirmed:
         messages.info(request, 'پرداخت قبلاً تایید شده است.')
         return redirect(reverse('supply:procurement_purchase_order_detail', kwargs={'order_number': order_number}))
     try:
         po.payment_confirmed = True
         po.save(update_fields=['payment_confirmed'])
-        ProcurementPurchaseOrderStatusLog.objects.create(
-            purchase_order=po,
+        OrderStatusLog.objects.create(
+            order=po,
             old_status=po.status,
             new_status=po.status,
             changed_by=request.user,

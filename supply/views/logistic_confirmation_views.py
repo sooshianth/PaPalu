@@ -11,10 +11,9 @@ import logging
 from core.logging_levels import *
 
 from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
-from core.SupplyFolder.ProcurementPurchaseOrderModel import (
-    ProcurementPurchaseOrder,
-    ProcurementPurchaseOrderMaterial,
-)
+from core.OrderFolder.OrderModel import Order
+from core.OrderFolder.OrderItemModel import OrderItem
+
 from core.PersonFolder.PersonModel import Person
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from django.contrib.auth import get_user_model
@@ -64,11 +63,11 @@ def get_accessible_purchase_transport_fields_logistic_edit(user):
 def get_accessible_procurement_purchase_order_fields_logistic(user):
     """Check field access for ProcurementPurchaseOrder model (for logistic views)"""
     return {
-        'order_number': user_can_access_field(user, ProcurementPurchaseOrder, 'order_number', 'view'),
-        'status': user_can_access_field(user, ProcurementPurchaseOrder, 'status', 'view'),
-        'supplier': user_can_access_field(user, ProcurementPurchaseOrder, 'supplier', 'view'),
-        'materials': user_can_access_field(user, ProcurementPurchaseOrder, 'materials', 'view'),
-        'created_at': user_can_access_field(user, ProcurementPurchaseOrder, 'created_at', 'view'),
+        'order_number': user_can_access_field(user, Order, 'order_number', 'view'),
+        'status': user_can_access_field(user, Order, 'status', 'view'),
+        'supplier': user_can_access_field(user, Order, 'supplier', 'view'),
+        'materials': user_can_access_field(user, Order, 'materials', 'view'),
+        'created_at': user_can_access_field(user, Order, 'created_at', 'view'),
     }
 
 
@@ -258,9 +257,9 @@ def logistic_confirmation_detail_view(request, transport_number):
                     
                     # اگر تمام حمل‌های سفارش تسویه شدند، وضعیت سفارش را به "در انتظار تسویه نهایی" تغییر می‌دهیم
                     if all_settled:
-                        if po.status == ProcurementPurchaseOrder.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                        if po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
                             po.transition(
-                                ProcurementPurchaseOrder.STATUS_AWAITING_FINAL_SETTLEMENT,
+                                Order.STATUS_AWAITING_FINAL_SETTLEMENT,
                                 user=request.user,
                                 note='همه حمل‌های سفارش تسویه شدند'
                             )

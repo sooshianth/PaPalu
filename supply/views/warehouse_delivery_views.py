@@ -14,10 +14,9 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
-from core.SupplyFolder.ProcurementPurchaseOrderModel import (
-    ProcurementPurchaseOrder,
-    ProcurementPurchaseOrderMaterial,
-)
+from core.OrderFolder.OrderModel import Order
+from core.OrderFolder.OrderItemModel import OrderItem
+
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
@@ -73,11 +72,11 @@ def get_accessible_purchase_transport_fields_edit(user):
 def get_accessible_procurement_purchase_order_fields_for_warehouse(user):
     """Check field access for ProcurementPurchaseOrder model (for warehouse views)"""
     return {
-        'order_number': user_can_access_field(user, ProcurementPurchaseOrder, 'order_number', 'view'),
-        'status': user_can_access_field(user, ProcurementPurchaseOrder, 'status', 'view'),
-        'supplier': user_can_access_field(user, ProcurementPurchaseOrder, 'supplier', 'view'),
-        'materials': user_can_access_field(user, ProcurementPurchaseOrder, 'materials', 'view'),
-        'created_at': user_can_access_field(user, ProcurementPurchaseOrder, 'created_at', 'view'),
+        'order_number': user_can_access_field(user, Order, 'order_number', 'view'),
+        'status': user_can_access_field(user, Order, 'status', 'view'),
+        'supplier': user_can_access_field(user, Order, 'supplier', 'view'),
+        'materials': user_can_access_field(user, Order, 'materials', 'view'),
+        'created_at': user_can_access_field(user, Order, 'created_at', 'view'),
     }
 
 

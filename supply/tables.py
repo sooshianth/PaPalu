@@ -7,7 +7,7 @@ from core.PersonFolder.BankAccountModel import BankAccount
 from core.PersonFolder.PaymentPreferenceModel import PaymentPreference
 from core.PersonFolder.SocialNetworkModel import SocialNetwork
 from core.PersonFolder.AttachmentModel import Attachment
-from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrder
+from core.OrderFolder.OrderModel import Order
 
 
 def convert_to_persian_numbers(text):
@@ -194,7 +194,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     
     supplier = tables.Column(
         verbose_name='نام تأمین‌کننده',
-        accessor='supplier.name',
+        accessor='customer.name',
         orderable=True,
         visible=False,
         attrs={
@@ -205,7 +205,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     
     created_by = tables.Column(
         verbose_name='کاربر ثبت کننده',
-        accessor='created_by',
+        accessor='registered_by',
         orderable=True,
         empty_values=(),
         visible=False,
@@ -252,7 +252,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
             self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
-        model = ProcurementPurchaseOrder
+        model = Order
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'actions')
         attrs = {
@@ -281,7 +281,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     
     def render_materials_list(self, record):
         """نمایش لیست مواد اولیه با جزئیات FK از RawMaterial"""
-        materials = record.materials.select_related('raw_material').all()
+        materials = record.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
             items = []
             for m in materials:
@@ -308,8 +308,8 @@ class ProcurementPurchaseOrderTable(tables.Table):
     
     def render_created_by(self, record):
         """نمایش نام کاربر ثبت کننده"""
-        if record.created_by:
-            name = record.created_by.get_full_name() or record.created_by.username
+        if record.registered_by:
+            name = record.registered_by.get_full_name() or record.registered_by.username
             return format_html('<strong>{}</strong>', name)
         return '—'
     
@@ -716,8 +716,8 @@ class ProcurementPurchaseOrderStatusLogTable(tables.Table):
     note = tables.Column(verbose_name='یادداشت', orderable=False)
     
     class Meta:
-        from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrderStatusLog
-        model = ProcurementPurchaseOrderStatusLog
+        from core.OrderFolder.OrderModel import OrderStatusLog
+        model = OrderStatusLog
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('old_status', 'new_status', 'changed_at', 'changed_by_name', 'note')
         attrs = {
@@ -1028,7 +1028,7 @@ class LogisticConfirmationTable(tables.Table):
     
     supplier = tables.Column(
         verbose_name='تأمین‌کننده',
-        accessor='purchase_order__supplier__name',
+        accessor='purchase_order__customer__name',
         orderable=True,
         visible=False,
         attrs={
@@ -1163,7 +1163,7 @@ class LogisticConfirmationTable(tables.Table):
     
     def render_raw_materials(self, record):
         """نمایش مواد اولیه سفارش (ممکن چندتا باشد)"""
-        materials = record.purchase_order.materials.select_related('raw_material').all()
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
             names = [m.raw_material.name for m in materials]
             if len(names) > 2:

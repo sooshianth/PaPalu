@@ -2,78 +2,727 @@
 {% block title %}ویرایش سفارش خرید{% endblock %}
 {% block extra_css %}
 <style>
-  .form-wrapper {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:22px;background:#fff;padding:20px;border:1px solid #e0e5e8;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.04)}
-  .form-wrapper h4 {grid-column:1/-1;font-size:.95rem;margin:-4px 0 10px;font-weight:600;color:#2d3e50}
-  .form-group {display:flex;flex-direction:column}
-  .form-group label {font-size:.75rem;margin-bottom:4px;font-weight:600;color:#37474f}
-  .form-group input, .form-group select, .form-group textarea {padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
-  .materials-block {grid-column:1/-1;border-top:2px dashed #e0e5e8;padding-top:14px;margin-top:10px}
-  table.inline-set {width:100%;border-collapse:collapse;font-size:.78rem}
-  table.inline-set th, table.inline-set td {border:1px solid #e0e5e8;padding:6px;text-align:center}
-  .btn-row {display:flex;gap:8px;margin-top:4px}
-  .del-row-btn {background:#dc3545;color:#fff;padding:4px 10px;border:none;border-radius:6px;font-size:.7rem;cursor:pointer}
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+        position: relative;
+        z-index: 1;
+        overflow: visible;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 0;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+        overflow: visible;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-content {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: visible;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .form-section.collapsed .form-section-content {
+        max-height: 0;
+        padding: 0 25px;
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .text-danger {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .mb-3 { margin-bottom: 1rem; }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    .col-12 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-6 {
+        flex: 0 0 50%;
+        max-width: 50%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-4 {
+        flex: 0 0 33.3333%;
+        max-width: 33.3333%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    .col-md-3 {
+        flex: 0 0 25%;
+        max-width: 25%;
+        padding-right: 15px;
+        padding-left: 15px;
+    }
+    
+    .table-container {
+        overflow-x: auto;
+        margin-top: 15px;
+    }
+    
+    .table-container table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        margin-bottom: 0;
+    }
+    
+    .table-container table thead {
+        background: var(--gray-100);
+    }
+    
+    .table-container table thead th {
+        padding: 15px;
+        text-align: center;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+        vertical-align: middle;
+    }
+    
+    .table-container table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    
+    .table-container table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .table-container table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+        text-align: center;
+        vertical-align: middle;
+        font-weight: 500;
+    }
+    
+    .table-container table tbody td input,
+    .table-container table tbody td select,
+    .table-container table tbody td textarea {
+        width: 100%;
+        min-width: 100px;
+        padding: 8px 10px;
+        font-size: 0.9rem;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+    }
+    
+    .table-container table tbody td input[readonly],
+    .table-container table tbody td input[disabled] {
+        background-color: #f5f5f5;
+        cursor: not-allowed;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--dark-green);
+        color: white;
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .col-md-6, .col-md-4, .col-md-3 {
+            flex: 0 0 100%;
+            max-width: 100%;
+        }
+        .form-card { padding: 20px; }
+        .form-section-header {
+            padding: 18px 20px;
+            min-height: 50px;
+        }
+        .form-section-content {
+            padding: 0 20px 20px 20px;
+        }
+        .form-section.collapsed .form-section-content {
+            padding: 0 20px;
+        }
+        .form-actions { flex-direction: column; }
+        .btn { width: 100%; }
+    }
 </style>
 {% endblock %}
 {% block content %}
-<form method="post" enctype="multipart/form-data" class="form-wrapper">
-  {% csrf_token %}
-  <h4>ویرایش سفارش {{ po.order_number }}</h4>
-  {% for field in form %}
-    <div class="form-group">
-      <label>{{ field.label }}{% if field.field.required %} *{% endif %}</label>
-      {{ field }}
-      {% if field.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ field.errors|join:'، ' }}</div>{% endif %}
-    </div>
-  {% endfor %}
-  {{ material_formset.management_form }}
-  <div class="materials-block">
-    <h4>مواد اولیه (هر ماده با جزئیات خود)</h4>
-    <div style="overflow-x: auto;">
-      <table class="inline-set" style="min-width: 1600px;">
-        <thead>
-          <tr>
-            <th rowspan="2">ماده اولیه</th>
-            <th rowspan="2">مقدار</th>
-            <th rowspan="2">واحد</th>
-            <th colspan="4">اطلاعات مالی</th>
-            <th colspan="3">اطلاعات لجستیک</th>
-            <th rowspan="2">شناسه تخصیص</th>
-            <th rowspan="2">توضیحات</th>
-            <th rowspan="2">حذف</th>
-          </tr>
-          <tr>
-            <th>قیمت واحد</th>
-            <th>قیمت کل</th>
-            <th>بدون کرایه؟</th>
-            <th>مالیات</th>
-            <th>کرایه تمام شده</th>
-            <th>بهای تمام شده</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for form in material_formset %}
-          <tr>
-            <td>{{ form.raw_material }}</td>
-            <td>{{ form.quantity }}</td>
-            <td>{{ form.unit }}</td>
-            <td>{{ form.unit_price }}</td>
-            <td>{{ form.total_price }}</td>
-            <td>{{ form.freight_included }}</td>
-            <td>{{ form.vat_on_material }}</td>
-            <td>{{ form.freight_cost_completed }}</td>
-            <td>{{ form.total_cost_completed }}</td>
-            <td>{{ form.external_allocation_id }}</td>
-            <td>{{ form.notes }}</td>
-            <td>{{ form.DELETE }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
-    <a href="{% url 'supply:procurement_purchase_order_detail' po.order_number %}" class="btn btn-secondary btn-sm">لغو</a>
-    <button type="submit" class="btn btn-primary btn-sm">ذخیره تغییرات</button>
-  </div>
-</form>
+<div class="page-header">
+    <h2>ویرایش سفارش {{ po.order_number }}</h2>
+    <a href="{% url 'supply:procurement_purchase_order_detail' po.order_number %}" class="btn btn-secondary">بازگشت</a>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- بخش اطلاعات سفارش -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>اطلاعات سفارش</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                    {% for field in form %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label {% if field.field.required %}required-field{% endif %}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger">{{ field.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- بخش مواد اولیه -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>مواد اولیه</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                {{ material_formset.management_form }}
+                <div class="table-container">
+                    <table style="min-width: 1400px;">
+                        <thead>
+                            <tr>
+                                <th>ماده اولیه</th>
+                                <th>مقدار</th>
+                                <th>واحد</th>
+                                <th>قیمت واحد</th>
+                                <th>مالیات (%)</th>
+                                <th>کرایه تمام شده</th>
+                                <th>بهای تمام شده</th>
+                                <th>شناسه تخصیص</th>
+                                <th>توضیحات</th>
+                                <th>حذف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for form in material_formset %}
+                            <tr>
+                                <td>
+                                    {% for hidden in form.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+                                    {{ form.raw_material }}
+                                    {% if form.raw_material.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.raw_material.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.quantity }}
+                                    {% if form.quantity.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.quantity.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.weight_unit }}
+                                    {% if form.weight_unit.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.weight_unit.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.unit_price }}
+                                    {% if form.unit_price.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.unit_price.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.vat_percent }}
+                                    {% if form.vat_percent.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.vat_percent.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.freight_cost }}
+                                    {% if form.freight_cost.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.freight_cost.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.total_purchase_cost }}
+                                    {% if form.total_purchase_cost.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.total_purchase_cost.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.external_allocation_id }}
+                                    {% if form.external_allocation_id.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.external_allocation_id.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ form.notes }}
+                                    {% if form.notes.errors %}
+                                        <div class="text-danger" style="font-size: 0.75rem; margin-top: 4px;">{{ form.notes.errors.0 }}</div>
+                                    {% endif %}
+                                </td>
+                                <td style="text-align: center;">
+                                    {% if form.DELETE %}
+                                        <label style="display: flex; align-items: center; justify-content: center; cursor: pointer; margin: 0;">
+                                            {{ form.DELETE }}
+                                            <span style="margin-right: 5px; color: #dc3545; font-size: 0.85rem;">حذف</span>
+                                        </label>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if material_formset.non_form_errors %}
+                    {% for err in material_formset.non_form_errors %}
+                        <div class="text-danger">{{ err }}</div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- دکمه‌ها -->
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+            <a href="{% url 'supply:procurement_purchase_order_detail' po.order_number %}" class="btn btn-secondary">لغو</a>
+        </div>
+    </form>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function(header) {
+        header.addEventListener('click', function() {
+            const section = this.closest('.form-section');
+            section.classList.toggle('collapsed');
+        });
+    });
+    
+    // Autocomplete برای تأمین‌کننده
+    const supplierInput = document.querySelector('input[name="customer"]');
+    const supplierIdInput = document.querySelector('input[name="supplier_id"]');
+    
+    // اگر مقدار اولیه وجود دارد، آن را تنظیم کن
+    if (supplierInput && supplierInput.value && supplierInput.value.trim() === '') {
+        // اگر مقدار خالی است، از initial استفاده کن
+        const initialValue = supplierInput.getAttribute('value') || supplierInput.defaultValue;
+        if (initialValue) {
+            supplierInput.value = initialValue;
+        }
+    }
+    let supplierSuggestions = [];
+    let searchTimeout;
+    
+    if (supplierInput) {
+        const suggestionsContainer = document.createElement('div');
+        suggestionsContainer.className = 'suggestions-container';
+        suggestionsContainer.id = 'supplier-suggestions';
+        supplierInput.parentElement.style.position = 'relative';
+        supplierInput.parentElement.appendChild(suggestionsContainer);
+        
+        supplierInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                suggestionsContainer.style.display = 'none';
+                supplierSuggestions = [];
+                if (supplierIdInput) supplierIdInput.value = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "supply:supplier_search_api" %}?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        supplierSuggestions = data.results || [];
+                        displaySupplierSuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی تأمین‌کننده:', error);
+                    });
+            }, 300);
+        });
+        
+        function displaySupplierSuggestions() {
+            suggestionsContainer.innerHTML = '';
+            if (supplierSuggestions.length === 0) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
+            
+            supplierSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('click', function() {
+                    supplierInput.value = item.text;
+                    if (supplierIdInput) {
+                        supplierIdInput.value = item.id;
+                    }
+                    suggestionsContainer.style.display = 'none';
+                });
+                suggestionsContainer.appendChild(suggestionItem);
+            });
+            suggestionsContainer.style.display = 'block';
+        }
+        
+        document.addEventListener('click', function(e) {
+            if (!supplierInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                suggestionsContainer.style.display = 'none';
+            }
+        });
+    }
+    
+    // Autocomplete برای مواد اولیه
+    function setupRawMaterialAutoFill(formRow) {
+        const rawMaterialInput = formRow.querySelector('.raw-material-autocomplete');
+        if (!rawMaterialInput) {
+            const allInputs = formRow.querySelectorAll('input[type="text"]');
+            for (let inp of allInputs) {
+                if (inp.name && inp.name.includes('raw_material') && !inp.name.includes('raw_material_id')) {
+                    inp.classList.add('raw-material-autocomplete');
+                    inp.setAttribute('placeholder', 'جستجوی ماده اولیه...');
+                    inp.setAttribute('autocomplete', 'off');
+                    break;
+                }
+            }
+            const foundInput = formRow.querySelector('.raw-material-autocomplete');
+            if (!foundInput) return;
+        }
+        
+        const rawMaterialInputFinal = formRow.querySelector('.raw-material-autocomplete');
+        if (!rawMaterialInputFinal) return;
+        
+        if (rawMaterialInputFinal._rawMaterialSetupDone) {
+            return;
+        }
+        rawMaterialInputFinal._rawMaterialSetupDone = true;
+        
+        // اگر مقدار اولیه وجود دارد، آن را تنظیم کن
+        if (rawMaterialInputFinal.value && rawMaterialInputFinal.value.trim() === '') {
+            const initialValue = rawMaterialInputFinal.getAttribute('value') || rawMaterialInputFinal.defaultValue;
+            if (initialValue) {
+                rawMaterialInputFinal.value = initialValue;
+            }
+        }
+        
+        let rawMaterialIdInput = formRow.querySelector('input[name*="-raw_material_id"]');
+        if (!rawMaterialIdInput && rawMaterialInputFinal) {
+            rawMaterialIdInput = document.createElement('input');
+            rawMaterialIdInput.type = 'hidden';
+            rawMaterialIdInput.className = 'raw-material-id-input';
+            const rawMaterialName = rawMaterialInputFinal.name;
+            const match = rawMaterialName.match(/^(mat-\d+)-raw_material$/);
+            if (match) {
+                rawMaterialIdInput.name = match[1] + '-raw_material_id';
+            } else {
+                rawMaterialIdInput.name = rawMaterialName.replace('-raw_material', '-raw_material_id');
+            }
+            rawMaterialInputFinal.parentElement.appendChild(rawMaterialIdInput);
+        }
+        
+        let unitSelect = formRow.querySelector('.material-unit-select');
+        if (!unitSelect) {
+            unitSelect = formRow.querySelector('select[name*="-weight_unit"]');
+        }
+        
+        let suggestionsDiv = formRow.querySelector('.raw-material-suggestions');
+        if (!suggestionsDiv) {
+            suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'suggestions-container raw-material-suggestions';
+            rawMaterialInputFinal.parentElement.style.position = 'relative';
+            rawMaterialInputFinal.parentElement.appendChild(suggestionsDiv);
+        }
+        
+        let rawMaterialSuggestions = [];
+        let searchTimeout;
+        
+        rawMaterialInputFinal.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+                rawMaterialSuggestions = [];
+                if (rawMaterialIdInput) rawMaterialIdInput.value = '';
+                if (unitSelect) unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
+                return;
+            }
+            
+            searchTimeout = setTimeout(function() {
+                fetch('{% url "supply:raw_material_search_api" %}?q=' + encodeURIComponent(query))
+                    .then(response => response.json())
+                    .then(data => {
+                        rawMaterialSuggestions = data.results || [];
+                        displayRawMaterialSuggestions();
+                    })
+                    .catch(error => {
+                        console.error('خطا در جستجوی ماده اولیه:', error);
+                    });
+            }, 300);
+        });
+        
+        function displayRawMaterialSuggestions() {
+            if (!suggestionsDiv) return;
+            suggestionsDiv.innerHTML = '';
+            
+            if (rawMaterialSuggestions.length === 0) {
+                suggestionsDiv.style.display = 'none';
+                return;
+            }
+            
+            rawMaterialSuggestions.forEach(function(item) {
+                const suggestionItem = document.createElement('div');
+                suggestionItem.className = 'suggestion-item';
+                suggestionItem.textContent = item.text;
+                suggestionItem.addEventListener('click', function() {
+                    if (rawMaterialInputFinal) rawMaterialInputFinal.value = item.text;
+                    if (rawMaterialIdInput) {
+                        rawMaterialIdInput.value = item.id;
+                    }
+                    if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+                    
+                    const url = '{% url "supply:raw_material_info_api" raw_material_id=0 %}'.replace('0', item.id);
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.error) {
+                                console.error('خطا در دریافت اطلاعات ماده اولیه:', data.error);
+                                return;
+                            }
+                            
+                            if (unitSelect && data.available_units && data.available_units.length > 0) {
+                                unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
+                                data.available_units.forEach(function(unit) {
+                                    const option = document.createElement('option');
+                                    option.value = unit.display;
+                                    option.textContent = unit.display;
+                                    if (unit.is_main) {
+                                        option.selected = true;
+                                    }
+                                    unitSelect.appendChild(option);
+                                });
+                                
+                                if (!unitSelect.value && data.available_units.length > 0) {
+                                    unitSelect.value = data.available_units[0].display;
+                                }
+                            }
+                        })
+                        .catch(error => {
+                            console.error('خطا در دریافت اطلاعات ماده اولیه:', error);
+                        });
+                });
+                suggestionsDiv.appendChild(suggestionItem);
+            });
+            
+            suggestionsDiv.style.display = 'block';
+        }
+        
+        document.addEventListener('click', function(e) {
+            if (rawMaterialInputFinal && suggestionsDiv && 
+                !rawMaterialInputFinal.contains(e.target) && 
+                !suggestionsDiv.contains(e.target)) {
+                suggestionsDiv.style.display = 'none';
+            }
+        });
+    }
+    
+    // اعمال autocomplete به تمام فرم‌های مواد اولیه
+    document.querySelectorAll('tr').forEach(function(row) {
+        const rawMaterialInput = row.querySelector('.raw-material-autocomplete');
+        if (rawMaterialInput) {
+            setupRawMaterialAutoFill(row);
+        }
+    });
+    
+    // استایل برای suggestions
+    const style = document.createElement('style');
+    style.textContent = `
+        .suggestions-container {
+            position: absolute;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 999999 !important;
+            display: none;
+            width: 100%;
+            min-width: 300px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            margin-top: 2px;
+            top: 100%;
+            left: 0;
+        }
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        .suggestion-item:hover {
+            background: #f0f0f0;
+        }
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+{% endblock %}
 {% endblock %}

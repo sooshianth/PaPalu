@@ -23,7 +23,7 @@ class OrderItem(models.Model):
         verbose_name='سفارش'
     )
     
-    # محصول
+    # محصول (برای سفارش فروش)
     product = models.ForeignKey(
         'Product',
         on_delete=models.SET_NULL,
@@ -31,6 +31,32 @@ class OrderItem(models.Model):
         blank=True,
         related_name='order_items',
         verbose_name='محصول'
+    )
+    
+    # ماده اولیه (برای سفارش خرید تامینی)
+    raw_material = models.ForeignKey(
+        'RawMaterial',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_items',
+        verbose_name='ماده اولیه'
+    )
+    
+    # توضیحات
+    notes = models.TextField(
+        verbose_name='توضیحات',
+        null=True,
+        blank=True,
+        help_text='توضیحات خاص این قلم در این سفارش'
+    )
+    
+    # شناسه تخصیص (تخصیص دیفالت تأمین)
+    external_allocation_id = models.CharField(
+        max_length=100,
+        verbose_name='شناسه تخصیص (تخصیص دیفالت تأمین)',
+        null=True,
+        blank=True
     )
     
     # واحد وزن
@@ -162,7 +188,14 @@ class OrderItem(models.Model):
         ordering = ['id']
     
     def __str__(self):
-        return f"{self.order.order_number} - {self.product}"
+        item_name = ''
+        if self.product:
+            item_name = str(self.product)
+        elif self.raw_material:
+            item_name = str(self.raw_material)
+        else:
+            item_name = 'بدون نام'
+        return f"{self.order.order_number if self.order else 'N/A'} - {item_name}"
     
     @property
     def vat(self):

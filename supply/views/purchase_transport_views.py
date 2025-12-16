@@ -14,7 +14,7 @@ from core.SupplyFolder.PurchaseTransportModel import (
     PurchaseTransport,
     PurchaseTransportStatusLog,
 )
-from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrder
+from core.OrderFolder.OrderModel import Order
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from core.PersonFolder.PersonModel import Person
 from django.contrib.auth import get_user_model
@@ -60,9 +60,9 @@ def get_accessible_purchase_transport_fields(user):
 def get_accessible_procurement_purchase_order_fields_for_transport(user):
     """دریافت فیلدهای قابل دسترس برای مدل ProcurementPurchaseOrder"""
     return {
-        'order_number': user_can_access_field(user, ProcurementPurchaseOrder, 'order_number', 'view'),
-        'status': user_can_access_field(user, ProcurementPurchaseOrder, 'status', 'view'),
-        'supplier': user_can_access_field(user, ProcurementPurchaseOrder, 'supplier', 'view'),
+        'order_number': user_can_access_field(user, Order, 'order_number', 'view'),
+        'status': user_can_access_field(user, Order, 'status', 'view'),
+        'supplier': user_can_access_field(user, Order, 'supplier', 'view'),
     }
 
 
@@ -165,10 +165,10 @@ class PurchaseTransportForm(ModelForm):
         self.fields['vehicle_type'].required = True
         
         # Filter purchase orders that are not in draft or completed status
-        self.fields['purchase_order'].queryset = ProcurementPurchaseOrder.objects.exclude(
+        self.fields['purchase_order'].queryset = Order.objects.exclude(
             status__in=[
-                ProcurementPurchaseOrder.STATUS_DRAFT,
-                ProcurementPurchaseOrder.STATUS_COMPLETED
+                Order.STATUS_DRAFT,
+                Order.STATUS_COMPLETED
             ]
         ).order_by('-created_at')
         
@@ -200,8 +200,8 @@ def purchase_transport_list_view(request):
     try:
         from supply.tables import PurchaseTransportTable
         # Orders awaiting transport definition (for quick create)
-        awaiting_pos = ProcurementPurchaseOrder.objects.filter(
-            status=ProcurementPurchaseOrder.STATUS_AWAITING_TRANSPORT_DEFINITION
+        awaiting_pos = Order.objects.filter(
+            status=Order.STATUS_AWAITING_TRANSPORT_DEFINITION
         ).select_related('supplier').order_by('-created_at')
         
         # Active transports (not completed)
@@ -320,8 +320,8 @@ def create_purchase_transport_view(request):
     initial_order = None
     if order_number:
         try:
-            initial_order = ProcurementPurchaseOrder.objects.get(order_number=order_number)
-        except ProcurementPurchaseOrder.DoesNotExist:
+            initial_order = Order.objects.get(order_number=order_number)
+        except Order.DoesNotExist:
             pass
     
     try:
@@ -516,7 +516,7 @@ def get_purchase_order_info_api(request, order_number):
     from django.http import JsonResponse
     
     try:
-        po = get_object_or_404(ProcurementPurchaseOrder, order_number=order_number)
+        po = get_object_or_404(Order, order_number=order_number)
         materials_data = []
         
         for material in po.materials.select_related('raw_material').all():

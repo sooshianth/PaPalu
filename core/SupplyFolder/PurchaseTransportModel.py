@@ -3,7 +3,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from django_jalali.db import models as jmodels
 from ..TransportFolder.TransportModel import Transport
-from .ProcurementPurchaseOrderModel import ProcurementPurchaseOrder
+from ..OrderFolder.OrderModel import Order
 from ..PersonFolder.PersonModel import Person
 
 
@@ -59,10 +59,11 @@ class PurchaseTransport(models.Model):
     
     # Foreign Keys
     purchase_order = models.ForeignKey(
-        ProcurementPurchaseOrder,
+        Order,
         on_delete=models.CASCADE,
-        related_name='transports',
-        verbose_name='سفارش خرید'
+        related_name='purchase_transports',
+        verbose_name='سفارش خرید',
+        limit_choices_to={'order_type': 'purchase'}
     )
     
     transport_ref = models.OneToOneField(
