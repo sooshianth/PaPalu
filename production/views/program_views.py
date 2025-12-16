@@ -20,6 +20,10 @@ from core.ProductFolder.ProductModel import Product
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.WarehouseFolder.InventoryItemModel import InventoryItem
+from core.OrderFolder.OrderModel import Order
+from core.OrderFolder.OrderItemModel import OrderItem
+from core.AllocationFolder.AllocationModel import Allocation
+from core.AllocationFolder.AllocationProductInfoModel import AllocationProductInfo
 from django_tables2 import RequestConfig
 
 bug_logger = logging.getLogger("bugs")
@@ -80,9 +84,35 @@ def _calculate_product_inventory_and_requirement(product):
         ).aggregate(total=Sum('planned_weight_ton'))['total']
         planned_inventory = Decimal(str(planned_result)) if planned_result else Decimal('0')
         
-        # Calculate net_unplanned_requirement: logistic_confirmed - (inventory + planned_inventory)
-        # Currently logistic_confirmed is 0, so it's -(inventory + planned_inventory)
+        # Calculate logistic_confirmed: sum of quantities from order items of orders with pending_factory status
+        # Convert all quantities to kg for consistency
         logistic_confirmed = Decimal('0')
+        try:
+            orders_pending_factory = Order.objects.filter(
+                status='pending_factory',
+                order_type='sale'
+            )
+            for order in orders_pending_factory:
+                order_items = OrderItem.objects.filter(
+                    order=order,
+                    product=product
+                )
+                for item in order_items:
+                    if item.quantity and item.weight_unit:
+                        quantity = Decimal(str(item.quantity))
+                        # Convert to kg
+                        if item.weight_unit == 'kg':
+                            logistic_confirmed += quantity
+                        elif item.weight_unit == 'ton':
+                            logistic_confirmed += quantity * Decimal('1000')
+                        elif item.weight_unit == 'bag' and item.bag_weight:
+                            # Convert bags to kg using bag_weight
+                            logistic_confirmed += quantity * Decimal(str(item.bag_weight))
+                        # For 'piece' unit, we skip it as it's not a weight unit
+        except Exception as e:
+            bug_logger.warning(f"Error calculating logistic_confirmed for product {product.id}: {str(e)}")
+        
+        # Calculate net_unplanned_requirement: logistic_confirmed - (inventory + planned_inventory)
         net_unplanned = logistic_confirmed - (inventory + planned_inventory)
         
         return inventory, net_unplanned
@@ -236,13 +266,42 @@ def _get_dashboard_context():
             planned_totals = {}
             bug_logger.warning(f"Error aggregating planned inventory: {str(e)}")
         
+        # Pre-compute logistic_confirmed from orders with pending_factory status
+        logistic_confirmed_totals = {}
+        try:
+            orders_pending_factory = Order.objects.filter(
+                status='pending_factory',
+                order_type='sale'
+            ).prefetch_related('order_items')
+            for order in orders_pending_factory:
+                for item in order.order_items.all():
+                    if item.product and item.quantity and item.weight_unit:
+                        product_id = str(item.product.id)
+                        quantity = Decimal(str(item.quantity))
+                        # Convert to kg
+                        if item.weight_unit == 'kg':
+                            quantity_kg = quantity
+                        elif item.weight_unit == 'ton':
+                            quantity_kg = quantity * Decimal('1000')
+                        elif item.weight_unit == 'bag' and item.bag_weight:
+                            quantity_kg = quantity * Decimal(str(item.bag_weight))
+                        else:
+                            quantity_kg = Decimal('0')  # Skip 'piece' or invalid units
+                        
+                        if product_id not in logistic_confirmed_totals:
+                            logistic_confirmed_totals[product_id] = Decimal('0')
+                        logistic_confirmed_totals[product_id] += quantity_kg
+        except Exception as e:
+            bug_logger.warning(f"Error calculating logistic_confirmed totals: {str(e)}")
+            logistic_confirmed_totals = {}
+        
         # Build flow status per product (unique), ignoring formula differences
         products = Product.objects.filter(production_infos__isnull=False).distinct()
         for product in products:
             product_id = str(product.id)
             planned_inventory = Decimal(str(planned_totals.get(product_id, 0)))
             inventory = Decimal(str(inventory_totals.get(product_id, 0)))
-            logistic_confirmed = Decimal('0')  # placeholder until logistic integration
+            logistic_confirmed = Decimal(str(logistic_confirmed_totals.get(product_id, 0)))
             net_unplanned = logistic_confirmed - (inventory + planned_inventory)
             
             product_flow_status.append({
@@ -257,7 +316,51 @@ def _get_dashboard_context():
 
         # Sort by numeric value (convert string back to Decimal for comparison)
         product_flow_status.sort(key=lambda x: Decimal(x['net_unplanned_requirement']), reverse=True)
+        
+        # Get allocations from orders with pending_factory status
         allocations = []
+        try:
+            orders_pending_factory = Order.objects.filter(
+                status='pending_factory',
+                order_type='sale'
+            ).prefetch_related('allocations__product_infos__product')
+            
+            for order in orders_pending_factory:
+                order_allocations = order.allocations.all()
+                for allocation in order_allocations:
+                    # Calculate total weight for this allocation
+                    total_weight_kg = Decimal('0')
+                    products_list = []
+                    
+                    for product_info in allocation.product_infos.all():
+                        if product_info.quantity and product_info.unit:
+                            quantity = Decimal(str(product_info.quantity))
+                            # Convert to kg
+                            if product_info.unit == 'kg':
+                                quantity_kg = quantity
+                            elif product_info.unit == 'ton':
+                                quantity_kg = quantity * Decimal('1000')
+                            elif product_info.unit == 'gr':
+                                quantity_kg = quantity / Decimal('1000')
+                            else:
+                                quantity_kg = Decimal('0')  # Skip other units
+                            
+                            total_weight_kg += quantity_kg
+                            products_list.append({
+                                'product': product_info.product.name if product_info.product else '-',
+                                'weight': str(quantity_kg),
+                                'status': product_info.get_unit_display() if product_info.unit else '-'
+                            })
+                    
+                    allocations.append({
+                        'id': allocation.allocation_number or str(allocation.pk),
+                        'status': allocation.get_allocation_status_display() if allocation.allocation_status else '-',
+                        'total_weight': str(total_weight_kg),
+                        'products': products_list
+                    })
+        except Exception as e:
+            bug_logger.warning(f"Error loading allocations: {str(e)}")
+            allocations = []
         return {
             'raw_material_inventory': raw_material_inventory,
             'raw_materials_inventory': raw_materials_inventory,  # Expanded format for floating card
