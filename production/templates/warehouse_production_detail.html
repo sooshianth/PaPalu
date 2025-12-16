@@ -977,7 +977,7 @@
                         <tr>
                             <th style="width: 40px;"></th>
                             <th>ماده اولیه</th>
-                            <th>مقدار در فرمول</th>
+                            <th>درصد</th>
                             <th>مقدار مورد نیاز</th>
                             <th>برداشت واقعی</th>
                             <th>اختلاف</th>
@@ -1002,7 +1002,7 @@
                             <td style="text-align: right; font-weight: 600; color: #343a40;">
                                 {{ bom.raw_material.name|default:"-" }}
                             </td>
-                            <td style="text-align: center;">{{ bom.planned_quantity|persian_number:3 }}</td>
+                            <td style="text-align: center;">{{ bom.planned_percentage|persian_number:3 }}%</td>
                             <td style="color: #0d6efd; font-weight: 600; text-align: center;">{{ bom.total_consumption|persian_number:3 }}</td>
                             <td style="color: #28a745; font-weight: 600; text-align: center;">{{ bom.total_actual_consumption|persian_number:3 }}</td>
                             <td style="text-align: center;">

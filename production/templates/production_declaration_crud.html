@@ -1253,6 +1253,7 @@ const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
 const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
 const warehouseDistributionData = JSON.parse('{{ warehouse_distribution_json|escapejs }}');
 const actualConsumptionGlobal = JSON.parse('{{ actual_consumption_json|escapejs }}');
+const maxBomError = {{ max_bom_error|default:5.0 }};
 // Safely parse product flow data; fallback to empty array when not provided
 const _productFlowRaw = '{{ product_flow_status_json|escapejs }}';
 const productFlowStatusData = _productFlowRaw ? JSON.parse(_productFlowRaw) : [];
@@ -1291,6 +1292,178 @@ function setupWarehouseDistributionListeners() {
             updateTotalDifference(bomId);
         });
     });
+}
+
+function setupActualConsumptionListeners() {
+    // Listen to actual consumption input changes and produced weight
+    document.querySelectorAll('.warehouse-actual-input').forEach(input => {
+        input.addEventListener('input', function() {
+            const bomId = this.dataset.bomId;
+            updateActualPercentage(bomId);
+            validateBomError();
+        });
+    });
+    
+    // Also listen to produced weight changes
+    const producedWeightInput = document.getElementById('producedWeight');
+    if (producedWeightInput) {
+        producedWeightInput.addEventListener('input', function() {
+            // Update all BOM percentages
+            document.querySelectorAll('.warehouse-actual-consumption-item').forEach(item => {
+                const bomId = item.dataset.bomId;
+                updateActualPercentage(bomId);
+            });
+        });
+    }
+}
+
+function updateActualPercentage(bomId) {
+    const producedWeightInput = document.getElementById('producedWeight');
+    const producedWeight = producedWeightInput ? new Decimal(producedWeightInput.value || '0') : new Decimal('0');
+    const maxError = new Decimal(maxBomError || '5');
+    
+    const bomItem = document.querySelector(`.warehouse-actual-consumption-item[data-bom-id="${bomId}"]`);
+    if (!bomItem) return;
+    
+    // Get bomPercentage from data attribute (convert to Decimal)
+    const bomPercentageStr = bomItem.getAttribute('data-bom-percentage') || bomItem.dataset.bomPercentage || '0';
+    const bomPercentage = new Decimal(bomPercentageStr);
+    
+    if (producedWeight.lte(new Decimal('0'))) {
+        // If no produced weight, show "-" for all percentages
+        document.querySelectorAll(`.actual-percentage-display[data-bom-id="${bomId}"]`).forEach(display => {
+            display.textContent = '-';
+            display.style.color = '#6c757d';
+        });
+        const totalDisplay = bomItem.querySelector('.total-actual-percentage');
+        if (totalDisplay) {
+            totalDisplay.textContent = '-';
+        }
+        const rangeDisplay = bomItem.querySelector('.allowed-range');
+        if (rangeDisplay) {
+            rangeDisplay.textContent = '-';
+        }
+        const statusDisplay = bomItem.querySelector('.validation-status');
+        if (statusDisplay) {
+            statusDisplay.textContent = '-';
+            statusDisplay.style.color = '#6c757d';
+        }
+        return;
+    }
+    
+    // Calculate total actual consumption for this BOM
+    let totalActual = new Decimal('0');
+    const actualInputs = bomItem.querySelectorAll('.warehouse-actual-input');
+    actualInputs.forEach(input => {
+        const amount = new Decimal(input.value || '0');
+        totalActual = totalActual.plus(amount);
+    });
+    
+    // Calculate percentage for each warehouse
+    actualInputs.forEach(input => {
+        const amount = new Decimal(input.value || '0');
+        const percentage = amount.div(producedWeight).mul(new Decimal('100'));
+        
+        const display = input.closest('tr').querySelector('.actual-percentage-display');
+        if (display) {
+            if (amount.gt(new Decimal('0'))) {
+                display.textContent = percentage.toFixed(2) + '%';
+                display.style.color = '#2e7d32';
+            } else {
+                display.textContent = '-';
+                display.style.color = '#6c757d';
+            }
+        }
+    });
+    
+    // Calculate total percentage for this BOM
+    const totalPercentage = totalActual.div(producedWeight).mul(new Decimal('100'));
+    
+    const totalDisplay = bomItem.querySelector('.total-actual-percentage');
+    if (totalDisplay) {
+        if (totalActual.gt(new Decimal('0'))) {
+            totalDisplay.textContent = totalPercentage.toFixed(2) + '%';
+            totalDisplay.style.color = '#2e7d32';
+        } else {
+            totalDisplay.textContent = '-';
+            totalDisplay.style.color = '#6c757d';
+        }
+    }
+    
+    // Calculate and display allowed range
+    const errorAmount = bomPercentage.mul(maxError).div(new Decimal('100'));
+    const minAllowed = bomPercentage.minus(errorAmount);
+    const maxAllowed = bomPercentage.plus(errorAmount);
+    
+    const rangeDisplay = bomItem.querySelector('.allowed-range');
+    if (rangeDisplay) {
+        rangeDisplay.textContent = `${minAllowed.toFixed(2)}% - ${maxAllowed.toFixed(2)}% (حداکثر انحراف: ${maxError.toFixed(2)}%)`;
+        rangeDisplay.style.color = '#0d6efd';
+    }
+    
+    // Display validation status
+    const statusDisplay = bomItem.querySelector('.validation-status');
+    if (statusDisplay && totalActual.gt(new Decimal('0'))) {
+        if (totalPercentage.gte(minAllowed) && totalPercentage.lte(maxAllowed)) {
+            statusDisplay.textContent = '✓ در محدوده مجاز';
+            statusDisplay.style.color = '#28a745';
+        } else {
+            const diff = totalPercentage.minus(bomPercentage);
+            statusDisplay.textContent = `✗ خارج از محدوده (انحراف: ${diff.gt(new Decimal('0')) ? '+' : ''}${diff.toFixed(2)}%)`;
+            statusDisplay.style.color = '#dc3545';
+        }
+    } else if (statusDisplay) {
+        statusDisplay.textContent = '-';
+        statusDisplay.style.color = '#6c757d';
+    }
+}
+
+function validateBomError() {
+    const producedWeightInput = document.getElementById('producedWeight');
+    const producedWeight = producedWeightInput ? new Decimal(producedWeightInput.value || '0') : new Decimal('0');
+    const maxError = new Decimal(maxBomError || '5');
+    
+    if (producedWeight.lte(new Decimal('0'))) {
+        return false;
+    }
+    
+    let hasError = false;
+    const errors = [];
+    
+    // Check each BOM item
+    document.querySelectorAll('.warehouse-actual-consumption-item').forEach(bomItem => {
+        const bomId = bomItem.dataset.bomId;
+        const bomPercentageStr = bomItem.getAttribute('data-bom-percentage') || bomItem.dataset.bomPercentage || '0';
+        const bomPercentage = new Decimal(bomPercentageStr);
+        
+        // Calculate total actual consumption for this BOM
+        let totalActual = new Decimal('0');
+        const actualInputs = bomItem.querySelectorAll('.warehouse-actual-input');
+        actualInputs.forEach(input => {
+            const amount = new Decimal(input.value || '0');
+            totalActual = totalActual.plus(amount);
+        });
+        
+        if (totalActual.gt(new Decimal('0'))) {
+            // Calculate actual percentage
+            const actualPercentage = totalActual.div(producedWeight).mul(new Decimal('100'));
+            
+            // Calculate allowed range: bomPercentage ± (maxError% of bomPercentage)
+            const errorAmount = bomPercentage.mul(maxError).div(new Decimal('100'));
+            const minAllowed = bomPercentage.minus(errorAmount);
+            const maxAllowed = bomPercentage.plus(errorAmount);
+            
+            // Check if actual percentage is outside allowed range
+            if (actualPercentage.lt(minAllowed) || actualPercentage.gt(maxAllowed)) {
+                hasError = true;
+                const materialName = bomItem.querySelector('strong').textContent;
+                const diff = actualPercentage.minus(bomPercentage);
+                errors.push(`${materialName}: درصد واقعی ${actualPercentage.toFixed(2)}% خارج از محدوده مجاز (${minAllowed.toFixed(2)}% - ${maxAllowed.toFixed(2)}%) است. انحراف: ${diff.gt(new Decimal('0')) ? '+' : ''}${diff.toFixed(2)}%`);
+            }
+        }
+    });
+    
+    return { isValid: !hasError, errors: errors };
 }
 
 function updateTotalDifference(bomId) {
@@ -1594,8 +1767,10 @@ function showCompleteProductionModal() {
                 const warehousesWithAmount = warehousesForBom.filter(wh => new Decimal(wh.amount || '0').gt(new Decimal('0')));
                 
                 if (warehousesWithAmount.length > 0) {
+                    // Ensure percentage is a valid number string
+                    const bomPercentageValue = item.percentage ? String(item.percentage) : '0';
                     html += `
-                        <div class="warehouse-actual-consumption-item" data-bom-id="${item.id}" style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; border: 2px solid #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div class="warehouse-actual-consumption-item" data-bom-id="${item.id}" data-bom-percentage="${bomPercentageValue}" style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; border: 2px solid #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                             <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid #ffc107;">
                                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                                     <div>
@@ -1611,9 +1786,10 @@ function showCompleteProductionModal() {
                                 <table style="width: 100%; border-collapse: separate; border-spacing: 0 8px;">
                                     <thead>
                                         <tr style="background: #f8f9fa;">
-                                            <th style="padding: 10px; text-align: right; border-radius: 6px 0 0 6px; font-size: 0.85rem; font-weight: 600; color: #495057;">انبار</th>
+                                            <th style="padding: 10px; text-align: right; border-radius: 6px 0 0 0; font-size: 0.85rem; font-weight: 600; color: #495057;">انبار</th>
                                             <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057; background: #e7f5ff;">مقدار مصرف کل (برنامه)</th>
-                                            <th style="padding: 10px; text-align: center; border-radius: 0 6px 6px 0; font-size: 0.85rem; font-weight: 600; color: #495057; background: #fff6db;">برداشت واقعی</th>
+                                            <th style="padding: 10px; text-align: center; font-size: 0.85rem; font-weight: 600; color: #495057; background: #fff6db;">برداشت واقعی</th>
+                                            <th style="padding: 10px; text-align: center; border-radius: 0 6px 6px 0; font-size: 0.85rem; font-weight: 600; color: #495057; background: #e8f5e9;">درصد واقعی</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1629,22 +1805,28 @@ function showCompleteProductionModal() {
                         
                         html += `
                             <tr class="warehouse-actual-row" style="background: #ffffff; border: 1px solid #e9ecef;">
-                                <td style="padding: 12px; border-radius: 6px 0 0 6px;">
+                                <td style="padding: 12px; border-radius: 6px 0 0 0;">
                                     <strong style="font-size: 0.95rem; color: #343a40;">${wh.warehouse}</strong>
                                 </td>
                                 <td style="padding: 12px; text-align: center; background: #f0f8ff;">
                                     <div style="font-size: 0.9rem; color: #0d6efd; font-weight: 600;">${plannedAmount} ${item.unit_used || 'تن'}</div>
                                 </td>
-                                <td style="padding: 12px; text-align: center; background: #fffbf0; border-radius: 0 6px 6px 0;">
+                                <td style="padding: 12px; text-align: center; background: #fffbf0;">
                                     <input type="number" 
                                            class="warehouse-actual-input form-control" 
                                            data-bom-id="${item.id}"
                                            data-warehouse="${wh.warehouse}"
+                                           data-bom-percentage="${bomPercentageValue}"
                                            min="0" 
                                            step="0.001"
                                            value="${defaultActual}"
                                            placeholder="برداشت واقعی"
                                            style="width: 120px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
+                                </td>
+                                <td style="padding: 12px; text-align: center; background: #f1f8e9; border-radius: 0 6px 6px 0;">
+                                    <div class="actual-percentage-display" 
+                                         data-bom-id="${item.id}"
+                                         style="font-size: 0.9rem; color: #2e7d32; font-weight: 600;">-</div>
                                 </td>
                             </tr>
                         `;
@@ -1654,6 +1836,21 @@ function showCompleteProductionModal() {
                                     </tbody>
                                 </table>
                             </div>
+                            <div class="bom-total-actual-percentage" 
+                                 data-bom-id="${item.id}"
+                                 style="margin-top: 12px; padding: 12px; border-radius: 8px; border-left: 4px solid #6c757d; font-size: 0.9rem; background: #e9ecef;">
+                                <strong>درصد فرمول:</strong> 
+                                <span style="color: #0d6efd; font-weight: 600;">${bomPercentageValue}%</span>
+                                <br>
+                                <strong>درصد واقعی کل:</strong> 
+                                <span class="total-actual-percentage" style="font-weight: 600;">-</span>
+                                <br>
+                                <strong>محدوده مجاز:</strong> 
+                                <span class="allowed-range" style="font-weight: 600;">-</span>
+                                <br>
+                                <strong>وضعیت:</strong> 
+                                <span class="validation-status" style="font-weight: 600;">-</span>
+                            </div>
                         </div>
                     `;
                 }
@@ -1662,6 +1859,9 @@ function showCompleteProductionModal() {
             html += '</div>';
             bomList.innerHTML = html;
             bomSection.style.display = 'block';
+            
+            // Setup event listeners for actual consumption inputs
+            setupActualConsumptionListeners();
                 } else {
                     try { console.debug(`BOM ${item.id} has no distribution; totalConsumption=${totalConsumption}, existingGlobalActual=${existingGlobalActual}`); } catch(e) {}
             bomSection.style.display = 'none';
@@ -1823,6 +2023,17 @@ function confirmCompleteProduction() {
     if (startDt && !isNaN(startDt.getTime()) && !isNaN(endDt.getTime()) && endDt <= startDt) {
         alert('زمان پایان واقعی باید بعد از شروع واقعی ثبت شود.');
         return;
+    }
+    
+    // Validate BOM error percentage before proceeding
+    const producedWeight = new Decimal(weight || '0');
+    if (producedWeight.gt(new Decimal('0'))) {
+        const validationResult = validateBomError();
+        if (!validationResult.isValid) {
+            const maxError = new Decimal(maxBomError || '5');
+            alert('خطا در درصد مواد اولیه:\n\n' + validationResult.errors.join('\n') + '\n\nحداکثر انحراف مجاز: ' + maxError.toFixed(2) + '%');
+            return;
+        }
     }
     
     // Validate and collect warehouse-specific actual consumption data

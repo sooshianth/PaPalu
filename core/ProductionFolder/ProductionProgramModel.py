@@ -191,6 +191,14 @@ class ProductionProgram(models.Model):
         verbose_name='دلیل عدم تایید توسط انبار',
         help_text='دلیل رد کردن برنامه تولید توسط انباردار'
     )
+    
+    max_bom_error = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('5.00'),
+        verbose_name='حداکثر خطای مجاز BOM (درصد)',
+        help_text='حداکثر انحراف مجاز درصد مواد اولیه از فرمول (به صورت درصد)'
+    )
 
     created_at = jmodels.jDateTimeField(auto_now_add=True, verbose_name='ایجاد')
     updated_at = jmodels.jDateTimeField(auto_now=True, verbose_name='آخرین ویرایش')

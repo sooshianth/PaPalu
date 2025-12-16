@@ -1399,8 +1399,65 @@ def production_program_crud_view(request, program_id=None):
                                     'warehouse_distribution_json': json.dumps(warehouse_dist_data),
                                     'warehouses': available_warehouses,
                                     'production_warehouses': production_warehouses,
+                                    'max_bom_error': float(program.max_bom_error) if program and program.max_bom_error else 5.0,
                                 }
                                 return render(request, 'production_declaration_crud.html', context)
+                            
+                            # Validate BOM error percentage
+                            if instance.produced_weight_ton and instance.produced_weight_ton > 0:
+                                max_error = instance.max_bom_error if instance.max_bom_error else Decimal('5.00')
+                                bom_errors = []
+                                
+                                for bom in bom_items:
+                                    bom_id_str = str(bom.id)
+                                    if bom_id_str in instance.warehouse_distribution:
+                                        # Calculate total actual consumption for this BOM
+                                        bom_actuals = actual_consumption.get(bom_id_str, {})
+                                        total_actual = sum(Decimal(str(amount)) for amount in bom_actuals.values())
+                                        
+                                        if total_actual > 0 and bom.percentage:
+                                            # Calculate actual percentage
+                                            actual_percentage = (total_actual / instance.produced_weight_ton) * Decimal('100')
+                                            
+                                            # Calculate allowed range: bom.percentage ± (max_error% of bom.percentage)
+                                            error_amount = (bom.percentage * max_error) / Decimal('100')
+                                            min_allowed = bom.percentage - error_amount
+                                            max_allowed = bom.percentage + error_amount
+                                            
+                                            # Check if actual percentage is outside allowed range
+                                            if actual_percentage < min_allowed or actual_percentage > max_allowed:
+                                                material_name = bom.raw_material.name if bom.raw_material else f"BOM #{bom.id}"
+                                                diff = actual_percentage - bom.percentage
+                                                bom_errors.append(
+                                                    f"{material_name}: درصد واقعی {actual_percentage:.2f}% خارج از محدوده مجاز "
+                                                    f"({min_allowed:.2f}% - {max_allowed:.2f}%) است. انحراف: {diff:+.2f}%"
+                                                )
+                                
+                                if bom_errors:
+                                    bug_logger.warning(f"Completion rejected: BOM error validation failed for {len(bom_errors)} materials")
+                                    messages.error(request, f'خطا در درصد مواد اولیه:\n\n' + '\n'.join(bom_errors) + f'\n\nحداکثر انحراف مجاز: {max_error}%')
+                                    # Don't save and return to form
+                                    warehouse_dist_data = program.warehouse_distribution if program and program.warehouse_distribution else {}
+                                    available_warehouses = Warehouse.objects.filter(
+                                        warehouse_type='secondary'
+                                    ).order_by('name')
+                                    production_warehouses = Warehouse.objects.filter(
+                                        warehouse_type='production'
+                                    ).order_by('name')
+                                    context = {
+                                        'form': form,
+                                        'program': program,
+                                        'is_create': is_create,
+                                        'raw_materials_inventory': raw_materials_inventory,
+                                        'raw_materials_inventory_json': json.dumps(raw_materials_inventory),
+                                        'production_infos_json': json.dumps(production_infos_data),
+                                        'bom_data_json': json.dumps(bom_data),
+                                        'warehouse_distribution_json': json.dumps(warehouse_dist_data),
+                                        'warehouses': available_warehouses,
+                                        'production_warehouses': production_warehouses,
+                                        'max_bom_error': float(program.max_bom_error) if program and program.max_bom_error else 5.0,
+                                    }
+                                    return render(request, 'production_declaration_crud.html', context)
                         
                         instance.actual_consumption = actual_consumption
                         bug_logger.debug(f"Actual consumption data (warehouse-wise) stored: {len(actual_consumption)} BOM items")
@@ -1809,6 +1866,7 @@ def production_program_crud_view(request, program_id=None):
             'program_status': program.status if program else 'draft',
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
+            'max_bom_error': float(program.max_bom_error) if program and program.max_bom_error else 5.0,
             'can_deny': can_deny,
             'can_revert': can_revert,
             'can_archive': can_archive,
