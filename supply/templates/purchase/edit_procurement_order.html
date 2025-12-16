@@ -689,6 +689,122 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // تابع محاسبه بهای تمام شده هر ردیف
+    function calculateRowTotal(formRow) {
+        const qtyInput = formRow.querySelector('input[name*="-quantity"]');
+        const priceInput = formRow.querySelector('input[name*="-unit_price"]');
+        const totalInput = formRow.querySelector('input[name*="-total_purchase_cost"]');
+        const vatInput = formRow.querySelector('input[name*="-vat_percent"]');
+        
+        if (qtyInput && priceInput && totalInput) {
+            const qty = parseFloat(qtyInput.value) || 0;
+            const price = parseFloat(priceInput.value) || 0;
+            let total = qty * price;
+            
+            // اضافه کردن مالیات به قیمت کل (اگر مالیات وجود داشته باشد)
+            if (vatInput) {
+                const vatPercent = parseFloat(vatInput.value) || 0;
+                if (vatPercent > 0) {
+                    const vatAmount = (total * vatPercent) / 100;
+                    total = total + vatAmount;
+                }
+            }
+            
+            // گرد کردن به 2 رقم اعشار
+            totalInput.value = total.toFixed(2);
+            
+            // محاسبه مجدد جمع بدون کرایه
+            calculateSubtotal();
+        }
+    }
+    
+    // تابع محاسبه جمع بدون کرایه
+    function calculateSubtotal() {
+        const totalInputs = document.querySelectorAll('input[name*="-total_purchase_cost"]');
+        let subtotal = 0;
+        
+        totalInputs.forEach(function(input) {
+            const formRow = input.closest('tr');
+            if (formRow) {
+                // بررسی اینکه آیا ردیف برای حذف علامت خورده است
+                const deleteCheckbox = formRow.querySelector('input[name*="-DELETE"]');
+                if (!deleteCheckbox || !deleteCheckbox.checked) {
+                    const value = parseFloat(input.value) || 0;
+                    subtotal += value;
+                }
+            }
+        });
+        
+        const subtotalInput = document.querySelector('input[name="subtotal_without_freight"]');
+        if (subtotalInput) {
+            subtotalInput.value = subtotal.toFixed(2);
+        }
+    }
+    
+    // اتصال event listener ها برای محاسبه به تمام ردیف‌های موجود
+    document.querySelectorAll('tbody tr').forEach(function(row) {
+        const qtyInput = row.querySelector('input[name*="-quantity"]');
+        const priceInput = row.querySelector('input[name*="-unit_price"]');
+        const vatInput = row.querySelector('input[name*="-vat_percent"]');
+        const unitSelect = row.querySelector('select[name*="-weight_unit"]');
+        
+        if (qtyInput) {
+            qtyInput.addEventListener('input', function() {
+                calculateRowTotal(row);
+            });
+            qtyInput.addEventListener('change', function() {
+                calculateRowTotal(row);
+            });
+        }
+        
+        if (priceInput) {
+            priceInput.addEventListener('input', function() {
+                calculateRowTotal(row);
+            });
+            priceInput.addEventListener('change', function() {
+                calculateRowTotal(row);
+            });
+        }
+        
+        if (vatInput) {
+            vatInput.addEventListener('input', function() {
+                calculateRowTotal(row);
+            });
+            vatInput.addEventListener('change', function() {
+                calculateRowTotal(row);
+            });
+        }
+        
+        if (unitSelect) {
+            unitSelect.addEventListener('change', function() {
+                // اگر واحد تغییر کرد، ممکن است نیاز به تبدیل واحد باشد
+                // فعلاً فقط محاسبه را انجام می‌دهیم
+                calculateRowTotal(row);
+            });
+        }
+    });
+    
+    // مدیریت checkbox حذف
+    document.querySelectorAll('input[name*="-DELETE"]').forEach(function(checkbox) {
+        checkbox.addEventListener('change', function() {
+            const formRow = this.closest('tr');
+            if (formRow) {
+                if (this.checked) {
+                    formRow.style.opacity = '0.5';
+                } else {
+                    formRow.style.opacity = '1';
+                }
+                calculateSubtotal();
+            }
+        });
+    });
+    
+    // محاسبه اولیه
+    document.querySelectorAll('tbody tr').forEach(function(row) {
+        calculateRowTotal(row);
+    });
+    calculateSubtotal();
+    
     // استایل برای suggestions
     const style = document.createElement('style');
     style.textContent = `
