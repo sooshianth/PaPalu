@@ -491,6 +491,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 } else {
                                     vatInput.value = '0.00';
                                 }
+                                
+                                // محاسبه مجدد total_price با مالیات
+                                calculateRowTotal(formRow);
                             }
                             
                             // محاسبه بهای تمام شده خرید
@@ -516,16 +519,27 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // محاسبه قیمت کل هر ردیف
+    // محاسبه قیمت کل هر ردیف (شامل مالیات)
     function calculateRowTotal(formRow) {
         const qtyInput = formRow.querySelector('input[name*="-quantity"]');
         const priceInput = formRow.querySelector('input[name*="-unit_price"]');
         const totalInput = formRow.querySelector('input[name*="-total_price"]');
+        const vatInput = formRow.querySelector('input[name*="-vat_on_material"]');
         
         if (qtyInput && priceInput && totalInput) {
             const qty = parseFloat(qtyInput.value) || 0;
             const price = parseFloat(priceInput.value) || 0;
-            const total = qty * price;
+            let total = qty * price;
+            
+            // اضافه کردن مالیات به قیمت کل (اگر مالیات وجود داشته باشد)
+            if (vatInput) {
+                const vatPercent = parseFloat(vatInput.value) || 0;
+                if (vatPercent > 0) {
+                    const vatAmount = (total * vatPercent) / 100;
+                    total = total + vatAmount;
+                }
+            }
+            
             totalInput.value = total.toFixed(2);
             
             // محاسبه مجموع کل
@@ -536,24 +550,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // محاسبه بهای تمام شده خرید (قیمت کل + مالیات + کرایه)
+    // محاسبه بهای تمام شده خرید (قیمت کل که شامل مالیات است + کرایه)
     function calculateTotalCostCompleted(formRow) {
         const totalPriceInput = formRow.querySelector('input[name*="-total_price"]');
-        const vatInput = formRow.querySelector('input[name*="-vat_on_material"]');
         const freightCostInput = formRow.querySelector('input[name*="-freight_cost_completed"]');
         const totalCostInput = formRow.querySelector('input[name*="-total_cost_completed"]');
         
         if (!totalCostInput) return;
         
+        // total_price قبلاً شامل مالیات شده است
         const totalPrice = parseFloat(totalPriceInput.value) || 0;
-        const vatPercent = parseFloat(vatInput.value) || 0;
         const freightCost = parseFloat(freightCostInput.value) || 0;
         
-        // محاسبه مالیات
-        const vatAmount = (totalPrice * vatPercent) / 100;
-        
-        // بهای تمام شده = قیمت کل + مالیات + کرایه
-        const totalCost = totalPrice + vatAmount + freightCost;
+        // بهای تمام شده = قیمت کل (شامل مالیات) + کرایه
+        const totalCost = totalPrice + freightCost;
         
         totalCostInput.value = totalCost.toFixed(2);
     }
@@ -664,7 +674,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             if (vatInput) {
                 vatInput.addEventListener('input', function() {
-                    calculateTotalCostCompleted(newForm);
+                    // محاسبه مجدد total_price با مالیات جدید
+                    calculateRowTotal(newForm);
                 });
             }
             if (freightCostInput) {
@@ -721,7 +732,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (vatInput) {
             vatInput.addEventListener('input', function() {
-                calculateTotalCostCompleted(formRow);
+                // محاسبه مجدد total_price با مالیات جدید
+                calculateRowTotal(formRow);
             });
         }
         if (freightCostInput) {

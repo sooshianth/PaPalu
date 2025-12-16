@@ -8,7 +8,7 @@ from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 import logging
 from core.logging_levels import *
 from django_tables2 import RequestConfig
@@ -353,6 +353,32 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
         # Validate total price calculation
         if quantity and unit_price:
             calculated_total = quantity * unit_price
+            
+            # اضافه کردن مالیات به قیمت کل (اگر مالیات وجود داشته باشد)
+            vat_on_material = cleaned_data.get('vat_on_material')
+            # اگر در cleaned_data نبود، از data اصلی بگیر
+            if not vat_on_material and hasattr(self, 'data') and self.data:
+                if hasattr(self, 'add_prefix'):
+                    field_name = self.add_prefix('vat_on_material')
+                    vat_value = self.data.get(field_name, '').strip() or None
+                    if vat_value:
+                        try:
+                            vat_on_material = Decimal(str(vat_value))
+                        except (ValueError, TypeError):
+                            vat_on_material = None
+            
+            if vat_on_material:
+                try:
+                    vat_percent = Decimal(str(vat_on_material))
+                    if vat_percent > 0:
+                        vat_amount = (calculated_total * vat_percent) / Decimal('100')
+                        calculated_total = calculated_total + vat_amount
+                except (ValueError, TypeError):
+                    # اگر مالیات معتبر نبود، فقط قیمت کل را بدون مالیات محاسبه کن
+                    pass
+            
+            # گرد کردن به 2 رقم اعشار برای مطابقت با محدودیت فیلد
+            calculated_total = calculated_total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             cleaned_data['total_price'] = calculated_total
             if total_price and abs(float(total_price) - float(calculated_total)) > 0.01:
                 # فقط هشدار می‌دهیم، مقدار را اصلاح می‌کنیم

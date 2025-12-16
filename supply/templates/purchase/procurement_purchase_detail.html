@@ -29,13 +29,21 @@
         margin-bottom: 30px;
     }
     
+    .form-section {
+        background: var(--gray-100);
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
     .section-title {
-        font-size: 1.1rem;
-        margin: 25px 0 15px 0;
-        color: var(--gray-800);
+        font-size: 1.2rem;
+        margin: 0 0 20px 0;
+        color: var(--primary-green);
         font-weight: 600;
-        border-bottom: 2px solid var(--primary-green);
-        padding-bottom: 8px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--light-green);
     }
     
     .detail-grid {
@@ -50,8 +58,9 @@
         flex-direction: column;
         gap: 6px;
         padding: 15px;
-        background: var(--gray-100);
+        background: white;
         border-radius: 8px;
+        border: 1px solid var(--gray-200);
     }
     
     .kv span:first-child {
@@ -63,6 +72,7 @@
     .kv strong {
         font-size: 1rem;
         color: var(--gray-800);
+        font-weight: 500;
     }
     
     .materials-list {
@@ -89,46 +99,88 @@
         font-weight: 500;
     }
     
+    .status-draft {
+        background: #fff3cd;
+        color: #b8860b;
+    }
+    
+    .status-awaiting_transport_def {
+        background: #e3f2fd;
+        color: #0b74c7;
+    }
+    
+    .status-awaiting_vehicle_entry {
+        background: #e0f7fa;
+        color: #007c91;
+    }
+    
+    .status-awaiting_delivery {
+        background: #ede7f6;
+        color: #5e35b1;
+    }
+    
+    .status-awaiting_wh_reconciliation {
+        background: #fff8e1;
+        color: #ff8f00;
+    }
+    
+    .status-awaiting_final_settlement {
+        background: #f3e5f5;
+        color: #6a1b9a;
+    }
+    
+    .status-completed {
+        background: #d4edda;
+        color: #155724;
+    }
+    
     .table-container {
         overflow-x: auto;
         margin-top: 15px;
     }
     
-    /* استایل جدول django-tables2 */
-    .table-container .table {
+    /* استایل جدول */
+    .table-container .table,
+    .table-container table {
         width: 100%;
         border-collapse: collapse;
         background: white;
         margin-bottom: 0;
     }
     
-    .table-container .table thead {
+    .table-container .table thead,
+    .table-container table thead {
         background: var(--gray-100);
     }
     
-    .table-container .table thead th {
-        padding: 12px 15px;
+    .table-container .table thead th,
+    .table-container table thead th {
+        padding: 15px;
         text-align: center;
         font-weight: 600;
         color: var(--gray-800);
-        border: 1px solid var(--gray-300);
+        border-bottom: 2px solid var(--primary-green);
         vertical-align: middle;
     }
     
-    .table-container .table tbody tr {
+    .table-container .table tbody tr,
+    .table-container table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
         transition: background-color 0.2s;
     }
     
-    .table-container .table tbody tr:hover {
+    .table-container .table tbody tr:hover,
+    .table-container table tbody tr:hover {
         background-color: var(--light-green);
     }
     
-    .table-container .table tbody td {
-        padding: 12px 15px;
+    .table-container .table tbody td,
+    .table-container table tbody td {
+        padding: 15px;
         color: var(--gray-600);
-        border: 1px solid var(--gray-300);
         text-align: center;
         vertical-align: middle;
+        font-weight: 500;
     }
     
     .actions {
@@ -145,6 +197,84 @@
         margin-top: 20px;
     }
     
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+    }
+    
+    .btn-primary {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: var(--dark-green);
+        color: white;
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .btn-success:hover {
+        background-color: #218838;
+        color: white;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+        color: white;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 0.875rem;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
     @media (max-width: 768px) {
         .page-header {
             flex-direction: column;
@@ -155,16 +285,23 @@
             padding: 20px;
         }
         
+        .form-section {
+            padding: 15px;
+        }
+        
         .detail-grid {
             grid-template-columns: 1fr;
         }
         
-        .data-table {
+        .table-container .table,
+        .table-container table {
             font-size: 0.9rem;
         }
         
-        .data-table thead th,
-        .data-table tbody td {
+        .table-container .table thead th,
+        .table-container .table tbody td,
+        .table-container table thead th,
+        .table-container table tbody td {
             padding: 10px;
         }
     }
@@ -177,143 +314,161 @@
 </div>
 
 <div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
     <div class="actions">
       <a href="{% url 'supply:edit_procurement_purchase_order' po.order_number %}" class="btn btn-primary">ویرایش</a>
       {% if po.can_delete %}<a href="{% url 'supply:delete_procurement_purchase_order' po.order_number %}" class="btn btn-danger" onclick="return confirm('حذف سفارش؟')">حذف (پیش‌نویس)</a>{% endif %}
       {% if not po.payment_confirmed %}<a href="{% url 'supply:confirm_procurement_purchase_order_payment' po.order_number %}" class="btn btn-success" onclick="return confirm('تایید پرداخت؟ پس از تایید امکان ویرایش مالی وجود ندارد')">تایید پرداخت</a>{% endif %}
     </div>
     
-    <div class="section-title">اطلاعات سفارش (Order-Level)</div>
-    <div class="detail-grid">
-      <div class="kv"><span>شماره سفارش</span><strong>{{ po.order_number }}</strong></div>
-      <div class="kv"><span>وضعیت</span><strong>{{ po.get_status_display }}</strong></div>
-      <div class="kv"><span>تأمین‌کننده</span><strong>{{ po.supplier.name|default:'—' }}</strong></div>
-      <div class="kv"><span>نوع پرداخت کرایه</span><strong>{{ po.get_freight_payment_type_display }}</strong></div>
-      <div class="kv"><span>جمع بدون کرایه</span><strong>{{ po.subtotal_without_freight|default:'—' }}</strong></div>
-      <div class="kv"><span>هزینه کرایه</span><strong>{{ po.freight_cost|default:'—' }}</strong></div>
-      <div class="kv"><span>مالیات %</span><strong>{{ po.vat_percentage|default:'—' }}</strong></div>
-      <div class="kv"><span>پیش‌فاکتور تایید شد؟</span><strong>{{ po.pre_invoice_approved|yesno:'بله,خیر' }}</strong></div>
-      <div class="kv"><span>پرداخت تایید شد؟</span><strong>{{ po.payment_confirmed|yesno:'بله,خیر' }}</strong></div>
-      <div class="kv"><span>شناسه در سیستم خارجی</span><strong>{{ po.external_system_id|default:'—' }}</strong></div>
-      <div class="kv"><span>کاربر ثبت کننده</span><strong>{{ po.created_by.get_full_name|default:po.created_by.username|default:'—' }}</strong></div>
-      <div class="kv"><span>تاریخ ایجاد</span><strong>{{ po.created_at|date:'Y-m-d H:i' }}</strong></div>
-      {% if po.pre_invoice_file %}
-      <div class="kv" style="grid-column:1/-1"><span>فایل پیش‌فاکتور</span><a href="{{ po.pre_invoice_file.url }}" target="_blank" style="color:var(--primary-green);font-weight:600">دانلود</a></div>
-      {% endif %}
+    <div class="form-section">
+        <h5 class="section-title">اطلاعات سفارش</h5>
+        <div class="detail-grid">
+            <div class="kv"><span>شماره سفارش</span><strong>{{ po.order_number }}</strong></div>
+            <div class="kv"><span>وضعیت</span><span class="status-badge status-{{ po.status }}">{{ po.get_status_display }}</span></div>
+            <div class="kv"><span>تأمین‌کننده</span><strong>{{ po.supplier.name|default:'—' }}</strong></div>
+            <div class="kv"><span>نوع پرداخت کرایه</span><strong>{{ po.get_freight_payment_type_display }}</strong></div>
+            <div class="kv"><span>جمع بدون کرایه</span><strong>{{ po.subtotal_without_freight|default:'—' }}</strong></div>
+            <div class="kv"><span>هزینه کرایه</span><strong>{{ po.freight_cost|default:'—' }}</strong></div>
+            <div class="kv"><span>مالیات %</span><strong>{{ po.vat_percentage|default:'—' }}</strong></div>
+            <div class="kv"><span>پیش‌فاکتور تایید شد؟</span><strong>{{ po.pre_invoice_approved|yesno:'بله,خیر' }}</strong></div>
+            <div class="kv"><span>پرداخت تایید شد؟</span><strong>{{ po.payment_confirmed|yesno:'بله,خیر' }}</strong></div>
+            <div class="kv"><span>شناسه در سیستم خارجی</span><strong>{{ po.external_system_id|default:'—' }}</strong></div>
+            <div class="kv"><span>کاربر ثبت کننده</span><strong>{{ po.created_by.get_full_name|default:po.created_by.username|default:'—' }}</strong></div>
+            <div class="kv"><span>تاریخ ایجاد</span><strong>{{ po.created_at|date:'Y-m-d H:i' }}</strong></div>
+            {% if po.pre_invoice_file %}
+            <div class="kv" style="grid-column:1/-1"><span>فایل پیش‌فاکتور</span><a href="{{ po.pre_invoice_file.url }}" target="_blank" style="color:var(--primary-green);font-weight:600">دانلود</a></div>
+            {% endif %}
+        </div>
     </div>
     
-    <div class="section-title">مواد اولیه (Material-Level Details) - هر ماده با جزئیات خود</div>
-    <div class="table-container" style="overflow-x: auto;">
-      <table class="table table-bordered table-hover" style="min-width: 1800px;">
-        <thead>
-          <tr>
-            <th>شناسه ماده اولیه</th>
-            <th>نام ماده اولیه</th>
-            <th>شکل فیزیکی</th>
-            <th>توضیحات فنی</th>
-            <th>مقدار</th>
-            <th>واحد</th>
-            <th>قیمت واحد</th>
-            <th>قیمت کل</th>
-            <th>بدون احتساب کرایه؟</th>
-            <th>مالیات بر ارزش افزوده</th>
-            <th>بهای تمام شده کرایه</th>
-            <th>بهای تمام شده خرید</th>
-            <th>شناسه تخصیص</th>
-            <th>توضیحات</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for m in materials %}
-          <tr>
-            <td>{{ m.raw_material.raw_material_id|default:'—' }}</td>
-            <td><strong>{{ m.raw_material.name|default:'—' }}</strong></td>
-            <td>{{ m.raw_material.get_physical_form_display|default:'—' }}</td>
-            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.raw_material.technical_description }}">{{ m.raw_material.technical_description|default:'—'|truncatewords:5 }}</td>
-            <td>{{ m.quantity }}</td>
-            <td>{{ m.unit|default:'—' }}</td>
-            <td>{{ m.unit_price|default:'—' }}</td>
-            <td>{{ m.total_price|default:'—' }}</td>
-            <td>{{ m.freight_included|yesno:'بله,خیر' }}</td>
-            <td>{{ m.vat_on_material|default:'—' }}</td>
-            <td>{{ m.freight_cost_completed|default:'—' }}</td>
-            <td>{{ m.total_cost_completed|default:'—' }}</td>
-            <td>{{ m.external_allocation_id|default:'—' }}</td>
-            <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.notes }}">{{ m.notes|default:'—'|truncatewords:5 }}</td>
-          </tr>
-          {% empty %}
-          <tr><td colspan="14" style="text-align:center;color:var(--gray-500)">هیچ ماده اولیه‌ای ثبت نشده</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div class="form-section">
+        <h5 class="section-title">مواد اولیه</h5>
+        <div class="table-container" style="overflow-x: auto;">
+            <table class="table table-bordered table-hover" style="min-width: 1800px;">
+                <thead>
+                    <tr>
+                        <th>شناسه ماده اولیه</th>
+                        <th>نام ماده اولیه</th>
+                        <th>شکل فیزیکی</th>
+                        <th>توضیحات فنی</th>
+                        <th>مقدار</th>
+                        <th>واحد</th>
+                        <th>قیمت واحد</th>
+                        <th>قیمت کل</th>
+                        <th>بدون احتساب کرایه؟</th>
+                        <th>مالیات بر ارزش افزوده</th>
+                        <th>بهای تمام شده کرایه</th>
+                        <th>بهای تمام شده خرید</th>
+                        <th>شناسه تخصیص</th>
+                        <th>توضیحات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in materials %}
+                    <tr>
+                        <td>{{ m.raw_material.raw_material_id|default:'—' }}</td>
+                        <td><strong>{{ m.raw_material.name|default:'—' }}</strong></td>
+                        <td>{{ m.raw_material.get_physical_form_display|default:'—' }}</td>
+                        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.raw_material.technical_description }}">{{ m.raw_material.technical_description|default:'—'|truncatewords:5 }}</td>
+                        <td>{{ m.quantity }}</td>
+                        <td>{{ m.unit|default:'—' }}</td>
+                        <td>{{ m.unit_price|default:'—' }}</td>
+                        <td>{{ m.total_price|default:'—' }}</td>
+                        <td>{{ m.freight_included|yesno:'بله,خیر' }}</td>
+                        <td>{{ m.vat_on_material|default:'—' }}</td>
+                        <td>{{ m.freight_cost_completed|default:'—' }}</td>
+                        <td>{{ m.total_cost_completed|default:'—' }}</td>
+                        <td>{{ m.external_allocation_id|default:'—' }}</td>
+                        <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.notes }}">{{ m.notes|default:'—'|truncatewords:5 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="14" style="text-align:center;color:var(--gray-500)">هیچ ماده اولیه‌ای ثبت نشده</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 
-    <div class="section-title">حمل‌های خرید مرتبط</div>
-    <div class="btn-actions" style="margin-bottom: 1rem;">
-      <a href="{% url 'supply:create_purchase_transport' %}?order={{ po.order_number }}" class="btn btn-primary">
-        <svg style="width: 1.2rem; height: 1.2rem; margin-left: 0.3rem;" fill="currentColor" viewBox="0 0 20 20">
-          <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
-          <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
-        </svg>
-        ثبت حمل جدید
-      </a>
-    </div>
-    
-    {% if transports %}
-      <div class="table-container">
-        <table class="simple-table">
-          <thead>
-            <tr>
-              <th>نوع ماشین</th>
-              <th>وضعیت حمل</th>
-              <th>تاریخ ثبت</th>
-              <th>کرایه</th>
-              <th>عملیات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for transport in transports %}
-              <tr>
-                <td>{{ transport.get_vehicle_type_display|default:"—" }}</td>
-                <td>
-                  <span class="status-badge status-{{ transport.status }}">
-                    {{ transport.get_status_display }}
-                  </span>
-                </td>
-                <td>{{ transport.created_at|date:"Y/m/d" }}</td>
-                <td>
-                  {% if transport.total_freight %}
-                    {{ transport.total_freight|floatformat:0|default:"—" }}
-                  {% else %}
-                    —
-                  {% endif %}
-                </td>
-                <td>
-                  <a href="{% url 'supply:purchase_transport_detail' transport.transport_number %}" class="btn btn-secondary btn-sm">جزئیات</a>
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    {% else %}
-      <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem;">هیچ حمل خریدی برای این سفارش ثبت نشده است. برای ایجاد حمل جدید، روی دکمه "ثبت حمل جدید" کلیک کنید.</p>
-    {% endif %}
-
-    <div class="section-title">تاریخچه وضعیت</div>
-    <div class="table-container">
-      {% render_table log_table %}
+    <div class="form-section">
+        <h5 class="section-title">حمل‌های خرید مرتبط</h5>
+        <div class="btn-actions" style="margin-bottom: 1rem;">
+            <a href="{% url 'supply:create_purchase_transport' %}?order={{ po.order_number }}" class="btn btn-primary">
+                <svg style="width: 1.2rem; height: 1.2rem; margin-left: 0.3rem;" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                    <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                </svg>
+                ثبت حمل جدید
+            </a>
+        </div>
+        
+        {% if transports %}
+        <div class="table-container">
+            <table class="table table-bordered table-hover">
+                <thead>
+                    <tr>
+                        <th>نوع ماشین</th>
+                        <th>وضعیت حمل</th>
+                        <th>تاریخ ثبت</th>
+                        <th>کرایه</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transport in transports %}
+                    <tr>
+                        <td>{{ transport.get_vehicle_type_display|default:"—" }}</td>
+                        <td>
+                            <span class="status-badge status-{{ transport.status }}">
+                                {{ transport.get_status_display }}
+                            </span>
+                        </td>
+                        <td>{{ transport.created_at|date:"Y/m/d" }}</td>
+                        <td>
+                            {% if transport.total_freight %}
+                                {{ transport.total_freight|floatformat:0|default:"—" }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'supply:purchase_transport_detail' transport.transport_number %}" class="btn btn-secondary btn-sm">جزئیات</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem;">هیچ حمل خریدی برای این سفارش ثبت نشده است. برای ایجاد حمل جدید، روی دکمه "ثبت حمل جدید" کلیک کنید.</p>
+        {% endif %}
     </div>
 
-    <div class="section-title">تغییر وضعیت</div>
-    <div class="btn-actions">
-      {% if next_status_choices %}
-        {% for code,label in next_status_choices %}
-          <a href="{% url 'supply:transition_procurement_purchase_order_status' po.order_number code %}" class="btn btn-success" onclick="return confirm('تغییر وضعیت به {{ label }} ؟')">{{ label }}</a>
-        {% endfor %}
-      {% else %}
-        <p style="color: var(--gray-600); font-size: 0.9rem;">هیچ وضعیت بعدی مجاز در گردش کار وجود ندارد.</p>
-      {% endif %}
+    <div class="form-section">
+        <h5 class="section-title">تاریخچه وضعیت</h5>
+        <div class="table-container">
+            {% render_table log_table %}
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h5 class="section-title">تغییر وضعیت</h5>
+        <div class="btn-actions">
+            {% if next_status_choices %}
+                {% for code,label in next_status_choices %}
+                    <a href="{% url 'supply:transition_procurement_purchase_order_status' po.order_number code %}" class="btn btn-success" onclick="return confirm('تغییر وضعیت به {{ label }} ؟')">{{ label }}</a>
+                {% endfor %}
+            {% else %}
+                <p style="color: var(--gray-600); font-size: 0.9rem;">هیچ وضعیت بعدی مجاز در گردش کار وجود ندارد.</p>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -273,6 +273,12 @@ class ProcurementPurchaseOrderTable(tables.Table):
             record.get_status_display()
         )
     
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
     def render_materials_list(self, record):
         """نمایش لیست مواد اولیه با جزئیات FK از RawMaterial"""
         materials = record.materials.select_related('raw_material').all()
@@ -284,7 +290,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
                 display_text = f"{rm.raw_material_id or 'N/A'} - {rm.name or 'بدون نام'}"
                 if rm.physical_form:
                     display_text += f" ({rm.get_physical_form_display()})"
-                items.append((display_text,))
+                items.append((format_html('<strong>{}</strong>', display_text),))
             
             inner_html = format_html_join(
                 '',
@@ -296,19 +302,28 @@ class ProcurementPurchaseOrderTable(tables.Table):
     
     def render_supplier(self, value):
         """نمایش نام تأمین‌کننده"""
-        return value or '—'
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
     
     def render_created_by(self, record):
         """نمایش نام کاربر ثبت کننده"""
         if record.created_by:
-            return record.created_by.get_full_name() or record.created_by.username
+            name = record.created_by.get_full_name() or record.created_by.username
+            return format_html('<strong>{}</strong>', name)
+        return '—'
+    
+    def render_created_at(self, value, record):
+        """نمایش تاریخ ایجاد"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
         return '—'
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""
         detail_url = reverse('supply:procurement_purchase_order_detail', args=[record.order_number])
         return format_html(
-            '<a href="{}" class="btn btn-secondary btn-sm">جزئیات</a>',
+            '<a href="{}" class="btn-outline-info">جزئیات</a>',
             detail_url
         )
 
