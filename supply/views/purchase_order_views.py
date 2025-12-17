@@ -807,7 +807,7 @@ def procurement_purchase_order_detail_view(request, order_number):
     can_delete = po.can_delete()  # محاسبه مقدار can_delete برای استفاده در template
     
     # Get transports for this purchase order
-    transports = Transport.objects.filter(purchase_order=po).order_by('-created_at')
+    transports = Transport.objects.filter(allocation__order=po).order_by('-created_at')
     
     # Get allowed next statuses for workflow transitions
     allowed_next_statuses = po.WORKFLOW_ALLOWED.get(po.status, set())

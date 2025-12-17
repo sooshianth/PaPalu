@@ -251,10 +251,15 @@ def car_entrance_list_view(request):
         # نمایش فقط حمل‌هایی که در وضعیت "در انتظار ورود خودرو" هستند
         # این حمل‌ها باید دارای اطلاعات پایه (نوع ماشین، نوع حمل) باشند
         # ولی فاقد داده‌های کامل راننده باشند
+        # باید جهت ورودی داشته باشند (direction='inbound' یا transport_type='inbound')
+        # برای حمل‌های قدیمی که direction ندارند، از transport_type استفاده می‌کنیم
         transports = Transport.objects.filter(
-            status=Transport.STATUS_AWAITING_VEHICLE_ENTRY,
-            transport_type='inbound'
-        ).select_related('purchase_order', 'driver', 'purchase_order__supplier').order_by('-created_at')
+            status=Transport.STATUS_AWAITING_VEHICLE_ENTRY
+        ).filter(
+            Q(direction='inbound') | 
+            Q(transport_type='inbound') |
+            Q(direction__isnull=True, transport_type='inbound')
+        ).select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
         bug_logger.debug(f"تعداد حمل‌های در انتظار ورود خودرو: {transports.count()}")
         table = CarEntranceTable(transports, prefix='car-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table)
@@ -345,30 +350,17 @@ def register_driver_for_transport_view(request, transport_number):
                     bug_logger.info(f"اطلاعات راننده و زمان ورود برای حمل {transport_number} ثبت شد")
                     
                     # تغییر وضعیت به "در انتظار تخلیه"
-                    try:
-                        pt.transition(
-                            Transport.STATUS_AWAITING_UNLOADING,
-                            user=request.user,
-                            note=f'ثبت ورود خودرو توسط نگهبان - راننده: {driver.name} - پلاک: {pt.plate_number}'
-                        )
-                        bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تخلیه' تغییر یافت")
-                    except Exception as trans_err:
-                        bug_logger.error(f"خطا در تغییر وضعیت حمل {transport_number}: {trans_err}")
-                        raise
+                    pt.status = Transport.STATUS_AWAITING_UNLOADING
+                    pt.save()
+                    bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تخلیه' تغییر یافت")
                     
                     # تغییر وضعیت سفارش خرید به "در انتظار تحویل بار"
                     po = pt.purchase_order
                     if po and po.status == Order.STATUS_AWAITING_VEHICLE_ENTRY:
-                        try:
-                            po.transition(
-                                Order.STATUS_AWAITING_DELIVERY,
-                                user=request.user,
-                                note=f'ورود خودرو ثبت شد - حمل: {transport_number}'
-                            )
-                            bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
-                            audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال ورود خودرو به‌روزرسانی شد")
-                        except Exception as po_err:
-                            bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number}: {po_err}")
+                        po.status = Order.STATUS_AWAITING_DELIVERY
+                        po.save()
+                        bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
+                        audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال ورود خودرو به‌روزرسانی شد")
                     
                     audit_logger.info(f"ورود خودرو ثبت شد - حمل: {transport_number} - راننده: {driver.name} - پلاک: {pt.plate_number}")
                     
@@ -508,10 +500,12 @@ def car_exit_list_view(request):
     try:
         # نمایش فقط حمل‌هایی که در وضعیت "در انتظار تخلیه" هستند
         # این حمل‌ها پس از ثبت ورود خودرو وارد این لیست می‌شوند
+        # باید جهت ورودی داشته باشند (direction='inbound' یا transport_type='inbound')
         transports = Transport.objects.filter(
-            status=Transport.STATUS_AWAITING_UNLOADING,
-            transport_type='inbound'
-        ).select_related('purchase_order', 'driver', 'purchase_order__supplier').order_by('-created_at')
+            status=Transport.STATUS_AWAITING_UNLOADING
+        ).filter(
+            Q(direction='inbound') | Q(transport_type='inbound')
+        ).select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
         
         bug_logger.debug(f"تعداد حمل‌های در انتظار تخلیه: {transports.count()}")
         

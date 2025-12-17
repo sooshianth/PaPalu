@@ -229,6 +229,22 @@ class Order(models.Model):
         customer_name = self.customer.name if self.customer else 'بدون مشتری'
         return f"{self.order_number} - {customer_name} - {self.get_order_type_display()}"
     
+    @property
+    def supplier(self):
+        """Property برای سازگاری با کد قدیمی - برمی‌گرداند customer"""
+        return self.customer
+    
+    @property
+    def materials(self):
+        """Property برای سازگاری با کد قدیمی - برمی‌گرداند order_items"""
+        return self.order_items
+    
+    @property
+    def transports(self):
+        """Property برای سازگاری با کد قدیمی - برمی‌گرداند transports از طریق allocations"""
+        from core.TransportFolder.TransportModel import Transport
+        return Transport.objects.filter(allocation__order=self)
+    
     def get_total_amount(self):
         """
         محاسبه مبلغ کل سفارش از مجموع اقلام

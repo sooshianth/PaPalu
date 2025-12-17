@@ -169,8 +169,8 @@ def logistic_confirmation_list_view(request):
         transports = Transport.objects.filter(
             status=Transport.STATUS_AWAITING_SETTLEMENT
         ).select_related(
-            'purchase_order',
-            'purchase_order__supplier',
+            'allocation__order',
+            'allocation__order__customer',
             'driver'
         ).order_by('-created_at')
         
@@ -216,8 +216,8 @@ def logistic_confirmation_detail_view(request, transport_number):
     try:
         transport = get_object_or_404(
             Transport.objects.select_related(
-                'purchase_order',
-                'purchase_order__supplier',
+                'allocation__order',
+                'allocation__order__customer',
                 'driver'
             ),
             transport_number=transport_number
@@ -237,12 +237,9 @@ def logistic_confirmation_detail_view(request, transport_number):
             try:
                 from django.db import transaction
                 with transaction.atomic():
-                    # Transition to awaiting payment doc status
-                    transport.transition(
-                        new_status=Transport.STATUS_AWAITING_PAYMENT_DOC,
-                        user=request.user,
-                        note='تایید نهایی لجستیک - تطبیق داده‌های وزنی و مالی با بارنامه'
-                    )
+                    # تغییر وضعیت به awaiting payment doc
+                    transport.status = Transport.STATUS_AWAITING_PAYMENT_DOC
+                    transport.save()
                     
                     # بررسی وضعیت سفارش خرید
                     po = transport.purchase_order
@@ -258,11 +255,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                     # اگر تمام حمل‌های سفارش تسویه شدند، وضعیت سفارش را به "در انتظار تسویه نهایی" تغییر می‌دهیم
                     if all_settled:
                         if po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
-                            po.transition(
-                                Order.STATUS_AWAITING_FINAL_SETTLEMENT,
-                                user=request.user,
-                                note='همه حمل‌های سفارش تسویه شدند'
-                            )
+                            po.status = Order.STATUS_AWAITING_FINAL_SETTLEMENT
+                            po.save()
                             bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
                             audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تسویه همه حمل‌ها به‌روزرسانی شد")
                     

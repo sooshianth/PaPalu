@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django import forms
 from django.forms import ModelForm
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponseForbidden
 import logging
 from core.logging_levels import *
@@ -85,9 +86,9 @@ class TransportForm(ModelForm):
     
     فیلدهای اجباری:
     - purchase_order (شماره سفارش) - به صورت custom field
-    - transport_type (نوع حمل)
     - vehicle_type (نوع ماشین)
     
+    transport_type به صورت خودکار به 'inbound' تنظیم می‌شود.
     بقیه فیلدها اختیاری هستند.
     """
     purchase_order = forms.ModelChoiceField(
@@ -100,19 +101,16 @@ class TransportForm(ModelForm):
     class Meta:
         model = Transport
         fields = [
-            'allocation', 'transport_type', 'vehicle_type',
+            'allocation', 'vehicle_type',
             'plate_number', 'driver',
             'freight_payment_type', 'initial_freight', 'total_freight',
             'discount', 'surplus', 'freight_payment',
             'driver_account_number', 'driver_sheba_number',
-            'expected_arrival_date', 'actual_arrival_date',
-            'loading_date', 'delivery_date',
-            'gross_weight', 'tare_weight', 'net_weight',
+            'expected_arrival_date',
             'waybill_number', 'notes'
         ]
         labels = {
             'allocation': 'تخصیص',
-            'transport_type': 'نوع حمل',
             'vehicle_type': 'نوع ماشین',
             'plate_number': 'پلاک',
             'driver': 'راننده',
@@ -125,18 +123,11 @@ class TransportForm(ModelForm):
             'driver_account_number': 'شماره حساب راننده',
             'driver_sheba_number': 'شماره شبا راننده',
             'expected_arrival_date': 'تاریخ پیش‌بینی ورود',
-            'actual_arrival_date': 'تاریخ واقعی ورود',
-            'loading_date': 'تاریخ بارگیری',
-            'delivery_date': 'تاریخ تحویل',
-            'gross_weight': 'وزن ناخالص',
-            'tare_weight': 'وزن خالی',
-            'net_weight': 'وزن خالص',
             'waybill_number': 'شماره بارنامه',
             'notes': 'یادداشت',
         }
         widgets = {
             'allocation': forms.Select(attrs={'class': 'form-control'}),
-            'transport_type': forms.Select(attrs={'class': 'form-control'}),
             'vehicle_type': forms.Select(attrs={'class': 'form-control'}),
             'plate_number': forms.TextInput(attrs={'class': 'form-control'}),
             'driver': forms.Select(attrs={'class': 'form-control'}),
@@ -149,12 +140,6 @@ class TransportForm(ModelForm):
             'driver_account_number': forms.TextInput(attrs={'class': 'form-control'}),
             'driver_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
             'expected_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
-            'actual_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
-            'loading_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
-            'delivery_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
-            'gross_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
-            'tare_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
-            'net_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'waybill_number': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
@@ -165,8 +150,11 @@ class TransportForm(ModelForm):
         from core.AllocationFolder.AllocationModel import Allocation
         
         # فیلدهای اجباری
-        self.fields['transport_type'].required = True
         self.fields['vehicle_type'].required = True
+        
+        # حذف فیلد transport_type از فرم (خودکار به inbound تنظیم می‌شود)
+        if 'transport_type' in self.fields:
+            del self.fields['transport_type']
         
         # Filter purchase orders that are not in draft or completed status
         self.fields['purchase_order'].queryset = Order.objects.filter(
@@ -186,12 +174,10 @@ class TransportForm(ModelForm):
         self.fields['allocation'].widget = forms.HiddenInput()
         self.fields['allocation'].required = False
         
-        # Filter drivers only
-        self.fields['driver'].queryset = Person.objects.filter(type='driver').order_by('name')
-        
-        # تنظیم مقدار پیش‌فرض برای transport_type
-        if not self.instance.pk:  # فقط برای ایجاد جدید
-            self.fields['transport_type'].initial = 'inbound'  # دیفالت ورودی در تامین
+        # تبدیل فیلد driver به text input برای autocomplete
+        # یک hidden field برای driver_id اضافه می‌کنیم
+        self.fields['driver'].widget = forms.HiddenInput()
+        self.fields['driver'].required = False
     
     def clean(self):
         cleaned_data = super().clean()
@@ -241,16 +227,20 @@ def purchase_transport_list_view(request):
         # Orders awaiting transport definition (for quick create)
         awaiting_pos = Order.objects.filter(
             status=Order.STATUS_AWAITING_TRANSPORT_DEFINITION
-        ).select_related('supplier').order_by('-created_at')
+        ).select_related('customer').order_by('-created_at')
         
-        # Active transports (not completed)
+        # Active transports (not completed) - فقط حمل‌های ورودی
         active_transports = Transport.objects.exclude(
             status__in=[Transport.STATUS_COMPLETED, Transport.STATUS_PAYMENT_DOC_UPLOADED]
+        ).filter(
+            Q(direction='inbound') | Q(transport_type='inbound')
         ).select_related('allocation', 'allocation__order', 'created_by').order_by('-created_at')
         
-        # Completed transports (both old completed status and new payment_doc_uploaded status)
+        # Completed transports (both old completed status and new payment_doc_uploaded status) - فقط حمل‌های ورودی
         completed_transports = Transport.objects.filter(
             status__in=[Transport.STATUS_COMPLETED, Transport.STATUS_PAYMENT_DOC_UPLOADED]
+        ).filter(
+            Q(direction='inbound') | Q(transport_type='inbound')
         ).select_related('allocation', 'allocation__order', 'created_by').order_by('-created_at')
         
         # Prepare table accessible fields dict
@@ -371,47 +361,19 @@ def create_purchase_transport_view(request):
                     with transaction.atomic():
                         pt = form.save(commit=False)
                         pt.created_by = request.user
+                        # تنظیم خودکار transport_type و direction به inbound
+                        pt.transport_type = 'inbound'
+                        pt.direction = 'inbound'
                         # اطمینان از اینکه وضعیت پیش‌فرض draft است
                         if not pt.status:
                             pt.status = Transport.STATUS_DRAFT
                         pt.save()
                         
-                        # Refresh از دیتابیس برای اطمینان از اینکه وضعیت به درستی ذخیره شده
-                        pt.refresh_from_db()
-                        
-                        bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number} - وضعیت: {pt.status} - ID: {pt.transport_id}")
-                        
                         # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
-                        # ابتدا بررسی می‌کنیم که وضعیت فعلی draft است
-                        bug_logger.debug(f"وضعیت فعلی حمل قبل از transition: {pt.status}")
-                        bug_logger.debug(f"وضعیت مورد نظر: {Transport.STATUS_AWAITING_VEHICLE_ENTRY}")
-                        bug_logger.debug(f"WORKFLOW_ALLOWED برای {pt.status}: {pt.WORKFLOW_ALLOWED.get(pt.status, set())}")
+                        pt.status = Transport.STATUS_AWAITING_VEHICLE_ENTRY
+                        pt.save()
                         
-                        # بررسی اینکه آیا transition مجاز است
-                        allowed_statuses = pt.WORKFLOW_ALLOWED.get(pt.status, set())
-                        if Transport.STATUS_AWAITING_VEHICLE_ENTRY not in allowed_statuses:
-                            error_msg = f'مسیر تغییر وضعیت غیرمجاز است. وضعیت فعلی: {pt.get_status_display()}, وضعیت مجاز: {[s for s in allowed_statuses]}'
-                            bug_logger.error(f"خطا در transition حمل {pt.transport_number}: {error_msg}")
-                            messages.error(request, error_msg)
-                            raise ValueError(error_msg)
-                        
-                        try:
-                            pt.transition(
-                                Transport.STATUS_AWAITING_VEHICLE_ENTRY,
-                                user=request.user,
-                                note='ثبت اولیه حمل'
-                            )
-                            # Refresh بعد از transition
-                            pt.refresh_from_db()
-                            bug_logger.info(f"وضعیت حمل {pt.transport_number} به 'در انتظار ورود خودرو' تغییر یافت - وضعیت فعلی: {pt.status}")
-                        except ValueError as ve:
-                            bug_logger.error(f"خطا در تغییر وضعیت حمل {pt.transport_number}: {ve}", exc_info=True)
-                            messages.error(request, f'خطا در تغییر وضعیت حمل: {str(ve)}')
-                            raise  # Re-raise to rollback transaction
-                        except Exception as trans_err:
-                            bug_logger.error(f"خطای غیرمنتظره در تغییر وضعیت حمل {pt.transport_number}: {trans_err}", exc_info=True)
-                            messages.error(request, f'خطای غیرمنتظره در تغییر وضعیت: {str(trans_err)}')
-                            raise  # Re-raise to rollback transaction
+                        bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number} - وضعیت: {pt.status} - ID: {pt.pk}")
                         
                         # ارسال اعلان به نگهبان
                         try:
@@ -464,15 +426,28 @@ def purchase_transport_detail_view(request, transport_number):
     audit_logger.info(f"مشاهده جزئیات حمل خرید {transport_number}")
     from supply.tables import TransportStatusLogTable
     
-    pt = get_object_or_404(Transport, transport_number=transport_number)
+    # اگر transport_number برابر None است، خطا بده
+    if not transport_number or transport_number == 'None':
+        messages.error(request, 'شماره حمل نامعتبر است.')
+        return redirect(reverse('supply:purchase_transport_list'))
+    
+    # تلاش برای پیدا کردن حمل با transport_number یا pk
+    try:
+        if transport_number.isdigit():
+            pt = get_object_or_404(Transport, pk=int(transport_number))
+        else:
+            pt = get_object_or_404(Transport, transport_number=transport_number)
+    except (ValueError, Transport.DoesNotExist) as e:
+        bug_logger.error(f"خطا در یافتن حمل با شناسه {transport_number}: {e}")
+        messages.error(request, 'حمل مورد نظر یافت نشد.')
+        return redirect(reverse('supply:purchase_transport_list'))
     # Transport model doesn't have status_logs, so we use empty list for now
     logs = []
     log_table = TransportStatusLogTable(logs)
     RequestConfig(request, paginate=False).configure(log_table)
     
-    # Get allowed next statuses for workflow transitions
-    allowed_next_statuses = pt.WORKFLOW_ALLOWED.get(pt.status, set())
-    next_status_choices = [(code, label) for code, label in pt.STATUS_CHOICES if code in allowed_next_statuses]
+    # لیست تمام وضعیت‌های ممکن
+    next_status_choices = pt.STATUS_CHOICES
     
     return render(request, 'supply_purchase_transport_detail.html', {
         'pt': pt,
@@ -539,11 +514,15 @@ def transition_purchase_transport_status_view(request, transport_number, new_sta
     pt = get_object_or_404(Transport, transport_number=transport_number)
     
     try:
-        pt.transition(new_status, user=request.user)
+        # بررسی معتبر بودن وضعیت
+        valid_statuses = [code for code, label in Transport.STATUS_CHOICES]
+        if new_status not in valid_statuses:
+            messages.error(request, 'وضعیت انتخاب شده نامعتبر است.')
+            return redirect(reverse('supply:purchase_transport_detail', kwargs={'transport_number': transport_number}))
+        
+        pt.status = new_status
+        pt.save()
         messages.success(request, 'وضعیت حمل بروزرسانی شد.')
-    except ValueError as ve:
-        bug_logger.warning(f"Invalid transport status transition {transport_number}: {ve}")
-        messages.error(request, str(ve))
     except Exception as e:
         bug_logger.error(f"Transition purchase transport error: {e}")
         messages.error(request, 'خطای تغییر وضعیت حمل.')
@@ -577,3 +556,114 @@ def get_purchase_order_info_api(request, order_number):
     except Exception as e:
         bug_logger.error(f"Get purchase order info API error: {e}")
         return JsonResponse({'error': 'خطا در دریافت اطلاعات سفارش'}, status=400)
+
+
+@login_required
+def driver_search_api(request):
+    """API برای جستجوی راننده بر اساس نام یا شماره تلفن"""
+    from django.http import JsonResponse
+    
+    query = request.GET.get('q', '').strip()
+    driver_id = request.GET.get('id', '').strip()
+    
+    # اگر id داده شده، فقط آن راننده را برگردان
+    if driver_id:
+        try:
+            driver = Person.objects.filter(pk=int(driver_id), type='driver').first()
+            if driver:
+                return JsonResponse({
+                    'results': [{
+                        'id': driver.pk,
+                        'text': f"{driver.name or 'بدون نام'} - {driver.phone_number or 'بدون تلفن'}",
+                        'name': driver.name or '',
+                        'phone': driver.phone_number or '',
+                        'national_id': driver.national_id or '',
+                    }]
+                })
+            else:
+                return JsonResponse({'results': []})
+        except (ValueError, TypeError):
+            return JsonResponse({'results': []})
+    
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+    
+    try:
+        drivers = Person.objects.filter(
+            type='driver'
+        ).filter(
+            Q(name__icontains=query) | Q(phone_number__icontains=query) | Q(national_id__icontains=query)
+        ).order_by('name')[:10]
+        
+        results = []
+        for driver in drivers:
+            results.append({
+                'id': driver.pk,
+                'text': f"{driver.name or 'بدون نام'} - {driver.phone_number or 'بدون تلفن'}",
+                'name': driver.name or '',
+                'phone': driver.phone_number or '',
+                'national_id': driver.national_id or '',
+            })
+        
+        return JsonResponse({'results': results})
+    except Exception as e:
+        bug_logger.error(f"Driver search API error: {e}")
+        return JsonResponse({'error': 'خطا در جستجوی راننده'}, status=400)
+
+
+@login_required
+def create_driver_api(request):
+    """API برای ایجاد راننده جدید"""
+    from django.http import JsonResponse
+    from django.db import transaction
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        name = request.POST.get('name', '').strip()
+        phone = request.POST.get('phone', '').strip()
+        national_id = request.POST.get('national_id', '').strip()
+        
+        if not name or not phone:
+            return JsonResponse({'error': 'نام و شماره تلفن اجباری است'}, status=400)
+        
+        # بررسی تکراری نبودن
+        existing = Person.objects.filter(
+            Q(phone_number=phone) | Q(national_id=national_id)
+        ).filter(type='driver').first()
+        
+        if existing:
+            return JsonResponse({
+                'error': 'راننده با این شماره تلفن یا کد ملی قبلاً ثبت شده است',
+                'driver': {
+                    'id': existing.pk,
+                    'name': existing.name,
+                    'phone': existing.phone_number,
+                    'national_id': existing.national_id,
+                }
+            }, status=400)
+        
+        with transaction.atomic():
+            driver = Person.objects.create(
+                name=name,
+                phone_number=phone,
+                national_id=national_id if national_id else None,
+                type='driver'
+            )
+            
+            audit_logger.info(f"راننده جدید ایجاد شد - نام: {driver.name} - تلفن: {driver.phone_number} - توسط: {request.user.username}")
+            
+            return JsonResponse({
+                'success': True,
+                'driver': {
+                    'id': driver.pk,
+                    'name': driver.name,
+                    'phone': driver.phone_number,
+                    'national_id': driver.national_id or '',
+                    'text': f"{driver.name} - {driver.phone_number}",
+                }
+            })
+    except Exception as e:
+        bug_logger.error(f"Create driver API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در ایجاد راننده: {str(e)}'}, status=500)

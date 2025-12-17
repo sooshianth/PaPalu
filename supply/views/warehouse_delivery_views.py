@@ -340,14 +340,14 @@ def warehouse_delivery_list_view(request):
         # حمل‌های در وضعیت های قابل تحویل انبار (awaiting_unloading for warehouseman)
         transports_unloading_qs = Transport.objects.filter(
             status=Transport.STATUS_AWAITING_UNLOADING
-        ).select_related('purchase_order', 'driver').order_by('-created_at')
+        ).select_related('allocation__order', 'driver').order_by('-created_at')
         
         bug_logger.debug(f"Found {transports_unloading_qs.count()} transports awaiting unloading")
         
         # حمل‌های در انتظار تایید خروج توسط نگهبان (awaiting_wh_reconciliation)
         transports_guard_qs = Transport.objects.filter(
             status=Transport.STATUS_AWAITING_WH_RECONCILIATION
-        ).select_related('purchase_order', 'driver').order_by('-created_at')
+        ).select_related('allocation__order', 'driver').order_by('-created_at')
         
         bug_logger.debug(f"Found {transports_guard_qs.count()} transports awaiting guard reconciliation")
 
@@ -519,16 +519,9 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # )
                     
                     # تغییر وضعیت به "در انتظار تطبیق انبار"
-                    try:
-                        pt.transition(
-                            Transport.STATUS_AWAITING_WH_RECONCILIATION,
-                            user=request.user,
-                            note=f'تکمیل تخلیه - وزن خالص: {net_weight} - انبار: {warehouse_id} - نوع کرایه: {data.get("freight_payment_type")}'
-                        )
-                        bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تطبیق انبار' تغییر یافت")
-                    except Exception as trans_err:
-                        bug_logger.error(f"خطا در تغییر وضعیت حمل {transport_number}: {trans_err}")
-                        raise
+                    pt.status = Transport.STATUS_AWAITING_WH_RECONCILIATION
+                    pt.save()
+                    bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تطبیق انبار' تغییر یافت")
                     
                     # ثبت در Audit Trail
                     audit_logger.info(
@@ -619,13 +612,10 @@ def guard_vehicle_exit_view(request, transport_number):
         bug_logger.debug(f"Guard confirming vehicle exit for transport {transport_number}")
         try:
             with transaction.atomic():
-                # Transition to awaiting_settlement
-                bug_logger.debug(f"Transitioning transport {transport_number} to awaiting_settlement")
-                pt.transition(
-                    Transport.STATUS_AWAITING_SETTLEMENT,
-                    user=request.user,
-                    note=f'تایید خروج خودرو توسط نگهبان - وزن خالص: {pt.net_weight}'
-                )
+                # تغییر وضعیت به awaiting_settlement
+                bug_logger.debug(f"Changing transport {transport_number} status to awaiting_settlement")
+                pt.status = Transport.STATUS_AWAITING_SETTLEMENT
+                pt.save()
                 
                 audit_logger.info(
                     f"خروج خودرو تایید شد - "

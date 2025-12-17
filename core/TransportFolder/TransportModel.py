@@ -474,37 +474,6 @@ class Transport(models.Model):
 
         super().save(*args, **kwargs)
     
-    # Workflow transitions برای سازگاری با کد قدیمی
-    WORKFLOW_ALLOWED = {
-        'draft': {'pending_vehicle_entry'},
-        'pending_vehicle_entry': {'pending_unloading', 'vehicle_entered'},
-        'vehicle_entered': {'pending_unloading'},
-        'pending_unloading': {'awaiting_wh_reconciliation'},
-        'awaiting_wh_reconciliation': {'pending_settlement'},
-        'pending_settlement': {'completed', 'awaiting_payment_doc'},
-        'completed': {'awaiting_payment_doc', 'payment_doc_uploaded'},
-        'awaiting_payment_doc': {'payment_doc_uploaded'},
-    }
-    
-    def transition(self, new_status, user=None, note=None):
-        """تغییر وضعیت حمل - برای سازگاری با کد قدیمی"""
-        if new_status not in dict(self.STATUS_CHOICES):
-            raise ValueError('وضعیت جدید نامعتبر است.')
-        
-        # بررسی workflow
-        allowed = self.WORKFLOW_ALLOWED.get(self.status, set())
-        if new_status not in allowed:
-            raise ValueError('مسیر تغییر وضعیت غیرمجاز است.')
-        
-        old_status = self.status
-        self.status = new_status
-        self.save()
-        
-        # در صورت نیاز می‌توان لاگ تغییر وضعیت را اینجا اضافه کرد
-        # import logging
-        # audit_logger = logging.getLogger("audit")
-        # audit_logger.info(f"تغییر وضعیت حمل {self.waybill_number or self.pk}: {old_status} -> {new_status}")
-    
     def send_guard_notification(self):
         """ارسال اعلان به نگهبان با اطلاعات خودرو - برای سازگاری با کد قدیمی"""
         import logging

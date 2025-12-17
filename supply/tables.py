@@ -665,7 +665,9 @@ class TransportTable(tables.Table):
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""
-        detail_url = reverse('supply:purchase_transport_detail', args=[record.transport_number])
+        # اگر transport_number None است، از pk استفاده کن
+        identifier = record.transport_number or str(record.pk)
+        detail_url = reverse('supply:purchase_transport_detail', args=[identifier])
         return format_html(
             '<a href="{}" class="btn btn-secondary btn-sm">جزئیات</a>',
             detail_url

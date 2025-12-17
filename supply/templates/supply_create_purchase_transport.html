@@ -13,14 +13,39 @@
   .form-row-2 {grid-column:1/-1;display:grid;grid-template-columns:repeat(2, minmax(220px, 1fr));gap:16px;align-items:start}
   @media (max-width: 768px){.form-row-2{grid-template-columns:1fr}}
   /* License plate input (Iran style) */
-  .plate-input {display:flex;align-items:center;gap:8px;direction:ltr}
-  .plate-seg {display:flex;gap:6px;align-items:center}
+  .plate-input {display:flex;align-items:center;gap:8px;direction:ltr;justify-content:center;width:100%}
+  .plate-seg {display:flex;gap:6px;align-items:center;justify-content:center}
   .plate-input input[type="text"] {width:90px;text-align:center}
   .plate-input .seg-5 {width:120px}
   .plate-input .seg-letter {width:60px}
   .plate-input .seg-2 {width:70px}
   .plate-input .dash {opacity:.5}
-  .plate-helper {font-size:.65rem;color:#666;margin-top:4px}
+  .plate-helper {font-size:.65rem;color:#666;margin-top:4px;text-align:center}
+  /* Driver autocomplete styles */
+  .driver-autocomplete-wrapper {position:relative}
+  .driver-autocomplete-input {width:100%;padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
+  .suggestions-container {position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #cfd8dc;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:1000;max-height:300px;overflow-y:auto;display:none;margin-top:4px}
+  .suggestion-item {padding:10px 12px;cursor:pointer;border-bottom:1px solid #f0f0f0;font-size:.8rem}
+  .suggestion-item:hover {background-color:#f5f5f5}
+  .suggestion-item:last-child {border-bottom:none}
+  .add-driver-btn {margin-top:8px;padding:6px 12px;font-size:.75rem;background:#4caf50;color:white;border:none;border-radius:6px;cursor:pointer}
+  .add-driver-btn:hover {background:#45a049}
+  /* Modal styles */
+  .modal {display:none;position:fixed;z-index:2000;left:0;top:0;width:100%;height:100%;background-color:rgba(0,0,0,0.5)}
+  .modal-content {background-color:#fefefe;margin:5% auto;padding:20px;border:1px solid #888;width:90%;max-width:500px;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+  .modal-header {display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid #e0e0e0}
+  .modal-header h3 {margin:0;font-size:1.1rem;color:#2d3e50}
+  .close {color:#aaa;font-size:28px;font-weight:bold;cursor:pointer;line-height:1}
+  .close:hover {color:#000}
+  .modal-body .form-group {margin-bottom:16px}
+  .modal-body label {display:block;margin-bottom:6px;font-size:.85rem;font-weight:600;color:#37474f}
+  .modal-body input {width:100%;padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px}
+  .modal-footer {display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:15px;border-top:2px solid #e0e0e0}
+  .btn {padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:.85rem}
+  .btn-primary {background:#2196F3;color:white}
+  .btn-primary:hover {background:#1976D2}
+  .btn-secondary {background:#757575;color:white}
+  .btn-secondary:hover {background:#616161}
   /* Badge style for display (use in tables) */
   .plate-badge {display:inline-flex;align-items:center;gap:4px;background:#111;color:#fff;padding:6px 10px;border-radius:8px;border:2px solid #ffd54f;font-weight:700;letter-spacing:.5px}
   .plate-badge .ir-flag {background:#d32f2f;width:4px;height:16px;border-radius:2px;margin-right:4px}
@@ -45,15 +70,6 @@
     {% endif %}
     {% if form.purchase_order.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.purchase_order.errors|join:'، ' }}</div>{% endif %}
     <small style="font-size:.65rem;color:#666;margin-top:2px">انتخاب سفارش خرید که در وضعیت "در انتظار تعریف حمل" یا بعد از آن است</small>
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.transport_type %}
-  <div class="form-group">
-    <label>{{ form.transport_type.label }} <span style="color:#d32f2f">*</span></label>
-    {{ form.transport_type }}
-    {% if form.transport_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.transport_type.errors|join:'، ' }}</div>{% endif %}
-    <small style="font-size:.65rem;color:#666;margin-top:2px">دیفالت: ورودی در تامین</small>
   </div>
   {% endif %}
   
@@ -94,32 +110,65 @@
   {% endif %}
   
   {% if accessible_transport_fields.plate_number %}
-    <div class="form-group" style="order:2">
-      <label>{{ form.plate_number.label }}</label>
-      <!-- Segmented license plate input -->
-      <div class="plate-input">
-        <div class="plate-seg">
-          <input type="text" id="plate-first" class="form-control seg-5" maxlength="5" placeholder="12345" inputmode="numeric" pattern="\d*">
-          <span class="dash">|</span>
-          <input type="text" id="plate-letter" class="form-control seg-letter" maxlength="2" placeholder="الف" dir="rtl">
-          <span class="dash">|</span>
-          <input type="text" id="plate-last" class="form-control seg-2" maxlength="2" placeholder="67" inputmode="numeric" pattern="\d*">
-        </div>
+  <div class="form-group">
+    <label>{{ form.plate_number.label }}</label>
+    <!-- Segmented license plate input -->
+    <div class="plate-input" style="justify-content:center;margin:0 auto">
+      <div class="plate-seg">
+        <input type="text" id="plate-first" class="form-control seg-5" maxlength="5" placeholder="12345" inputmode="numeric" pattern="\d*">
+        <span class="dash">|</span>
+        <input type="text" id="plate-letter" class="form-control seg-letter" maxlength="2" placeholder="الف" dir="rtl">
+        <span class="dash">|</span>
+        <input type="text" id="plate-last" class="form-control seg-2" maxlength="2" placeholder="67" inputmode="numeric" pattern="\d*">
       </div>
-      <input type="hidden" id="id_plate_number" name="plate_number">
-      <div class="plate-helper">الگو: 12345 | الف | 67</div>
-      {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
     </div>
-    {% endif %}
+    <input type="hidden" id="id_plate_number" name="plate_number">
+    <div class="plate-helper" style="text-align:center">الگو: 12345 | الف | 67</div>
+    {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem;text-align:center">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
+  </div>
+  {% endif %}
   
   {% if accessible_transport_fields.driver %}
   <div class="form-group">
     <label>{{ form.driver.label }}</label>
-    {{ form.driver }}
-    {% if form.driver.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver.errors|join:'، ' }}</div>{% endif %}
-    <small style="font-size:.65rem;color:#666;margin-top:2px">انتخاب راننده از لیست اشخاص</small>
+    <div class="driver-autocomplete-wrapper">
+      <input type="text" id="driver-autocomplete" class="driver-autocomplete-input" placeholder="جستجوی راننده (نام، تلفن یا کد ملی)..." autocomplete="off">
+      {{ form.driver }}
+      <div id="driver-suggestions" class="suggestions-container"></div>
+    </div>
+    <button type="button" class="add-driver-btn" onclick="openAddDriverModal()">+ افزودن راننده جدید</button>
+    {% if form.driver.errors %}<div style="color:#d32f2f;font-size:.65rem;margin-top:4px">{{ form.driver.errors|join:'، ' }}</div>{% endif %}
+    <small style="font-size:.65rem;color:#666;margin-top:2px">جستجو کنید یا راننده جدید اضافه کنید</small>
   </div>
   {% endif %}
+  
+  <!-- Modal برای افزودن راننده جدید -->
+  <div id="addDriverModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>افزودن راننده جدید</h3>
+        <span class="close" onclick="closeAddDriverModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>نام راننده <span style="color:#d32f2f">*</span></label>
+          <input type="text" id="new-driver-name" placeholder="نام و نام خانوادگی">
+        </div>
+        <div class="form-group">
+          <label>شماره تلفن <span style="color:#d32f2f">*</span></label>
+          <input type="text" id="new-driver-phone" placeholder="09123456789">
+        </div>
+        <div class="form-group">
+          <label>کد ملی</label>
+          <input type="text" id="new-driver-national-id" placeholder="کد ملی 10 رقمی">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="closeAddDriverModal()">انصراف</button>
+        <button type="button" class="btn btn-primary" onclick="saveNewDriver()">ذخیره</button>
+      </div>
+    </div>
+  </div>
   
   <div class="section-divider"></div>
   <div class="section-title">اطلاعات کرایه (اختیاری)</div>
@@ -201,57 +250,6 @@
   </div>
   {% endif %}
   
-  {% if accessible_transport_fields.actual_arrival_date %}
-  <div class="form-group">
-    <label>{{ form.actual_arrival_date.label }}</label>
-    {{ form.actual_arrival_date }}
-    {% if form.actual_arrival_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.actual_arrival_date.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.loading_date %}
-  <div class="form-group">
-    <label>{{ form.loading_date.label }}</label>
-    {{ form.loading_date }}
-    {% if form.loading_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.loading_date.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.delivery_date %}
-  <div class="form-group">
-    <label>{{ form.delivery_date.label }}</label>
-    {{ form.delivery_date }}
-    {% if form.delivery_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.delivery_date.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  <div class="section-divider"></div>
-  <div class="section-title">اطلاعات وزنی (اختیاری)</div>
-  
-  {% if accessible_transport_fields.gross_weight %}
-  <div class="form-group">
-    <label>{{ form.gross_weight.label }}</label>
-    {{ form.gross_weight }}
-    {% if form.gross_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.gross_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.tare_weight %}
-  <div class="form-group">
-    <label>{{ form.tare_weight.label }}</label>
-    {{ form.tare_weight }}
-    {% if form.tare_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.tare_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.net_weight %}
-  <div class="form-group">
-    <label>{{ form.net_weight.label }}</label>
-    {{ form.net_weight }}
-    {% if form.net_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.net_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
   <div class="section-divider"></div>
   <div class="section-title">سایر اطلاعات (اختیاری)</div>
   
@@ -300,9 +298,9 @@ document.addEventListener('DOMContentLoaded', function() {
               orderInfoDiv.id = 'order-info-display';
               orderInfoDiv.style.cssText = 'grid-column:1/-1;background:#f5f5f5;padding:12px;border-radius:8px;margin-top:8px;border-right:4px solid var(--primary-green)';
               orderInfoDiv.innerHTML = '<div style="font-weight:600;margin-bottom:8px;color:#37474f">اطلاعات سفارش خرید:</div><div style="font-size:.75rem;color:#546e7a" id="order-info-content"></div>';
-              // Insert after transport_type field
-              const transportTypeGroup = orderSelect.closest('.form-group').nextElementSibling;
-              transportTypeGroup.parentNode.insertBefore(orderInfoDiv, transportTypeGroup.nextSibling);
+              // Insert after purchase_order field
+              const purchaseOrderGroup = orderSelect.closest('.form-group');
+              purchaseOrderGroup.parentNode.insertBefore(orderInfoDiv, purchaseOrderGroup.nextSibling);
             }
             
             const orderInfoContent = document.getElementById('order-info-content');
@@ -324,6 +322,83 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
   {% endif %}
+  
+  // Driver autocomplete
+  const driverInput = document.getElementById('driver-autocomplete');
+  const driverIdInput = document.getElementById('id_driver');
+  const driverSuggestions = document.getElementById('driver-suggestions');
+  let driverSearchTimeout;
+  let driverSuggestionsList = [];
+  
+  if (driverInput) {
+    driverInput.addEventListener('input', function() {
+      const query = this.value.trim();
+      
+      clearTimeout(driverSearchTimeout);
+      
+      if (query.length < 2) {
+        driverSuggestions.style.display = 'none';
+        driverSuggestionsList = [];
+        if (driverIdInput) driverIdInput.value = '';
+        return;
+      }
+      
+      driverSearchTimeout = setTimeout(function() {
+        fetch('{% url "supply:driver_search_api" %}?q=' + encodeURIComponent(query))
+          .then(response => response.json())
+          .then(data => {
+            driverSuggestionsList = data.results || [];
+            displayDriverSuggestions();
+          })
+          .catch(error => {
+            console.error('خطا در جستجوی راننده:', error);
+          });
+      }, 300);
+    });
+    
+    function displayDriverSuggestions() {
+      driverSuggestions.innerHTML = '';
+      
+      if (driverSuggestionsList.length === 0) {
+        driverSuggestions.style.display = 'none';
+        return;
+      }
+      
+      driverSuggestionsList.forEach(function(item) {
+        const suggestionItem = document.createElement('div');
+        suggestionItem.className = 'suggestion-item';
+        suggestionItem.textContent = item.text;
+        suggestionItem.addEventListener('click', function() {
+          driverInput.value = item.text;
+          if (driverIdInput) {
+            driverIdInput.value = item.id;
+          }
+          driverSuggestions.style.display = 'none';
+        });
+        driverSuggestions.appendChild(suggestionItem);
+      });
+      
+      driverSuggestions.style.display = 'block';
+    }
+    
+    // بستن پیشنهادات با کلیک خارج
+    document.addEventListener('click', function(e) {
+      if (!driverInput.contains(e.target) && !driverSuggestions.contains(e.target)) {
+        driverSuggestions.style.display = 'none';
+      }
+    });
+    
+    // اگر راننده قبلاً انتخاب شده، نمایش بده
+    {% if form.driver.value %}
+    fetch('{% url "supply:driver_search_api" %}?id={{ form.driver.value }}')
+      .then(response => response.json())
+      .then(data => {
+        if (data.results && data.results.length > 0) {
+          driverInput.value = data.results[0].text;
+        }
+      });
+    {% endif %}
+  }
 });
 // Plate formatting and serialization
 function normalizeDigits(str){
@@ -361,5 +436,92 @@ document.addEventListener('submit', function(e){
   }
   hidden.value = `${first}-${letter}-${last}`;
 }, true);
+
+// Modal functions for adding new driver
+function openAddDriverModal() {
+  document.getElementById('addDriverModal').style.display = 'block';
+  document.getElementById('new-driver-name').value = '';
+  document.getElementById('new-driver-phone').value = '';
+  document.getElementById('new-driver-national-id').value = '';
+}
+
+function closeAddDriverModal() {
+  document.getElementById('addDriverModal').style.display = 'none';
+}
+
+function saveNewDriver() {
+  const name = document.getElementById('new-driver-name').value.trim();
+  const phone = document.getElementById('new-driver-phone').value.trim();
+  const nationalId = document.getElementById('new-driver-national-id').value.trim();
+  
+  if (!name || !phone) {
+    alert('لطفاً نام و شماره تلفن را وارد کنید.');
+    return;
+  }
+  
+  const formData = new FormData();
+  formData.append('name', name);
+  formData.append('phone', phone);
+  if (nationalId) {
+    formData.append('national_id', nationalId);
+  }
+  
+  fetch('{% url "supply:create_driver_api" %}', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // پر کردن فیلد autocomplete با راننده جدید
+      const driverInput = document.getElementById('driver-autocomplete');
+      const driverIdInput = document.getElementById('id_driver');
+      
+      if (driverInput) {
+        driverInput.value = data.driver.text;
+      }
+      if (driverIdInput) {
+        driverIdInput.value = data.driver.id;
+      }
+      
+      closeAddDriverModal();
+      alert('راننده با موفقیت اضافه شد.');
+    } else {
+      if (data.driver) {
+        // راننده قبلاً وجود دارد
+        if (confirm('راننده با این اطلاعات قبلاً ثبت شده است. آیا می‌خواهید از راننده موجود استفاده کنید؟')) {
+          const driverInput = document.getElementById('driver-autocomplete');
+          const driverIdInput = document.getElementById('id_driver');
+          
+          if (driverInput) {
+            driverInput.value = `${data.driver.name} - ${data.driver.phone}`;
+          }
+          if (driverIdInput) {
+            driverIdInput.value = data.driver.id;
+          }
+          
+          closeAddDriverModal();
+        }
+      } else {
+        alert('خطا: ' + (data.error || 'خطا در ایجاد راننده'));
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('خطا در ارتباط با سرور');
+  });
+}
+
+// بستن modal با کلیک خارج از آن
+window.onclick = function(event) {
+  const modal = document.getElementById('addDriverModal');
+  if (event.target == modal) {
+    closeAddDriverModal();
+  }
+}
 </script>
 {% endblock %}
