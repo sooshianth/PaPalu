@@ -16,14 +16,14 @@ from core.logging_levels import *
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
-from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+from core.TransportFolder.TransportModel import Transport
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from django.contrib.auth import get_user_model
-from supply.tables import PurchaseTransportTable
+from supply.tables import TransportTable
 import django_tables2 as tables
 
 User = get_user_model()
@@ -32,63 +32,63 @@ User = get_user_model()
 # ==================== Field Access Helper Functions ====================
 
 def get_accessible_purchase_transport_fields(user):
-    """Check field access for PurchaseTransport model (view permission)"""
+    """Check field access for Transport model (view permission)"""
     return {
-        'transport_number': user_can_access_field(user, PurchaseTransport, 'transport_number', 'view'),
-        'purchase_order': user_can_access_field(user, PurchaseTransport, 'purchase_order', 'view'),
-        'status': user_can_access_field(user, PurchaseTransport, 'status', 'view'),
-        'transport_type': user_can_access_field(user, PurchaseTransport, 'transport_type', 'view'),
-        'vehicle_type': user_can_access_field(user, PurchaseTransport, 'vehicle_type', 'view'),
-        'plate_number': user_can_access_field(user, PurchaseTransport, 'plate_number', 'view'),
-        'driver': user_can_access_field(user, PurchaseTransport, 'driver', 'view'),
-        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'view'),
-        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'view'),
-        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'view'),
-        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'view'),
-        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'view'),
-        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'view'),
-        'driver_account_number': user_can_access_field(user, PurchaseTransport, 'driver_account_number', 'view'),
-        'driver_sheba_number': user_can_access_field(user, PurchaseTransport, 'driver_sheba_number', 'view'),
-        'expected_arrival_date': user_can_access_field(user, PurchaseTransport, 'expected_arrival_date', 'view'),
-        'actual_arrival_date': user_can_access_field(user, PurchaseTransport, 'actual_arrival_date', 'view'),
-        'loading_date': user_can_access_field(user, PurchaseTransport, 'loading_date', 'view'),
-        'delivery_date': user_can_access_field(user, PurchaseTransport, 'delivery_date', 'view'),
-        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'view'),
-        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'view'),
-        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'view'),
-        'waybill_number': user_can_access_field(user, PurchaseTransport, 'waybill_number', 'view'),
-        'notes': user_can_access_field(user, PurchaseTransport, 'notes', 'view'),
-        'created_at': user_can_access_field(user, PurchaseTransport, 'created_at', 'view'),
+        'transport_number': user_can_access_field(user, Transport, 'transport_number', 'view'),
+        'purchase_order': user_can_access_field(user, Transport, 'purchase_order', 'view'),
+        'status': user_can_access_field(user, Transport, 'status', 'view'),
+        'transport_type': user_can_access_field(user, Transport, 'transport_type', 'view'),
+        'vehicle_type': user_can_access_field(user, Transport, 'vehicle_type', 'view'),
+        'plate_number': user_can_access_field(user, Transport, 'plate_number', 'view'),
+        'driver': user_can_access_field(user, Transport, 'driver', 'view'),
+        'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'view'),
+        'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'view'),
+        'total_freight': user_can_access_field(user, Transport, 'total_freight', 'view'),
+        'discount': user_can_access_field(user, Transport, 'discount', 'view'),
+        'surplus': user_can_access_field(user, Transport, 'surplus', 'view'),
+        'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'view'),
+        'driver_account_number': user_can_access_field(user, Transport, 'driver_account_number', 'view'),
+        'driver_sheba_number': user_can_access_field(user, Transport, 'driver_sheba_number', 'view'),
+        'expected_arrival_date': user_can_access_field(user, Transport, 'expected_arrival_date', 'view'),
+        'actual_arrival_date': user_can_access_field(user, Transport, 'actual_arrival_date', 'view'),
+        'loading_date': user_can_access_field(user, Transport, 'loading_date', 'view'),
+        'delivery_date': user_can_access_field(user, Transport, 'delivery_date', 'view'),
+        'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'view'),
+        'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'view'),
+        'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
+        'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'view'),
+        'notes': user_can_access_field(user, Transport, 'notes', 'view'),
+        'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
     }
 
 
 def get_accessible_purchase_transport_fields_edit(user):
-    """Check field access for PurchaseTransport model (edit permission)"""
+    """Check field access for Transport model (edit permission)"""
     return {
-        'transport_number': user_can_access_field(user, PurchaseTransport, 'transport_number', 'edit'),
-        'purchase_order': user_can_access_field(user, PurchaseTransport, 'purchase_order', 'edit'),
-        'status': user_can_access_field(user, PurchaseTransport, 'status', 'edit'),
-        'transport_type': user_can_access_field(user, PurchaseTransport, 'transport_type', 'edit'),
-        'vehicle_type': user_can_access_field(user, PurchaseTransport, 'vehicle_type', 'edit'),
-        'plate_number': user_can_access_field(user, PurchaseTransport, 'plate_number', 'edit'),
-        'driver': user_can_access_field(user, PurchaseTransport, 'driver', 'edit'),
-        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'edit'),
-        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'edit'),
-        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'edit'),
-        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'edit'),
-        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'edit'),
-        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'edit'),
-        'driver_account_number': user_can_access_field(user, PurchaseTransport, 'driver_account_number', 'edit'),
-        'driver_sheba_number': user_can_access_field(user, PurchaseTransport, 'driver_sheba_number', 'edit'),
-        'expected_arrival_date': user_can_access_field(user, PurchaseTransport, 'expected_arrival_date', 'edit'),
-        'actual_arrival_date': user_can_access_field(user, PurchaseTransport, 'actual_arrival_date', 'edit'),
-        'loading_date': user_can_access_field(user, PurchaseTransport, 'loading_date', 'edit'),
-        'delivery_date': user_can_access_field(user, PurchaseTransport, 'delivery_date', 'edit'),
-        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'edit'),
-        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'edit'),
-        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'edit'),
-        'waybill_number': user_can_access_field(user, PurchaseTransport, 'waybill_number', 'edit'),
-        'notes': user_can_access_field(user, PurchaseTransport, 'notes', 'edit'),
+        'transport_number': user_can_access_field(user, Transport, 'transport_number', 'edit'),
+        'purchase_order': user_can_access_field(user, Transport, 'purchase_order', 'edit'),
+        'status': user_can_access_field(user, Transport, 'status', 'edit'),
+        'transport_type': user_can_access_field(user, Transport, 'transport_type', 'edit'),
+        'vehicle_type': user_can_access_field(user, Transport, 'vehicle_type', 'edit'),
+        'plate_number': user_can_access_field(user, Transport, 'plate_number', 'edit'),
+        'driver': user_can_access_field(user, Transport, 'driver', 'edit'),
+        'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'edit'),
+        'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'edit'),
+        'total_freight': user_can_access_field(user, Transport, 'total_freight', 'edit'),
+        'discount': user_can_access_field(user, Transport, 'discount', 'edit'),
+        'surplus': user_can_access_field(user, Transport, 'surplus', 'edit'),
+        'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'edit'),
+        'driver_account_number': user_can_access_field(user, Transport, 'driver_account_number', 'edit'),
+        'driver_sheba_number': user_can_access_field(user, Transport, 'driver_sheba_number', 'edit'),
+        'expected_arrival_date': user_can_access_field(user, Transport, 'expected_arrival_date', 'edit'),
+        'actual_arrival_date': user_can_access_field(user, Transport, 'actual_arrival_date', 'edit'),
+        'loading_date': user_can_access_field(user, Transport, 'loading_date', 'edit'),
+        'delivery_date': user_can_access_field(user, Transport, 'delivery_date', 'edit'),
+        'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'edit'),
+        'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'edit'),
+        'net_weight': user_can_access_field(user, Transport, 'net_weight', 'edit'),
+        'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'edit'),
+        'notes': user_can_access_field(user, Transport, 'notes', 'edit'),
     }
 
 
@@ -186,7 +186,7 @@ class CarEntranceDriverForm(forms.Form):
     )
 
 
-class CarEntranceTable(PurchaseTransportTable):
+class CarEntranceTable(TransportTable):
     raw_materials = tables.Column(
         verbose_name='نام مواد اولیه',
         empty_values=(),
@@ -201,7 +201,7 @@ class CarEntranceTable(PurchaseTransportTable):
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         if accessible_fields:
-            # Handle columns from parent table (already initialized by PurchaseTransportTable)
+            # Handle columns from parent table (already initialized by TransportTable)
             # Add raw_materials visibility based on related fields
             if hasattr(self.base_columns, 'raw_materials'):
                 # raw_materials column shows purchase_order.materials.raw_material.name
@@ -226,7 +226,7 @@ class CarEntranceTable(PurchaseTransportTable):
             register_url
         )
     
-    class Meta(PurchaseTransportTable.Meta):
+    class Meta(TransportTable.Meta):
         sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
         fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
@@ -251,8 +251,8 @@ def car_entrance_list_view(request):
         # نمایش فقط حمل‌هایی که در وضعیت "در انتظار ورود خودرو" هستند
         # این حمل‌ها باید دارای اطلاعات پایه (نوع ماشین، نوع حمل) باشند
         # ولی فاقد داده‌های کامل راننده باشند
-        transports = PurchaseTransport.objects.filter(
-            status=PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY,
+        transports = Transport.objects.filter(
+            status=Transport.STATUS_AWAITING_VEHICLE_ENTRY,
             transport_type='inbound'
         ).select_related('purchase_order', 'driver', 'purchase_order__supplier').order_by('-created_at')
         bug_logger.debug(f"تعداد حمل‌های در انتظار ورود خودرو: {transports.count()}")
@@ -271,7 +271,7 @@ def car_entrance_list_view(request):
         bug_logger.error(f"Car entrance list error: {e}")
         messages.error(request, 'خطا در بارگذاری لیست ورود خودروها.')
         return render(request, 'supply_carentrance_list.html', {
-            'table': PurchaseTransportTable([], prefix='car-'),
+            'table': TransportTable([], prefix='car-'),
             'accessible_transport_fields': accessible_transport_fields,
             'accessible_po_fields': accessible_po_fields,
             'accessible_raw_material_fields': accessible_raw_material_fields,
@@ -295,9 +295,9 @@ def register_driver_for_transport_view(request, transport_number):
     accessible_raw_material_fields = get_accessible_raw_material_fields_for_carentrance(request.user)
     accessible_person_fields = get_accessible_person_fields_edit_for_carentrance(request.user)
     
-    pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
+    pt = get_object_or_404(Transport, transport_number=transport_number)
 
-    if pt.status != PurchaseTransport.STATUS_AWAITING_VEHICLE_ENTRY:
+    if pt.status != Transport.STATUS_AWAITING_VEHICLE_ENTRY:
         audit_logger.activity(f"تلاش برای ثبت راننده برای حمل {transport_number} با وضعیت نامعتبر: {pt.status}")
         messages.error(request, 'این حمل در وضعیت قابل ثبت راننده نیست.')
         return redirect(reverse('supply:carentrance'))
@@ -347,7 +347,7 @@ def register_driver_for_transport_view(request, transport_number):
                     # تغییر وضعیت به "در انتظار تخلیه"
                     try:
                         pt.transition(
-                            PurchaseTransport.STATUS_AWAITING_UNLOADING,
+                            Transport.STATUS_AWAITING_UNLOADING,
                             user=request.user,
                             note=f'ثبت ورود خودرو توسط نگهبان - راننده: {driver.name} - پلاک: {pt.plate_number}'
                         )
@@ -419,7 +419,7 @@ def driver_lookup_api(request):
             return JsonResponse({'found': False})
         
         # جستجوی آخرین حمل راننده برای دریافت account و sheba
-        last_transport = PurchaseTransport.objects.filter(
+        last_transport = Transport.objects.filter(
             driver=driver
         ).exclude(
             driver_account_number__isnull=True,
@@ -442,7 +442,7 @@ def driver_lookup_api(request):
         return JsonResponse({'error': 'lookup_failed'}, status=500)
 
 
-class CarExitTable(PurchaseTransportTable):
+class CarExitTable(TransportTable):
     """جدول برای خودروهای در انتظار تخلیه"""
     raw_materials = tables.Column(
         verbose_name='نام مواد اولیه',
@@ -473,7 +473,7 @@ class CarExitTable(PurchaseTransportTable):
     def render_actions(self, record):
         """نمایش دکمه خروج ماشین - فقط برای حمل‌های تکمیل شده فعال است"""
         # خروج خودرو فقط بعد از تکمیل تحویل انبار (وضعیت completed) فعال است
-        if record.status == PurchaseTransport.STATUS_COMPLETED:
+        if record.status == Transport.STATUS_COMPLETED:
             exit_url = reverse('supply:carexit_mark_exited', args=[record.transport_number])
             return format_html(
                 '<a href="{}" class="btn btn-warning btn-sm">خروج ماشین</a>',
@@ -484,7 +484,7 @@ class CarExitTable(PurchaseTransportTable):
                 '<span class="badge badge-secondary" style="font-size:0.7rem">در انتظار تحویل انبار</span>'
             )
     
-    class Meta(PurchaseTransportTable.Meta):
+    class Meta(TransportTable.Meta):
         sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
         fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
@@ -508,8 +508,8 @@ def car_exit_list_view(request):
     try:
         # نمایش فقط حمل‌هایی که در وضعیت "در انتظار تخلیه" هستند
         # این حمل‌ها پس از ثبت ورود خودرو وارد این لیست می‌شوند
-        transports = PurchaseTransport.objects.filter(
-            status=PurchaseTransport.STATUS_AWAITING_UNLOADING,
+        transports = Transport.objects.filter(
+            status=Transport.STATUS_AWAITING_UNLOADING,
             transport_type='inbound'
         ).select_related('purchase_order', 'driver', 'purchase_order__supplier').order_by('-created_at')
         
@@ -542,10 +542,10 @@ def car_exit_list_view(request):
 def mark_vehicle_exited_view(request, transport_number):
     """ثبت خروج خودرو از کارخانه - فقط برای حمل‌های تکمیل شده"""
     audit_logger.info(f"ثبت خروج خودرو برای حمل {transport_number}")
-    pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
+    pt = get_object_or_404(Transport, transport_number=transport_number)
     
     # فقط حمل‌های تکمیل شده می‌توانند خارج شوند
-    if pt.status != PurchaseTransport.STATUS_COMPLETED:
+    if pt.status != Transport.STATUS_COMPLETED:
         audit_logger.activity(f"تلاش برای خروج خودرو با وضعیت نامعتبر - حمل {transport_number}: وضعیت {pt.status}")
         messages.error(request, 'این خودرو هنوز آماده خروج نیست. باید ابتدا فرآیند تحویل انبار تکمیل شود.')
         return redirect(reverse('supply:carexit'))

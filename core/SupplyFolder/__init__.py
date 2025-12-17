@@ -1,5 +1,4 @@
 from .RawMaterialPriceInquiryModel import RawMaterialPriceInquiry
-from .PurchaseTransportModel import PurchaseTransport, PurchaseTransportStatusLog
 # from .ProcurementPurchaseOrderModel import (
 #     ProcurementPurchaseOrder,
 #     ProcurementPurchaseOrderMaterial,
@@ -8,8 +7,6 @@ from .PurchaseTransportModel import PurchaseTransport, PurchaseTransportStatusLo
 
 __all__ = [
     'RawMaterialPriceInquiry',
-    'PurchaseTransport',
-    'PurchaseTransportStatusLog',
     'ProcurementPurchaseOrder',
     'ProcurementPurchaseOrderMaterial',
     'ProcurementPurchaseOrderStatusLog',

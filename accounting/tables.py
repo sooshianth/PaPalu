@@ -1,7 +1,7 @@
 import django_tables2 as tables
 from django.utils.html import format_html
 from django.urls import reverse
-from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+from core.TransportFolder.TransportModel import Transport
 
 
 class UploadFarePaymentDocsTable(tables.Table):
@@ -75,7 +75,7 @@ class UploadFarePaymentDocsTable(tables.Table):
     )
     
     class Meta:
-        model = PurchaseTransport
+        model = Transport
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('transport_number', 'purchase_order', 'raw_materials', 'net_weight', 'freight_payment', 'status', 'actions')
         attrs = {

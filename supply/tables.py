@@ -475,7 +475,7 @@ class AttachmentTable(tables.Table):
         return value or '—'
 
 
-class PurchaseTransportTable(tables.Table):
+class TransportTable(tables.Table):
     """جدول حمل‌های خرید با استفاده از django-tables2"""
     
     transport_number = tables.Column(
@@ -490,7 +490,7 @@ class PurchaseTransportTable(tables.Table):
     
     purchase_order = tables.Column(
         verbose_name='شماره سفارش',
-        accessor='purchase_order.order_number',
+        accessor='allocation.order.order_number',
         orderable=True,
         visible=False,
         attrs={
@@ -501,7 +501,7 @@ class PurchaseTransportTable(tables.Table):
     
     purchase_order_status = tables.Column(
         verbose_name='وضعیت سفارش',
-        accessor='purchase_order.status',
+        accessor='allocation.order.status',
         orderable=False,
         empty_values=(),
         visible=False,
@@ -601,8 +601,8 @@ class PurchaseTransportTable(tables.Table):
             self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
-        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
-        model = PurchaseTransport
+        from core.TransportFolder.TransportModel import Transport
+        model = Transport
         template_name = 'django_tables2/bootstrap4.html'
         # فیلدهای مورد نیاز برای لیست حمل‌ها
         fields = ('purchase_order', 'created_at', 'transport_type', 'vehicle_type', 'status', 'actions')
@@ -618,12 +618,12 @@ class PurchaseTransportTable(tables.Table):
     
     def render_purchase_order_status(self, record):
         """نمایش وضعیت سفارش خرید"""
-        if record.purchase_order:
-            status_class = f'status-{record.purchase_order.status}'
+        if record.allocation and record.allocation.order:
+            status_class = f'status-{record.allocation.order.status}'
             return format_html(
                 '<span class="status-badge {}">{}</span>',
                 status_class,
-                record.purchase_order.get_status_display()
+                record.allocation.order.get_status_display()
             )
         return '—'
     
@@ -672,8 +672,8 @@ class PurchaseTransportTable(tables.Table):
         )
 
 
-class PurchaseTransportStatusLogTable(tables.Table):
-    """جدول تاریخچه وضعیت حمل خرید"""
+class TransportStatusLogTable(tables.Table):
+    """جدول تاریخچه وضعیت حمل - بدون مدل (برای سازگاری)"""
     
     old_status = tables.Column(verbose_name='از وضعیت', orderable=False)
     new_status = tables.Column(verbose_name='به وضعیت', orderable=False)
@@ -682,8 +682,6 @@ class PurchaseTransportStatusLogTable(tables.Table):
     note = tables.Column(verbose_name='یادداشت', orderable=False)
     
     class Meta:
-        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransportStatusLog
-        model = PurchaseTransportStatusLog
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('old_status', 'new_status', 'changed_at', 'changed_by_name', 'note')
         attrs = {
@@ -698,7 +696,7 @@ class PurchaseTransportStatusLogTable(tables.Table):
         return value or '—'
     
     def render_changed_by_name(self, record):
-        if record.changed_by:
+        if hasattr(record, 'changed_by') and record.changed_by:
             return record.changed_by.get_full_name() or record.changed_by.username
         return '—'
     
@@ -839,8 +837,8 @@ class GuardExitTable(tables.Table):
         )
     
     class Meta:
-        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
-        model = PurchaseTransport
+        from core.TransportFolder.TransportModel import Transport
+        model = Transport
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('transport_number', 'purchase_order', 'plate_number', 'vehicle_type', 'net_weight', 'actions')
         attrs = {
@@ -1145,8 +1143,8 @@ class LogisticConfirmationTable(tables.Table):
                 self.base_columns['status'].visible = accessible_fields.get('status', False)
     
     class Meta:
-        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
-        model = PurchaseTransport
+        from core.TransportFolder.TransportModel import Transport
+        model = Transport
         template_name = 'django_tables2/bootstrap4.html'
         # فیلدهای مورد نیاز برای لیست حمل‌های در انتظار تسویه
         fields = ('purchase_order', 'raw_materials', 'plate_number', 'net_weight', 'delivery_date', 'status', 'actions')
@@ -1305,8 +1303,8 @@ class UploadFarePaymentDocsTable(tables.Table):
     )
     
     class Meta:
-        from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
-        model = PurchaseTransport
+        from core.TransportFolder.TransportModel import Transport
+        model = Transport
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('transport_number', 'purchase_order', 'raw_materials', 'net_weight', 'freight_payment', 'status', 'actions')
         attrs = {

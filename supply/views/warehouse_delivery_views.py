@@ -13,7 +13,7 @@ from core.logging_levels import *
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
-from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+from core.TransportFolder.TransportModel import Transport
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 
@@ -21,7 +21,7 @@ from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from django.contrib.auth import get_user_model
-from supply.tables import PurchaseTransportTable
+from supply.tables import TransportTable
 import django_tables2 as tables
 from django.utils.html import format_html
 
@@ -31,41 +31,41 @@ User = get_user_model()
 # ==================== Field Access Helper Functions ====================
 
 def get_accessible_purchase_transport_fields(user):
-    """Check field access for PurchaseTransport model (view permission)"""
+    """Check field access for Transport model (view permission)"""
     return {
-        'transport_number': user_can_access_field(user, PurchaseTransport, 'transport_number', 'view'),
-        'purchase_order': user_can_access_field(user, PurchaseTransport, 'purchase_order', 'view'),
-        'status': user_can_access_field(user, PurchaseTransport, 'status', 'view'),
-        'vehicle_type': user_can_access_field(user, PurchaseTransport, 'vehicle_type', 'view'),
-        'plate_number': user_can_access_field(user, PurchaseTransport, 'plate_number', 'view'),
-        'driver': user_can_access_field(user, PurchaseTransport, 'driver', 'view'),
-        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'view'),
-        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'view'),
-        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'view'),
-        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'view'),
-        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'view'),
-        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'view'),
-        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'view'),
-        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'view'),
-        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'view'),
-        'loading_date': user_can_access_field(user, PurchaseTransport, 'loading_date', 'view'),
-        'created_at': user_can_access_field(user, PurchaseTransport, 'created_at', 'view'),
+        'transport_number': user_can_access_field(user, Transport, 'transport_number', 'view'),
+        'purchase_order': user_can_access_field(user, Transport, 'purchase_order', 'view'),
+        'status': user_can_access_field(user, Transport, 'status', 'view'),
+        'vehicle_type': user_can_access_field(user, Transport, 'vehicle_type', 'view'),
+        'plate_number': user_can_access_field(user, Transport, 'plate_number', 'view'),
+        'driver': user_can_access_field(user, Transport, 'driver', 'view'),
+        'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'view'),
+        'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'view'),
+        'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
+        'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'view'),
+        'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'view'),
+        'total_freight': user_can_access_field(user, Transport, 'total_freight', 'view'),
+        'discount': user_can_access_field(user, Transport, 'discount', 'view'),
+        'surplus': user_can_access_field(user, Transport, 'surplus', 'view'),
+        'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'view'),
+        'loading_date': user_can_access_field(user, Transport, 'loading_date', 'view'),
+        'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
     }
 
 
 def get_accessible_purchase_transport_fields_edit(user):
-    """Check field access for PurchaseTransport model (edit permission)"""
+    """Check field access for Transport model (edit permission)"""
     return {
-        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'edit'),
-        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'edit'),
-        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'edit'),
-        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'edit'),
-        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'edit'),
-        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'edit'),
-        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'edit'),
-        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'edit'),
-        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'edit'),
-        'loading_date': user_can_access_field(user, PurchaseTransport, 'loading_date', 'edit'),
+        'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'edit'),
+        'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'edit'),
+        'net_weight': user_can_access_field(user, Transport, 'net_weight', 'edit'),
+        'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'edit'),
+        'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'edit'),
+        'total_freight': user_can_access_field(user, Transport, 'total_freight', 'edit'),
+        'discount': user_can_access_field(user, Transport, 'discount', 'edit'),
+        'surplus': user_can_access_field(user, Transport, 'surplus', 'edit'),
+        'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'edit'),
+        'loading_date': user_can_access_field(user, Transport, 'loading_date', 'edit'),
     }
 
 
@@ -229,7 +229,7 @@ class WarehouseDeliveryForm(forms.Form):
         return cleaned_data
 
 
-class WarehouseDeliveryTable(PurchaseTransportTable):
+class WarehouseDeliveryTable(TransportTable):
     """جدول حمل‌های در انتظار تخلیه"""
     
     raw_materials = tables.Column(
@@ -268,7 +268,7 @@ class WarehouseDeliveryTable(PurchaseTransportTable):
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         if accessible_fields:
-            # Handle columns from parent table already initialized by PurchaseTransportTable
+            # Handle columns from parent table already initialized by TransportTable
             # Set visibility for custom columns based on related field access
             if hasattr(self.base_columns, 'raw_materials'):
                 self.base_columns['raw_materials'].visible = accessible_fields.get('purchase_order', False)
@@ -315,7 +315,7 @@ class WarehouseDeliveryTable(PurchaseTransportTable):
             detail_url
         )
     
-    class Meta(PurchaseTransportTable.Meta):
+    class Meta(TransportTable.Meta):
         sequence = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
 
 
@@ -338,15 +338,15 @@ def warehouse_delivery_list_view(request):
     
     try:
         # حمل‌های در وضعیت های قابل تحویل انبار (awaiting_unloading for warehouseman)
-        transports_unloading_qs = PurchaseTransport.objects.filter(
-            status=PurchaseTransport.STATUS_AWAITING_UNLOADING
+        transports_unloading_qs = Transport.objects.filter(
+            status=Transport.STATUS_AWAITING_UNLOADING
         ).select_related('purchase_order', 'driver').order_by('-created_at')
         
         bug_logger.debug(f"Found {transports_unloading_qs.count()} transports awaiting unloading")
         
         # حمل‌های در انتظار تایید خروج توسط نگهبان (awaiting_wh_reconciliation)
-        transports_guard_qs = PurchaseTransport.objects.filter(
-            status=PurchaseTransport.STATUS_AWAITING_WH_RECONCILIATION
+        transports_guard_qs = Transport.objects.filter(
+            status=Transport.STATUS_AWAITING_WH_RECONCILIATION
         ).select_related('purchase_order', 'driver').order_by('-created_at')
         
         bug_logger.debug(f"Found {transports_guard_qs.count()} transports awaiting guard reconciliation")
@@ -423,10 +423,10 @@ def warehouse_delivery_detail_view(request, transport_number):
     try:
         if transport_number and str(transport_number).isdigit():
             bug_logger.debug(f"Fetching transport by transport_id: {transport_number}")
-            pt = get_object_or_404(PurchaseTransport, transport_id=int(transport_number))
+            pt = get_object_or_404(Transport, transport_id=int(transport_number))
         else:
             bug_logger.debug(f"Fetching transport by transport_number: {transport_number}")
-            pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
+            pt = get_object_or_404(Transport, transport_number=transport_number)
         bug_logger.debug(f"Transport found - ID: {pt.transport_id}, Status: {pt.status}, Order: {pt.purchase_order.order_number if pt.purchase_order else 'N/A'}")
     except Exception as e:
         bug_logger.error(f"Warehouse delivery detail fetch error for identifier={transport_number}: {e}")
@@ -434,13 +434,13 @@ def warehouse_delivery_detail_view(request, transport_number):
         return redirect(reverse('supply:warehouse_delivery'))
     
     # Allow viewing in awaiting_unloading (for data entry) or awaiting_wh_reconciliation (read-only)
-    if pt.status not in [PurchaseTransport.STATUS_AWAITING_UNLOADING, PurchaseTransport.STATUS_AWAITING_WH_RECONCILIATION]:
+    if pt.status not in [Transport.STATUS_AWAITING_UNLOADING, Transport.STATUS_AWAITING_WH_RECONCILIATION]:
         audit_logger.activity(f"تلاش برای دسترسی به تخلیه با وضعیت نامعتبر - حمل {transport_number}: {pt.status}")
         messages.error(request, 'این حمل در وضعیت قابل مشاهده نیست.')
         return redirect(reverse('supply:warehouse_delivery'))
     
     # Only allow editing if status is awaiting_unloading
-    if pt.status != PurchaseTransport.STATUS_AWAITING_UNLOADING:
+    if pt.status != Transport.STATUS_AWAITING_UNLOADING:
         # Read-only mode for awaiting_wh_reconciliation
         bug_logger.debug(f"Loading read-only form for transport {transport_number} - status: {pt.status}")
         initial = {
@@ -521,7 +521,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # تغییر وضعیت به "در انتظار تطبیق انبار"
                     try:
                         pt.transition(
-                            PurchaseTransport.STATUS_AWAITING_WH_RECONCILIATION,
+                            Transport.STATUS_AWAITING_WH_RECONCILIATION,
                             user=request.user,
                             note=f'تکمیل تخلیه - وزن خالص: {net_weight} - انبار: {warehouse_id} - نوع کرایه: {data.get("freight_payment_type")}'
                         )
@@ -598,10 +598,10 @@ def guard_vehicle_exit_view(request, transport_number):
     try:
         if transport_number and str(transport_number).isdigit():
             bug_logger.debug(f"Guard fetching transport by transport_id: {transport_number}")
-            pt = get_object_or_404(PurchaseTransport, transport_id=int(transport_number))
+            pt = get_object_or_404(Transport, transport_id=int(transport_number))
         else:
             bug_logger.debug(f"Guard fetching transport by transport_number: {transport_number}")
-            pt = get_object_or_404(PurchaseTransport, transport_number=transport_number)
+            pt = get_object_or_404(Transport, transport_number=transport_number)
         bug_logger.debug(f"Guard access - Transport: {pt.transport_id}, Status: {pt.status}, Net weight: {pt.net_weight}")
     except Exception as e:
         bug_logger.error(f"Guard exit fetch error for identifier={transport_number}: {e}")
@@ -609,7 +609,7 @@ def guard_vehicle_exit_view(request, transport_number):
         return redirect(reverse('supply:warehouse_delivery'))
     
     # Check status - must be awaiting_wh_reconciliation (warehouseman completed)
-    if pt.status != PurchaseTransport.STATUS_AWAITING_WH_RECONCILIATION:
+    if pt.status != Transport.STATUS_AWAITING_WH_RECONCILIATION:
         audit_logger.activity(f"تلاش برای خروج خودرو با وضعیت نامعتبر - حمل {transport_number}: {pt.status}")
         messages.error(request, 'این حمل در وضعیت قابل خروج نیست. ابتدا باید اطلاعات تخلیه توسط انباردار تکمیل شود.')
         return redirect(reverse('supply:warehouse_delivery'))
@@ -622,7 +622,7 @@ def guard_vehicle_exit_view(request, transport_number):
                 # Transition to awaiting_settlement
                 bug_logger.debug(f"Transitioning transport {transport_number} to awaiting_settlement")
                 pt.transition(
-                    PurchaseTransport.STATUS_AWAITING_SETTLEMENT,
+                    Transport.STATUS_AWAITING_SETTLEMENT,
                     user=request.user,
                     note=f'تایید خروج خودرو توسط نگهبان - وزن خالص: {pt.net_weight}'
                 )

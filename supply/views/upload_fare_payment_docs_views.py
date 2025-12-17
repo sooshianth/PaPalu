@@ -10,7 +10,7 @@ from django.utils import timezone
 import logging
 from core.logging_levels import *
 
-from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+from core.TransportFolder.TransportModel import Transport
 from core.RBACModel.TaskPermission import TaskChoices
 from core.RBACModel.Roles import user_has_task
 from supply.tables import UploadFarePaymentDocsTable
@@ -23,7 +23,7 @@ class UploadFarePaymentDocForm(ModelForm):
     """فرم بارگذاری اسناد پرداخت کرایه"""
     
     class Meta:
-        model = PurchaseTransport
+        model = Transport
         fields = ['freight_payment_document']
         labels = {
             'freight_payment_document': 'سند پرداخت کرایه',
@@ -57,8 +57,8 @@ def upload_fare_payment_docs_list_view(request):
         # Include both awaiting_payment_doc (new workflow) and completed (legacy/backward compatibility)
         # that don't have payment documents uploaded yet
         from django.db.models import Q
-        transports = PurchaseTransport.objects.filter(
-            status__in=[PurchaseTransport.STATUS_AWAITING_PAYMENT_DOC, PurchaseTransport.STATUS_COMPLETED]
+        transports = Transport.objects.filter(
+            status__in=[Transport.STATUS_AWAITING_PAYMENT_DOC, Transport.STATUS_COMPLETED]
         ).filter(
             Q(freight_payment_document__isnull=True) | Q(freight_payment_document='')  # NULL or empty string
         ).select_related(
@@ -99,7 +99,7 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
     
     try:
         transport = get_object_or_404(
-            PurchaseTransport.objects.select_related(
+            Transport.objects.select_related(
                 'purchase_order',
                 'purchase_order__supplier',
                 'driver'
@@ -109,7 +109,7 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
         
         # Check if transport is in valid status (awaiting_payment_doc or completed for legacy)
         # and doesn't already have a document
-        if transport.status not in [PurchaseTransport.STATUS_AWAITING_PAYMENT_DOC, PurchaseTransport.STATUS_COMPLETED]:
+        if transport.status not in [Transport.STATUS_AWAITING_PAYMENT_DOC, Transport.STATUS_COMPLETED]:
             audit_logger.warning(
                 f"تلاش برای بارگذاری سند در وضعیت نامناسب - حمل {transport_number} - "
                 f"وضعیت: {transport.get_status_display()}"
@@ -136,7 +136,7 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
                     
                     # Transition to payment_doc_uploaded status
                     transport.transition(
-                        new_status=PurchaseTransport.STATUS_PAYMENT_DOC_UPLOADED,
+                        new_status=Transport.STATUS_PAYMENT_DOC_UPLOADED,
                         user=request.user,
                         note='بارگذاری سند پرداخت کرایه'
                     )
@@ -170,7 +170,7 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
         
         return render(request, 'supply_upload_fare_payment_docs_detail.html', context)
         
-    except PurchaseTransport.DoesNotExist:
+    except Transport.DoesNotExist:
         audit_logger.alert(f"تلاش برای دسترسی به حمل ناموجود - حمل {transport_number}")
         messages.error(request, 'حمل مورد نظر یافت نشد.')
         return redirect('supply:upload_fare_payment_docs_list')

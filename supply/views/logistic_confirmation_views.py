@@ -10,7 +10,7 @@ from django.utils import timezone
 import logging
 from core.logging_levels import *
 
-from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+from core.TransportFolder.TransportModel import Transport
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 
@@ -27,36 +27,36 @@ audit_logger = logging.getLogger("audit")
 # ==================== Field Access Helper Functions ====================
 
 def get_accessible_purchase_transport_fields_logistic(user):
-    """Check field access for PurchaseTransport model (view permission)"""
+    """Check field access for Transport model (view permission)"""
     return {
-        'transport_number': user_can_access_field(user, PurchaseTransport, 'transport_number', 'view'),
-        'purchase_order': user_can_access_field(user, PurchaseTransport, 'purchase_order', 'view'),
-        'status': user_can_access_field(user, PurchaseTransport, 'status', 'view'),
-        'vehicle_type': user_can_access_field(user, PurchaseTransport, 'vehicle_type', 'view'),
-        'plate_number': user_can_access_field(user, PurchaseTransport, 'plate_number', 'view'),
-        'driver': user_can_access_field(user, PurchaseTransport, 'driver', 'view'),
-        'gross_weight': user_can_access_field(user, PurchaseTransport, 'gross_weight', 'view'),
-        'tare_weight': user_can_access_field(user, PurchaseTransport, 'tare_weight', 'view'),
-        'net_weight': user_can_access_field(user, PurchaseTransport, 'net_weight', 'view'),
-        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'view'),
-        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'view'),
-        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'view'),
-        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'view'),
-        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'view'),
-        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'view'),
-        'created_at': user_can_access_field(user, PurchaseTransport, 'created_at', 'view'),
+        'transport_number': user_can_access_field(user, Transport, 'transport_number', 'view'),
+        'purchase_order': user_can_access_field(user, Transport, 'purchase_order', 'view'),
+        'status': user_can_access_field(user, Transport, 'status', 'view'),
+        'vehicle_type': user_can_access_field(user, Transport, 'vehicle_type', 'view'),
+        'plate_number': user_can_access_field(user, Transport, 'plate_number', 'view'),
+        'driver': user_can_access_field(user, Transport, 'driver', 'view'),
+        'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'view'),
+        'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'view'),
+        'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
+        'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'view'),
+        'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'view'),
+        'total_freight': user_can_access_field(user, Transport, 'total_freight', 'view'),
+        'discount': user_can_access_field(user, Transport, 'discount', 'view'),
+        'surplus': user_can_access_field(user, Transport, 'surplus', 'view'),
+        'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'view'),
+        'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
     }
 
 
 def get_accessible_purchase_transport_fields_logistic_edit(user):
-    """Check field access for PurchaseTransport model (edit permission)"""
+    """Check field access for Transport model (edit permission)"""
     return {
-        'freight_payment_type': user_can_access_field(user, PurchaseTransport, 'freight_payment_type', 'edit'),
-        'initial_freight': user_can_access_field(user, PurchaseTransport, 'initial_freight', 'edit'),
-        'total_freight': user_can_access_field(user, PurchaseTransport, 'total_freight', 'edit'),
-        'discount': user_can_access_field(user, PurchaseTransport, 'discount', 'edit'),
-        'surplus': user_can_access_field(user, PurchaseTransport, 'surplus', 'edit'),
-        'freight_payment': user_can_access_field(user, PurchaseTransport, 'freight_payment', 'edit'),
+        'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'edit'),
+        'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'edit'),
+        'total_freight': user_can_access_field(user, Transport, 'total_freight', 'edit'),
+        'discount': user_can_access_field(user, Transport, 'discount', 'edit'),
+        'surplus': user_can_access_field(user, Transport, 'surplus', 'edit'),
+        'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'edit'),
     }
 
 
@@ -86,7 +86,7 @@ class LogisticConfirmationForm(ModelForm):
     """فرم تایید لجستیک برای تکمیل اطلاعات مالی حمل"""
     
     class Meta:
-        model = PurchaseTransport
+        model = Transport
         fields = [
             'freight_payment_type',
             'initial_freight',
@@ -166,8 +166,8 @@ def logistic_confirmation_list_view(request):
     
     try:
         # Get transports awaiting settlement (status = awaiting_settlement)
-        transports = PurchaseTransport.objects.filter(
-            status=PurchaseTransport.STATUS_AWAITING_SETTLEMENT
+        transports = Transport.objects.filter(
+            status=Transport.STATUS_AWAITING_SETTLEMENT
         ).select_related(
             'purchase_order',
             'purchase_order__supplier',
@@ -215,7 +215,7 @@ def logistic_confirmation_detail_view(request, transport_number):
     
     try:
         transport = get_object_or_404(
-            PurchaseTransport.objects.select_related(
+            Transport.objects.select_related(
                 'purchase_order',
                 'purchase_order__supplier',
                 'driver'
@@ -224,7 +224,7 @@ def logistic_confirmation_detail_view(request, transport_number):
         )
         
         # Check if transport is in awaiting_settlement status
-        if transport.status != PurchaseTransport.STATUS_AWAITING_SETTLEMENT:
+        if transport.status != Transport.STATUS_AWAITING_SETTLEMENT:
             audit_logger.warning(
                 f"تلاش برای تایید لجستیک در وضعیت نامناسب - حمل {transport_number} - "
                 f"وضعیت: {transport.get_status_display()}"
@@ -239,7 +239,7 @@ def logistic_confirmation_detail_view(request, transport_number):
                 with transaction.atomic():
                     # Transition to awaiting payment doc status
                     transport.transition(
-                        new_status=PurchaseTransport.STATUS_AWAITING_PAYMENT_DOC,
+                        new_status=Transport.STATUS_AWAITING_PAYMENT_DOC,
                         user=request.user,
                         note='تایید نهایی لجستیک - تطبیق داده‌های وزنی و مالی با بارنامه'
                     )
@@ -249,9 +249,9 @@ def logistic_confirmation_detail_view(request, transport_number):
                     # اگر تمام حمل‌های سفارش در وضعیت awaiting_payment_doc یا بالاتر باشند
                     all_settled = not po.transports.exclude(
                         status__in=[
-                            PurchaseTransport.STATUS_AWAITING_PAYMENT_DOC,
-                            PurchaseTransport.STATUS_PAYMENT_DOC_UPLOADED,
-                            PurchaseTransport.STATUS_COMPLETED
+                            Transport.STATUS_AWAITING_PAYMENT_DOC,
+                            Transport.STATUS_PAYMENT_DOC_UPLOADED,
+                            Transport.STATUS_COMPLETED
                         ]
                     ).exists()
                     
@@ -295,7 +295,7 @@ def logistic_confirmation_detail_view(request, transport_number):
         
         return render(request, 'supply_logistic_confirmation_detail.html', context)
         
-    except PurchaseTransport.DoesNotExist:
+    except Transport.DoesNotExist:
         audit_logger.alert(f"تلاش برای دسترسی به حمل ناموجود - حمل {transport_number}")
         messages.error(request, 'حمل مورد نظر یافت نشد.')
         return redirect('supply:logistic_confirmation_list')

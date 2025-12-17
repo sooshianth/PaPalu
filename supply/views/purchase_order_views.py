@@ -796,7 +796,7 @@ def procurement_purchase_order_detail_view(request, order_number):
     """جزئیات سفارش خرید"""
     audit_logger.info(f"مشاهده جزئیات سفارش خرید {order_number}")
     from supply.tables import ProcurementPurchaseOrderStatusLogTable
-    from core.SupplyFolder.PurchaseTransportModel import PurchaseTransport
+    from core.TransportFolder.TransportModel import Transport
     
     po = get_object_or_404(Order, order_number=order_number, order_type='purchase')
     materials = po.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
@@ -807,7 +807,7 @@ def procurement_purchase_order_detail_view(request, order_number):
     can_delete = po.can_delete()  # محاسبه مقدار can_delete برای استفاده در template
     
     # Get transports for this purchase order
-    transports = PurchaseTransport.objects.filter(purchase_order=po).order_by('-created_at')
+    transports = Transport.objects.filter(purchase_order=po).order_by('-created_at')
     
     # Get allowed next statuses for workflow transitions
     allowed_next_statuses = po.WORKFLOW_ALLOWED.get(po.status, set())
