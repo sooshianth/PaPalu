@@ -60,7 +60,7 @@ class CreateProformaForm(forms.ModelForm):
                 label='سفارش',
             widget=forms.TextInput(attrs={
                 'class': 'form-control order-autocomplete',
-                'placeholder': 'جستجوی سفارش با شماره...',
+                'placeholder': 'جستجوی سفارش با شماره یا نام مشتری...',
                 'autocomplete': 'off'
             })
         )

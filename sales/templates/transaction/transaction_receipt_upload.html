@@ -244,7 +244,7 @@
 </style>
 
 <div class="page-header">
-    <h2>ثبت رسید تراکنش - سفارش {{ order.order_number }}</h2>
+    <h2>ثبت رسید تراکنش - سفارش {{ order_number_persian }}</h2>
 </div>
 
 {# داده دیدنی (اطلاعات تسویه و سفارش) #}
@@ -260,7 +260,7 @@
             </div>
             <div class="info-item">
                 <strong>شماره سفارش:</strong>
-                <span>{{ order.order_number }}</span>
+                <span>{{ order_number_persian }}</span>
             </div>
             <div class="info-item">
                 <strong>وضعیت تسویه:</strong>
@@ -280,7 +280,7 @@
                 <strong>مبلغ کل سند مبدا:</strong>
                 <span style="font-weight: 600; color: var(--primary-green);">
                     {% if settlement.original_document_amount %}
-                        {{ settlement.original_document_amount|floatformat:0 }} ریال
+                        {{ original_document_amount_persian }} ریال
                     {% else %}
                         -
                     {% endif %}
@@ -290,13 +290,13 @@
         <div class="info-row">
             <div class="info-item">
                 <strong>مبلغ کل تسویه شده:</strong>
-                <span style="font-weight: 600; color: var(--dark-green);">{{ settlement.settled_amount|floatformat:0|default:"0" }} ریال</span>
+                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount_persian }} ریال</span>
             </div>
             <div class="info-item">
                 <strong>مبلغ باقیمانده:</strong>
                 <span style="font-weight: 600; {% if remaining_amount > 0 %}color: #dc3545;{% else %}color: var(--primary-green);{% endif %}">
                     {% if settlement.original_document_amount %}
-                        {{ remaining_amount|floatformat:0 }} ریال
+                        {{ remaining_amount_persian }} ریال
                     {% else %}
                         -
                     {% endif %}
@@ -320,7 +320,7 @@
         {% elif remaining_amount > 0 %}
         <div class="info-row" style="margin-top: 1rem;">
             <div style="background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; border-right: 4px solid #ffc107; font-weight: 500;">
-                <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} ریال باقیمانده است. لطفاً رسیدهای تراکنش را تا رسیدن به مبلغ کل اضافه کنید.
+                <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount_persian }} ریال باقیمانده است. لطفاً رسیدهای تراکنش را تا رسیدن به مبلغ کل اضافه کنید.
             </div>
         </div>
         {% endif %}
@@ -353,45 +353,45 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for doc in documents %}
+                    {% for item in documents_with_persian %}
                         <tr>
-                            <td>{{ doc.accounting_document_number }}</td>
-                            <td>{{ doc.get_payment_type_display }}</td>
-                            <td><strong>{{ doc.document_amount|floatformat:0 }}</strong></td>
-                            <td>{{ doc.due_date }}</td>
-                            <td>{{ doc.source_account }}</td>
-                            <td>{{ doc.destination_account|default:"-" }}</td>
-                            <td>{{ doc.get_payment_status_display|default:"-" }}</td>
-                            <td>{{ doc.check_receipt_date|default:"-" }}</td>
+                            <td>{{ item.doc.accounting_document_number|default:"-" }}</td>
+                            <td>{{ item.doc.get_payment_type_display }}</td>
+                            <td><strong>{{ item.document_amount_persian }}</strong></td>
+                            <td>{{ item.doc.due_date }}</td>
+                            <td>{{ item.doc.source_account }}</td>
+                            <td>{{ item.doc.destination_account|default:"-" }}</td>
+                            <td>{{ item.doc.get_payment_status_display|default:"-" }}</td>
+                            <td>{{ item.doc.check_receipt_date|default:"-" }}</td>
                             <td>
-                                {% if doc.approval_status == 'approved' %}
+                                {% if item.doc.approval_status == 'approved' %}
                                     <span style="background: var(--primary-green); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">✓ تایید شده</span>
-                                {% elif doc.approval_status == 'rejected' %}
+                                {% elif item.doc.approval_status == 'rejected' %}
                                     <span style="background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">✗ رد شده</span>
                                 {% else %}
                                     <span style="background: #ffc107; color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 0.85rem;">⏳ در انتظار</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if doc.approval_status == 'rejected' and doc.rejection_reason %}
+                                {% if item.doc.approval_status == 'rejected' and item.doc.rejection_reason %}
                                     <span style="color: #dc3545; font-weight: 600; font-size: 0.85rem;">
-                                        {{ doc.get_rejection_reason_display }}
+                                        {{ item.doc.get_rejection_reason_display }}
                                     </span>
                                 {% else %}
                                     <span style="color: var(--gray-500);">-</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if doc.document_attachment %}
-                                    <a href="{{ doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
+                                {% if item.doc.document_attachment %}
+                                    <a href="{{ item.doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
                             <td>
                                 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
-                                    {% if doc.approval_status != 'approved' %}
-                                        <a href="{% url 'sales:transaction_receipt_edit' order.order_number doc.id %}" class="btn btn-sm" style="background: #17a2b8; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.85rem;">ویرایش</a>
+                                    {% if item.doc.approval_status != 'approved' %}
+                                        <a href="{% url 'sales:transaction_receipt_edit' order.order_number item.doc.id %}" class="btn btn-sm" style="background: #17a2b8; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.85rem;">ویرایش</a>
                                     {% else %}
                                         <span style="color: var(--gray-500); font-size: 0.85rem;">-</span>
                                     {% endif %}
@@ -403,7 +403,7 @@
                 </table>
             </div>
             <div class="total-amount">
-                جمع مبالغ اسناد: {{ total_document_amount|floatformat:0 }} ریال
+                جمع مبالغ اسناد: {{ total_document_amount_persian }} ریال
             </div>
         {% else %}
             <p class="empty-message">هنوز سند تراکنشی برای این تسویه ثبت نشده است.</p>

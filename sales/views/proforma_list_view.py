@@ -326,27 +326,47 @@ def proforma_detail_view(request, proforma_id):
 def order_search_api(request):
     """
     API endpoint برای جستجوی سفارش‌ها
+    جستجو بر اساس شماره سفارش و نام مشتری
     """
     query = request.GET.get('q', '').strip()
     
     if not query:
         return JsonResponse({'results': []})
     
-    # فیلتر کردن سفارش‌ها - فقط سفارش‌های فروش و مربوط به کاربر
-    if request.user.is_superuser:
-        orders = Order.objects.filter(
-            order_type='sale',
-            order_number__icontains=query
-        ).select_related('customer').order_by('-created_at')[:20]
-    else:
-        orders = Order.objects.filter(
-            order_type='sale',
-            order_number__icontains=query,
-            registered_by=request.user
-        ).select_related('customer').order_by('-created_at')[:20]
+    # ساخت query base برای سفارش‌های فروش
+    base_filter = Q(order_type='sale')
+    if not request.user.is_superuser:
+        base_filter &= Q(registered_by=request.user)
+    
+    # جستجو بر اساس شماره سفارش
+    orders_by_number = Order.objects.filter(
+        base_filter & Q(order_number__icontains=query)
+    ).select_related('customer')
+    
+    # جستجو بر اساس نام مشتری - اگر مشتری‌ای پیدا شد، همه سفارش‌هایش را برگردان
+    orders_by_customer = Order.objects.none()
+    matching_customers = Person.objects.filter(
+        name__icontains=query
+    ).distinct()
+    
+    if matching_customers.exists():
+        # برای هر مشتری که نامش با query مطابقت دارد، همه سفارش‌هایش را بگیر
+        customer_filter = base_filter & Q(customer__in=matching_customers)
+        orders_by_customer = Order.objects.filter(
+            customer_filter
+        ).select_related('customer')
+    
+    # ترکیب نتایج و حذف تکراری‌ها
+    all_orders = (orders_by_number | orders_by_customer).distinct().order_by('-created_at')[:20]
     
     results = []
-    for order in orders:
+    seen_order_numbers = set()
+    for order in all_orders:
+        # جلوگیری از تکرار
+        if order.order_number in seen_order_numbers:
+            continue
+        seen_order_numbers.add(order.order_number)
+        
         results.append({
             'id': order.order_number,
             'text': f"{order.order_number} - {order.customer.name if order.customer else 'بدون مشتری'}",

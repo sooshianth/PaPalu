@@ -20,6 +20,28 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 
+def to_persian_digits(text):
+    """تبدیل اعداد انگلیسی به فارسی بدون کاما"""
+    if text is None:
+        return ''
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    translation_table = str.maketrans(english_digits, persian_digits)
+    return str(text).translate(translation_table)
+
+
+def persian_number_with_comma(value):
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (برای مبالغ)"""
+    if value is None:
+        return '-'
+    try:
+        num_float = float(value)
+        formatted = f"{num_float:,.0f}"
+        return to_persian_digits(formatted)
+    except (ValueError, TypeError):
+        return str(value)
+
+
 @login_required
 def approve_transaction_receipt_list_view(request):
     """
@@ -297,11 +319,10 @@ def approve_transaction_receipt_detail_view(request, order_number):
         # اگر document_id در query string باشد، فرم را با آن سند پر کن
         if document:
             # اگر سند قبلاً تأیید شده، مقادیر موجود را نمایش بده
+            # توجه: inquiry_amount نباید پیش‌پر شود - کاربر باید آن را دستی وارد کند برای بررسی تطابق
             initial_data = {}
             if document.accounting_document_number:
                 initial_data['accounting_document_number'] = document.accounting_document_number
-            if document.inquiry_amount:
-                initial_data['inquiry_amount'] = document.inquiry_amount
             if document.tracking_number:
                 initial_data['tracking_number'] = document.tracking_number
             # inquiry_name در فرم به صورت ChoiceField است و خود فرم مقدار پیش‌فرض را تنظیم می‌کند
@@ -354,11 +375,48 @@ def approve_transaction_receipt_detail_view(request, order_number):
         else:
             rejection_form = None
 
+    # فارسی کردن اعداد برای نمایش در template
+    order_number_persian = to_persian_digits(order.order_number)
+    original_document_amount_persian = persian_number_with_comma(settlement.original_document_amount) if settlement.original_document_amount else '-'
+    settled_amount_persian = persian_number_with_comma(settlement.settled_amount) if settlement.settled_amount else '۰'
+    total_inquiry_amount_persian = persian_number_with_comma(total_inquiry_amount) if total_inquiry_amount else '۰'
+    remaining_amount_persian = persian_number_with_comma(remaining_amount) if settlement.original_document_amount else '۰'
+    
+    # فارسی کردن اعداد برای هر سند
+    documents_with_persian = []
+    for doc in documents:
+        doc_dict = {
+            'doc': doc,
+            'document_amount_persian': persian_number_with_comma(doc.document_amount) if doc.document_amount else '-',
+        }
+        documents_with_persian.append(doc_dict)
+    
+    # فارسی کردن اعداد برای اسناد تأیید شده
+    approved_documents_with_persian = []
+    for doc in approved_documents:
+        doc_dict = {
+            'doc': doc,
+            'inquiry_amount_persian': persian_number_with_comma(doc.inquiry_amount) if doc.inquiry_amount else '-',
+            'tracking_number_persian': to_persian_digits(doc.tracking_number) if doc.tracking_number else '-',
+            'approval_account_number_persian': to_persian_digits(doc.approval_account_number) if doc.approval_account_number else '-',
+            'shaba_number_persian': to_persian_digits(doc.shaba_number) if doc.shaba_number else '-',
+        }
+        approved_documents_with_persian.append(doc_dict)
+    
+    # فارسی کردن اعداد برای سند انتخابی
+    selected_document_persian = None
+    if document:
+        selected_document_persian = {
+            'document_amount_persian': persian_number_with_comma(document.document_amount) if document.document_amount else '-',
+        }
+
     context = {
         'order': order,
         'settlement': settlement,
         'documents': documents,
+        'documents_with_persian': documents_with_persian,
         'approved_documents': approved_documents,
+        'approved_documents_with_persian': approved_documents_with_persian,
         'total_inquiry_amount': total_inquiry_amount,
         'remaining_amount': remaining_amount,
         'can_approve': can_approve,
@@ -366,6 +424,13 @@ def approve_transaction_receipt_detail_view(request, order_number):
         'form': form,
         'rejection_form': rejection_form if 'rejection_form' in locals() else None,
         'selected_document': document,
+        'selected_document_persian': selected_document_persian,
+        # اعداد فارسی شده
+        'order_number_persian': order_number_persian,
+        'original_document_amount_persian': original_document_amount_persian,
+        'settled_amount_persian': settled_amount_persian,
+        'total_inquiry_amount_persian': total_inquiry_amount_persian,
+        'remaining_amount_persian': remaining_amount_persian,
         'page_title': f'تأیید تراکنش - سفارش {order.order_number}',
     }
     return render(request, 'transaction/approve_transaction_receipt_detail.html', context)
