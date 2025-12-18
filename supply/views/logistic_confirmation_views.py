@@ -237,35 +237,50 @@ def logistic_confirmation_detail_view(request, transport_number):
     accessible_person_fields = get_accessible_person_fields_logistic(request.user)
     
     try:
+        bug_logger.info(f"شروع بارگذاری جزئیات تایید لجستیک - transport_number: {transport_number}")
+        
         # Support both transport_number and numeric pk as identifier
+        transport = None
         if transport_number and str(transport_number).isdigit():
             bug_logger.debug(f"Fetching transport by pk: {transport_number}")
-            transport = get_object_or_404(
-                Transport.objects.select_related(
+            try:
+                transport = Transport.objects.select_related(
                     'allocation__order',
                     'allocation__order__customer',
                     'driver'
-                ),
-                pk=int(transport_number)
-            )
+                ).get(pk=int(transport_number))
+                bug_logger.info(f"حمل با pk={transport_number} پیدا شد - transport_number: {transport.transport_number}, status: {transport.status}")
+            except Transport.DoesNotExist:
+                bug_logger.error(f"حمل با pk={transport_number} پیدا نشد")
+                messages.error(request, 'حمل مورد نظر یافت نشد.')
+                return redirect('supply:logistic_confirmation_list')
         else:
             bug_logger.debug(f"Fetching transport by transport_number: {transport_number}")
-            transport = get_object_or_404(
-                Transport.objects.select_related(
+            try:
+                transport = Transport.objects.select_related(
                     'allocation__order',
                     'allocation__order__customer',
                     'driver'
-                ),
-                transport_number=transport_number
-            )
+                ).get(transport_number=transport_number)
+                bug_logger.info(f"حمل با transport_number={transport_number} پیدا شد - pk: {transport.pk}, status: {transport.status}")
+            except Transport.DoesNotExist:
+                bug_logger.error(f"حمل با transport_number={transport_number} پیدا نشد")
+                messages.error(request, 'حمل مورد نظر یافت نشد.')
+                return redirect('supply:logistic_confirmation_list')
+        
+        if not transport:
+            bug_logger.error(f"transport None است - transport_number: {transport_number}")
+            messages.error(request, 'حمل مورد نظر یافت نشد.')
+            return redirect('supply:logistic_confirmation_list')
         
         # Check if transport is in awaiting_settlement status
+        bug_logger.info(f"بررسی وضعیت حمل - status: {transport.status}, expected: {Transport.STATUS_AWAITING_SETTLEMENT}")
         if transport.status != Transport.STATUS_AWAITING_SETTLEMENT:
             audit_logger.warning(
                 f"تلاش برای تایید لجستیک در وضعیت نامناسب - حمل {transport_number} - "
                 f"وضعیت: {transport.get_status_display()}"
             )
-            messages.warning(request, 'این حمل در وضعیت مناسب برای تایید لجستیک نیست.')
+            messages.warning(request, f'این حمل در وضعیت مناسب برای تایید لجستیک نیست. وضعیت فعلی: {transport.get_status_display()}')
             return redirect('supply:logistic_confirmation_list')
         
         if request.method == 'POST':
@@ -317,21 +332,83 @@ def logistic_confirmation_detail_view(request, transport_number):
                 bug_logger.error(f"خطا در تایید لجستیک - حمل {transport_number}: {str(e)}", exc_info=True)
                 messages.error(request, 'خطا در ثبت تایید لجستیک')
         
-        context = {
-            'transport': transport,
-            'purchase_order': transport.allocation.order if transport.allocation else None,
-            'accessible_transport_fields': accessible_transport_fields_view,
-            'accessible_po_fields': accessible_po_fields,
-            'accessible_person_fields': accessible_person_fields,
-        }
-        
-        return render(request, 'supply_logistic_confirmation_detail.html', context)
+        # آماده‌سازی context
+        try:
+            po = transport.allocation.order if transport.allocation else None
+            bug_logger.info(f"آماده‌سازی context - transport: {transport.transport_number}, order: {po.order_number if po else 'None'}")
+            
+            # Pre-fetch و فیلتر order_items برای جلوگیری از خطاهای Decimal
+            # استفاده از defer() برای جلوگیری از بارگذاری فیلدهای Decimal مشکل‌دار
+            valid_order_items = []
+            if po:
+                try:
+                    from decimal import Decimal, InvalidOperation
+                    
+                    # استفاده از defer() برای بارگذاری نکردن فیلدهای Decimal
+                    # فقط فیلدهای مورد نیاز را load می‌کنیم
+                    all_items = po.order_items.filter(
+                        raw_material__isnull=False
+                    ).select_related('raw_material').defer(
+                        'quantity', 'unit_price', 'discount', 'additional_charges', 
+                        'vat_percent', 'freight_cost', 'total_purchase_cost', 
+                        'bag_weight', 'conversion_rate'
+                    )
+                    
+                    # حالا می‌توانیم items را iterate کنیم بدون اینکه Decimal fields load شوند
+                    for item in all_items:
+                        if item.raw_material:
+                            valid_order_items.append(item)
+                    
+                    bug_logger.info(f"تعداد order_items معتبر: {len(valid_order_items)}")
+                except Exception as items_err:
+                    bug_logger.error(f"خطا در بارگذاری order_items: {items_err}", exc_info=True)
+                    # Fallback: استفاده از values() برای گرفتن فقط raw_material
+                    try:
+                        items_data = po.order_items.filter(
+                            raw_material__isnull=False
+                        ).values('id', 'raw_material__name', 'raw_material_id')
+                        
+                        # ساخت objects ساده برای template
+                        class SimpleOrderItem:
+                            def __init__(self, item_id, raw_material_name, raw_material_id):
+                                self.id = item_id
+                                self.raw_material_id = raw_material_id
+                                self.raw_material = type('RawMaterial', (), {'name': raw_material_name})() if raw_material_name else None
+                        
+                        for item_data in items_data:
+                            valid_order_items.append(SimpleOrderItem(
+                                item_data['id'],
+                                item_data['raw_material__name'],
+                                item_data['raw_material_id']
+                            ))
+                        
+                        bug_logger.info(f"تعداد order_items (fallback با values): {len(valid_order_items)}")
+                    except Exception as fallback_err:
+                        bug_logger.error(f"خطا در fallback method: {fallback_err}", exc_info=True)
+            
+            context = {
+                'transport': transport,
+                'purchase_order': po,
+                'order_items': valid_order_items,  # ارسال لیست فیلتر شده به template
+                'accessible_transport_fields': accessible_transport_fields_view,
+                'accessible_po_fields': accessible_po_fields,
+                'accessible_person_fields': accessible_person_fields,
+            }
+            
+            bug_logger.info(f"رندر کردن template - supply_logistic_confirmation_detail.html")
+            return render(request, 'supply_logistic_confirmation_detail.html', context)
+        except Exception as context_err:
+            bug_logger.error(f"خطا در آماده‌سازی context - حمل {transport_number}: {str(context_err)}", exc_info=True)
+            messages.error(request, f'خطا در آماده‌سازی داده‌ها: {str(context_err)}')
+            return redirect('supply:logistic_confirmation_list')
         
     except Transport.DoesNotExist:
         audit_logger.alert(f"تلاش برای دسترسی به حمل ناموجود - حمل {transport_number}")
+        bug_logger.error(f"Transport.DoesNotExist - transport_number: {transport_number}")
         messages.error(request, 'حمل مورد نظر یافت نشد.')
         return redirect('supply:logistic_confirmation_list')
     except Exception as e:
         bug_logger.error(f"خطا در نمایش جزئیات تایید لجستیک - حمل {transport_number}: {str(e)}", exc_info=True)
-        messages.error(request, 'خطا در بارگذاری جزئیات حمل')
+        audit_logger.error(f"خطا در نمایش جزئیات تایید لجستیک - حمل {transport_number}: {str(e)}")
+        messages.error(request, f'خطا در بارگذاری جزئیات حمل: {str(e)}')
         return redirect('supply:logistic_confirmation_list')

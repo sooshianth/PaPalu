@@ -262,7 +262,7 @@
         </div>
         <div class="info-item">
             <span class="info-label">تأمین‌کننده</span>
-            <span class="info-value">{{ purchase_order.supplier.name }}</span>
+            <span class="info-value">{{ purchase_order.customer.name|default:"—" }}</span>
         </div>
         <div class="info-item">
             <span class="info-label">شماره بارنامه</span>
@@ -322,11 +322,18 @@
     </div>
     
     <div class="info-grid">
-        {% for material in purchase_order.materials.all %}
-        <div class="info-item">
-            <span class="info-label">نام ماده اولیه</span>
-            <span class="info-value">{{ material.raw_material.name|default:"—" }}</span>
-        </div>
+        {% for order_item in order_items %}
+            {% if order_item.raw_material %}
+            <div class="info-item">
+                <span class="info-label">نام ماده اولیه</span>
+                <span class="info-value">{{ order_item.raw_material.name|default:"—" }}</span>
+            </div>
+            {% endif %}
+        {% empty %}
+            <div class="info-item">
+                <span class="info-label">نام ماده اولیه</span>
+                <span class="info-value">—</span>
+            </div>
         {% endfor %}
         
         <div class="info-item">
