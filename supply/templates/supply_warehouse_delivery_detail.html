@@ -140,9 +140,19 @@
   {% endif %}
   
   <div class="form-group">
-    <label>{{ form.warehouse_identifier.label }}{% if form.warehouse_identifier.field.required %} *{% endif %}</label>
-    {{ form.warehouse_identifier }}
-    {% if form.warehouse_identifier.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.warehouse_identifier.errors|join:'، ' }}</div>{% endif %}
+    <div class="form-group">
+        <label>{{ form.source_warehouse.label }}{% if form.source_warehouse.field.required %} *{% endif %}</label>
+        {% if form.source_warehouse.help_text %}<small class="form-text text-muted">{{ form.source_warehouse.help_text }}</small>{% endif %}
+        {{ form.source_warehouse }}
+        {% if form.source_warehouse.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.source_warehouse.errors|join:'، ' }}</div>{% endif %}
+    </div>
+    
+    <div class="form-group">
+        <label>{{ form.destination_warehouse.label }}{% if form.destination_warehouse.field.required %} *{% endif %}</label>
+        {% if form.destination_warehouse.help_text %}<small class="form-text text-muted">{{ form.destination_warehouse.help_text }}</small>{% endif %}
+        {{ form.destination_warehouse }}
+        {% if form.destination_warehouse.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.destination_warehouse.errors|join:'، ' }}</div>{% endif %}
+    </div>
   </div>
   
   <div class="section-divider"></div>

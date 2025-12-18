@@ -8,6 +8,7 @@ from django.db import transaction
 from django.http import HttpResponseForbidden
 from django_tables2 import RequestConfig
 import jdatetime
+from jdatetime import datetime as jdatetime_datetime
 
 from core.logging_levels import *
 bug_logger = logging.getLogger("bugs")
@@ -20,6 +21,11 @@ from core.OrderFolder.OrderItemModel import OrderItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
+from core.WarehouseFolder.WarehouseModel import Warehouse
+from core.StockEntryFolder.StockEntryModel import StockEntry
+from core.StockEntryFolder.SourceStockModel import SourceStock
+from core.StockEntryFolder.TargetStockModel import TargetStock
+from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from supply.tables import TransportTable
 import django_tables2 as tables
@@ -203,11 +209,22 @@ class WarehouseDeliveryForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
     )
     
-    # شناسه انبار
-    warehouse_identifier = forms.CharField(
-        label='شناسه انبار',
+    # انبار مبدأ (انبار مجازی تامین‌کننده)
+    source_warehouse = forms.ModelChoiceField(
+        label='انبار مبدأ (تامین‌کننده)',
+        queryset=Warehouse.objects.filter(warehouse_type='supplier'),
         required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control'})
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='انبار مجازی تامین‌کننده که ماده اولیه از آنجا آمده است'
+    )
+    
+    # انبار مقصد (انبار کارخانه)
+    destination_warehouse = forms.ModelChoiceField(
+        label='انبار مقصد (کارخانه)',
+        queryset=Warehouse.objects.exclude(warehouse_type='supplier'),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text='انبار کارخانه که ماده اولیه در آنجا تخلیه می‌شود'
     )
     
     def clean(self):
@@ -475,7 +492,8 @@ def warehouse_delivery_detail_view(request, transport_number):
             'discount': pt.discount,
             'surplus': pt.surplus,
             'freight_payment': pt.freight_payment,
-            'warehouse_identifier': getattr(pt, 'warehouse_identifier', None),
+            'source_warehouse': getattr(pt, 'source_warehouse', None),
+            'destination_warehouse': getattr(pt, 'destination_warehouse', None),
         }
         form = WarehouseDeliveryForm(initial=initial)
         for field in form.fields:
@@ -505,9 +523,10 @@ def warehouse_delivery_detail_view(request, transport_number):
                     gross = data.get('gross_weight')
                     tare = data.get('tare_weight')
                     net_weight = gross - tare if gross and tare else None
-                    warehouse_id = data.get('warehouse_identifier')
+                    source_warehouse = data.get('source_warehouse')
+                    destination_warehouse = data.get('destination_warehouse')
                     
-                    bug_logger.debug(f"Saving unloading data - Transport: {transport_number}, Gross: {gross}, Tare: {tare}, Net: {net_weight}, Warehouse: {warehouse_id}")
+                    bug_logger.debug(f"Saving unloading data - Transport: {transport_number}, Gross: {gross}, Tare: {tare}, Net: {net_weight}, Source: {source_warehouse}, Destination: {destination_warehouse}")
                     
                     # به‌روزرسانی فیلدهای حمل
                     pt.gross_weight = gross
@@ -526,19 +545,72 @@ def warehouse_delivery_detail_view(request, transport_number):
                     
                     bug_logger.info(f"اطلاعات تخلیه برای حمل {transport_number} ثبت شد - وزن خالص: {net_weight}")
                     
-                    # TODO: افزایش موجودی انبار
-                    # این قسمت باید لاگ موجودی از انبار مجازی تامین‌کنندگان به انبار با شناسه {warehouse_id} ایجاد کند
-                    # مقدار افزایش: net_weight
-                    # کد نمونه:
-                    # from core.WarehouseFolder.InventoryLog import InventoryLog
-                    # InventoryLog.objects.create(
-                    #     warehouse_id=warehouse_id,
-                    #     raw_material=pt.purchase_order.materials.first().raw_material,
-                    #     quantity=net_weight,
-                    #     transaction_type='inbound',
-                    #     reference_transport=pt,
-                    #     created_by=request.user
-                    # )
+                    # ایجاد لاگ موجودیت: از انبار مبدأ (تامین‌کننده) به انبار مقصد (کارخانه)
+                    if source_warehouse and destination_warehouse and net_weight and net_weight > 0:
+                        try:
+                            # گرفتن ماده اولیه از سفارش
+                            po = pt.allocation.order if pt.allocation else None
+                            if po:
+                                # گرفتن اولین ماده اولیه از سفارش
+                                order_item = po.order_items.filter(raw_material__isnull=False).select_related('raw_material').first()
+                                if order_item and order_item.raw_material:
+                                    raw_material = order_item.raw_material
+                                    
+                                    # ایجاد StockEntry
+                                    stock_entry = StockEntry.objects.create(
+                                        transaction_date=jdatetime_datetime.now(),
+                                        notes=f"تخلیه حمل {transport_number} - انتقال از انبار {source_warehouse.warehouse_id} به انبار {destination_warehouse.warehouse_id}",
+                                        is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
+                                    )
+                                    
+                                    # ایجاد SourceStock (از انبار تامین‌کننده)
+                                    raw_material_content_type = ContentType.objects.get_for_model(RawMaterial)
+                                    source_stock = SourceStock.objects.create(
+                                        stock_entry=stock_entry,
+                                        from_content_type=raw_material_content_type,
+                                        from_object_id=raw_material.pk,
+                                        from_warehouse=source_warehouse,
+                                        quantity=net_weight
+                                    )
+                                    
+                                    # ایجاد TargetStock (به انبار کارخانه)
+                                    target_stock = TargetStock.objects.create(
+                                        stock_entry=stock_entry,
+                                        to_content_type=raw_material_content_type,
+                                        to_object_id=raw_material.pk,
+                                        to_warehouse=destination_warehouse,
+                                        quantity=net_weight
+                                    )
+                                    
+                                    # Commit کردن StockEntry برای به‌روزرسانی موجودیت‌ها
+                                    stock_entry.commit()
+                                    
+                                    bug_logger.info(
+                                        f"لاگ موجودیت ایجاد شد - "
+                                        f"StockEntry ID: {stock_entry.pk}, "
+                                        f"از انبار: {source_warehouse.warehouse_id}, "
+                                        f"به انبار: {destination_warehouse.warehouse_id}, "
+                                        f"مقدار: {net_weight} کیلوگرم, "
+                                        f"ماده اولیه: {raw_material.name}"
+                                    )
+                                    
+                                    audit_logger.info(
+                                        f"لاگ موجودیت برای تخلیه - "
+                                        f"حمل: {transport_number}, "
+                                        f"از انبار: {source_warehouse.warehouse_id}, "
+                                        f"به انبار: {destination_warehouse.warehouse_id}, "
+                                        f"مقدار: {net_weight} کیلوگرم, "
+                                        f"ماده اولیه: {raw_material.name}, "
+                                        f"کاربر: {request.user.username}"
+                                    )
+                                else:
+                                    bug_logger.warning(f"ماده اولیه برای سفارش {po.order_number} پیدا نشد")
+                            else:
+                                bug_logger.warning(f"سفارش برای حمل {transport_number} پیدا نشد")
+                        except Exception as inv_err:
+                            bug_logger.error(f"خطا در ایجاد لاگ موجودیت برای حمل {transport_number}: {inv_err}", exc_info=True)
+                            # خطا را لاگ می‌کنیم اما فرآیند را متوقف نمی‌کنیم
+                            messages.warning(request, f'اطلاعات تخلیه ثبت شد اما خطا در ایجاد لاگ موجودیت: {str(inv_err)}')
                     
                     # تغییر وضعیت حمل به "در انتظار تطبیق انبار"
                     pt.status = Transport.STATUS_AWAITING_WH_RECONCILIATION
@@ -559,7 +631,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                         f"وزن پر: {gross} - "
                         f"وزن خالی: {tare} - "
                         f"وزن خالص: {net_weight} - "
-                        f"انبار: {warehouse_id} - "
+                        f"انبار مبدأ: {source_warehouse.warehouse_id if source_warehouse else 'N/A'} - "
+                        f"انبار مقصد: {destination_warehouse.warehouse_id if destination_warehouse else 'N/A'} - "
                         f"کاربر: {request.user.username} - "
                         f"کرایه پرداختی: {data.get('freight_payment')}"
                     )
