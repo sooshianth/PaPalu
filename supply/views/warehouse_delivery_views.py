@@ -99,11 +99,19 @@ def get_accessible_person_fields_for_warehouse(user):
 
 
 def get_accessible_po_material_fields_for_warehouse(user):
-    """Check field access for ProcurementPurchaseOrderMaterial model"""
+    """Check field access for OrderItem model (materials in purchase orders)"""
+    # برای سوپریوزر، همه فیلدها قابل دسترسی هستند
+    if user.is_superuser:
+        return {
+            'quantity': True,
+            'unit': True,
+            'raw_material': True,
+        }
+    
     return {
-        'quantity': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'quantity', 'view'),
-        'unit': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'unit', 'view'),
-        'raw_material': user_can_access_field(user, ProcurementPurchaseOrderMaterial, 'raw_material', 'view'),
+        'quantity': user_can_access_field(user, OrderItem, 'quantity', 'view'),
+        'unit': user_can_access_field(user, OrderItem, 'weight_unit', 'view'),
+        'raw_material': user_can_access_field(user, OrderItem, 'raw_material', 'view'),
     }
 
 # ==================== End Field Access Helper Functions ====================
@@ -267,21 +275,27 @@ class WarehouseDeliveryTable(TransportTable):
     
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if accessible_fields:
-            # Handle columns from parent table already initialized by TransportTable
-            # Set visibility for custom columns based on related field access
-            if hasattr(self.base_columns, 'raw_materials'):
-                self.base_columns['raw_materials'].visible = accessible_fields.get('purchase_order', False)
-            if hasattr(self.base_columns, 'quantity'):
-                self.base_columns['quantity'].visible = accessible_fields.get('purchase_order', False)
-            if hasattr(self.base_columns, 'unit'):
-                self.base_columns['unit'].visible = accessible_fields.get('purchase_order', False)
+        
+        # ستون‌های مورد نیاز برای انباردار: شماره سفارش، نوع ماده اولیه، مقدار، واحد، پلاک، نوع ماشین
+        # این ستون‌ها باید همیشه نمایش داده شوند
+        required_columns = ['purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions']
+        
+        # همیشه ستون‌های مورد نیاز را نمایش بده
+        for col_name in required_columns:
+            if col_name in ['raw_materials', 'quantity', 'unit']:
+                # ستون‌های custom که در base_columns تعریف شده‌اند
+                if col_name in self.base_columns:
+                    self.base_columns[col_name].visible = True
+            elif col_name in self.columns:
+                # ستون‌های عادی
+                self.columns[col_name].column.visible = True
     
     def render_raw_materials(self, record):
         """نمایش لیست مواد اولیه از سفارش خرید"""
         if not record.purchase_order:
             return '—'
-        materials = record.purchase_order.materials.select_related('raw_material').all()
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
             names = [m.raw_material.name for m in materials if m.raw_material]
             return format_html('<br>'.join(names)) if names else '—'
@@ -291,9 +305,10 @@ class WarehouseDeliveryTable(TransportTable):
         """نمایش مقدار سفارش"""
         if not record.purchase_order:
             return '—'
-        materials = record.purchase_order.materials.all()
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
         if materials:
-            quantities = [str(m.quantity) for m in materials]
+            quantities = [str(m.quantity) for m in materials if m.quantity]
             return format_html('<br>'.join(quantities)) if quantities else '—'
         return '—'
     
@@ -301,22 +316,28 @@ class WarehouseDeliveryTable(TransportTable):
         """نمایش واحد سفارش"""
         if not record.purchase_order:
             return '—'
-        materials = record.purchase_order.materials.all()
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
         if materials:
-            units = [m.unit or '—' for m in materials]
+            units = [m.get_weight_unit_display() or '—' for m in materials]
             return format_html('<br>'.join(units)) if units else '—'
         return '—'
     
     def render_actions(self, record):
-        identifier = record.transport_number or record.transport_id
-        detail_url = reverse('supply:warehouse_delivery_detail', args=[identifier])
+        """نمایش دکمه جزئیات حمل"""
+        # استفاده از transport_number یا pk در صورت None بودن
+        transport_id = record.transport_number
+        if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
+            transport_id = str(record.pk)
+        detail_url = reverse('supply:warehouse_delivery_detail', args=[str(transport_id)])
         return format_html(
-            '<a href="{}" class="btn btn-primary btn-sm">ثبت اطلاعات تخلیه</a>',
+            '<a href="{}" class="btn btn-primary btn-sm">جزئیات حمل</a>',
             detail_url
         )
     
     class Meta(TransportTable.Meta):
         sequence = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+        fields = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
 
 
 @login_required
@@ -356,19 +377,20 @@ def warehouse_delivery_list_view(request):
         for pt in transports_unloading_qs:
             if not pt.transport_number:
                 try:
-                    bug_logger.debug(f"Backfilling transport_number for transport_id={pt.transport_id}")
+                    bug_logger.debug(f"Backfilling transport_number for transport pk={pt.pk}")
                     pt.save()
                 except Exception as gen_err:
-                    bug_logger.warning(f"Failed to backfill transport_number for transport_id={pt.transport_id}: {gen_err}")
+                    bug_logger.warning(f"Failed to backfill transport_number for transport pk={pt.pk}: {gen_err}")
             transports_unloading.append(pt)
         
         transports_guard = []
         for pt in transports_guard_qs:
             if not pt.transport_number:
                 try:
+                    bug_logger.debug(f"Backfilling transport_number for transport pk={pt.pk}")
                     pt.save()
                 except Exception as gen_err:
-                    bug_logger.warning(f"Failed to backfill transport_number for transport_id={pt.transport_id}: {gen_err}")
+                    bug_logger.warning(f"Failed to backfill transport_number for transport pk={pt.pk}: {gen_err}")
             transports_guard.append(pt)
         
         table_unloading = WarehouseDeliveryTable(transports_unloading, prefix='wh-', accessible_fields=accessible_transport_fields)
@@ -419,15 +441,15 @@ def warehouse_delivery_detail_view(request, transport_number):
     accessible_raw_material_fields = get_accessible_raw_material_fields_for_warehouse(request.user)
     accessible_po_material_fields = get_accessible_po_material_fields_for_warehouse(request.user)
     
-    # Support both transport_number and numeric transport_id as identifier
+    # Support both transport_number and numeric pk as identifier
     try:
         if transport_number and str(transport_number).isdigit():
-            bug_logger.debug(f"Fetching transport by transport_id: {transport_number}")
-            pt = get_object_or_404(Transport, transport_id=int(transport_number))
+            bug_logger.debug(f"Fetching transport by pk: {transport_number}")
+            pt = get_object_or_404(Transport, pk=int(transport_number))
         else:
             bug_logger.debug(f"Fetching transport by transport_number: {transport_number}")
             pt = get_object_or_404(Transport, transport_number=transport_number)
-        bug_logger.debug(f"Transport found - ID: {pt.transport_id}, Status: {pt.status}, Order: {pt.purchase_order.order_number if pt.purchase_order else 'N/A'}")
+        bug_logger.debug(f"Transport found - ID: {pt.pk}, Status: {pt.status}, Order: {pt.allocation.order.order_number if pt.allocation and pt.allocation.order else 'N/A'}")
     except Exception as e:
         bug_logger.error(f"Warehouse delivery detail fetch error for identifier={transport_number}: {e}")
         messages.error(request, 'شناسه حمل نامعتبر است یا یافت نشد.')
@@ -518,16 +540,22 @@ def warehouse_delivery_detail_view(request, transport_number):
                     #     created_by=request.user
                     # )
                     
-                    # تغییر وضعیت به "در انتظار تطبیق انبار"
+                    # تغییر وضعیت حمل به "در انتظار تطبیق انبار"
                     pt.status = Transport.STATUS_AWAITING_WH_RECONCILIATION
                     pt.save()
                     bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تطبیق انبار' تغییر یافت")
+                    
+                    # تغییر وضعیت سفارش از "در انتظار تحویل بار" به "در انتظار تطبیق اطلاعات انبار"
+                    po = pt.allocation.order if pt.allocation else None
+                    if po and po.status == Order.STATUS_AWAITING_DELIVERY:
+                        po.transition(Order.STATUS_AWAITING_WH_RECONCILIATION, user=request.user, note=f"تخلیه برای حمل {transport_number} تکمیل شد و در انتظار تطبیق اطلاعات انبار است.")
+                        bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تطبیق اطلاعات انبار' تغییر یافت")
                     
                     # ثبت در Audit Trail
                     audit_logger.info(
                         f"تخلیه تکمیل شد - "
                         f"حمل: {transport_number} - "
-                        f"سفارش: {pt.purchase_order.order_number} - "
+                        f"سفارش: {pt.allocation.order.order_number if pt.allocation and pt.allocation.order else 'N/A'} - "
                         f"وزن پر: {gross} - "
                         f"وزن خالی: {tare} - "
                         f"وزن خالص: {net_weight} - "
@@ -590,12 +618,12 @@ def guard_vehicle_exit_view(request, transport_number):
     # Get transport
     try:
         if transport_number and str(transport_number).isdigit():
-            bug_logger.debug(f"Guard fetching transport by transport_id: {transport_number}")
-            pt = get_object_or_404(Transport, transport_id=int(transport_number))
+            bug_logger.debug(f"Guard fetching transport by pk: {transport_number}")
+            pt = get_object_or_404(Transport, pk=int(transport_number))
         else:
             bug_logger.debug(f"Guard fetching transport by transport_number: {transport_number}")
             pt = get_object_or_404(Transport, transport_number=transport_number)
-        bug_logger.debug(f"Guard access - Transport: {pt.transport_id}, Status: {pt.status}, Net weight: {pt.net_weight}")
+        bug_logger.debug(f"Guard access - Transport: {pt.pk}, Status: {pt.status}, Net weight: {pt.net_weight}")
     except Exception as e:
         bug_logger.error(f"Guard exit fetch error for identifier={transport_number}: {e}")
         messages.error(request, 'شناسه حمل نامعتبر است یا یافت نشد.')
@@ -612,15 +640,24 @@ def guard_vehicle_exit_view(request, transport_number):
         bug_logger.debug(f"Guard confirming vehicle exit for transport {transport_number}")
         try:
             with transaction.atomic():
-                # تغییر وضعیت به awaiting_settlement
+                # تغییر وضعیت حمل به "در انتظار تسویه"
                 bug_logger.debug(f"Changing transport {transport_number} status to awaiting_settlement")
                 pt.status = Transport.STATUS_AWAITING_SETTLEMENT
+                pt.delivery_date = jdatetime.date.today()
                 pt.save()
+                
+                # تغییر وضعیت سفارش از "در انتظار تطبیق اطلاعات انبار" به "در انتظار تطبیق اطلاعات تحویل انبار"
+                po = pt.allocation.order if pt.allocation else None
+                if po and po.status == Order.STATUS_AWAITING_WH_RECONCILIATION:
+                    # در مستندات گفته شده که وضعیت به "در انتظار تطبیق اطلاعات تحویل انبار" تغییر می‌یابد
+                    # اما این وضعیت در Order model وجود ندارد، پس از همان STATUS_AWAITING_WH_RECONCILIATION استفاده می‌کنیم
+                    # یا می‌توانیم یک وضعیت جدید اضافه کنیم
+                    bug_logger.info(f"وضعیت سفارش {po.order_number} در حالت 'در انتظار تطبیق اطلاعات انبار' باقی می‌ماند")
                 
                 audit_logger.info(
                     f"خروج خودرو تایید شد - "
                     f"حمل: {transport_number} - "
-                    f"سفارش: {pt.purchase_order.order_number} - "
+                    f"سفارش: {pt.allocation.order.order_number if pt.allocation and pt.allocation.order else 'N/A'} - "
                     f"نگهبان: {request.user.username} - "
                     f"وزن خالص: {pt.net_weight}"
                 )

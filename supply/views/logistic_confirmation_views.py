@@ -28,6 +28,28 @@ audit_logger = logging.getLogger("audit")
 
 def get_accessible_purchase_transport_fields_logistic(user):
     """Check field access for Transport model (view permission)"""
+    # برای سوپریوزر، همه فیلدها قابل دسترسی هستند
+    if user.is_superuser:
+        return {
+            'transport_number': True,
+            'purchase_order': True,
+            'status': True,
+            'vehicle_type': True,
+            'plate_number': True,
+            'driver': True,
+            'gross_weight': True,
+            'tare_weight': True,
+            'net_weight': True,
+            'freight_payment_type': True,
+            'initial_freight': True,
+            'total_freight': True,
+            'discount': True,
+            'surplus': True,
+            'freight_payment': True,
+            'delivery_date': True,
+            'created_at': True,
+        }
+    
     return {
         'transport_number': user_can_access_field(user, Transport, 'transport_number', 'view'),
         'purchase_order': user_can_access_field(user, Transport, 'purchase_order', 'view'),
@@ -44,6 +66,7 @@ def get_accessible_purchase_transport_fields_logistic(user):
         'discount': user_can_access_field(user, Transport, 'discount', 'view'),
         'surplus': user_can_access_field(user, Transport, 'surplus', 'view'),
         'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'view'),
+        'delivery_date': user_can_access_field(user, Transport, 'delivery_date', 'view'),
         'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
     }
 
@@ -214,14 +237,27 @@ def logistic_confirmation_detail_view(request, transport_number):
     accessible_person_fields = get_accessible_person_fields_logistic(request.user)
     
     try:
-        transport = get_object_or_404(
-            Transport.objects.select_related(
-                'allocation__order',
-                'allocation__order__customer',
-                'driver'
-            ),
-            transport_number=transport_number
-        )
+        # Support both transport_number and numeric pk as identifier
+        if transport_number and str(transport_number).isdigit():
+            bug_logger.debug(f"Fetching transport by pk: {transport_number}")
+            transport = get_object_or_404(
+                Transport.objects.select_related(
+                    'allocation__order',
+                    'allocation__order__customer',
+                    'driver'
+                ),
+                pk=int(transport_number)
+            )
+        else:
+            bug_logger.debug(f"Fetching transport by transport_number: {transport_number}")
+            transport = get_object_or_404(
+                Transport.objects.select_related(
+                    'allocation__order',
+                    'allocation__order__customer',
+                    'driver'
+                ),
+                transport_number=transport_number
+            )
         
         # Check if transport is in awaiting_settlement status
         if transport.status != Transport.STATUS_AWAITING_SETTLEMENT:
@@ -242,23 +278,25 @@ def logistic_confirmation_detail_view(request, transport_number):
                     transport.save()
                     
                     # بررسی وضعیت سفارش خرید
-                    po = transport.purchase_order
-                    # اگر تمام حمل‌های سفارش در وضعیت awaiting_payment_doc یا بالاتر باشند
-                    all_settled = not po.transports.exclude(
-                        status__in=[
-                            Transport.STATUS_AWAITING_PAYMENT_DOC,
-                            Transport.STATUS_PAYMENT_DOC_UPLOADED,
-                            Transport.STATUS_COMPLETED
-                        ]
-                    ).exists()
-                    
-                    # اگر تمام حمل‌های سفارش تسویه شدند، وضعیت سفارش را به "در انتظار تسویه نهایی" تغییر می‌دهیم
-                    if all_settled:
-                        if po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
-                            po.status = Order.STATUS_AWAITING_FINAL_SETTLEMENT
-                            po.save()
-                            bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
-                            audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تسویه همه حمل‌ها به‌روزرسانی شد")
+                    po = transport.allocation.order if transport.allocation else None
+                    if po:
+                        # بررسی اینکه آیا تمام حمل‌های سفارش در وضعیت awaiting_payment_doc یا بالاتر هستند
+                        # باید از allocation.transports استفاده کنیم
+                        all_transports = Transport.objects.filter(allocation__order=po)
+                        all_settled = not all_transports.exclude(
+                            status__in=[
+                                Transport.STATUS_AWAITING_PAYMENT_DOC,
+                                Transport.STATUS_PAYMENT_DOC_UPLOADED,
+                                Transport.STATUS_COMPLETED
+                            ]
+                        ).exists()
+                        
+                        # اگر تمام حمل‌های سفارش تسویه شدند، وضعیت سفارش را به "در انتظار تسویه نهایی" تغییر می‌دهیم
+                        if all_settled:
+                            if po.status == Order.STATUS_AWAITING_WH_RECONCILIATION:
+                                po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"تمام حمل‌های سفارش تسویه شدند.")
+                                bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
+                                audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تسویه همه حمل‌ها به‌روزرسانی شد")
                     
                     # Log successful completion
                     audit_logger.info(
@@ -281,7 +319,7 @@ def logistic_confirmation_detail_view(request, transport_number):
         
         context = {
             'transport': transport,
-            'purchase_order': transport.purchase_order,
+            'purchase_order': transport.allocation.order if transport.allocation else None,
             'accessible_transport_fields': accessible_transport_fields_view,
             'accessible_po_fields': accessible_po_fields,
             'accessible_person_fields': accessible_person_fields,

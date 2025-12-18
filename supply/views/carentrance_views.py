@@ -33,6 +33,36 @@ User = get_user_model()
 
 def get_accessible_purchase_transport_fields(user):
     """Check field access for Transport model (view permission)"""
+    # برای سوپریوزر، همه فیلدها قابل دسترسی هستند
+    if user.is_superuser:
+        return {
+            'transport_number': True,
+            'purchase_order': True,
+            'status': True,
+            'transport_type': True,
+            'vehicle_type': True,
+            'plate_number': True,
+            'driver': True,
+            'freight_payment_type': True,
+            'initial_freight': True,
+            'total_freight': True,
+            'discount': True,
+            'surplus': True,
+            'freight_payment': True,
+            'driver_account_number': True,
+            'driver_sheba_number': True,
+            'expected_arrival_date': True,
+            'actual_arrival_date': True,
+            'loading_date': True,
+            'delivery_date': True,
+            'gross_weight': True,
+            'tare_weight': True,
+            'net_weight': True,
+            'waybill_number': True,
+            'notes': True,
+            'created_at': True,
+        }
+    
     return {
         'transport_number': user_can_access_field(user, Transport, 'transport_number', 'view'),
         'purchase_order': user_can_access_field(user, Transport, 'purchase_order', 'view'),
@@ -94,6 +124,16 @@ def get_accessible_purchase_transport_fields_edit(user):
 
 def get_accessible_procurement_purchase_order_fields_for_carentrance(user):
     """Check field access for ProcurementPurchaseOrder model (for car entrance views)"""
+    # برای سوپریوزر، همه فیلدها قابل دسترسی هستند
+    if user.is_superuser:
+        return {
+            'order_number': True,
+            'status': True,
+            'supplier': True,
+            'created_at': True,
+            'materials': True,
+        }
+    
     return {
         'order_number': user_can_access_field(user, Order, 'order_number', 'view'),
         'status': user_can_access_field(user, Order, 'status', 'view'),
@@ -191,7 +231,7 @@ class CarEntranceTable(TransportTable):
         verbose_name='نام مواد اولیه',
         empty_values=(),
         orderable=False,
-        visible=False,
+        visible=True,  # به صورت پیش‌فرض نمایش داده می‌شود
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -200,19 +240,30 @@ class CarEntranceTable(TransportTable):
     
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if accessible_fields:
-            # Handle columns from parent table (already initialized by TransportTable)
-            # Add raw_materials visibility based on related fields
-            if hasattr(self.base_columns, 'raw_materials'):
-                # raw_materials column shows purchase_order.materials.raw_material.name
-                # Check if user can access purchase_order and materials
-                self.base_columns['raw_materials'].visible = accessible_fields.get('purchase_order', False)
+        
+        # ستون‌های مورد نیاز برای نگهبان: نوع ماشین، نام ماده اولیه، زمان ثبت، وضعیت، عملیات
+        # این ستون‌ها باید همیشه نمایش داده شوند (حتی اگر accessible_fields محدود باشد)
+        required_columns = ['vehicle_type', 'raw_materials', 'created_at', 'status', 'actions']
+        
+        # همیشه ستون‌های مورد نیاز را نمایش بده - بعد از super().__init__ که ممکن است آن‌ها را مخفی کرده باشد
+        for col_name in required_columns:
+            if col_name == 'raw_materials':
+                # raw_materials یک ستون custom است که در base_columns تعریف شده
+                if 'raw_materials' in self.base_columns:
+                    self.base_columns['raw_materials'].visible = True
+            elif col_name in self.columns:
+                # ستون‌های عادی - مطمئن شویم که visible هستند
+                self.columns[col_name].column.visible = True
+        
+        # اگر accessible_fields وجود دارد، ستون‌های دیگر را بر اساس آن تنظیم کن
+        # اما ستون‌های مورد نیاز را تغییر نده (قبلاً visible=True شده‌اند)
     
     def render_raw_materials(self, record):
         """نمایش لیست مواد اولیه از سفارش خرید"""
         if not record.purchase_order:
             return '—'
-        materials = record.purchase_order.materials.select_related('raw_material').all()
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
             names = [m.raw_material.name for m in materials if m.raw_material]
             return format_html('<br>'.join(names)) if names else '—'
@@ -220,15 +271,20 @@ class CarEntranceTable(TransportTable):
     
     def render_actions(self, record):
         """نمایش دکمه ثبت راننده برای هر رکورد"""
-        register_url = reverse('supply:carentrance_register_driver', args=[record.transport_number])
+        # استفاده از transport_number یا pk در صورت None بودن
+        transport_id = record.transport_number
+        if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
+            transport_id = str(record.pk)
+        register_url = reverse('supply:carentrance_register_driver', args=[str(transport_id)])
         return format_html(
             '<a href="{}" class="btn btn-primary btn-sm">ثبت راننده</a>',
             register_url
         )
     
     class Meta(TransportTable.Meta):
-        sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
-        fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        # ستون‌های مورد نیاز: نوع ماشین، نام ماده اولیه، زمان ثبت حمل، وضعیت حمل، عملیات
+        sequence = ('vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        fields = ('vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
 
 @login_required
@@ -253,16 +309,63 @@ def car_entrance_list_view(request):
         # ولی فاقد داده‌های کامل راننده باشند
         # باید جهت ورودی داشته باشند (direction='inbound' یا transport_type='inbound')
         # برای حمل‌های قدیمی که direction ندارند، از transport_type استفاده می‌کنیم
-        transports = Transport.objects.filter(
+        
+        # ابتدا همه حمل‌های در انتظار ورود را بگیر
+        all_awaiting = Transport.objects.filter(
             status=Transport.STATUS_AWAITING_VEHICLE_ENTRY
-        ).filter(
+        )
+        
+        # لاگ برای دیباگ
+        total_count = all_awaiting.count()
+        bug_logger.info(f"تعداد کل حمل‌های در انتظار ورود خودرو: {total_count}")
+        
+        # فیلتر بر اساس جهت ورودی
+        # حمل‌های ورودی: direction='inbound' یا transport_type='inbound'
+        # یا اگر هر دو null باشند (برای حمل‌های قدیمی که فقط status دارند)
+        transports = all_awaiting.filter(
             Q(direction='inbound') | 
             Q(transport_type='inbound') |
-            Q(direction__isnull=True, transport_type='inbound')
-        ).select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
-        bug_logger.debug(f"تعداد حمل‌های در انتظار ورود خودرو: {transports.count()}")
+            (Q(direction__isnull=True) & Q(transport_type__isnull=True))
+        )
+        
+        inbound_count = transports.count()
+        bug_logger.info(f"تعداد حمل‌های ورودی در انتظار ورود خودرو: {inbound_count}")
+        
+        # اگر هیچ حمل ورودی پیدا نشد ولی حمل‌های در انتظار وجود دارند، همه را نمایش بده (برای دیباگ)
+        # این به ما کمک می‌کند تا ببینیم چه مشکلی وجود دارد
+        if inbound_count == 0 and total_count > 0:
+            bug_logger.warning(f"هیچ حمل ورودی پیدا نشد! نمایش همه حمل‌های در انتظار ورود برای دیباگ")
+            sample_transports = list(all_awaiting.values_list('transport_number', 'direction', 'transport_type', 'status')[:5])
+            bug_logger.warning(f"نمونه حمل‌ها (transport_number, direction, transport_type, status): {sample_transports}")
+            # نمایش همه حمل‌های در انتظار ورود (حتی اگر direction/transport_type تنظیم نشده باشند)
+            transports = all_awaiting
+        
+        transports = transports.select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
+        final_count = transports.count()
+        bug_logger.info(f"تعداد نهایی حمل‌های برای نمایش: {final_count}")
+        
+        # لاگ accessible_fields برای دیباگ
+        if request.user.is_superuser:
+            bug_logger.info(f"کاربر سوپریوزر است - همه فیلدها باید قابل دسترسی باشند")
+            # برای سوپریوزر، مطمئن شویم که همه فیلدها True هستند
+            for key in accessible_transport_fields:
+                accessible_transport_fields[key] = True
+        else:
+            bug_logger.info(f"accessible_transport_fields sample: {dict(list(accessible_transport_fields.items())[:5])}")
+        
+        # برای نگهبان، ستون‌های مورد نیاز را همیشه True می‌کنیم
+        required_fields_for_guard = ['vehicle_type', 'created_at', 'status']
+        for field in required_fields_for_guard:
+            if field in accessible_transport_fields:
+                accessible_transport_fields[field] = True
+        
         table = CarEntranceTable(transports, prefix='car-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table)
+        
+        # لاگ تعداد ردیف‌های جدول و ستون‌های visible
+        visible_columns = [col for col in table.columns if col.visible]
+        bug_logger.info(f"تعداد ردیف‌های جدول: {len(table.rows)}")
+        bug_logger.info(f"ستون‌های visible: {[col.name for col in visible_columns]}")
         
         context = {
             'table': table,
@@ -294,13 +397,28 @@ def register_driver_for_transport_view(request, transport_number):
         messages.error(request, 'شما دسترسی به ثبت راننده را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
+    # اگر transport_number برابر None است یا 'None'، از pk استفاده کن
+    if not transport_number or transport_number == 'None':
+        bug_logger.error(f"transport_number نامعتبر: {transport_number}")
+        messages.error(request, 'شماره حمل نامعتبر است.')
+        return redirect(reverse('supply:carentrance'))
+    
     # Get field access permissions for edit
     accessible_transport_fields = get_accessible_purchase_transport_fields_edit(request.user)
     accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_carentrance(request.user)
     accessible_raw_material_fields = get_accessible_raw_material_fields_for_carentrance(request.user)
     accessible_person_fields = get_accessible_person_fields_edit_for_carentrance(request.user)
     
-    pt = get_object_or_404(Transport, transport_number=transport_number)
+    # تلاش برای پیدا کردن حمل با transport_number یا pk
+    try:
+        if transport_number.isdigit():
+            pt = get_object_or_404(Transport, pk=int(transport_number))
+        else:
+            pt = get_object_or_404(Transport, transport_number=transport_number)
+    except (ValueError, Transport.DoesNotExist) as e:
+        bug_logger.error(f"خطا در یافتن حمل با شناسه {transport_number}: {e}")
+        messages.error(request, 'حمل مورد نظر یافت نشد.')
+        return redirect(reverse('supply:carentrance'))
 
     if pt.status != Transport.STATUS_AWAITING_VEHICLE_ENTRY:
         audit_logger.activity(f"تلاش برای ثبت راننده برای حمل {transport_number} با وضعیت نامعتبر: {pt.status}")
@@ -357,10 +475,15 @@ def register_driver_for_transport_view(request, transport_number):
                     # تغییر وضعیت سفارش خرید به "در انتظار تحویل بار"
                     po = pt.purchase_order
                     if po and po.status == Order.STATUS_AWAITING_VEHICLE_ENTRY:
-                        po.status = Order.STATUS_AWAITING_DELIVERY
-                        po.save()
-                        bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
-                        audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال ورود خودرو به‌روزرسانی شد")
+                        try:
+                            po.transition(Order.STATUS_AWAITING_DELIVERY, user=request.user, note='ورود خودرو ثبت شد')
+                            bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تحویل بار' تغییر یافت")
+                            audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال ورود خودرو به‌روزرسانی شد")
+                        except Exception as order_transition_err:
+                            bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number}: {order_transition_err}")
+                            # اگر transition ناموفق بود، به صورت مستقیم تغییر می‌دهیم
+                            po.status = Order.STATUS_AWAITING_DELIVERY
+                            po.save()
                     
                     audit_logger.info(f"ورود خودرو ثبت شد - حمل: {transport_number} - راننده: {driver.name} - پلاک: {pt.plate_number}")
                     
@@ -456,7 +579,8 @@ class CarExitTable(TransportTable):
         """نمایش لیست مواد اولیه از سفارش خرید"""
         if not record.purchase_order:
             return '—'
-        materials = record.purchase_order.materials.select_related('raw_material').all()
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
             names = [m.raw_material.name for m in materials if m.raw_material]
             return format_html('<br>'.join(names)) if names else '—'

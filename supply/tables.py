@@ -598,7 +598,11 @@ class TransportTable(tables.Table):
             self.columns['expected_arrival_date'].column.visible = accessible_fields.get('expected_arrival_date', False)
             self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
             # Always show actions if any field is visible
-            self.columns['actions'].column.visible = any(accessible_fields.values())
+            self.columns['actions'].column.visible = any(accessible_fields.values()) if accessible_fields else True
+        else:
+            # اگر accessible_fields None باشد، همه ستون‌ها را نمایش بده (برای سوپریوزر یا کاربران بدون محدودیت)
+            # ستون‌ها به صورت پیش‌فرض visible هستند، فقط actions را مطمئن می‌کنیم
+            self.columns['actions'].column.visible = True
     
     class Meta:
         from core.TransportFolder.TransportModel import Transport
@@ -1016,10 +1020,10 @@ class LogisticConfirmationTable(tables.Table):
     )
     
     purchase_order = tables.Column(
-        verbose_name='شماره سفارش خرید',
-        accessor='purchase_order__order_number',
+        verbose_name='شماره سفارش',
+        accessor='allocation.order.order_number',
         orderable=True,
-        visible=False,
+        visible=True,  # همیشه نمایش داده می‌شود
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1122,27 +1126,20 @@ class LogisticConfirmationTable(tables.Table):
     
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if accessible_fields:
-            if hasattr(self.base_columns, 'transport_number'):
-                self.base_columns['transport_number'].visible = accessible_fields.get('transport_number', False)
-            if hasattr(self.base_columns, 'purchase_order'):
-                self.base_columns['purchase_order'].visible = accessible_fields.get('purchase_order', False)
-            if hasattr(self.base_columns, 'supplier'):
-                self.base_columns['supplier'].visible = accessible_fields.get('purchase_order', False)
-            if hasattr(self.base_columns, 'raw_materials'):
-                self.base_columns['raw_materials'].visible = accessible_fields.get('purchase_order', False)
-            if hasattr(self.base_columns, 'vehicle_type'):
-                self.base_columns['vehicle_type'].visible = accessible_fields.get('vehicle_type', False)
-            if hasattr(self.base_columns, 'plate_number'):
-                self.base_columns['plate_number'].visible = accessible_fields.get('plate_number', False)
-            if hasattr(self.base_columns, 'driver'):
-                self.base_columns['driver'].visible = accessible_fields.get('driver', False)
-            if hasattr(self.base_columns, 'net_weight'):
-                self.base_columns['net_weight'].visible = accessible_fields.get('net_weight', False)
-            if hasattr(self.base_columns, 'delivery_date'):
-                self.base_columns['delivery_date'].visible = accessible_fields.get('delivery_date', False)
-            if hasattr(self.base_columns, 'status'):
-                self.base_columns['status'].visible = accessible_fields.get('status', False)
+        
+        # ستون‌های مورد نیاز: شماره سفارش، نوع ماده اولیه، پلاک خودرو، مقدار تحویلی، تاریخ خروج، وضعیت، عملیات
+        # این ستون‌ها باید همیشه نمایش داده شوند
+        required_columns = ['purchase_order', 'raw_materials', 'plate_number', 'net_weight', 'delivery_date', 'status', 'actions']
+        
+        # همیشه ستون‌های مورد نیاز را نمایش بده
+        for col_name in required_columns:
+            if col_name in ['raw_materials']:
+                # ستون‌های custom که در base_columns تعریف شده‌اند
+                if col_name in self.base_columns:
+                    self.base_columns[col_name].visible = True
+            elif col_name in self.columns:
+                # ستون‌های عادی
+                self.columns[col_name].column.visible = True
     
     class Meta:
         from core.TransportFolder.TransportModel import Transport
@@ -1163,12 +1160,14 @@ class LogisticConfirmationTable(tables.Table):
     
     def render_raw_materials(self, record):
         """نمایش مواد اولیه سفارش (ممکن چندتا باشد)"""
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
+        if not record.allocation or not record.allocation.order:
+            return '—'
+        materials = record.allocation.order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
-            names = [m.raw_material.name for m in materials]
+            names = [m.raw_material.name for m in materials if m.raw_material]
             if len(names) > 2:
                 return format_html('{}, ...', ', '.join(names[:2]))
-            return ', '.join(names)
+            return ', '.join(names) if names else '—'
         return '—'
     
     def render_transport_number(self, value):
@@ -1225,9 +1224,11 @@ class LogisticConfirmationTable(tables.Table):
     
     def render_actions(self, record):
         """نمایش دکمه جزئیات"""
-        if not record.transport_number:
-            return format_html('<span class="text-muted">شماره حمل ناموجود</span>')
-        detail_url = reverse('supply:logistic_confirmation_detail', kwargs={'transport_number': record.transport_number})
+        # استفاده از transport_number یا pk در صورت None بودن
+        transport_id = record.transport_number
+        if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
+            transport_id = str(record.pk)
+        detail_url = reverse('supply:logistic_confirmation_detail', kwargs={'transport_number': str(transport_id)})
         return format_html(
             '<a href="{}" class="btn btn-sm btn-primary">جزئیات</a>',
             detail_url
