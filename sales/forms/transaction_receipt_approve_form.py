@@ -117,14 +117,8 @@ class TransactionApprovalForm(forms.ModelForm):
             self.fields['bank_account'].queryset = BankAccount.objects.none()
             self.fields['inquiry_name'].choices = [('', 'لطفاً مشتری را انتخاب کنید')]
 
-        # تنظیم مقدار اولیه inquiry_amount از document_amount
-        if self.document and self.document.document_amount:
-            # اگر inquiry_amount از قبل وجود ندارد یا خالی است، از document_amount استفاده کن
-            if not self.document.inquiry_amount:
-                self.fields['inquiry_amount'].initial = self.document.document_amount
-            else:
-                # اگر inquiry_amount از قبل وجود دارد، همان را استفاده کن
-                self.fields['inquiry_amount'].initial = self.document.inquiry_amount
+        # ذخیره مقدار اصلی document_amount برای بررسی تطابق (بدون پیش‌پرکردن فیلد)
+        # مقدار inquiry_amount نباید پیش‌پر شود - کاربر باید آن را وارد کند
         
         # حذف فیلدهای قدیمی source_bank, approval_account_number, shaba_number
         # چون از bank_account استفاده می‌کنیم
@@ -159,6 +153,22 @@ class TransactionApprovalForm(forms.ModelForm):
                     'inquiry_name_other': 'لطفاً نام استعلام گرفته شده را وارد کنید.'
                 })
             cleaned_data['inquiry_name'] = inquiry_name_other
+        
+        # بررسی تطابق inquiry_amount با document_amount (برای اطمینان از صحت)
+        if self.document and self.document.document_amount:
+            inquiry_amount = cleaned_data.get('inquiry_amount')
+            if inquiry_amount:
+                document_amount = float(self.document.document_amount)
+                submitted_amount = float(inquiry_amount)
+                
+                # بررسی تطابق دقیق مبالغ
+                if abs(submitted_amount - document_amount) > 0.01:  # استفاده از tolerance برای اعداد اعشاری
+                    # فرمت کردن مبالغ برای نمایش در پیام خطا
+                    document_amount_formatted = f"{document_amount:,.0f}"
+                    submitted_amount_formatted = f"{submitted_amount:,.0f}"
+                    raise forms.ValidationError({
+                        'inquiry_amount': f'مبلغ استعلام گرفته شده با مبلغ سند تطابق ندارد. مبلغ واقعی سند: {document_amount_formatted} ریال، مبلغ وارد شده: {submitted_amount_formatted} ریال. لطفاً مبلغ را بررسی کنید و در صورت نیاز تراکنش را رد کنید.'
+                    })
         
         # بررسی اینکه مجموع مبالغ استعلام از مبلغ کل تسویه بیشتر نشود
         if self.settlement and self.settlement.original_document_amount:

@@ -373,6 +373,9 @@
                     {% if settlement.original_document_amount %}
                         <small style="color: var(--gray-600); margin-top: 0.25rem;">مبلغ کل تسویه: {{ original_document_amount_persian }} ریال | باقیمانده: {{ remaining_amount_persian }} ریال</small>
                     {% endif %}
+                    {% if selected_document.document_amount %}
+                        <small style="color: #0066cc; margin-top: 0.25rem; display: block; font-weight: 500;">⚠️ لطفاً مبلغ استعلام را دستی وارد کنید. مبلغ باید با مبلغ سند ({{ selected_document_persian.document_amount_persian }} ریال) تطابق داشته باشد.</small>
+                    {% endif %}
                 </div>
             </div>
             
@@ -499,26 +502,14 @@ document.getElementById('{{ form.bank_account.id_for_label }}').addEventListener
     }
 });
 
-    // اگر حساب بانکی از قبل انتخاب شده، اطلاعات را نمایش بده
-    window.addEventListener('DOMContentLoaded', function() {
-        var bankAccountSelect = document.getElementById('{{ form.bank_account.id_for_label }}');
-        if (bankAccountSelect && bankAccountSelect.value) {
-            bankAccountSelect.dispatchEvent(new Event('change'));
-        }
-        
-        // پر کردن خودکار مبلغ استعلام از مبلغ سند
-        var inquiryAmountInput = document.getElementById('{{ form.inquiry_amount.id_for_label }}');
-        var documentAmount = parseFloat('{{ selected_document.document_amount|default:"0" }}');
-        
-        if (inquiryAmountInput && documentAmount > 0) {
-            // اگر فیلد خالی است یا مقدار اولیه ندارد، از مبلغ سند استفاده کن
-            var currentValue = parseFloat(inquiryAmountInput.value) || 0;
-            if (currentValue === 0 || !inquiryAmountInput.value) {
-                inquiryAmountInput.value = documentAmount;
+        // اگر حساب بانکی از قبل انتخاب شده، اطلاعات را نمایش بده
+        window.addEventListener('DOMContentLoaded', function() {
+            var bankAccountSelect = document.getElementById('{{ form.bank_account.id_for_label }}');
+            if (bankAccountSelect && bankAccountSelect.value) {
+                bankAccountSelect.dispatchEvent(new Event('change'));
             }
-        }
-        
-        // مدیریت نمایش/مخفی کردن فیلد inquiry_name_other
+            
+            // مدیریت نمایش/مخفی کردن فیلد inquiry_name_other
         var inquiryNameSelect = document.getElementById('id_inquiry_name_select');
         var inquiryNameOtherContainer = document.getElementById('inquiry_name_other_container');
         var inquiryNameOtherInput = document.getElementById('id_inquiry_name_other');

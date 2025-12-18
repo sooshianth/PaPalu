@@ -319,11 +319,10 @@ def approve_transaction_receipt_detail_view(request, order_number):
         # اگر document_id در query string باشد، فرم را با آن سند پر کن
         if document:
             # اگر سند قبلاً تأیید شده، مقادیر موجود را نمایش بده
+            # توجه: inquiry_amount نباید پیش‌پر شود - کاربر باید آن را دستی وارد کند برای بررسی تطابق
             initial_data = {}
             if document.accounting_document_number:
                 initial_data['accounting_document_number'] = document.accounting_document_number
-            if document.inquiry_amount:
-                initial_data['inquiry_amount'] = document.inquiry_amount
             if document.tracking_number:
                 initial_data['tracking_number'] = document.tracking_number
             # inquiry_name در فرم به صورت ChoiceField است و خود فرم مقدار پیش‌فرض را تنظیم می‌کند
