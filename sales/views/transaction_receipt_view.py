@@ -20,6 +20,28 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 
+def to_persian_digits(text):
+    """تبدیل اعداد انگلیسی به فارسی بدون کاما"""
+    if text is None:
+        return ''
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    translation_table = str.maketrans(english_digits, persian_digits)
+    return str(text).translate(translation_table)
+
+
+def persian_number_with_comma(value):
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (برای مبالغ)"""
+    if value is None:
+        return '-'
+    try:
+        num_float = float(value)
+        formatted = f"{num_float:,.0f}"
+        return to_persian_digits(formatted)
+    except (ValueError, TypeError):
+        return str(value)
+
+
 @login_required
 def transaction_receipt_order_list_view(request):
     """
@@ -46,11 +68,20 @@ def transaction_receipt_order_list_view(request):
         'order_type': True,
         'status': True,
         'registered_by': True,
+        'original_document_amount': True,
+        'remaining_amount': True,
+        'customer_name': True,
+        'customer_national_id': True,
         'actions': True,
     }
     
     # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
-    table = TransactionReceiptOrderTable(orders_qs.select_related('registered_by'), user=request.user, accessible_fields=accessible_fields)
+    # استفاده از select_related و prefetch_related برای بهینه‌سازی query
+    table = TransactionReceiptOrderTable(
+        orders_qs.select_related('registered_by', 'customer').prefetch_related('settlements', 'settlements__transaction_documents'),
+        user=request.user,
+        accessible_fields=accessible_fields
+    )
     
     RequestConfig(request, paginate={'per_page': 20}).configure(table)
     
@@ -202,15 +233,38 @@ def transaction_receipt_upload_view(request, order_number):
         if all_approved and all_documents_exist:
             can_proceed = True
     
+    # فارسی کردن اعداد برای نمایش در template
+    order_number_persian = to_persian_digits(order.order_number)
+    original_document_amount_persian = persian_number_with_comma(settlement.original_document_amount) if settlement.original_document_amount else '-'
+    settled_amount_persian = persian_number_with_comma(settlement.settled_amount) if settlement.settled_amount else '۰'
+    remaining_amount_persian = persian_number_with_comma(remaining_amount) if settlement.original_document_amount else '-'
+    total_document_amount_persian = persian_number_with_comma(total_document_amount) if total_document_amount else '۰'
+    
+    # فارسی کردن اعداد برای هر سند
+    documents_with_persian = []
+    for doc in documents:
+        doc_dict = {
+            'doc': doc,
+            'document_amount_persian': persian_number_with_comma(doc.document_amount) if doc.document_amount else '-',
+        }
+        documents_with_persian.append(doc_dict)
+    
     context = {
         # داده دیدنی
         'order': order,
         'settlement': settlement,
         'documents': documents,
+        'documents_with_persian': documents_with_persian,
         'total_document_amount': total_document_amount,
         'remaining_amount': remaining_amount,
         'all_approved': all_approved,
         'can_proceed': can_proceed,
+        # اعداد فارسی شده
+        'order_number_persian': order_number_persian,
+        'original_document_amount_persian': original_document_amount_persian,
+        'settled_amount_persian': settled_amount_persian,
+        'remaining_amount_persian': remaining_amount_persian,
+        'total_document_amount_persian': total_document_amount_persian,
         # فرم برای داده‌های پرکردنی
         'form': form,
         'page_title': f'ثبت رسید تراکنش - سفارش {order.order_number}',

@@ -175,7 +175,7 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
             <div>
                 <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">شماره سفارش:</strong>
-                <span>{{ order.order_number }}</span>
+                <span>{{ order_number_persian }}</span>
             </div>
             <div>
                 <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مشتری:</strong>
@@ -184,25 +184,25 @@
             <div>
                 <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مبلغ کل سند مبدا:</strong>
                 <span style="font-weight: 600; color: var(--primary-green);">
-                    {{ settlement.original_document_amount|floatformat:0|default:"-" }} ریال
+                    {{ original_document_amount_persian }} ریال
                 </span>
             </div>
             <div>
                 <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مبلغ کل تسویه شده:</strong>
                 <span style="font-weight: 600; color: var(--dark-green);">
-                    {{ settlement.settled_amount|floatformat:0|default:"0" }} ریال
+                    {{ settled_amount_persian }} ریال
                 </span>
             </div>
             <div>
                 <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">مجموع مبالغ استعلام:</strong>
                 <span style="font-weight: 600; color: var(--primary-green);">
-                    {{ total_inquiry_amount|floatformat:0|default:"0" }} ریال
+                    {{ total_inquiry_amount_persian }} ریال
                 </span>
             </div>
             <div>
                 <strong style="display: block; color: var(--gray-600); font-size: 0.85rem; margin-bottom: 0.25rem;">باقیمانده:</strong>
                 <span style="font-weight: 600; {% if remaining_amount > 0 %}color: #dc3545;{% else %}color: var(--primary-green);{% endif %}">
-                    {{ remaining_amount|floatformat:0|default:"0" }} ریال
+                    {{ remaining_amount_persian }} ریال
                 </span>
             </div>
         </div>
@@ -212,7 +212,7 @@
         </div>
         {% elif remaining_amount > 0 %}
         <div style="margin-top: 1rem; background: #fff3cd; color: #856404; padding: 1rem; border-radius: 8px; border-right: 4px solid #ffc107; font-weight: 500;">
-            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} ریال باقیمانده است. لطفاً تأییدهای تراکنش را تا رسیدن به مبلغ کل اضافه کنید.
+            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount_persian }} ریال باقیمانده است. لطفاً تأییدهای تراکنش را تا رسیدن به مبلغ کل اضافه کنید.
         </div>
         {% endif %}
     </div>
@@ -242,43 +242,43 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for doc in documents %}
-                        <tr {% if doc.approval_status == 'rejected' %}style="background-color: #f8d7da;"{% elif doc.inquiry_amount %}style="background-color: #d4edda;"{% endif %}>
-                            <td>{{ doc.accounting_document_number|default:"-" }}</td>
-                            <td>{{ doc.get_payment_type_display }}</td>
-                            <td><strong>{{ doc.document_amount|floatformat:0 }}</strong></td>
-                            <td>{{ doc.due_date|default:"-" }}</td>
-                            <td>{{ doc.source_account|default:"-" }}</td>
-                            <td>{{ doc.get_payment_status_display|default:"-" }}</td>
-                            <td>{{ doc.check_receipt_date|default:"-" }}</td>
+                    {% for item in documents_with_persian %}
+                        <tr {% if item.doc.approval_status == 'rejected' %}style="background-color: #f8d7da;"{% elif item.doc.inquiry_amount %}style="background-color: #d4edda;"{% endif %}>
+                            <td>{{ item.doc.accounting_document_number|default:"-" }}</td>
+                            <td>{{ item.doc.get_payment_type_display }}</td>
+                            <td><strong>{{ item.document_amount_persian }}</strong></td>
+                            <td>{{ item.doc.due_date|default:"-" }}</td>
+                            <td>{{ item.doc.source_account|default:"-" }}</td>
+                            <td>{{ item.doc.get_payment_status_display|default:"-" }}</td>
+                            <td>{{ item.doc.check_receipt_date|default:"-" }}</td>
                             <td>
-                                {% if doc.document_attachment %}
-                                    <a href="{{ doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
+                                {% if item.doc.document_attachment %}
+                                    <a href="{{ item.doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
                                 {% else %}
                                     -
                                 {% endif %}
                             </td>
                             <td>
-                                {% if doc.approval_status == 'approved' %}
+                                {% if item.doc.approval_status == 'approved' %}
                                     <span style="color: var(--primary-green); font-weight: 600;">✓ تأیید شده</span>
-                                {% elif doc.approval_status == 'rejected' %}
+                                {% elif item.doc.approval_status == 'rejected' %}
                                     <span style="color: #dc3545; font-weight: 600;">✗ رد شده</span>
-                                    {% if doc.rejection_reason %}
-                                        <br><small style="color: #721c24;">دلیل: {{ doc.get_rejection_reason_display }}</small>
+                                    {% if item.doc.rejection_reason %}
+                                        <br><small style="color: #721c24;">دلیل: {{ item.doc.get_rejection_reason_display }}</small>
                                     {% endif %}
                                 {% else %}
                                     <span style="color: #ffc107; font-weight: 600;">⏳ در انتظار تأیید</span>
                                 {% endif %}
                             </td>
                             <td>
-                                {% if doc.approval_status == 'rejected' %}
+                                {% if item.doc.approval_status == 'rejected' %}
                                     <span style="color: #dc3545; font-weight: 600; font-size: 0.85rem;">⚠️ باید ویرایش شود</span>
-                                {% elif doc.approval_status == 'approved' %}
+                                {% elif item.doc.approval_status == 'approved' %}
                                     <span style="color: var(--primary-green); font-weight: 600; font-size: 0.85rem;">✓ تایید شده</span>
-                                {% elif not doc.inquiry_amount %}
-                                    <a href="?document_id={{ doc.id }}" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">تأیید</a>
+                                {% elif not item.doc.inquiry_amount %}
+                                    <a href="?document_id={{ item.doc.id }}" class="btn btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">تأیید</a>
                                 {% else %}
-                                    <a href="?document_id={{ doc.id }}" class="btn btn-sm btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">ویرایش تأیید</a>
+                                    <a href="?document_id={{ item.doc.id }}" class="btn btn-sm btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">ویرایش تأیید</a>
                                 {% endif %}
                             </td>
                         </tr>
@@ -314,23 +314,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                    {% for doc in approved_documents %}
+                    {% for item in approved_documents_with_persian %}
                         <tr>
-                            <td>{{ doc.accounting_document_number|default:"-" }}</td>
-                            <td><strong>{{ doc.inquiry_amount|floatformat:0 }}</strong></td>
-                            <td>{{ doc.tracking_number|default:"-" }}</td>
-                            <td>{{ doc.source_bank|default:"-" }}</td>
-                            <td>{{ doc.approval_account_number|default:"-" }}</td>
-                            <td>{{ doc.shaba_number|default:"-" }}</td>
-                            <td>{{ doc.inquiry_name|default:"-" }}</td>
-                            <td>{{ doc.transfer_time|date:"Y/m/d H:i"|default:"-" }}</td>
+                            <td>{{ item.doc.accounting_document_number|default:"-" }}</td>
+                            <td><strong>{{ item.inquiry_amount_persian }}</strong></td>
+                            <td>{{ item.tracking_number_persian }}</td>
+                            <td>{{ item.doc.source_bank|default:"-" }}</td>
+                            <td>{{ item.approval_account_number_persian }}</td>
+                            <td>{{ item.shaba_number_persian }}</td>
+                            <td>{{ item.doc.inquiry_name|default:"-" }}</td>
+                            <td>{{ item.doc.transfer_time|date:"Y/m/d H:i"|default:"-" }}</td>
                         </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
             <div style="margin-top: 1rem; padding: 1rem; background: var(--light-green); border-radius: 8px; font-weight: 600; color: var(--dark-green);">
-                جمع مبالغ استعلام: {{ total_inquiry_amount|floatformat:0 }} ریال
+                جمع مبالغ استعلام: {{ total_inquiry_amount_persian }} ریال
             </div>
         {% else %}
             <p style="text-align: center; color: var(--gray-600); padding: 2rem;">هنوز تأیید تراکنشی ثبت نشده است.</p>
@@ -349,7 +349,7 @@
             <strong>اطلاعات سند انتخابی:</strong>
             <div style="margin-top: 0.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; font-size: 0.9rem;">
                 <div><strong>نوع تسویه:</strong> {{ selected_document.get_payment_type_display }}</div>
-                <div><strong>مبلغ سند:</strong> {{ selected_document.document_amount|floatformat:0 }} ریال</div>
+                <div><strong>مبلغ سند:</strong> {{ selected_document_persian.document_amount_persian }} ریال</div>
                 <div><strong>تاریخ سررسید:</strong> {{ selected_document.due_date|default:"-" }}</div>
                 <div><strong>حساب مبدا:</strong> {{ selected_document.source_account|default:"-" }}</div>
             </div>
@@ -371,7 +371,7 @@
                     {{ form.inquiry_amount }}
                     {{ form.inquiry_amount.errors }}
                     {% if settlement.original_document_amount %}
-                        <small style="color: var(--gray-600); margin-top: 0.25rem;">مبلغ کل تسویه: {{ settlement.original_document_amount|floatformat:0 }} ریال | باقیمانده: {{ remaining_amount|floatformat:0 }} ریال</small>
+                        <small style="color: var(--gray-600); margin-top: 0.25rem;">مبلغ کل تسویه: {{ original_document_amount_persian }} ریال | باقیمانده: {{ remaining_amount_persian }} ریال</small>
                     {% endif %}
                 </div>
             </div>
