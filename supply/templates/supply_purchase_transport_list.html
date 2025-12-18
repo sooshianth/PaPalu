@@ -250,6 +250,54 @@
 </div>
 
 <div class="list-card">
+    <!-- فیلتر و جست‌وجو -->
+    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; border: 1px solid #dee2e6;">
+        <h4 style="margin-bottom: 15px; font-size: 1.1rem; color: var(--gray-800);">فیلتر و جست‌وجو</h4>
+        <form method="get" action="{% url 'supply:purchase_transport_list' %}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">شماره سفارش</label>
+                <input type="text" name="order_number" value="{{ filters.order_number }}" placeholder="جستجو..." style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">نوع ماشین</label>
+                <select name="vehicle_type" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                    <option value="">همه</option>
+                    <option value="truck" {% if filters.vehicle_type == 'truck' %}selected{% endif %}>کامیون</option>
+                    <option value="trailer" {% if filters.vehicle_type == 'trailer' %}selected{% endif %}>تریلی</option>
+                    <option value="van" {% if filters.vehicle_type == 'van' %}selected{% endif %}>ون</option>
+                    <option value="pickup" {% if filters.vehicle_type == 'pickup' %}selected{% endif %}>وانت</option>
+                    <option value="other" {% if filters.vehicle_type == 'other' %}selected{% endif %}>سایر</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">نوع حمل</label>
+                <select name="transport_type" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                    <option value="">همه</option>
+                    <option value="inbound" {% if filters.transport_type == 'inbound' %}selected{% endif %}>ورودی</option>
+                    <option value="outbound" {% if filters.transport_type == 'outbound' %}selected{% endif %}>خروجی</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">وضعیت حمل</label>
+                <select name="status" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                    <option value="">همه</option>
+                    <option value="pending_vehicle_entry" {% if filters.status == 'pending_vehicle_entry' %}selected{% endif %}>در انتظار ورود خودرو به کارخانه</option>
+                    <option value="pending_unloading" {% if filters.status == 'pending_unloading' %}selected{% endif %}>در انتظار تخلیه</option>
+                    <option value="pending_settlement" {% if filters.status == 'pending_settlement' %}selected{% endif %}>در انتظار تسویه</option>
+                    <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>تکمیل شده</option>
+                    <option value="payment_doc_uploaded" {% if filters.status == 'payment_doc_uploaded' %}selected{% endif %}>سند پرداخت بارگذاری شده</option>
+                </select>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">تاریخ ثبت</label>
+                <input type="date" name="created_at" value="{{ filters.created_at }}" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primary" style="flex: 1; padding: 8px 16px; font-size: 0.9rem;">جستجو</button>
+                <a href="{% url 'supply:purchase_transport_list' %}" class="btn btn-secondary" style="flex: 1; padding: 8px 16px; font-size: 0.9rem; text-align: center; text-decoration: none;">پاک کردن</a>
+            </div>
+        </form>
+    </div>
         {% if awaiting_pos %}
         <div class="dual-table-section">
             <h3>سفارش‌های در انتظار تعریف حمل</h3>

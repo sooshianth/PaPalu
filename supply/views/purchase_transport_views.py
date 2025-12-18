@@ -224,6 +224,14 @@ def purchase_transport_list_view(request):
     
     try:
         from supply.tables import TransportTable
+        
+        # دریافت پارامترهای فیلتر و جست‌وجو
+        order_number_filter = request.GET.get('order_number', '').strip()
+        vehicle_type_filter = request.GET.get('vehicle_type', '').strip()
+        transport_type_filter = request.GET.get('transport_type', '').strip()
+        status_filter = request.GET.get('status', '').strip()
+        created_at_filter = request.GET.get('created_at', '').strip()
+        
         # Orders awaiting transport definition (for quick create)
         awaiting_pos = Order.objects.filter(
             status=Order.STATUS_AWAITING_TRANSPORT_DEFINITION
@@ -234,14 +242,57 @@ def purchase_transport_list_view(request):
             status__in=[Transport.STATUS_COMPLETED, Transport.STATUS_PAYMENT_DOC_UPLOADED]
         ).filter(
             Q(direction='inbound') | Q(transport_type='inbound')
-        ).select_related('allocation', 'allocation__order', 'created_by').order_by('-created_at')
+        ).select_related('allocation', 'allocation__order', 'created_by')
         
         # Completed transports (both old completed status and new payment_doc_uploaded status) - فقط حمل‌های ورودی
         completed_transports = Transport.objects.filter(
             status__in=[Transport.STATUS_COMPLETED, Transport.STATUS_PAYMENT_DOC_UPLOADED]
         ).filter(
             Q(direction='inbound') | Q(transport_type='inbound')
-        ).select_related('allocation', 'allocation__order', 'created_by').order_by('-created_at')
+        ).select_related('allocation', 'allocation__order', 'created_by')
+        
+        # اعمال فیلترها بر روی حمل‌های فعال
+        if order_number_filter:
+            active_transports = active_transports.filter(
+                Q(allocation__order__order_number__icontains=order_number_filter)
+            )
+        if vehicle_type_filter:
+            active_transports = active_transports.filter(vehicle_type=vehicle_type_filter)
+        if transport_type_filter:
+            active_transports = active_transports.filter(transport_type=transport_type_filter)
+        if status_filter:
+            active_transports = active_transports.filter(status=status_filter)
+        if created_at_filter:
+            try:
+                from datetime import datetime
+                # فرض می‌کنیم تاریخ به فرمت YYYY-MM-DD وارد شده
+                date_obj = datetime.strptime(created_at_filter, '%Y-%m-%d').date()
+                active_transports = active_transports.filter(created_at__date=date_obj)
+            except ValueError:
+                pass  # اگر تاریخ نامعتبر بود، فیلتر اعمال نمی‌شود
+        
+        # اعمال فیلترها بر روی حمل‌های تکمیل‌شده
+        if order_number_filter:
+            completed_transports = completed_transports.filter(
+                Q(allocation__order__order_number__icontains=order_number_filter)
+            )
+        if vehicle_type_filter:
+            completed_transports = completed_transports.filter(vehicle_type=vehicle_type_filter)
+        if transport_type_filter:
+            completed_transports = completed_transports.filter(transport_type=transport_type_filter)
+        if status_filter:
+            completed_transports = completed_transports.filter(status=status_filter)
+        if created_at_filter:
+            try:
+                from datetime import datetime
+                date_obj = datetime.strptime(created_at_filter, '%Y-%m-%d').date()
+                completed_transports = completed_transports.filter(created_at__date=date_obj)
+            except ValueError:
+                pass
+        
+        # مرتب‌سازی
+        active_transports = active_transports.order_by('-created_at')
+        completed_transports = completed_transports.order_by('-created_at')
         
         # Prepare table accessible fields dict
         table_accessible_fields = {
@@ -278,6 +329,13 @@ def purchase_transport_list_view(request):
             'accessible_po_fields': accessible_po_fields,
             'accessible_person_fields': accessible_person_fields,
             'accessible_user_fields': accessible_user_fields,
+            'filters': {
+                'order_number': order_number_filter,
+                'vehicle_type': vehicle_type_filter,
+                'transport_type': transport_type_filter,
+                'status': status_filter,
+                'created_at': created_at_filter,
+            },
         }
         return render(request, 'supply_purchase_transport_list.html', context)
     except Exception as e:
@@ -367,11 +425,31 @@ def create_purchase_transport_view(request):
                         # اطمینان از اینکه وضعیت پیش‌فرض draft است
                         if not pt.status:
                             pt.status = Transport.STATUS_DRAFT
+                        
+                        # تولید خودکار شماره حمل
+                        if not pt.transport_number:
+                            import uuid
+                            from datetime import datetime
+                            # تولید شماره حمل به فرمت TRANSPORT-YYYYMMDD-XXXX
+                            date_str = datetime.now().strftime('%Y%m%d')
+                            unique_id = str(uuid.uuid4())[:4].upper()
+                            pt.transport_number = f"TRANSPORT-{date_str}-{unique_id}"
+                        
                         pt.save()
                         
                         # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
                         pt.status = Transport.STATUS_AWAITING_VEHICLE_ENTRY
                         pt.save()
+                        
+                        # تغییر وضعیت سفارش از "در انتظار تعریف حمل" به "در انتظار ورود خودرو"
+                        if pt.allocation and pt.allocation.order:
+                            order = pt.allocation.order
+                            if order.status == Order.STATUS_AWAITING_TRANSPORT_DEFINITION:
+                                try:
+                                    order.transition(Order.STATUS_AWAITING_VEHICLE_ENTRY, user=request.user, note='تعریف حمل انجام شد')
+                                    bug_logger.info(f"وضعیت سفارش {order.order_number} از 'در انتظار تعریف حمل' به 'در انتظار ورود خودرو' تغییر کرد")
+                                except Exception as order_transition_err:
+                                    bug_logger.warning(f"خطا در تغییر وضعیت سفارش {order.order_number}: {order_transition_err}")
                         
                         bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number} - وضعیت: {pt.status} - ID: {pt.pk}")
                         

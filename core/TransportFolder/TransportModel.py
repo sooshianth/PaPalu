@@ -474,6 +474,10 @@ class Transport(models.Model):
 
         super().save(*args, **kwargs)
     
+    def can_delete(self):
+        """بررسی امکان حذف حمل - فقط در وضعیت پیش‌نویس مجاز است"""
+        return self.status == self.STATUS_DRAFT
+    
     def send_guard_notification(self):
         """ارسال اعلان به نگهبان با اطلاعات خودرو - برای سازگاری با کد قدیمی"""
         import logging
