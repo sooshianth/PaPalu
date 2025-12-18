@@ -237,6 +237,11 @@ def purchase_transport_list_view(request):
             status=Order.STATUS_AWAITING_TRANSPORT_DEFINITION
         ).select_related('customer').order_by('-created_at')
         
+        # Create table for awaiting orders
+        from supply.tables import AwaitingPurchaseOrderTable
+        awaiting_table = AwaitingPurchaseOrderTable(awaiting_pos)
+        RequestConfig(request, paginate={'per_page': 10}).configure(awaiting_table)
+        
         # Active transports (not completed) - فقط حمل‌های ورودی
         active_transports = Transport.objects.exclude(
             status__in=[Transport.STATUS_COMPLETED, Transport.STATUS_PAYMENT_DOC_UPLOADED]
@@ -324,7 +329,7 @@ def purchase_transport_list_view(request):
         context = {
             'active_table': active_table,
             'completed_table': completed_table,
-            'awaiting_pos': awaiting_pos,
+            'awaiting_table': awaiting_table,
             'accessible_transport_fields': accessible_transport_fields,
             'accessible_po_fields': accessible_po_fields,
             'accessible_person_fields': accessible_person_fields,
@@ -619,6 +624,7 @@ def get_purchase_order_info_api(request, order_number):
     """API endpoint برای دریافت اطلاعات سفارش خرید"""
     from django.http import JsonResponse
     
+    audit_logger.info(f"دریافت اطلاعات سفارش خرید از طریق API - شماره: {order_number}")
     try:
         po = get_object_or_404(Order, order_number=order_number)
         materials_data = []
@@ -647,6 +653,7 @@ def driver_search_api(request):
     """API برای جستجوی راننده بر اساس نام یا شماره تلفن"""
     from django.http import JsonResponse
     
+    audit_logger.info("جستجوی راننده از طریق API")
     query = request.GET.get('q', '').strip()
     driver_id = request.GET.get('id', '').strip()
     

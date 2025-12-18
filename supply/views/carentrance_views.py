@@ -524,8 +524,10 @@ def driver_lookup_api(request):
     
     اطلاعات راننده را از آخرین حمل او نیز استخراج می‌کند (account و sheba)
     """
+    audit_logger.info("جستجوی راننده با شماره تلفن از طریق API")
     phone = request.GET.get('phone')
     if not phone:
+        audit_logger.alert("درخواست جستجوی راننده بدون شماره تلفن")
         return JsonResponse({'error': 'phone_required'}, status=400)
     
     try:
