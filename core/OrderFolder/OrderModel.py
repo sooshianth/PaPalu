@@ -254,22 +254,61 @@ class Order(models.Model):
         return total or 0
     
     @staticmethod
-    def generate_order_number():
+    def generate_order_number(order_type='sale'):
         """
-        تولید خودکار شماره سفارش
-        شروع از 100000 و افزایش تدریجی
+        تولید خودکار شماره سفارش بر اساس نوع سفارش
+        - برای سفارش فروش (sale): از 100000 شروع می‌شود و دونه دونه افزایش می‌یابد
+        - برای سفارش خرید (purchase): از PF000001 شروع می‌شود و دونه دونه افزایش می‌یابد
         """
-        last_order = Order.objects.all().order_by('-order_number').first()
-        if last_order:
-            try:
-                last_number = int(last_order.order_number)
-                if last_number >= 100000:
-                    return str(last_number + 1)
-                else:
-                    return '100000'
-            except (ValueError, TypeError):
+        if order_type == 'purchase':
+            # برای سفارش‌های خرید: فرمت PF000001
+            last_order = Order.objects.filter(
+                order_type='purchase',
+                order_number__startswith='PF'
+            ).order_by('-order_number').first()
+            
+            if last_order:
+                try:
+                    # استخراج عدد از PF000001
+                    last_num_str = last_order.order_number[2:]  # حذف PF از ابتدا
+                    last_num = int(last_num_str)
+                    return f"PF{last_num + 1:06d}"
+                except (ValueError, TypeError):
+                    return 'PF000001'
+            else:
+                return 'PF000001'
+        else:
+            # برای سفارش‌های فروش: فرمت عددی از 100000
+            # فقط سفارش‌های فروش که شماره آن‌ها عددی است و >= 100000
+            from django.db.models import IntegerField
+            from django.db.models.functions import Cast
+            
+            # فیلتر سفارش‌های فروش که شماره آن‌ها عددی است
+            sale_orders = Order.objects.filter(
+                order_type='sale'
+            ).exclude(
+                order_number__startswith='PF'
+            ).exclude(
+                order_number__startswith='PO-'
+            )
+            
+            # پیدا کردن آخرین شماره با تبدیل به عدد
+            last_order = None
+            max_number = 99999  # کمتر از 100000
+            
+            for order in sale_orders:
+                try:
+                    order_num = int(order.order_number)
+                    if order_num >= 100000 and order_num > max_number:
+                        max_number = order_num
+                        last_order = order
+                except (ValueError, TypeError):
+                    continue
+            
+            if last_order and max_number >= 100000:
+                return str(max_number + 1)
+            else:
                 return '100000'
-        return '100000'
     
     # Constants for purchase order statuses
     STATUS_DRAFT = 'draft'
@@ -327,19 +366,9 @@ class Order(models.Model):
         """ذخیره سفارش با منطق خودکار"""
         creating = self._state.adding
         
-        # تولید شماره سفارش برای سفارش‌های خرید
-        if creating and not self.order_number and self.order_type == 'purchase':
-            # استفاده از فرمت PO- برای سفارش‌های خرید
-            last_po = Order.objects.filter(order_type='purchase', order_number__startswith='PO-').order_by('-order_number').first()
-            if last_po:
-                try:
-                    # استخراج عدد از PO-0000001
-                    last_num = int(last_po.order_number.split('-')[1])
-                    self.order_number = f"PO-{last_num + 1:07d}"
-                except (ValueError, IndexError):
-                    self.order_number = f"PO-{1:07d}"
-            else:
-                self.order_number = f"PO-{1:07d}"
+        # تولید شماره سفارش برای سفارش‌های خرید و فروش
+        if creating and not self.order_number and self.order_type:
+            self.order_number = self.generate_order_number(self.order_type)
         
         # تنظیم وضعیت پیش‌فرض برای سفارش‌های خرید
         if creating and self.order_type == 'purchase' and not self.status:

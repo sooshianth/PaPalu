@@ -423,7 +423,7 @@ class Command(BaseCommand):
         freight_types = ['seller', 'buyer', 'shared']
         
         for i in range(count):
-            order_number = Order.generate_order_number()
+            order_number = Order.generate_order_number(order_type)
             order = Order.objects.create(
                 order_number=order_number,
                 customer=random.choice(persons) if persons else None,
@@ -670,7 +670,7 @@ class Command(BaseCommand):
         freight_payment_types = ['cash', 'credit', 'included', 'separate']
         
         for i in range(count):
-            order_number = Order.generate_order_number()
+            order_number = Order.generate_order_number('purchase')
             order = Order.objects.create(
                 order_number=order_number,
                 customer=random.choice(suppliers) if suppliers else None,  # supplier به عنوان customer
