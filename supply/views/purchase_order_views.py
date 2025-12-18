@@ -798,7 +798,27 @@ def procurement_purchase_order_detail_view(request, order_number):
     from supply.tables import ProcurementPurchaseOrderStatusLogTable
     from core.TransportFolder.TransportModel import Transport
     
-    po = get_object_or_404(Order, order_number=order_number, order_type='purchase')
+    # ابتدا سعی می‌کنیم سفارش را با order_type='purchase' پیدا کنیم
+    try:
+        po = Order.objects.get(order_number=order_number, order_type='purchase')
+    except Order.DoesNotExist:
+        # اگر پیدا نشد، سعی می‌کنیم بدون فیلتر order_type پیدا کنیم
+        try:
+            po = Order.objects.get(order_number=order_number)
+            # اگر order_type null است یا purchase نیست، خطا می‌دهیم
+            if po.order_type is None:
+                bug_logger.warning(f"سفارش {order_number} دارای order_type null است")
+                messages.error(request, f'سفارش {order_number} دارای نوع سفارش مشخصی نیست. لطفاً نوع سفارش را تنظیم کنید.')
+                return redirect('supply:purchase_transport_list')
+            elif po.order_type != 'purchase':
+                bug_logger.warning(f"سفارش {order_number} از نوع {po.order_type} است نه purchase")
+                messages.error(request, f'سفارش {order_number} یک سفارش خرید نیست.')
+                return redirect('supply:purchase_transport_list')
+        except Order.DoesNotExist:
+            # اگر اصلاً سفارش پیدا نشد
+            bug_logger.error(f"سفارش {order_number} یافت نشد")
+            messages.error(request, f'سفارش {order_number} یافت نشد.')
+            return redirect('supply:purchase_transport_list')
     materials = po.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
     logs = po.status_logs.all().order_by('-changed_at')
     log_table = ProcurementPurchaseOrderStatusLogTable(logs)

@@ -512,9 +512,15 @@ def purchase_transport_detail_view(request, transport_number):
     # تلاش برای پیدا کردن حمل با transport_number یا pk
     try:
         if transport_number.isdigit():
-            pt = get_object_or_404(Transport, pk=int(transport_number))
+            pt = get_object_or_404(
+                Transport.objects.select_related('allocation', 'allocation__order', 'driver', 'created_by'),
+                pk=int(transport_number)
+            )
         else:
-            pt = get_object_or_404(Transport, transport_number=transport_number)
+            pt = get_object_or_404(
+                Transport.objects.select_related('allocation', 'allocation__order', 'driver', 'created_by'),
+                transport_number=transport_number
+            )
     except (ValueError, Transport.DoesNotExist) as e:
         bug_logger.error(f"خطا در یافتن حمل با شناسه {transport_number}: {e}")
         messages.error(request, 'حمل مورد نظر یافت نشد.')

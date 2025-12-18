@@ -180,7 +180,13 @@
         </div>
         <div class="kv">
             <span>شماره سفارش خرید</span>
-            <strong><a href="{% url 'supply:procurement_purchase_order_detail' pt.purchase_order.order_number %}">{{ pt.purchase_order.order_number }}</a></strong>
+            <strong>
+                {% if pt.purchase_order and pt.purchase_order.order_number %}
+                    <a href="{% url 'supply:procurement_purchase_order_detail' pt.purchase_order.order_number %}">{{ pt.purchase_order.order_number }}</a>
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
         </div>
         <div class="kv">
             <span>وضعیت فعلی</span>
