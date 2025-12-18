@@ -1,44 +1,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from django import forms
-from django.forms import ModelForm
 from django_tables2 import RequestConfig
 from django.utils import timezone
+from django.db.models import Q
 import logging
-from core.logging_levels import *
 
+from core.logging_levels import *
 from core.TransportFolder.TransportModel import Transport
 from core.RBACModel.TaskPermission import TaskChoices
 from core.RBACModel.Roles import user_has_task
 from accounting.tables import UploadFarePaymentDocsTable
+from accounting.forms import UploadFarePaymentDocForm
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
-
-
-class UploadFarePaymentDocForm(ModelForm):
-    """فرم بارگذاری اسناد پرداخت کرایه"""
-    
-    class Meta:
-        model = Transport
-        fields = ['freight_payment_document']
-        labels = {
-            'freight_payment_document': 'سند پرداخت کرایه',
-        }
-        widgets = {
-            'freight_payment_document': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': '.pdf,.jpg,.jpeg,.png,.doc,.docx',
-                'required': True
-            }),
-        }
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['freight_payment_document'].required = True
 
 
 @login_required
@@ -56,7 +33,6 @@ def upload_fare_payment_docs_list_view(request):
         # Get transports awaiting payment document upload
         # Include both awaiting_payment_doc (new workflow) and completed (legacy/backward compatibility)
         # that don't have payment documents uploaded yet
-        from django.db.models import Q
         transports = Transport.objects.filter(
             status__in=[Transport.STATUS_AWAITING_PAYMENT_DOC, Transport.STATUS_COMPLETED]
         ).filter(
@@ -178,3 +154,4 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
         bug_logger.error(f"خطا در نمایش جزئیات بارگذاری سند - حمل {transport_number}: {str(e)}", exc_info=True)
         messages.error(request, 'خطا در بارگذاری جزئیات حمل')
         return redirect('accounting:upload_fare_payment_docs_list')
+
