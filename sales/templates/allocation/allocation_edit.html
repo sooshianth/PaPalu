@@ -172,6 +172,84 @@
         .form-actions { flex-direction: column; }
         .btn { width: 100%; }
     }
+    
+    /* Popup Styles */
+    .popup-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .popup-overlay.active {
+        display: flex;
+    }
+    
+    .popup-content {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        position: relative;
+    }
+    
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .popup-header h5 {
+        margin: 0;
+        color: var(--primary-green);
+        font-size: 1.3rem;
+    }
+    
+    .popup-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--gray-600);
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .popup-close:hover {
+        color: var(--gray-800);
+    }
+    
+    .postal-code-input-wrapper {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .postal-code-input-wrapper .form-control {
+        flex: 1;
+    }
+    
+    .add-address-btn {
+        white-space: nowrap;
+        padding: 10px 15px;
+    }
 </style>
 {% endblock %}
 
@@ -214,7 +292,7 @@
         </div>
     </div>
 
-    <form method="post">
+    <form method="post" id="allocation-form">
         {% csrf_token %}
 
         <!-- بخش اطلاعات تخصیص -->
@@ -250,68 +328,69 @@
                 
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">کد پستی تحویل</label>
-                    {{ form.delivery_postal_code }}
+                    <div class="postal-code-input-wrapper">
+                        {{ form.delivery_postal_code }}
+                        <button type="button" class="btn btn-success add-address-btn" id="open-create-address-popup-btn" title="ایجاد آدرس جدید">
+                            <span>+</span>
+                        </button>
+                    </div>
                     {% if form.delivery_postal_code.errors %}
                         <span class="text-danger">{{ form.delivery_postal_code.errors }}</span>
-                    {% endif %}
-                    {% if delivery_addresses %}
-                        <small class="text-muted" style="display: block; margin-top: 5px;">
-                            آدرس‌های موجود: 
-                            {% for addr in delivery_addresses %}
-                                {{ addr.postal_code }}{% if not forloop.last %}، {% endif %}
-                            {% endfor %}
-                        </small>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- اطلاعات آدرس تحویل (در صورت وجود) -->
-        {% if delivery_info %}
-        <div class="info-box">
-            <h6>اطلاعات آدرس تحویل</h6>
-            <div class="info-row">
-                <span class="info-label">نام تحویل گیرنده:</span>
-                <span class="info-value">{{ delivery_info.recipient_name }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">کد ملی تحویل گیرنده:</span>
-                <span class="info-value">{{ delivery_info.recipient_national_id }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">شناسه یکتا تحویل:</span>
-                <span class="info-value">{{ delivery_info.unique_delivery_id }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">استان:</span>
-                <span class="info-value">{{ delivery_info.province }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">شهر:</span>
-                <span class="info-value">{{ delivery_info.city }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">آدرس پستی:</span>
-                <span class="info-value">{{ delivery_info.address }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">شماره ثابت:</span>
-                <span class="info-value">{{ delivery_info.landline_phone }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">شماره همراه:</span>
-                <span class="info-value">{{ delivery_info.mobile_phone }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">محدودیت تحویل:</span>
-                <span class="info-value">{{ delivery_info.delivery_limit }}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">نوع تحویل گیرنده:</span>
-                <span class="info-value">{{ delivery_info.recipient_type }}</span>
+        <!-- اطلاعات آدرس تحویل (در صورت وجود) - این بخش با JavaScript به‌روزرسانی می‌شود -->
+        <div id="delivery-info-container" style="display: {% if delivery_info %}block{% else %}none{% endif %};">
+            <div class="info-box" id="delivery-info-box">
+                <h6>اطلاعات آدرس تحویل</h6>
+                <div id="delivery-info-content">
+                    {% if delivery_info %}
+                    <div class="info-row">
+                        <span class="info-label">نام تحویل گیرنده:</span>
+                        <span class="info-value">{{ delivery_info.recipient_name }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">کد ملی تحویل گیرنده:</span>
+                        <span class="info-value">{{ delivery_info.recipient_national_id }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">شناسه یکتا تحویل:</span>
+                        <span class="info-value">{{ delivery_info.unique_delivery_id }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">استان:</span>
+                        <span class="info-value">{{ delivery_info.province }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">شهر:</span>
+                        <span class="info-value">{{ delivery_info.city }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">آدرس پستی:</span>
+                        <span class="info-value">{{ delivery_info.address }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">شماره ثابت:</span>
+                        <span class="info-value">{{ delivery_info.landline_phone }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">شماره همراه:</span>
+                        <span class="info-value">{{ delivery_info.mobile_phone }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">محدودیت تحویل:</span>
+                        <span class="info-value">{{ delivery_info.delivery_limit }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">نوع تحویل گیرنده:</span>
+                        <span class="info-value">{{ delivery_info.recipient_type }}</span>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
-        {% endif %}
 
         <!-- بخش محصولات -->
         <div class="form-section">
@@ -367,6 +446,99 @@
             <a href="{% url 'sales:allocation_list' %}" class="btn btn-secondary">انصراف</a>
         </div>
     </form>
+    
+    <!-- Popup برای ایجاد آدرس جدید (خارج از فرم اصلی) -->
+    <div id="create-address-popup" class="popup-overlay">
+            <div class="popup-content">
+                <div class="popup-header">
+                    <h5>ایجاد آدرس تحویل جدید</h5>
+                    <button type="button" class="popup-close" id="close-create-address-popup-btn">&times;</button>
+                </div>
+                
+                <form id="create-address-form">
+                    <input type="hidden" name="postal_code" id="popup-postal-code">
+                    <div class="mb-3">
+                        <label class="form-label">مشتری:</label>
+                        <input type="text" class="form-control" value="{{ order.customer.name|default:'' }}" readonly style="background-color: #f5f5f5;">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">کد پستی</label>
+                            <input type="text" name="postal_code_input" id="popup-postal-code-input" class="form-control" dir="ltr" required maxlength="10" pattern="[0-9]{10}" title="کد پستی باید دقیقاً 10 رقم باشد">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">نام تحویل گیرنده</label>
+                            <input type="text" name="recipient_name" class="form-control" required maxlength="100" minlength="2" title="نام تحویل گیرنده باید حداقل 2 کاراکتر باشد">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">کد ملی تحویل گیرنده</label>
+                            <input type="text" name="recipient_national_id" class="form-control" dir="ltr" maxlength="10" pattern="[0-9]{10}" title="کد ملی باید دقیقاً 10 رقم باشد">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">شناسه یکتا تحویل</label>
+                            <input type="text" name="unique_delivery_id" class="form-control" dir="ltr" maxlength="50">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">نوع تحویل گیرنده</label>
+                            <select name="recipient_type" class="form-control">
+                                <option value="">انتخاب کنید</option>
+                                <option value="person">شخص</option>
+                                <option value="company">شرکت</option>
+                                <option value="warehouse">انبار</option>
+                                <option value="other">سایر</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">استان</label>
+                            <input type="text" name="province" class="form-control" required maxlength="50">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">شهر</label>
+                            <input type="text" name="city" class="form-control" required maxlength="50">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label required-field">آدرس پستی</label>
+                            <textarea name="address" class="form-control" rows="2" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">شماره ثابت</label>
+                            <input type="text" name="landline_phone" class="form-control" dir="ltr" placeholder="02112345678" maxlength="11" pattern="0[0-9]{10}" title="شماره ثابت باید با 0 شروع شود و 11 رقم باشد">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">شماره همراه</label>
+                            <input type="text" name="mobile_phone" class="form-control" dir="ltr" placeholder="09123456789" maxlength="11" pattern="09[0-9]{9}" title="شماره همراه باید با 09 شروع شود و 11 رقم باشد">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label">محدودیت تحویل</label>
+                            <input type="text" name="delivery_limit" class="form-control" maxlength="200">
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions" style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-success">ذخیره آدرس جدید</button>
+                        <button type="button" class="btn btn-secondary" id="close-create-address-popup-btn-2">انصراف</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 </div>
 {% endblock %}
 
@@ -374,26 +546,582 @@
 <script>
     // Mapping واحدها از سفارش به تخصیص
     const productUnitMapping = JSON.parse('{{ product_unit_mapping|escapejs }}');
+    const orderNumber = '{{ order.order_number|escapejs }}';
+    const postalCodeSearchUrl = '{% url "sales:postal_code_search_api" order_number="000000" %}'.replace('000000', orderNumber);
+    const createAddressUrl = '{% url "sales:create_delivery_address_api" order_number="000000" %}'.replace('000000', orderNumber);
+    let validPostalCode = null; // برای ذخیره کد پستی معتبر
+    
+    // تابع برای پاک کردن اطلاعات آدرس
+    function clearDeliveryInfo() {
+        const container = document.getElementById('delivery-info-container');
+        const content = document.getElementById('delivery-info-content');
+        
+        if (container) {
+            container.style.display = 'none';
+        }
+        if (content) {
+            content.innerHTML = '';
+        }
+    }
+    
+    // تابع برای نمایش اطلاعات آدرس
+    function displayDeliveryInfo(deliveryInfo) {
+        const container = document.getElementById('delivery-info-container');
+        const content = document.getElementById('delivery-info-content');
+        
+        if (!container || !content) return;
+        
+        // ساخت HTML برای نمایش اطلاعات
+        let html = '';
+        html += '<div class="info-row"><span class="info-label">نام تحویل گیرنده:</span><span class="info-value">' + (deliveryInfo.recipient_name || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">کد ملی تحویل گیرنده:</span><span class="info-value">' + (deliveryInfo.recipient_national_id || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">شناسه یکتا تحویل:</span><span class="info-value">' + (deliveryInfo.unique_delivery_id || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">استان:</span><span class="info-value">' + (deliveryInfo.province || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">شهر:</span><span class="info-value">' + (deliveryInfo.city || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">آدرس پستی:</span><span class="info-value">' + (deliveryInfo.address || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">شماره ثابت:</span><span class="info-value">' + (deliveryInfo.landline_phone || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">شماره همراه:</span><span class="info-value">' + (deliveryInfo.mobile_phone || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">محدودیت تحویل:</span><span class="info-value">' + (deliveryInfo.delivery_limit || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">نوع تحویل گیرنده:</span><span class="info-value">' + (deliveryInfo.recipient_type || '-') + '</span></div>';
+        
+        content.innerHTML = html;
+        container.style.display = 'block';
+    }
+    
+    // تابع برای بارگذاری اطلاعات آدرس بر اساس کد پستی
+    function loadDeliveryInfo(postalCode) {
+        if (!postalCode || postalCode.length !== 10 || !/^\d{10}$/.test(postalCode)) {
+            clearDeliveryInfo();
+            return;
+        }
+        
+        fetch(`{% url 'sales:get_delivery_info_api' 'PLACEHOLDER' %}`.replace('PLACEHOLDER', postalCode))
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    clearDeliveryInfo();
+                } else {
+                    displayDeliveryInfo(data);
+                }
+            })
+            .catch(error => {
+                console.error('خطا در بارگذاری اطلاعات آدرس:', error);
+                clearDeliveryInfo();
+            });
+    }
+    
+    // تابع برای باز کردن popup ایجاد آدرس
+    function openCreateAddressPopup(postalCode = '') {
+        const popup = document.getElementById('create-address-popup');
+        const postalCodeInput = document.getElementById('popup-postal-code-input');
+        const hiddenPostalCode = document.getElementById('popup-postal-code');
+        
+        if (popup && postalCodeInput) {
+            if (postalCode) {
+                postalCodeInput.value = postalCode;
+                if (hiddenPostalCode) {
+                    hiddenPostalCode.value = postalCode;
+                }
+            } else {
+                postalCodeInput.value = '';
+                if (hiddenPostalCode) {
+                    hiddenPostalCode.value = '';
+                }
+            }
+            
+            popup.classList.add('active');
+        }
+    }
+    
+    // تابع برای بستن popup ایجاد آدرس
+    function closeCreateAddressPopup() {
+        const popup = document.getElementById('create-address-popup');
+        const form = document.getElementById('create-address-form');
+        
+        if (popup) {
+            popup.classList.remove('active');
+        }
+        
+        if (form) {
+            form.reset();
+        }
+    }
     
     // بارگذاری اطلاعات آدرس تحویل با تغییر کد پستی
     document.addEventListener('DOMContentLoaded', function() {
         const postalCodeInput = document.querySelector('#id_delivery_postal_code');
+        const form = document.getElementById('allocation-form');
+        
+        // مدیریت autocomplete برای جستجوی کد پستی
         if (postalCodeInput) {
-            postalCodeInput.addEventListener('blur', function() {
-                const postalCode = this.value.trim();
-                if (postalCode && postalCode.length >= 5) {
-                    fetch(`{% url 'sales:get_delivery_info_api' 'PLACEHOLDER' %}`.replace('PLACEHOLDER', postalCode))
+            // بارگذاری اولیه اطلاعات آدرس در صورت وجود کد پستی
+            const initialPostalCode = postalCodeInput.value.trim();
+            if (initialPostalCode && initialPostalCode.length === 10 && /^\d{10}$/.test(initialPostalCode)) {
+                validPostalCode = initialPostalCode;
+                lastPostalCode = initialPostalCode;
+                loadDeliveryInfo(initialPostalCode);
+            }
+            // ایجاد container برای پیشنهادات
+            const suggestionsContainer = document.createElement('div');
+            suggestionsContainer.className = 'postal-code-suggestions';
+            suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+            postalCodeInput.parentElement.style.position = 'relative';
+            postalCodeInput.parentElement.appendChild(suggestionsContainer);
+            
+            // ایجاد عنصر برای نمایش خطا
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'postal-code-error';
+            errorMessage.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin-top: 5px; display: none;';
+            postalCodeInput.parentElement.appendChild(errorMessage);
+            
+            let postalCodeSuggestions = [];
+            let searchTimeout;
+            let lastPostalCode = ''; // برای ذخیره آخرین کد پستی که اطلاعاتش نمایش داده شده
+            
+            postalCodeInput.addEventListener('input', function() {
+                const query = this.value.trim();
+                
+                clearTimeout(searchTimeout);
+                errorMessage.style.display = 'none';
+                postalCodeInput.style.borderColor = '';
+                
+                // اگر کد پستی تغییر کرده، اطلاعات قبلی را پاک کن
+                if (query !== lastPostalCode) {
+                    validPostalCode = null;
+                    if (query.length !== 10 || !/^\d{10}$/.test(query)) {
+                        clearDeliveryInfo();
+                    }
+                }
+                
+                // اگر کد پستی دقیقاً 10 رقم است، اطلاعات را بارگذاری کن
+                if (query.length === 10 && /^\d{10}$/.test(query)) {
+                    // بررسی اینکه آیا کد پستی از لیست معتبر است
+                    fetch(postalCodeSearchUrl + '?q=' + encodeURIComponent(query))
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.results && data.results.length > 0) {
+                                const found = data.results.find(r => r.postal_code === query);
+                                if (found) {
+                                    validPostalCode = query;
+                                    lastPostalCode = query;
+                                    loadDeliveryInfo(query);
+                                } else {
+                                    clearDeliveryInfo();
+                                }
+                            } else {
+                                clearDeliveryInfo();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('خطا:', error);
+                        });
+                }
+                
+                if (query.length < 2) {
+                    suggestionsContainer.style.display = 'none';
+                    postalCodeSuggestions = [];
+                    return;
+                }
+                
+                searchTimeout = setTimeout(function() {
+                    fetch(postalCodeSearchUrl + '?q=' + encodeURIComponent(query))
                         .then(response => response.json())
                         .then(data => {
                             if (data.error) {
-                                console.log('آدرس یافت نشد');
+                                console.error('خطا در جستجوی کد پستی:', data.error);
+                                postalCodeSuggestions = [];
                             } else {
-                                console.log('اطلاعات آدرس:', data);
+                                postalCodeSuggestions = data.results || [];
                             }
+                            displayPostalCodeSuggestions();
                         })
-                        .catch(error => console.error('خطا:', error));
+                        .catch(error => {
+                            console.error('خطا در جستجوی کد پستی:', error);
+                            postalCodeSuggestions = [];
+                            displayPostalCodeSuggestions();
+                        });
+                }, 300);
+            });
+            
+            function displayPostalCodeSuggestions() {
+                suggestionsContainer.innerHTML = '';
+                
+                if (postalCodeSuggestions.length === 0) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+                
+                postalCodeSuggestions.forEach(function(item) {
+                    const suggestionItem = document.createElement('div');
+                    suggestionItem.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;';
+                    suggestionItem.textContent = item.text;
+                    suggestionItem.addEventListener('mouseenter', function() {
+                        this.style.backgroundColor = '#f0f0f0';
+                    });
+                    suggestionItem.addEventListener('mouseleave', function() {
+                        this.style.backgroundColor = 'white';
+                    });
+                    suggestionItem.addEventListener('click', function() {
+                        postalCodeInput.value = item.postal_code;
+                        validPostalCode = item.postal_code; // ذخیره کد پستی معتبر
+                        lastPostalCode = item.postal_code; // ذخیره آخرین کد پستی
+                        suggestionsContainer.style.display = 'none';
+                        errorMessage.style.display = 'none';
+                        postalCodeInput.style.borderColor = '';
+                        
+                        // بارگذاری و نمایش اطلاعات آدرس تحویل
+                        if (item.postal_code && item.postal_code.length === 10) {
+                            loadDeliveryInfo(item.postal_code);
+                        }
+                    });
+                    suggestionsContainer.appendChild(suggestionItem);
+                });
+                
+                suggestionsContainer.style.display = 'block';
+            }
+            
+            // بستن پیشنهادات با کلیک خارج
+            document.addEventListener('click', function(e) {
+                if (!postalCodeInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
                 }
             });
+            
+            // مدیریت کلیدهای کیبورد
+            postalCodeInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+            
+            // بررسی اعتبار کد پستی هنگام blur
+            postalCodeInput.addEventListener('blur', function() {
+                const postalCode = this.value.trim();
+                if (postalCode && postalCode.length >= 5) {
+                    // بررسی اینکه آیا کد پستی از لیست معتبر است
+                    if (validPostalCode !== postalCode) {
+                        // بررسی با API
+                        fetch(postalCodeSearchUrl + '?q=' + encodeURIComponent(postalCode))
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.error || !data.results || data.results.length === 0) {
+                                    errorMessage.textContent = 'کد پستی معتبر نیست یا متعلق به مشتری این سفارش نیست.';
+                                    errorMessage.style.display = 'block';
+                                    postalCodeInput.style.borderColor = '#dc3545';
+                                    validPostalCode = null;
+                                } else {
+                                    // بررسی اینکه آیا کد پستی دقیقاً در نتایج است
+                                    const found = data.results.find(r => r.postal_code === postalCode);
+                                    if (found) {
+                                        validPostalCode = postalCode;
+                                        lastPostalCode = postalCode;
+                                        errorMessage.style.display = 'none';
+                                        postalCodeInput.style.borderColor = '';
+                                        
+                                        // بارگذاری و نمایش اطلاعات آدرس تحویل
+                                        loadDeliveryInfo(postalCode);
+                                    } else {
+                                        errorMessage.textContent = 'کد پستی معتبر نیست یا متعلق به مشتری این سفارش نیست.';
+                                        errorMessage.style.display = 'block';
+                                        postalCodeInput.style.borderColor = '#dc3545';
+                                        validPostalCode = null;
+                                    }
+                                }
+                            })
+                            .catch(error => {
+                                console.error('خطا:', error);
+                                errorMessage.textContent = 'خطا در بررسی کد پستی.';
+                                errorMessage.style.display = 'block';
+                                postalCodeInput.style.borderColor = '#dc3545';
+                                validPostalCode = null;
+                            });
+                    } else {
+                        // اگر کد پستی معتبر است، اطلاعات را نمایش بده
+                        if (validPostalCode === postalCode) {
+                            lastPostalCode = postalCode;
+                            loadDeliveryInfo(postalCode);
+                        }
+                    }
+                }
+            });
+            
+            // مدیریت دکمه باز کردن popup
+            const openPopupBtn = document.getElementById('open-create-address-popup-btn');
+            if (openPopupBtn) {
+                openPopupBtn.addEventListener('click', function() {
+                    const currentPostalCode = postalCodeInput.value.trim();
+                    openCreateAddressPopup(currentPostalCode);
+                });
+            }
+            
+            // مدیریت دکمه‌های بستن popup
+            const closePopupBtn1 = document.getElementById('close-create-address-popup-btn');
+            const closePopupBtn2 = document.getElementById('close-create-address-popup-btn-2');
+            const popup = document.getElementById('create-address-popup');
+            
+            if (closePopupBtn1) {
+                closePopupBtn1.addEventListener('click', closeCreateAddressPopup);
+            }
+            if (closePopupBtn2) {
+                closePopupBtn2.addEventListener('click', closeCreateAddressPopup);
+            }
+            
+            // بستن popup با کلیک روی overlay
+            if (popup) {
+                popup.addEventListener('click', function(e) {
+                    if (e.target === popup) {
+                        closeCreateAddressPopup();
+                    }
+                });
+            }
+            
+            // مدیریت فرم ایجاد آدرس جدید در popup
+            const createAddressForm = document.getElementById('create-address-form');
+            
+            if (createAddressForm) {
+                createAddressForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    
+                    const popupPostalCodeInput = document.getElementById('popup-postal-code-input');
+                    const postalCode = popupPostalCodeInput ? popupPostalCodeInput.value.trim() : '';
+                    const recipientName = createAddressForm.querySelector('[name="recipient_name"]').value.trim();
+                    const recipientNationalId = createAddressForm.querySelector('[name="recipient_national_id"]').value.trim();
+                    const mobilePhone = createAddressForm.querySelector('[name="mobile_phone"]').value.trim();
+                    const landlinePhone = createAddressForm.querySelector('[name="landline_phone"]').value.trim();
+                    const province = createAddressForm.querySelector('[name="province"]').value.trim();
+                    const city = createAddressForm.querySelector('[name="city"]').value.trim();
+                    const address = createAddressForm.querySelector('[name="address"]').value.trim();
+                    
+                    // اعتبارسنجی کد پستی
+                    if (!postalCode) {
+                        alert('لطفاً کد پستی را وارد کنید.');
+                        popupPostalCodeInput.focus();
+                        return;
+                    }
+                    if (!/^\d+$/.test(postalCode)) {
+                        alert('کد پستی باید فقط شامل اعداد باشد.');
+                        popupPostalCodeInput.focus();
+                        return;
+                    }
+                    if (postalCode.length !== 10) {
+                        alert('کد پستی باید دقیقاً 10 رقم باشد.');
+                        popupPostalCodeInput.focus();
+                        return;
+                    }
+                    
+                    // اعتبارسنجی نام تحویل گیرنده
+                    if (!recipientName) {
+                        alert('نام تحویل گیرنده الزامی است.');
+                        createAddressForm.querySelector('[name="recipient_name"]').focus();
+                        return;
+                    }
+                    if (recipientName.length < 2) {
+                        alert('نام تحویل گیرنده باید حداقل 2 کاراکتر باشد.');
+                        createAddressForm.querySelector('[name="recipient_name"]').focus();
+                        return;
+                    }
+                    
+                    // اعتبارسنجی کد ملی تحویل گیرنده
+                    if (recipientNationalId) {
+                        if (!/^\d+$/.test(recipientNationalId)) {
+                            alert('کد ملی تحویل گیرنده باید فقط شامل اعداد باشد.');
+                            createAddressForm.querySelector('[name="recipient_national_id"]').focus();
+                            return;
+                        }
+                        if (recipientNationalId.length !== 10) {
+                            alert('کد ملی تحویل گیرنده باید دقیقاً 10 رقم باشد.');
+                            createAddressForm.querySelector('[name="recipient_national_id"]').focus();
+                            return;
+                        }
+                    }
+                    
+                    // اعتبارسنجی شماره همراه
+                    if (mobilePhone) {
+                        if (!/^\d+$/.test(mobilePhone)) {
+                            alert('شماره همراه باید فقط شامل اعداد باشد.');
+                            createAddressForm.querySelector('[name="mobile_phone"]').focus();
+                            return;
+                        }
+                        if (mobilePhone.length !== 11) {
+                            alert('شماره همراه باید 11 رقم باشد.');
+                            createAddressForm.querySelector('[name="mobile_phone"]').focus();
+                            return;
+                        }
+                        if (!mobilePhone.startsWith('09')) {
+                            alert('شماره همراه باید با 09 شروع شود.');
+                            createAddressForm.querySelector('[name="mobile_phone"]').focus();
+                            return;
+                        }
+                    }
+                    
+                    // اعتبارسنجی شماره ثابت
+                    if (landlinePhone) {
+                        if (!/^\d+$/.test(landlinePhone)) {
+                            alert('شماره ثابت باید فقط شامل اعداد باشد.');
+                            createAddressForm.querySelector('[name="landline_phone"]').focus();
+                            return;
+                        }
+                        if (landlinePhone.length !== 11) {
+                            alert('شماره ثابت باید 11 رقم باشد.');
+                            createAddressForm.querySelector('[name="landline_phone"]').focus();
+                            return;
+                        }
+                        if (!landlinePhone.startsWith('0')) {
+                            alert('شماره ثابت باید با 0 شروع شود.');
+                            createAddressForm.querySelector('[name="landline_phone"]').focus();
+                            return;
+                        }
+                    }
+                    
+                    // اعتبارسنجی فیلدهای الزامی دیگر
+                    if (!province) {
+                        alert('استان الزامی است.');
+                        createAddressForm.querySelector('[name="province"]').focus();
+                        return;
+                    }
+                    if (!city) {
+                        alert('شهر الزامی است.');
+                        createAddressForm.querySelector('[name="city"]').focus();
+                        return;
+                    }
+                    if (!address) {
+                        alert('آدرس پستی الزامی است.');
+                        createAddressForm.querySelector('[name="address"]').focus();
+                        return;
+                    }
+                    
+                    // جمع‌آوری داده‌های فرم
+                    const formData = new FormData(createAddressForm);
+                    
+                    // تبدیل به JSON
+                    const data = {};
+                    for (let [key, value] of formData.entries()) {
+                        if (key !== 'postal_code_input') {
+                            data[key] = value;
+                        }
+                    }
+                    data['postal_code'] = postalCode;
+                    
+                    // ارسال درخواست
+                    fetch(createAddressUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        },
+                        body: JSON.stringify(data)
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.error) {
+                            alert('خطا در ایجاد آدرس: ' + result.error);
+                        } else {
+                            // آدرس با موفقیت ایجاد شد
+                            // قرار دادن کد پستی در فیلد اصلی
+                            postalCodeInput.value = postalCode;
+                            validPostalCode = postalCode;
+                            errorMessage.style.display = 'none';
+                            postalCodeInput.style.borderColor = '';
+                            
+                            // نمایش اطلاعات آدرس جدید
+                            if (result.postal_code) {
+                                lastPostalCode = result.postal_code;
+                                loadDeliveryInfo(result.postal_code);
+                            }
+                            
+                            // بستن popup
+                            closeCreateAddressPopup();
+                            
+                            alert('آدرس تحویل با موفقیت ایجاد شد.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا:', error);
+                        alert('خطا در ایجاد آدرس. لطفاً دوباره تلاش کنید.');
+                    });
+                });
+            }
+            
+            // جلوگیری از submit با کد پستی نامعتبر
+            if (form && postalCodeInput) {
+                let isSubmitting = false;
+                let allowSubmit = false; // flag برای اجازه submit
+                
+                const submitHandler = function(e) {
+                    // اگر قبلاً اجازه submit داده شده، اجازه بده
+                    if (allowSubmit) {
+                        allowSubmit = false; // reset flag
+                        return; // اجازه submit
+                    }
+                    
+                    const postalCode = postalCodeInput.value.trim();
+                    
+                    // اگر کد پستی خالی است، اجازه submit بده
+                    if (!postalCode) {
+                        return; // اجازه submit
+                    }
+                    
+                    // اگر کد پستی معتبر است، اجازه submit بده
+                    if (validPostalCode === postalCode) {
+                        return; // اجازه submit
+                    }
+                    
+                    // اگر در حال submit هستیم، جلوگیری کن
+                    if (isSubmitting) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    
+                    // بررسی نهایی قبل از submit
+                    isSubmitting = true;
+                    e.preventDefault(); // جلوگیری از submit تا بررسی کامل شود
+                    
+                    const checkUrl = postalCodeSearchUrl + '?q=' + encodeURIComponent(postalCode);
+                    fetch(checkUrl)
+                        .then(response => response.json())
+                        .then(data => {
+                            isSubmitting = false;
+                            
+                            if (data.error || !data.results || data.results.length === 0) {
+                                errorMessage.textContent = 'کد پستی معتبر نیست یا متعلق به مشتری این سفارش نیست. لطفاً کد پستی معتبر انتخاب کنید.';
+                                errorMessage.style.display = 'block';
+                                postalCodeInput.style.borderColor = '#dc3545';
+                                postalCodeInput.focus();
+                                return;
+                            }
+                            
+                            const found = data.results.find(r => r.postal_code === postalCode);
+                            if (!found) {
+                                errorMessage.textContent = 'کد پستی معتبر نیست یا متعلق به مشتری این سفارش نیست. لطفاً کد پستی معتبر انتخاب کنید.';
+                                errorMessage.style.display = 'block';
+                                postalCodeInput.style.borderColor = '#dc3545';
+                                postalCodeInput.focus();
+                                return;
+                            }
+                            
+                            // کد پستی معتبر است، ذخیره کن و submit کن
+                            validPostalCode = postalCode;
+                            errorMessage.style.display = 'none';
+                            postalCodeInput.style.borderColor = '';
+                            
+                            // تنظیم flag و submit فرم
+                            allowSubmit = true;
+                            form.submit();
+                        })
+                        .catch(error => {
+                            isSubmitting = false;
+                            console.error('خطا در بررسی کد پستی:', error);
+                            errorMessage.textContent = 'خطا در بررسی کد پستی. لطفاً دوباره تلاش کنید.';
+                            errorMessage.style.display = 'block';
+                            postalCodeInput.style.borderColor = '#dc3545';
+                            postalCodeInput.focus();
+                        });
+                    
+                    return false;
+                };
+                
+                form.addEventListener('submit', submitHandler);
+            }
         }
         
         // تنظیم خودکار واحد بر اساس محصول انتخاب شده

@@ -128,15 +128,20 @@ class CreateAllocationForm(forms.ModelForm):
                 'placeholder': 'ماشین درخواستی'
             }),
             'delivery_postal_code': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'کد پستی تحویل',
-                'maxlength': '20'
+                'class': 'form-control postal-code-autocomplete',
+                'placeholder': 'جستجوی کد پستی تحویل...',
+                'maxlength': '20',
+                'autocomplete': 'off',
+                'dir': 'ltr'
             }),
         }
     
     def __init__(self, *args, **kwargs):
         order = kwargs.pop('order', None)
         super().__init__(*args, **kwargs)
+        
+        # ذخیره order برای استفاده در validation
+        self.order = order
         
         # تنظیم فیلدهای اجباری
         self.fields['allocation_number'].required = True
@@ -146,6 +151,35 @@ class CreateAllocationForm(forms.ModelForm):
         
         # اگر order وجود دارد، می‌توانیم لیست آدرس‌های تحویل را برای نمایش در تمپلیت آماده کنیم
         # اما فیلد همچنان TextInput باقی می‌ماند تا کاربر بتواند کد پستی را وارد کند
+    
+    def clean_delivery_postal_code(self):
+        """اعتبارسنجی کد پستی - باید متعلق به مشتری سفارش باشد"""
+        postal_code = self.cleaned_data.get('delivery_postal_code')
+        
+        if not postal_code:
+            return postal_code
+        
+        # اگر order وجود ندارد، نمی‌توانیم validation انجام دهیم
+        if not self.order:
+            return postal_code
+        
+        # بررسی اینکه کد پستی متعلق به مشتری سفارش است
+        if self.order.customer:
+            try:
+                delivery_address = DeliveryAddress.objects.get(
+                    postal_code=postal_code,
+                    person=self.order.customer
+                )
+                # کد پستی معتبر است
+                return postal_code
+            except DeliveryAddress.DoesNotExist:
+                raise forms.ValidationError(
+                    'کد پستی وارد شده معتبر نیست یا متعلق به مشتری این سفارش نیست. '
+                    'لطفاً کد پستی معتبر انتخاب کنید.'
+                )
+        else:
+            # اگر سفارش مشتری ندارد، نمی‌توانیم validation انجام دهیم
+            raise forms.ValidationError('سفارش فاقد مشتری است. لطفاً ابتدا مشتری را به سفارش اضافه کنید.')
     
     def clean_allocation_number(self):
         allocation_number = self.cleaned_data.get('allocation_number')
