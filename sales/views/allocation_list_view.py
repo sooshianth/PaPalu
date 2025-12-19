@@ -551,6 +551,90 @@ def get_delivery_info_api(request, postal_code):
 
 @login_required
 @require_http_methods(["GET"])
+def get_delivery_info_rendered_api(request, order_number, postal_code):
+    """
+    API endpoint برای دریافت اطلاعات آدرس تحویل و رندر HTML
+    این endpoint اطلاعات آدرس را بر اساس کد پستی دریافت می‌کند و HTML رندر شده برمی‌گرداند
+    با بررسی دسترسی TaskPermission و صاحبیت سفارش
+    """
+    audit_logger.info(f"درخواست دریافت اطلاعات آدرس تحویل و HTML برای سفارش {order_number} - کد پستی: {postal_code}")
+    
+    # بررسی دسترسی TaskPermission
+    if not user_has_task(request.user, TaskChoices.SALES_ALLOCATION.value):
+        audit_logger.activity(f"تلاش برای دسترسی به API دریافت اطلاعات آدرس تحویل بدون دسترسی - سفارش: {order_number}")
+        return JsonResponse({'error': 'شما دسترسی به این بخش ندارید'}, status=403)
+    
+    # دریافت سفارش
+    try:
+        order = Order.objects.get(order_number=order_number)
+    except Order.DoesNotExist:
+        audit_logger.warning(f"سفارش {order_number} برای دریافت اطلاعات آدرس تحویل یافت نشد")
+        return JsonResponse({'error': 'سفارش یافت نشد'}, status=404)
+    
+    # بررسی دسترسی به سفارش (کاربر باید مالک سفارش باشد یا superuser)
+    if not request.user.is_superuser and order.registered_by != request.user:
+        audit_logger.activity(f"تلاش برای دسترسی به API دریافت اطلاعات آدرس تحویل سفارش {order_number} متعلق به کاربر دیگر")
+        return JsonResponse({'error': 'دسترسی غیرمجاز'}, status=403)
+    
+    # دریافت اطلاعات آدرس تحویل
+    delivery_info = get_delivery_address_info(postal_code)
+    if not delivery_info:
+        bug_logger.warning(f"آدرس تحویل برای کد پستی {postal_code} یافت نشد")
+        return JsonResponse({'error': 'آدرس تحویل یافت نشد'}, status=404)
+    
+    # ساخت HTML برای اطلاعات تحویل
+    html_content = f"""
+    <div class="info-row">
+        <span class="info-label">نام تحویل گیرنده:</span>
+        <span class="info-value">{delivery_info.get('recipient_name', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">کد ملی تحویل گیرنده:</span>
+        <span class="info-value">{delivery_info.get('recipient_national_id', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">شناسه یکتا تحویل:</span>
+        <span class="info-value">{delivery_info.get('unique_delivery_id', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">استان:</span>
+        <span class="info-value">{delivery_info.get('province', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">شهر:</span>
+        <span class="info-value">{delivery_info.get('city', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">آدرس پستی:</span>
+        <span class="info-value">{delivery_info.get('address', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">شماره ثابت:</span>
+        <span class="info-value">{delivery_info.get('landline_phone', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">شماره همراه:</span>
+        <span class="info-value">{delivery_info.get('mobile_phone', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">محدودیت تحویل:</span>
+        <span class="info-value">{delivery_info.get('delivery_limit', '-')}</span>
+    </div>
+    <div class="info-row">
+        <span class="info-label">نوع تحویل گیرنده:</span>
+        <span class="info-value">{delivery_info.get('recipient_type', '-')}</span>
+    </div>
+    """
+    
+    bug_logger.debug(f"اطلاعات آدرس تحویل برای کد پستی {postal_code} به صورت HTML رندر شد")
+    return JsonResponse({
+        'success': True,
+        'html': html_content.strip()
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
 def postal_code_search_api(request, order_number):
     """
     API endpoint برای جستجوی کد پستی‌های تحویل

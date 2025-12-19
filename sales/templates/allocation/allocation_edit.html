@@ -250,6 +250,12 @@
         white-space: nowrap;
         padding: 10px 15px;
     }
+    
+    .show-delivery-info-btn {
+        width: 100%;
+        margin-top: 8px;
+        font-size: 0.95rem;
+    }
 </style>
 {% endblock %}
 
@@ -337,58 +343,21 @@
                     {% if form.delivery_postal_code.errors %}
                         <span class="text-danger">{{ form.delivery_postal_code.errors }}</span>
                     {% endif %}
+                    <button type="button" class="btn btn-info show-delivery-info-btn" id="show-delivery-info-btn" title="نمایش اطلاعات آدرس تحویل">
+                        <span>🔍 نمایش اطلاعات حمل</span>
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- اطلاعات آدرس تحویل (در صورت وجود) - این بخش با JavaScript به‌روزرسانی می‌شود -->
-        <div id="delivery-info-container" style="display: {% if delivery_info %}block{% else %}none{% endif %};">
+        <div id="delivery-info-container" style="display: none;">
             <div class="info-box" id="delivery-info-box">
-                <h6>اطلاعات آدرس تحویل</h6>
-                <div id="delivery-info-content">
-                    {% if delivery_info %}
-                    <div class="info-row">
-                        <span class="info-label">نام تحویل گیرنده:</span>
-                        <span class="info-value">{{ delivery_info.recipient_name }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">کد ملی تحویل گیرنده:</span>
-                        <span class="info-value">{{ delivery_info.recipient_national_id }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">شناسه یکتا تحویل:</span>
-                        <span class="info-value">{{ delivery_info.unique_delivery_id }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">استان:</span>
-                        <span class="info-value">{{ delivery_info.province }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">شهر:</span>
-                        <span class="info-value">{{ delivery_info.city }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">آدرس پستی:</span>
-                        <span class="info-value">{{ delivery_info.address }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">شماره ثابت:</span>
-                        <span class="info-value">{{ delivery_info.landline_phone }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">شماره همراه:</span>
-                        <span class="info-value">{{ delivery_info.mobile_phone }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">محدودیت تحویل:</span>
-                        <span class="info-value">{{ delivery_info.delivery_limit }}</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">نوع تحویل گیرنده:</span>
-                        <span class="info-value">{{ delivery_info.recipient_type }}</span>
-                    </div>
-                    {% endif %}
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h6 style="margin: 0;">اطلاعات آدرس تحویل</h6>
+                    <button type="button" class="btn btn-sm btn-secondary" id="hide-delivery-info-btn" title="مخفی کردن اطلاعات">بستن</button>
                 </div>
+                <div id="delivery-info-content"></div>
             </div>
         </div>
 
@@ -549,6 +518,7 @@
     const orderNumber = '{{ order.order_number|escapejs }}';
     const postalCodeSearchUrl = '{% url "sales:postal_code_search_api" order_number="000000" %}'.replace('000000', orderNumber);
     const createAddressUrl = '{% url "sales:create_delivery_address_api" order_number="000000" %}'.replace('000000', orderNumber);
+    const baseDeliveryInfoRenderedUrl = '{% url "sales:get_delivery_info_rendered_api" order_number="000000" postal_code="PLACEHOLDER" %}'.replace('000000', orderNumber);
     let validPostalCode = null; // برای ذخیره کد پستی معتبر
     
     // تابع برای پاک کردن اطلاعات آدرس
@@ -590,24 +560,9 @@
     
     // تابع برای بارگذاری اطلاعات آدرس بر اساس کد پستی
     function loadDeliveryInfo(postalCode) {
-        if (!postalCode || postalCode.length !== 10 || !/^\d{10}$/.test(postalCode)) {
-            clearDeliveryInfo();
-            return;
-        }
-        
-        fetch(`{% url 'sales:get_delivery_info_api' 'PLACEHOLDER' %}`.replace('PLACEHOLDER', postalCode))
-            .then(response => response.json())
-            .then(data => {
-                if (data.error) {
-                    clearDeliveryInfo();
-                } else {
-                    displayDeliveryInfo(data);
-                }
-            })
-            .catch(error => {
-                console.error('خطا در بارگذاری اطلاعات آدرس:', error);
-                clearDeliveryInfo();
-            });
+        // این تابع فقط برای نشان دادن دکمه است
+        // هنگام کلیک دکمه، سرور خود بررسی می‌کند
+        // دکمه همیشه نمایش داده می‌شود
     }
     
     // تابع برای باز کردن popup ایجاد آدرس
@@ -651,6 +606,7 @@
     document.addEventListener('DOMContentLoaded', function() {
         const postalCodeInput = document.querySelector('#id_delivery_postal_code');
         const form = document.getElementById('allocation-form');
+        const showDeliveryInfoBtn = document.getElementById('show-delivery-info-btn');
         
         // مدیریت autocomplete برای جستجوی کد پستی
         if (postalCodeInput) {
@@ -1155,6 +1111,55 @@
                 }
             }
         });
+        
+        // مدیریت دکمه نمایش اطلاعات حمل
+        if (showDeliveryInfoBtn) {
+            showDeliveryInfoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const postalCodeInput2 = document.querySelector('#id_delivery_postal_code');
+                if (!postalCodeInput2) return;
+                
+                const postalCode = postalCodeInput2.value.trim();
+                if (!postalCode) {
+                    alert('لطفاً کد پستی را وارد کنید.');
+                    return;
+                }
+                
+                // درخواست اطلاعات از سرور - سرور خود بررسی می‌کند
+                const url = baseDeliveryInfoRenderedUrl.replace('PLACEHOLDER', encodeURIComponent(postalCode));
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.html) {
+                            // نمایش اطلاعات
+                            const container = document.getElementById('delivery-info-container');
+                            const content = document.getElementById('delivery-info-content');
+                            if (content) {
+                                content.innerHTML = data.html;
+                            }
+                            if (container) {
+                                container.style.display = 'block';
+                            }
+                        } else {
+                            alert('خطا: ' + (data.error || 'کد پستی معتبر نیست'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا:', error);
+                        alert('خطا در دریافت اطلاعات.');
+                    });
+            });
+        }
+        
+        // مدیریت دکمه بستن اطلاعات حمل
+        const hideDeliveryInfoBtn = document.getElementById('hide-delivery-info-btn');
+        if (hideDeliveryInfoBtn) {
+            hideDeliveryInfoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                clearDeliveryInfo();
+            });
+        }
     });
 </script>
 {% endblock %}
