@@ -43,7 +43,7 @@
   {% if accessible_transport_fields.purchase_order and accessible_po_fields.materials %}
   <div class="form-group">
     <label>نام ماده اولیه</label>
-    <textarea class="form-control" readonly style="background:#f5f5f5;cursor:not-allowed;min-height:50px">{% for material in pt.purchase_order.order_items.all %}{% if material.raw_material and accessible_raw_material_fields.name %}{{ material.raw_material.name }}{% if not forloop.last %}<br>{% endif %}{% endif %}{% endfor %}</textarea>
+    <textarea class="form-control" readonly style="background:#f5f5f5;cursor:not-allowed;min-height:50px">{% for material in order_items_list %}{% if material.raw_material and accessible_raw_material_fields.name %}{{ material.raw_material.name }}{% if not forloop.last %}<br>{% endif %}{% endif %}{% endfor %}</textarea>
   </div>
   {% endif %}
   

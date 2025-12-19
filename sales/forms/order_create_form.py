@@ -71,7 +71,9 @@ class CreateOrderForm(forms.ModelForm):
         self.fields['order_number'].required = True
         # تولید خودکار شماره سفارش
         if not self.instance or not self.instance.order_number:
-            self.fields['order_number'].initial = Order.generate_order_number()
+            # دریافت order_type از initial یا مقدار پیش‌فرض
+            order_type = self.initial.get('order_type', 'sale') if hasattr(self, 'initial') and self.initial else 'sale'
+            self.fields['order_number'].initial = Order.generate_order_number(order_type)
         
         self.fields['freight_payment_type'].required = True
 
@@ -134,7 +136,8 @@ class CreateOrderForm(forms.ModelForm):
             order.status = 'pending_proforma_issue'
         # اگر شماره سفارش خالی است، تولید کن
         if not order.order_number:
-            order.order_number = Order.generate_order_number()
+            order_type = order.order_type or 'sale'
+            order.order_number = Order.generate_order_number(order_type)
         if commit:
             order.save()
         return order

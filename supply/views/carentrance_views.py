@@ -412,9 +412,15 @@ def register_driver_for_transport_view(request, transport_number):
     # تلاش برای پیدا کردن حمل با transport_number یا pk
     try:
         if transport_number.isdigit():
-            pt = get_object_or_404(Transport, pk=int(transport_number))
+            pt = get_object_or_404(
+                Transport.objects.select_related('allocation', 'allocation__order', 'allocation__order__customer', 'driver'),
+                pk=int(transport_number)
+            )
         else:
-            pt = get_object_or_404(Transport, transport_number=transport_number)
+            pt = get_object_or_404(
+                Transport.objects.select_related('allocation', 'allocation__order', 'allocation__order__customer', 'driver'),
+                transport_number=transport_number
+            )
     except (ValueError, Transport.DoesNotExist) as e:
         bug_logger.error(f"خطا در یافتن حمل با شناسه {transport_number}: {e}")
         messages.error(request, 'حمل مورد نظر یافت نشد.')
@@ -505,9 +511,35 @@ def register_driver_for_transport_view(request, transport_number):
             initial['plate_number'] = pt.plate_number
         form = CarEntranceDriverForm(initial=initial)
 
+    # تبدیل order_items به list برای جلوگیری از خطای Decimal در template
+    # استفاده از values برای انتخاب فقط فیلدهای مورد نیاز و جلوگیری از خواندن فیلدهای Decimal نامعتبر
+    order_items_list = []
+    purchase_order = pt.purchase_order  # استفاده از property
+    if purchase_order:
+        try:
+            # استفاده از values برای انتخاب فقط فیلدهای مورد نیاز
+            order_items_data = purchase_order.order_items.filter(
+                raw_material__isnull=False
+            ).values('id', 'raw_material__id', 'raw_material__name')
+            
+            # ساخت یک list ساده از داده‌ها برای template
+            class SimpleOrderItem:
+                def __init__(self, raw_material_id, raw_material_name):
+                    self.raw_material = type('RawMaterial', (), {'id': raw_material_id, 'name': raw_material_name})()
+            
+            order_items_list = [
+                SimpleOrderItem(item_data['raw_material__id'], item_data['raw_material__name'])
+                for item_data in order_items_data
+            ]
+        except Exception as e:
+            bug_logger.error(f"خطا در خواندن order_items برای حمل {transport_number}: {e}", exc_info=True)
+            # در صورت خطا، list خالی برمی‌گردانیم
+            order_items_list = []
+
     context = {
         'form': form,
         'pt': pt,
+        'order_items_list': order_items_list,  # اضافه کردن order_items_list به context
         'accessible_transport_fields': accessible_transport_fields,
         'accessible_po_fields': accessible_po_fields,
         'accessible_raw_material_fields': accessible_raw_material_fields,
@@ -524,8 +556,10 @@ def driver_lookup_api(request):
     
     اطلاعات راننده را از آخرین حمل او نیز استخراج می‌کند (account و sheba)
     """
+    audit_logger.info("جستجوی راننده با شماره تلفن از طریق API")
     phone = request.GET.get('phone')
     if not phone:
+        audit_logger.alert("درخواست جستجوی راننده بدون شماره تلفن")
         return JsonResponse({'error': 'phone_required'}, status=400)
     
     try:

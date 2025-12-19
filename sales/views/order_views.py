@@ -236,9 +236,9 @@ def order_list_view(request):
     # استفاده از select_related به جای prefetch_related برای جلوگیری از خطای Decimal
     # prefetch_related ممکن است با مقادیر Decimal نامعتبر مشکل داشته باشد
     if request.user.is_superuser:
-        orders_qs = Order.objects.all().select_related('customer', 'registered_by').order_by('-created_at')
+        orders_qs = Order.objects.filter(order_type='sale').select_related('customer', 'registered_by').order_by('-created_at') 
     else:
-        orders_qs = Order.objects.filter(registered_by=request.user).select_related('customer', 'registered_by').order_by('-created_at')
+        orders_qs = Order.objects.filter(registered_by=request.user, order_type='sale').select_related('customer', 'registered_by').order_by('-created_at')
 
     # اعمال جستجو
     if search_query:

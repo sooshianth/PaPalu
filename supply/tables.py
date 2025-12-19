@@ -1363,3 +1363,325 @@ class UploadFarePaymentDocsTable(tables.Table):
             '<a href="{}" class="btn btn-sm btn-primary">جزئیات</a>',
             detail_url
         )
+
+
+class AwaitingPurchaseOrderTable(tables.Table):
+    """جدول سفارش‌های در انتظار تعریف حمل"""
+    
+    order_number = tables.Column(
+        verbose_name='شماره سفارش',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    supplier = tables.Column(
+        verbose_name='تأمین‌کننده',
+        accessor='customer.name',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    created_at = tables.DateTimeColumn(
+        verbose_name='تاریخ ایجاد',
+        format='Y-m-d',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        model = Order
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('order_number', 'supplier', 'created_at', 'actions')
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'border-collapse:collapse;font-size:.88rem'
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
+        }
+        sequence = ('order_number', 'supplier', 'created_at', 'actions')
+    
+    def render_order_number(self, value):
+        """نمایش شماره سفارش به صورت bold"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
+    def render_supplier(self, value):
+        """نمایش نام تأمین‌کننده"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
+    def render_actions(self, record):
+        """نمایش دکمه تعریف حمل"""
+        create_url = reverse('supply:create_purchase_transport') + f'?order={record.order_number}'
+        return format_html(
+            '<a href="{}" class="btn btn-secondary btn-sm">تعریف حمل</a>',
+            create_url
+        )
+
+
+class PurchaseOrderMaterialTable(tables.Table):
+    """جدول مواد اولیه سفارش خرید"""
+    
+    raw_material_id = tables.Column(
+        verbose_name='شناسه ماده اولیه',
+        accessor='raw_material.raw_material_id',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    raw_material_name = tables.Column(
+        verbose_name='نام ماده اولیه',
+        accessor='raw_material.name',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    physical_form = tables.Column(
+        verbose_name='شکل فیزیکی',
+        accessor='raw_material.get_physical_form_display',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    technical_description = tables.Column(
+        verbose_name='توضیحات فنی',
+        accessor='raw_material.technical_description',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center', 'style': 'max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    quantity = tables.Column(
+        verbose_name='مقدار',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    weight_unit = tables.Column(
+        verbose_name='واحد',
+        accessor='get_weight_unit_display',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    unit_price = tables.Column(
+        verbose_name='قیمت واحد',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    vat_percent = tables.Column(
+        verbose_name='مالیات بر ارزش افزوده (%)',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    freight_cost = tables.Column(
+        verbose_name='بهای تمام شده کرایه',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    total_purchase_cost = tables.Column(
+        verbose_name='بهای تمام شده خرید',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    external_allocation_id = tables.Column(
+        verbose_name='شناسه تخصیص',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    notes = tables.Column(
+        verbose_name='توضیحات',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center', 'style': 'max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        from core.OrderFolder.OrderItemModel import OrderItem
+        model = OrderItem
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('raw_material_id', 'raw_material_name', 'physical_form', 'technical_description', 
+                  'quantity', 'weight_unit', 'unit_price', 'vat_percent', 'freight_cost', 
+                  'total_purchase_cost', 'external_allocation_id', 'notes')
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'border-collapse:collapse;font-size:.88rem;min-width: 1800px;'
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
+        }
+        sequence = ('raw_material_id', 'raw_material_name', 'physical_form', 'technical_description', 
+                    'quantity', 'weight_unit', 'unit_price', 'vat_percent', 'freight_cost', 
+                    'total_purchase_cost', 'external_allocation_id', 'notes')
+    
+    def render_raw_material_name(self, value):
+        """نمایش نام ماده اولیه به صورت bold"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
+    def render_technical_description(self, value, record):
+        """نمایش توضیحات فنی با truncate"""
+        if value:
+            return format_html('<span title="{}">{}</span>', value, value[:50] + '...' if len(value) > 50 else value)
+        return '—'
+    
+    def render_notes(self, value):
+        """نمایش توضیحات با truncate"""
+        if value:
+            return format_html('<span title="{}">{}</span>', value, value[:30] + '...' if len(value) > 30 else value)
+        return '—'
+
+
+class PurchaseOrderTransportTable(tables.Table):
+    """جدول حمل‌های مرتبط با سفارش خرید"""
+    
+    vehicle_type = tables.Column(
+        verbose_name='نوع ماشین',
+        accessor='get_vehicle_type_display',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    status = tables.Column(
+        verbose_name='وضعیت حمل',
+        accessor='get_status_display',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    created_at = tables.DateTimeColumn(
+        verbose_name='تاریخ ثبت',
+        format='Y/m/d',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    total_freight = tables.Column(
+        verbose_name='کرایه',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        from core.TransportFolder.TransportModel import Transport
+        model = Transport
+        template_name = 'django_tables2/bootstrap4.html'
+        fields = ('vehicle_type', 'status', 'created_at', 'total_freight', 'actions')
+        attrs = {
+            'class': 'table table-hover table-bordered',
+            'style': 'border-collapse:collapse;font-size:.88rem'
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
+        }
+        sequence = ('vehicle_type', 'status', 'created_at', 'total_freight', 'actions')
+    
+    def render_status(self, record):
+        """نمایش وضعیت با badge"""
+        status_display = record.get_status_display()
+        status_class = f'status-{record.status}'
+        return format_html(
+            '<span class="status-badge {}">{}</span>',
+            status_class,
+            status_display
+        )
+    
+    def render_total_freight(self, value):
+        """نمایش کرایه"""
+        if value:
+            return format_html('{}', format_number_persian(value, decimal_places=0))
+        return '—'
+    
+    def render_actions(self, record):
+        """نمایش دکمه جزئیات"""
+        if not record.transport_number:
+            return format_html('<span class="text-muted">شماره حمل ناموجود</span>')
+        detail_url = reverse('supply:purchase_transport_detail', kwargs={'transport_number': record.transport_number})
+        return format_html(
+            '<a href="{}" class="btn btn-secondary btn-sm">جزئیات</a>',
+            detail_url
+        )

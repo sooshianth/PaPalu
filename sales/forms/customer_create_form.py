@@ -231,7 +231,7 @@ class BankAccountForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
     )
     shaba_number = forms.CharField(
-        max_length=50,
+        max_length=26,
         required=False,
         label='شماره شبا',
         widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})

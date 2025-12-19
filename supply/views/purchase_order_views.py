@@ -829,19 +829,26 @@ def procurement_purchase_order_detail_view(request, order_number):
     # Get transports for this purchase order
     transports = Transport.objects.filter(allocation__order=po).order_by('-created_at')
     
+    # Create tables for materials and transports
+    from supply.tables import PurchaseOrderMaterialTable, PurchaseOrderTransportTable
+    material_table = PurchaseOrderMaterialTable(materials)
+    RequestConfig(request, paginate=False).configure(material_table)
+    transport_table = PurchaseOrderTransportTable(transports)
+    RequestConfig(request, paginate={'per_page': 10}).configure(transport_table)
+    
     # Get allowed next statuses for workflow transitions
     allowed_next_statuses = po.WORKFLOW_ALLOWED.get(po.status, set())
     next_status_choices = [(code, label) for code, label in po.STATUS_CHOICES if code in allowed_next_statuses]
     
     return render(request, 'purchase/procurement_purchase_detail.html', {
         'po': po,
-        'materials': materials,
+        'material_table': material_table,
         'logs': logs,
         'log_table': log_table,
         'can_edit_financial': can_edit_financial,
         'can_delete': can_delete,
         'next_status_choices': next_status_choices,
-        'transports': transports,
+        'transport_table': transport_table,
     })
 
 
@@ -942,6 +949,7 @@ def supplier_search_api(request):
     """
     API endpoint برای جستجوی تامین‌کننده‌ها
     """
+    audit_logger.info("جستجوی تامین‌کننده از طریق API")
     query = request.GET.get('q', '').strip()
     
     if not query:
@@ -970,6 +978,7 @@ def raw_material_search_api(request):
     """
     API endpoint برای جستجوی مواد اولیه
     """
+    audit_logger.info("جستجوی مواد اولیه از طریق API")
     query = request.GET.get('q', '').strip()
     
     if not query:
@@ -1005,7 +1014,9 @@ def raw_material_info_api(request, raw_material_id):
     - آخرین استعلام قیمت
     - درصد مالیات بر ارزش افزوده از اطلاعات خرید
     """
+    audit_logger.info(f"دریافت اطلاعات ماده اولیه از طریق API - شناسه: {raw_material_id}")
     if not raw_material_id:
+        audit_logger.alert("درخواست اطلاعات ماده اولیه بدون شناسه")
         return JsonResponse({'error': 'شناسه ماده اولیه الزامی است'}, status=400)
     
     try:

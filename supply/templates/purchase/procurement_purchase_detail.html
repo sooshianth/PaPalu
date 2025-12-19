@@ -352,44 +352,7 @@
     <div class="form-section">
         <h5 class="section-title">مواد اولیه</h5>
         <div class="table-container" style="overflow-x: auto;">
-            <table class="table table-bordered table-hover" style="min-width: 1800px;">
-                <thead>
-                    <tr>
-                        <th>شناسه ماده اولیه</th>
-                        <th>نام ماده اولیه</th>
-                        <th>شکل فیزیکی</th>
-                        <th>توضیحات فنی</th>
-                        <th>مقدار</th>
-                        <th>واحد</th>
-                        <th>قیمت واحد</th>
-                        <th>مالیات بر ارزش افزوده (%)</th>
-                        <th>بهای تمام شده کرایه</th>
-                        <th>بهای تمام شده خرید</th>
-                        <th>شناسه تخصیص</th>
-                        <th>توضیحات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for m in materials %}
-                    <tr>
-                        <td>{{ m.raw_material.raw_material_id|default:'—' }}</td>
-                        <td><strong>{{ m.raw_material.name|default:'—' }}</strong></td>
-                        <td>{{ m.raw_material.get_physical_form_display|default:'—' }}</td>
-                        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.raw_material.technical_description }}">{{ m.raw_material.technical_description|default:'—'|truncatewords:5 }}</td>
-                        <td>{{ m.quantity|default:'—' }}</td>
-                        <td>{{ m.get_weight_unit_display|default:'—' }}</td>
-                        <td>{{ m.unit_price|default:'—' }}</td>
-                        <td>{{ m.vat_percent|default:'—' }}</td>
-                        <td>{{ m.freight_cost|default:'—' }}</td>
-                        <td>{{ m.total_purchase_cost|default:'—' }}</td>
-                        <td>{{ m.external_allocation_id|default:'—' }}</td>
-                        <td style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ m.notes }}">{{ m.notes|default:'—'|truncatewords:5 }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="12" style="text-align:center;color:var(--gray-500)">هیچ ماده اولیه‌ای ثبت نشده</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% render_table material_table %}
         </div>
     </div>
 
@@ -405,42 +368,9 @@
             </a>
         </div>
         
-        {% if transports %}
+        {% if transport_table %}
         <div class="table-container">
-            <table class="table table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th>نوع ماشین</th>
-                        <th>وضعیت حمل</th>
-                        <th>تاریخ ثبت</th>
-                        <th>کرایه</th>
-                        <th>عملیات</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for transport in transports %}
-                    <tr>
-                        <td>{{ transport.get_vehicle_type_display|default:"—" }}</td>
-                        <td>
-                            <span class="status-badge status-{{ transport.status }}">
-                                {{ transport.get_status_display }}
-                            </span>
-                        </td>
-                        <td>{{ transport.created_at|date:"Y/m/d" }}</td>
-                        <td>
-                            {% if transport.total_freight %}
-                                {{ transport.total_freight|floatformat:0|default:"—" }}
-                            {% else %}
-                                —
-                            {% endif %}
-                        </td>
-                        <td>
-                            <a href="{% url 'supply:purchase_transport_detail' transport.transport_number %}" class="btn btn-secondary btn-sm">جزئیات</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            {% render_table transport_table %}
         </div>
         {% else %}
         <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem;">هیچ حمل خریدی برای این سفارش ثبت نشده است. برای ایجاد حمل جدید، روی دکمه "ثبت حمل جدید" کلیک کنید.</p>
