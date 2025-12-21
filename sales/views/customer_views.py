@@ -1152,7 +1152,7 @@ def edit_customer_view(request, national_id):
             'name': person.name,
             'nature': person.nature,
             'registration_number': person.registration_number,
-            'birth_date': person.birth_date.strftime('%Y-%m-%d') if person.birth_date else '',
+            'birth_date': person.birth_date if person.birth_date else None,
             'activity_fields': list(person.activity_fields.all()),
             'introducer': person.introducer,
             'description': person.description,

@@ -1,5 +1,7 @@
 from django import forms
 from django.forms import BaseFormSet, formset_factory
+from django_jalali.forms import jDateField
+from django_jalali.forms.widgets import jDateInput
 from core.PersonFolder import Person
 from core.PersonFolder.PersonModel import ActivityField
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
@@ -264,19 +266,9 @@ class BankAccountForm(forms.Form):
     )
     
     def clean_account_number(self):
-        """اعتبارسنجی شماره حساب بانکی"""
+        """اعتبارسنجی شماره حساب بانکی - بدون محدودیت"""
         account_number = self.cleaned_data.get('account_number')
-        
-        if account_number:
-            # شماره حساب باید فقط شامل اعداد باشد
-            if not account_number.isdigit():
-                raise forms.ValidationError('شماره حساب بانکی باید فقط شامل اعداد باشد.')
-            
-            # باید دقیقاً 16 رقم باشد
-            if len(account_number) != 16:
-                raise forms.ValidationError('شماره حساب بانکی باید دقیقاً 16 رقم باشد.')
-        
-        return account_number
+        return clean_empty_to_none(account_number)
     
     def clean_shaba_number(self):
         """اعتبارسنجی شماره شبا"""
@@ -344,7 +336,9 @@ class CreateCustomerForm(forms.Form):
             'class': 'form-control',
             'placeholder': 'مثال: 1234567890 (حقیقی) یا 12345678901 (حقوقی)',
             'dir': 'ltr',
-            'maxlength': '11'
+            'maxlength': '11',
+            'pattern': '[0-9]*',
+            'inputmode': 'numeric'
         })
     )
     
@@ -401,13 +395,12 @@ class CreateCustomerForm(forms.Form):
         })
     )
     
-    birth_date = forms.CharField(
+    birth_date = jDateField(
         required=False,
         label='تاریخ تولد شخص',
-        help_text='فرمت: 1370-01-01 (سال-ماه-روز)',
-        widget=forms.TextInput(attrs={
+        widget=jDateInput(attrs={
             'class': 'form-control',
-            'placeholder': '1370-01-01',
+            'placeholder': 'انتخاب تاریخ',
             'dir': 'ltr'
         })
     )
@@ -493,9 +486,9 @@ class CreateCustomerForm(forms.Form):
         if not national_id:
             raise forms.ValidationError('کد ملی الزامی است.')
         
-        # بررسی عددی بودن
-        if not national_id.isdigit():
-            raise forms.ValidationError('کد ملی باید فقط شامل اعداد باشد.')
+        # بررسی عددی بودن - فقط اعداد انگلیسی
+        if not national_id.isdigit() or not all(c.isascii() and c.isdigit() for c in national_id):
+            raise forms.ValidationError('کد ملی باید فقط شامل اعداد انگلیسی باشد.')
         
         # دریافت nature از cleaned_data یا data (اگر هنوز clean نشده)
         nature = self.cleaned_data.get('nature')
@@ -569,26 +562,7 @@ class CreateCustomerForm(forms.Form):
         
         return registration_number
     
-    def clean_birth_date(self):
-        """اعتبارسنجی و تبدیل فرمت تاریخ تولد"""
-        birth_date = self.cleaned_data.get('birth_date')
-        
-        if birth_date:
-            # تبدیل اسلش به هایفن
-            birth_date = birth_date.replace('/', '-').strip()
-            
-            # بررسی فرمت تاریخ (باید به صورت YYYY-MM-DD باشد)
-            if not re.match(r'^\d{4}-\d{2}-\d{2}$', birth_date):
-                raise forms.ValidationError('فرمت تاریخ تولد باید به صورت 1370-01-01 (سال-ماه-روز) باشد.')
-            
-            # تبدیل رشته به jdatetime.date برای اعتبارسنجی
-            try:
-                year, month, day = map(int, birth_date.split('-'))
-                jdatetime.date(year, month, day)
-            except (ValueError, TypeError) as e:
-                raise forms.ValidationError('تاریخ تولد معتبر نیست. لطفاً تاریخ صحیح را وارد کنید.')
-        
-        return birth_date
+    # clean_birth_date دیگر لازم نیست چون jDateField خودش اعتبارسنجی می‌کند
     
     def clean(self):
         """اعتبارسنجی کلی فرم"""

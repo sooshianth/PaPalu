@@ -263,6 +263,42 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // اعتبارسنجی شناسه ملی - فقط اعداد انگلیسی
+    const nationalIdInput = document.querySelector('input[name="national_id"]');
+    if (nationalIdInput) {
+        // اضافه کردن pattern attribute
+        nationalIdInput.setAttribute('pattern', '[0-9]*');
+        nationalIdInput.setAttribute('inputmode', 'numeric');
+        
+        // جلوگیری از ورود کاراکترهای غیر عددی
+        nationalIdInput.addEventListener('input', function(e) {
+            // حذف تمام کاراکترهای غیر عددی
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+        
+        // جلوگیری از paste کاراکترهای غیر عددی
+        nationalIdInput.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text');
+            const numbersOnly = paste.replace(/[^0-9]/g, '');
+            this.value = numbersOnly;
+        });
+        
+        // اعتبارسنجی در submit
+        const form = nationalIdInput.closest('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                const value = nationalIdInput.value.trim();
+                if (value && !/^[0-9]+$/.test(value)) {
+                    e.preventDefault();
+                    alert('شناسه ملی باید فقط شامل اعداد انگلیسی باشد.');
+                    nationalIdInput.focus();
+                    return false;
+                }
+            });
+        }
+    }
+    
     // مدیریت حذف آدرس تحویل
     document.addEventListener('click', function(e) {
         if (e.target.closest('.delete-delivery-btn')) {
