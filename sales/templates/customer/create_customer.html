@@ -263,68 +263,182 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // اعتبارسنجی شناسه ملی - اعداد فارسی و انگلیسی
-    const nationalIdInput = document.querySelector('input[name="national_id"]');
-    if (nationalIdInput) {
-        // تابع تبدیل اعداد فارسی به انگلیسی
-        function persianToEnglish(text) {
-            const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
-            const englishDigits = '0123456789';
-            let result = '';
-            for (let char of text) {
-                const index = persianDigits.indexOf(char);
-                if (index !== -1) {
-                    result += englishDigits[index];
-                } else {
-                    result += char;
-                }
+    // تابع عمومی تبدیل اعداد فارسی به انگلیسی
+    function persianToEnglish(text) {
+        if (!text) return text;
+        const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        const englishDigits = '0123456789';
+        let result = '';
+        for (let char of text) {
+            const index = persianDigits.indexOf(char);
+            if (index !== -1) {
+                result += englishDigits[index];
+            } else {
+                result += char;
             }
-            return result;
         }
+        return result;
+    }
+    
+    // تابع اعمال تبدیل اعداد فارسی به انگلیسی برای یک input
+    function setupPersianToEnglishConverter(input, allowNonNumeric = false) {
+        if (!input || input.hasAttribute('data-converted')) return;
         
-        // تابع بررسی اینکه آیا کاراکتر عدد است (فارسی یا انگلیسی)
-        function isDigit(char) {
-            return /[0-9۰-۹]/.test(char);
-        }
+        // علامت‌گذاری که این input قبلاً تبدیل شده است
+        input.setAttribute('data-converted', 'true');
         
-        // اضافه کردن pattern attribute (هم فارسی و هم انگلیسی)
-        nationalIdInput.setAttribute('pattern', '[0-9۰-۹]*');
-        nationalIdInput.setAttribute('inputmode', 'numeric');
-        
-        // تبدیل اعداد فارسی به انگلیسی هنگام تایپ
-        nationalIdInput.addEventListener('input', function(e) {
-            // حذف تمام کاراکترهای غیر عددی (فارسی یا انگلیسی)
-            this.value = this.value.replace(/[^0-9۰-۹]/g, '');
-            // تبدیل اعداد فارسی به انگلیسی
-            this.value = persianToEnglish(this.value);
-        });
-        
-        // جلوگیری از paste کاراکترهای غیر عددی
-        nationalIdInput.addEventListener('paste', function(e) {
-            e.preventDefault();
-            const paste = (e.clipboardData || window.clipboardData).getData('text');
-            // حذف کاراکترهای غیر عددی و تبدیل فارسی به انگلیسی
-            const numbersOnly = paste.replace(/[^0-9۰-۹]/g, '');
-            this.value = persianToEnglish(numbersOnly);
-        });
-        
-        // اعتبارسنجی در submit
-        const form = nationalIdInput.closest('form');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                const value = nationalIdInput.value.trim();
-                if (value && !/^[0-9۰-۹]+$/.test(value)) {
-                    e.preventDefault();
-                    alert('شناسه ملی باید فقط شامل اعداد باشد.');
-                    nationalIdInput.focus();
-                    return false;
+        // اگر allowNonNumeric false باشد، فقط اعداد را قبول می‌کند
+        if (!allowNonNumeric) {
+            input.setAttribute('pattern', '[0-9۰-۹]*');
+            input.setAttribute('inputmode', 'numeric');
+            
+            // تبدیل اعداد فارسی به انگلیسی هنگام تایپ
+            input.addEventListener('input', function(e) {
+                const currentValue = this.value;
+                // حذف تمام کاراکترهای غیر عددی (فارسی یا انگلیسی)
+                const cleaned = currentValue.replace(/[^0-9۰-۹]/g, '');
+                // تبدیل اعداد فارسی به انگلیسی
+                const converted = persianToEnglish(cleaned);
+                if (converted !== currentValue) {
+                    this.value = converted;
                 }
+            }, { passive: true });
+            
+            // جلوگیری از paste کاراکترهای غیر عددی
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                // حذف کاراکترهای غیر عددی و تبدیل فارسی به انگلیسی
+                const numbersOnly = paste.replace(/[^0-9۰-۹]/g, '');
+                this.value = persianToEnglish(numbersOnly);
+            });
+        } else {
+            // برای فیلدهایی که ممکن است حروف هم داشته باشند (مثل shaba_number که IR دارد)
+            input.addEventListener('input', function(e) {
+                const currentValue = this.value;
+                // تبدیل اعداد فارسی به انگلیسی (بدون حذف حروف)
+                const converted = persianToEnglish(currentValue);
+                if (converted !== currentValue) {
+                    this.value = converted;
+                }
+            }, { passive: true });
+            
+            input.addEventListener('paste', function(e) {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text');
+                this.value = persianToEnglish(paste);
             });
         }
     }
     
+    // اعمال تبدیل برای فیلدهای formset (با استفاده از selector عمومی)
+    // این برای فیلدهای جدیدی که به صورت dynamic اضافه می‌شوند هم کار می‌کند
+    function setupFormsetConverters() {
+        // Delivery Address Formset
+        document.querySelectorAll('input[name*="postal_code"]').forEach(input => {
+            setupPersianToEnglishConverter(input);
+        });
+        document.querySelectorAll('input[name*="recipient_national_id"]').forEach(input => {
+            setupPersianToEnglishConverter(input);
+        });
+        document.querySelectorAll('input[name*="unique_delivery_id"]').forEach(input => {
+            setupPersianToEnglishConverter(input);
+        });
+        document.querySelectorAll('input[name*="delivery_landline"]').forEach(input => {
+            setupPersianToEnglishConverter(input);
+        });
+        document.querySelectorAll('input[name*="delivery_mobile"]').forEach(input => {
+            setupPersianToEnglishConverter(input);
+        });
+        
+        // Representative Formset
+        document.querySelectorAll('input[name*="mobile"]').forEach(input => {
+            if (input.name.includes('representative') || input.name.includes('rep-') || (input.name.includes('-mobile') && !input.name.includes('delivery'))) {
+                setupPersianToEnglishConverter(input);
+            }
+        });
+        document.querySelectorAll('input[name*="landline"]').forEach(input => {
+            if (input.name.includes('representative') || input.name.includes('rep-') || (input.name.includes('-landline') && !input.name.includes('delivery'))) {
+                setupPersianToEnglishConverter(input);
+            }
+        });
+        
+        // Bank Account Formset
+        document.querySelectorAll('input[name*="account_number"]').forEach(input => {
+            setupPersianToEnglishConverter(input);
+        });
+        document.querySelectorAll('input[name*="shaba_number"]').forEach(input => {
+            setupPersianToEnglishConverter(input, true); // allowNonNumeric = true برای IR
+        });
+    }
+    
+    // اعمال تبدیل برای همه فیلدهای عددی اصلی
+    function setupMainFieldConverters() {
+        // استفاده از selector عمومی برای پیدا کردن همه input ها با این name ها
+        const fieldNames = ['national_id', 'mobile_number', 'landline_number', 'registration_number', 'economic_code', 'tax_postal_code'];
+        fieldNames.forEach(function(fieldName) {
+            // جستجو با name دقیق
+            const input = document.querySelector('input[name="' + fieldName + '"]');
+            if (input) {
+                setupPersianToEnglishConverter(input);
+            }
+            // همچنین جستجو با name که ممکن است prefix داشته باشد
+            document.querySelectorAll('input[name*="' + fieldName + '"]').forEach(function(input) {
+                if (input.name === fieldName || input.name.endsWith('-' + fieldName)) {
+                    setupPersianToEnglishConverter(input);
+                }
+            });
+        });
+    }
+    
+    // اجرای اولیه برای فیلدهای اصلی (با چند بار تلاش برای اطمینان از بارگذاری DOM)
+    function initializeConverters() {
+        setupMainFieldConverters();
+        setupFormsetConverters();
+    }
+    
+    // اجرای فوری
+    initializeConverters();
+    
+    // اجرای مجدد با تاخیر برای اطمینان
+    setTimeout(initializeConverters, 100);
+    setTimeout(initializeConverters, 500);
+    
+    // اجرای مجدد بعد از اضافه شدن form جدید (با استفاده از MutationObserver)
+    const observer = new MutationObserver(function(mutations) {
+        // حذف data-converted از input های جدید اضافه شده
+        mutations.forEach(function(mutation) {
+            mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1) { // Element node
+                    // حذف data-converted از همه input های داخل node جدید
+                    const inputs = node.querySelectorAll ? node.querySelectorAll('input') : [];
+                    inputs.forEach(function(input) {
+                        input.removeAttribute('data-converted');
+                    });
+                    // اگر خود node یک input است
+                    if (node.tagName === 'INPUT') {
+                        node.removeAttribute('data-converted');
+                    }
+                }
+            });
+        });
+        // اجرای مجدد setup
+        setTimeout(function() {
+            setupFormsetConverters();
+        }, 100);
+    });
+    
+    // مشاهده تغییرات در container های formset
+    let deliveryContainer = document.getElementById('delivery-container');
+    let repContainer = document.getElementById('rep-container');
+    let bankContainer = document.getElementById('bank-container');
+    
+    if (deliveryContainer) observer.observe(deliveryContainer, { childList: true, subtree: true });
+    if (repContainer) observer.observe(repContainer, { childList: true, subtree: true });
+    if (bankContainer) observer.observe(bankContainer, { childList: true, subtree: true });
+    
     // مدیریت formset آدرس تحویل
-    const deliveryContainer = document.getElementById('delivery-container');
+    deliveryContainer = document.getElementById('delivery-container');
     const addDeliveryBtn = document.getElementById('add-delivery-btn');
     
     if (deliveryContainer && addDeliveryBtn) {
@@ -370,6 +484,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    // حذف data-converted برای اینکه دوباره setup شود
+                    input.removeAttribute('data-converted');
                     if (input.type === 'checkbox') {
                         if (input.name.includes('-DELETE')) {
                             input.checked = false;
@@ -386,6 +502,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 deliveryContainer.appendChild(newForm);
                 deliveryFormCount++;
                 deliveryTotalFormsInput.value = deliveryFormCount;
+                // اجرای مجدد setup برای form جدید
+                setTimeout(function() {
+                    setupFormsetConverters();
+                }, 50);
             });
             
             deliveryContainer.addEventListener('change', function(e) {
@@ -402,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // مدیریت formset نماینده
-    const repContainer = document.getElementById('rep-container');
+    repContainer = document.getElementById('rep-container');
     const addRepBtn = document.getElementById('add-rep-btn');
     
     if (repContainer && addRepBtn) {
@@ -450,6 +570,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    // حذف data-converted برای اینکه دوباره setup شود
+                    input.removeAttribute('data-converted');
                     if (input.type === 'checkbox') {
                         if (input.name.includes('-DELETE')) {
                             input.checked = false;
@@ -466,6 +588,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 repContainer.appendChild(newForm);
                 repFormCount++;
                 repTotalFormsInput.value = repFormCount;
+                // اجرای مجدد setup برای form جدید
+                setTimeout(function() {
+                    setupFormsetConverters();
+                }, 50);
             });
             
             repContainer.addEventListener('change', function(e) {
@@ -482,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // مدیریت formset حساب بانکی
-    const bankContainer = document.getElementById('bank-container');
+    bankContainer = document.getElementById('bank-container');
     const addBankBtn = document.getElementById('add-bank-btn');
     
     if (bankContainer && addBankBtn) {
@@ -528,6 +654,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+                    // حذف data-converted برای اینکه دوباره setup شود
+                    input.removeAttribute('data-converted');
                     if (input.type === 'checkbox') {
                         if (input.name.includes('-DELETE')) {
                             input.checked = false;
@@ -544,6 +672,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 bankContainer.appendChild(newForm);
                 bankFormCount++;
                 bankTotalFormsInput.value = bankFormCount;
+                // اجرای مجدد setup برای form جدید
+                setTimeout(function() {
+                    setupFormsetConverters();
+                }, 50);
             });
             
             bankContainer.addEventListener('change', function(e) {
