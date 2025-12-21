@@ -46,6 +46,7 @@ from .purchase_transport_views import (
     get_purchase_order_info_api,
     driver_search_api,
     create_driver_api,
+    get_order_materials_api,
 )
 
 # Car Entrance Views
@@ -105,6 +106,7 @@ __all__ = [
     'get_purchase_order_info_api',
     'driver_search_api',
     'create_driver_api',
+    'get_order_materials_api',
     # Car Entrance Views
     'car_entrance_list_view',
     'register_driver_for_transport_view',

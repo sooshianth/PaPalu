@@ -271,6 +271,33 @@ class OrderItem(models.Model):
         total = subtotal - discount + additional_charges + vat_amount
         return total.quantize(Decimal('0.01'))
     
+    def get_allocated_quantity(self):
+        """
+        محاسبه مجموع مقدار تخصیص یافته در تمام حمل‌ها
+        """
+        from django.db.models import Sum
+        total_allocated = self.transport_allocations.aggregate(
+            total=Sum('allocated_quantity')
+        )['total']
+        return Decimal(str(total_allocated or 0))
+    
+    def get_remaining_quantity(self):
+        """
+        محاسبه مقدار باقیمانده برای تخصیص به حمل‌ها
+        """
+        if not self.quantity:
+            return Decimal('0')
+        total_quantity = Decimal(str(self.quantity))
+        allocated = self.get_allocated_quantity()
+        return total_quantity - allocated
+    
+    def is_fully_allocated(self):
+        """
+        بررسی اینکه آیا تمام مقدار این ماده اولیه تخصیص یافته است یا نه
+        """
+        remaining = self.get_remaining_quantity()
+        return remaining <= Decimal('0')
+    
     def save(self, *args, **kwargs):
         """
         محاسبه خودکار بهای تمام شده خرید قبل از ذخیره

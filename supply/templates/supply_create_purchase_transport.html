@@ -364,6 +364,78 @@
         font-size: 0.9rem;
         color: var(--gray-700);
     }
+    
+    /* Material item styles */
+    .material-item {
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 15px;
+        background: #fafafa;
+        transition: all 0.3s ease;
+    }
+    .material-item:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .material-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    .material-name {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--gray-800);
+    }
+    .material-stats {
+        display: flex;
+        gap: 15px;
+        font-size: 0.85rem;
+        color: var(--gray-600);
+    }
+    .material-stat {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .material-stat-label {
+        font-size: 0.75rem;
+        color: var(--gray-500);
+    }
+    .material-stat-value {
+        font-weight: 600;
+        color: var(--primary-green);
+    }
+    .material-input-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+    .material-input-group label {
+        flex: 0 0 150px;
+        margin: 0;
+    }
+    .material-input-group input {
+        flex: 1;
+    }
+    .alert {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .alert-info {
+        background-color: #e3f2fd;
+        border: 1px solid #90caf9;
+        color: #1976d2;
+    }
+    .alert-warning {
+        background-color: #fff3e0;
+        border: 1px solid #ffb74d;
+        color: #f57c00;
+    }
 </style>
 {% endblock %}
 
@@ -441,6 +513,32 @@
                         <!-- محتوا به صورت داینامیک پر می‌شود -->
                     </div>
                 </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- بخش مواد اولیه -->
+        <div class="form-section" id="materials-section" style="display:none;">
+            <div class="form-section-header">
+                <h5>مواد اولیه حمل</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <strong>توجه:</strong> مقدار تخصیص یافته به این حمل را برای هر ماده اولیه وارد کنید. مجموع مقادیر نمی‌تواند بیشتر از مقدار باقیمانده در سفارش باشد.
+                </div>
+                
+                {{ raw_material_formset.management_form }}
+                <div id="materials-container">
+                    <!-- مواد اولیه به صورت داینامیک از API لود می‌شوند -->
+                </div>
+                
+                {% if raw_material_formset.non_form_errors %}
+                    {% for err in raw_material_formset.non_form_errors %}
+                        <div class="text-danger">{{ err }}</div>
+                    {% endfor %}
                 {% endif %}
             </div>
         </div>
@@ -693,39 +791,30 @@ document.addEventListener('DOMContentLoaded', function() {
       const orderNumber = this.options[this.selectedIndex].text.split(' ')[0]; // Extract order number from option text
       
       if (orderNumber && orderNumber !== '---------') {
-        // Fetch order info via AJAX
-        fetch(`/supply/api/purchase-order-info/${orderNumber}/`)
+        // Fetch order materials via AJAX
+        fetch(`/supply/api/order-materials/${orderNumber}/`)
           .then(response => response.json())
           .then(data => {
-            // نمایش یا به‌روزرسانی اطلاعات سفارش
-            let orderInfoDiv = document.getElementById('order-info-display');
-            if (!orderInfoDiv) {
-              orderInfoDiv = document.createElement('div');
-              orderInfoDiv.id = 'order-info-display';
-              orderInfoDiv.className = 'info-box';
-              orderInfoDiv.innerHTML = '<div class="info-box-title">اطلاعات سفارش خرید:</div><div class="info-box-content" id="order-info-content"></div>';
-              // Insert after purchase_order field
-              const purchaseOrderGroup = orderSelect.closest('.mb-3');
-              if (purchaseOrderGroup && purchaseOrderGroup.parentNode) {
-                purchaseOrderGroup.parentNode.insertBefore(orderInfoDiv, purchaseOrderGroup.nextSibling);
-              }
+            if (data.success) {
+              // نمایش بخش مواد اولیه
+              document.getElementById('materials-section').style.display = 'block';
+              
+              // پر کردن مواد اولیه
+              loadMaterialsToFormset(data.materials);
+              
+              // نمایش اطلاعات سفارش
+              showOrderInfo(data.materials);
+            } else {
+              alert('خطا در دریافت مواد اولیه سفارش');
             }
-            
-            const orderInfoContent = document.getElementById('order-info-content');
-            let materialsHtml = '<div><strong>تاریخ سفارش:</strong> ' + data.order_date + '</div>';
-            materialsHtml += '<div style="margin-top:8px"><strong>مواد اولیه:</strong></div>';
-            materialsHtml += '<ul style="margin:6px 0 0 20px;padding:0">';
-            data.materials.forEach(mat => {
-              materialsHtml += `<li><strong>نام ماده اولیه:</strong> ${mat.name} | <strong>مقدار:</strong> ${mat.quantity} | <strong>واحد:</strong> ${mat.unit}</li>`;
-            });
-            materialsHtml += '</ul>';
-            
-            orderInfoContent.innerHTML = materialsHtml;
-            orderInfoDiv.style.display = 'block';
           })
           .catch(error => {
-            console.error('Error fetching order info:', error);
+            console.error('Error fetching order materials:', error);
+            alert('خطا در دریافت مواد اولیه سفارش');
           });
+      } else {
+        // پنهان کردن بخش مواد اولیه اگر سفارش انتخاب نشده
+        document.getElementById('materials-section').style.display = 'none';
       }
     });
   }
@@ -807,6 +896,171 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     {% endif %}
   }
+  
+  // تابع برای نمایش اطلاعات سفارش
+  function showOrderInfo(materials) {
+    let orderInfoDiv = document.getElementById('order-info-display');
+    if (!orderInfoDiv) {
+      orderInfoDiv = document.createElement('div');
+      orderInfoDiv.id = 'order-info-display';
+      orderInfoDiv.className = 'info-box';
+      orderInfoDiv.innerHTML = '<div class="info-box-title">اطلاعات سفارش خرید:</div><div class="info-box-content" id="order-info-content"></div>';
+      const purchaseOrderGroup = document.getElementById('id_purchase_order').closest('.mb-3');
+      if (purchaseOrderGroup && purchaseOrderGroup.parentNode) {
+        purchaseOrderGroup.parentNode.insertBefore(orderInfoDiv, purchaseOrderGroup.nextSibling);
+      }
+    }
+    
+    const orderInfoContent = document.getElementById('order-info-content');
+    let materialsHtml = '<div style="margin-top:8px"><strong>مواد اولیه سفارش:</strong></div>';
+    materialsHtml += '<ul style="margin:6px 0 0 20px;padding:0">';
+    materials.forEach(mat => {
+      materialsHtml += `<li><strong>${mat.raw_material_name}:</strong> کل: ${mat.total_quantity} ${mat.weight_unit_display} | تخصیص یافته: ${mat.allocated_quantity} | باقیمانده: ${mat.remaining_quantity}</li>`;
+    });
+    materialsHtml += '</ul>';
+    
+    orderInfoContent.innerHTML = materialsHtml;
+    orderInfoDiv.style.display = 'block';
+  }
+  
+  // تابع برای پر کردن formset با مواد اولیه
+  function loadMaterialsToFormset(materials) {
+    const container = document.getElementById('materials-container');
+    container.innerHTML = ''; // پاک کردن محتوای قبلی
+    
+    const totalFormsInput = document.querySelector('input[name="materials-TOTAL_FORMS"]');
+    if (!totalFormsInput) {
+      console.error('فیلد TOTAL_FORMS پیدا نشد');
+      return;
+    }
+    
+    let formIndex = 0;
+    materials.forEach(function(material) {
+      // فقط مواد اولیه‌ای که هنوز مقدار باقیمانده دارند
+      if (parseFloat(material.remaining_quantity) > 0) {
+        const materialDiv = createMaterialFormRow(material, formIndex);
+        container.appendChild(materialDiv);
+        formIndex++;
+      }
+    });
+    
+    // به‌روزرسانی تعداد کل فرم‌ها
+    totalFormsInput.value = formIndex;
+  }
+  
+  // تابع برای ایجاد یک row برای هر ماده اولیه
+  function createMaterialFormRow(material, index) {
+    const div = document.createElement('div');
+    div.className = 'material-item';
+    div.innerHTML = `
+      <div class="material-item-header">
+        <div class="material-name">${material.raw_material_name}</div>
+        <div class="material-stats">
+          <div class="material-stat">
+            <span class="material-stat-label">کل</span>
+            <span class="material-stat-value">${material.total_quantity}</span>
+          </div>
+          <div class="material-stat">
+            <span class="material-stat-label">تخصیص یافته</span>
+            <span class="material-stat-value">${material.allocated_quantity}</span>
+          </div>
+          <div class="material-stat">
+            <span class="material-stat-label">باقیمانده</span>
+            <span class="material-stat-value">${material.remaining_quantity} ${material.weight_unit_display}</span>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col-md-6 mb-3">
+          <div class="material-input-group">
+            <label class="form-label">مقدار تخصیص به این حمل:</label>
+            <input type="number" 
+                   name="materials-${index}-allocated_quantity" 
+                   id="id_materials-${index}-allocated_quantity"
+                   class="form-control material-quantity-input" 
+                   step="0.001" 
+                   min="0" 
+                   max="${material.remaining_quantity}"
+                   placeholder="مقدار (حداکثر ${material.remaining_quantity})"
+                   data-max="${material.remaining_quantity}"
+                   data-unit="${material.weight_unit_display}">
+          </div>
+          <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">
+            واحد: ${material.weight_unit_display} - حداکثر: ${material.remaining_quantity}
+          </small>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">نوع بسته‌بندی (اختیاری):</label>
+          <select name="materials-${index}-packaging_type" 
+                  id="id_materials-${index}-packaging_type"
+                  class="form-control">
+            <option value="">-- انتخاب کنید --</option>
+            <option value="bag">کیسه</option>
+            <option value="pallet">پالت</option>
+            <option value="bulk">فله</option>
+            <option value="box">جعبه</option>
+            <option value="barrel">بشکه</option>
+            <option value="sack">گونی</option>
+            <option value="other">سایر</option>
+          </select>
+        </div>
+        <div class="col-md-6 mb-3">
+          <label class="form-label">تعداد بسته (اختیاری):</label>
+          <input type="number" 
+                 name="materials-${index}-number_of_packages" 
+                 id="id_materials-${index}-number_of_packages"
+                 class="form-control" 
+                 min="0"
+                 placeholder="تعداد">
+        </div>
+        <div class="col-md-12 mb-3">
+          <label class="form-label">یادداشت (اختیاری):</label>
+          <textarea name="materials-${index}-notes" 
+                    id="id_materials-${index}-notes"
+                    class="form-control" 
+                    rows="2"></textarea>
+        </div>
+      </div>
+      <input type="hidden" name="materials-${index}-order_item" value="${material.id}">
+      <input type="hidden" name="materials-${index}-raw_material" value="${material.raw_material_id}">
+      <input type="hidden" name="materials-${index}-weight_unit" value="${material.weight_unit}">
+    `;
+    
+    // اضافه کردن validation برای input مقدار
+    const quantityInput = div.querySelector('.material-quantity-input');
+    quantityInput.addEventListener('input', function() {
+      const value = parseFloat(this.value);
+      const max = parseFloat(this.getAttribute('data-max'));
+      
+      if (value > max) {
+        this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${max} باشد`);
+        this.style.borderColor = '#dc3545';
+      } else if (value < 0) {
+        this.setCustomValidity('مقدار نمی‌تواند منفی باشد');
+        this.style.borderColor = '#dc3545';
+      } else {
+        this.setCustomValidity('');
+        this.style.borderColor = '';
+      }
+    });
+    
+    return div;
+  }
+  
+  // اگر سفارش از قبل انتخاب شده، مواد اولیه را لود کن
+  {% if initial_order %}
+  fetch(`/supply/api/order-materials/{{ initial_order.order_number }}/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        document.getElementById('materials-section').style.display = 'block';
+        loadMaterialsToFormset(data.materials);
+      }
+    })
+    .catch(error => {
+      console.error('Error fetching initial order materials:', error);
+    });
+  {% endif %}
   
   // مدیریت باز و بسته شدن بخش‌های فرم
   document.querySelectorAll('.form-section-header').forEach(function(header) {
