@@ -55,6 +55,7 @@ def get_accessible_purchase_transport_fields(user):
         'notes': user_can_access_field(user, Transport, 'notes', 'view'),
         'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
         'created_by': user_can_access_field(user, Transport, 'created_by', 'view'),
+        'raw_materials': user_can_access_field(user, Transport, 'raw_material_infos', 'view'),
     }
 
 
@@ -113,7 +114,7 @@ class RawMaterialInfoForm(ModelForm):
         widgets = {
             'order_item': forms.HiddenInput(),
             'raw_material': forms.HiddenInput(),
-            'allocated_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0'}),
+            'allocated_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
             'weight_unit': forms.Select(attrs={'class': 'form-control', 'readonly': True}),
             'packaging_type': forms.Select(attrs={'class': 'form-control'}),
             'number_of_packages': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
@@ -435,6 +436,7 @@ def purchase_transport_list_view(request):
                 accessible_transport_fields.get('purchase_order', False) and
                 accessible_po_fields.get('status', False)
             ),
+            'raw_materials': accessible_transport_fields.get('raw_materials', False),
             'transport_type': accessible_transport_fields.get('transport_type', False),
             'vehicle_type': accessible_transport_fields.get('vehicle_type', False),
             'status': accessible_transport_fields.get('status', False),
@@ -577,15 +579,22 @@ def create_purchase_transport_view(request):
                         pt.status = Transport.STATUS_AWAITING_VEHICLE_ENTRY
                         pt.save()
                         
-                        # تغییر وضعیت سفارش از "در انتظار تعریف حمل" به "در انتظار ورود خودرو"
+                        # بررسی وضعیت سفارش و تغییر آن در صورت نیاز
                         if pt.allocation and pt.allocation.order:
                             order = pt.allocation.order
                             if order.status == Order.STATUS_AWAITING_TRANSPORT_DEFINITION:
-                                try:
-                                    order.transition(Order.STATUS_AWAITING_VEHICLE_ENTRY, user=request.user, note='تعریف حمل انجام شد')
-                                    bug_logger.info(f"وضعیت سفارش {order.order_number} از 'در انتظار تعریف حمل' به 'در انتظار ورود خودرو' تغییر کرد")
-                                except Exception as order_transition_err:
-                                    bug_logger.warning(f"خطا در تغییر وضعیت سفارش {order.order_number}: {order_transition_err}")
+                                # بررسی اینکه آیا مجموع وزن حمل‌ها به اندازه وزن سفارش رسیده یا نه
+                                remaining_weight = order.get_remaining_weight()
+                                
+                                # اگر وزن باقیمانده صفر یا کمتر شد، وضعیت را تغییر بده
+                                if remaining_weight <= Decimal('0'):
+                                    try:
+                                        order.transition(Order.STATUS_AWAITING_VEHICLE_ENTRY, user=request.user, note='تمام مواد اولیه به حمل‌ها تخصیص یافت')
+                                        bug_logger.info(f"وضعیت سفارش {order.order_number} از 'در انتظار تعریف حمل' به 'در انتظار ورود خودرو' تغییر کرد - تمام مواد اولیه تخصیص یافت")
+                                    except Exception as order_transition_err:
+                                        bug_logger.warning(f"خطا در تغییر وضعیت سفارش {order.order_number}: {order_transition_err}")
+                                else:
+                                    bug_logger.info(f"سفارش {order.order_number} هنوز در وضعیت 'در انتظار تعریف حمل' باقی ماند - وزن باقیمانده: {remaining_weight} کیلوگرم")
                         
                         bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number} - وضعیت: {pt.status} - ID: {pt.pk}")
                         
@@ -910,13 +919,27 @@ def get_order_materials_api(request, order_number):
                 remaining_quantity = order_item.get_remaining_quantity()
                 allocated_quantity = order_item.get_allocated_quantity()
                 
+                # برگرداندن مقادیر واقعی (بدون فرمت) برای محاسبات
+                # استفاده از normalize برای اطمینان از نمایش دقیق
+                def format_decimal_for_api(value):
+                    """فرمت کردن Decimal برای API بدون گرد کردن"""
+                    if value is None:
+                        return '0'
+                    # تبدیل به Decimal و سپس normalize برای حذف صفرهای اضافی
+                    from decimal import Decimal
+                    d = Decimal(str(value))
+                    # normalize برای حذف صفرهای اضافی در انتها
+                    normalized = d.normalize()
+                    # تبدیل به string بدون فرمت اضافی
+                    return str(normalized)
+                
                 materials_data.append({
                     'id': order_item.id,
                     'raw_material_id': order_item.raw_material.id,
                     'raw_material_name': order_item.raw_material.name,
-                    'total_quantity': str(order_item.quantity),
-                    'allocated_quantity': str(allocated_quantity),
-                    'remaining_quantity': str(remaining_quantity),
+                    'total_quantity': format_decimal_for_api(order_item.quantity),
+                    'allocated_quantity': format_decimal_for_api(allocated_quantity),
+                    'remaining_quantity': format_decimal_for_api(remaining_quantity),
                     'weight_unit': order_item.weight_unit,
                     'weight_unit_display': order_item.get_weight_unit_display(),
                     'is_fully_allocated': order_item.is_fully_allocated(),

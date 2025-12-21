@@ -49,7 +49,7 @@ class RawMaterialInfo(models.Model):
     
     allocated_quantity = models.DecimalField(
         max_digits=15,
-        decimal_places=3,
+        decimal_places=2,
         verbose_name='مقدار تخصیص یافته',
         validators=[MinValueValidator(0)],
         help_text='مقدار این ماده اولیه در این حمل'

@@ -558,6 +558,17 @@ class TransportTable(tables.Table):
         }
     )
     
+    raw_materials = tables.Column(
+        verbose_name='مواد اولیه',
+        orderable=False,
+        empty_values=(),
+        visible=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
     transport_type = tables.Column(
         verbose_name='نوع حمل',
         orderable=True,
@@ -638,6 +649,7 @@ class TransportTable(tables.Table):
             self.columns['transport_number'].column.visible = accessible_fields.get('transport_number', False)
             self.columns['purchase_order'].column.visible = accessible_fields.get('purchase_order', False)
             self.columns['purchase_order_status'].column.visible = accessible_fields.get('purchase_order_status', False)
+            self.columns['raw_materials'].column.visible = accessible_fields.get('raw_materials', False)
             self.columns['transport_type'].column.visible = accessible_fields.get('transport_type', False)
             self.columns['vehicle_type'].column.visible = accessible_fields.get('vehicle_type', False)
             self.columns['status'].column.visible = accessible_fields.get('status', False)
@@ -656,7 +668,7 @@ class TransportTable(tables.Table):
         model = Transport
         template_name = 'django_tables2/bootstrap4.html'
         # فیلدهای مورد نیاز برای لیست حمل‌ها
-        fields = ('purchase_order', 'created_at', 'transport_type', 'vehicle_type', 'status', 'actions')
+        fields = ('purchase_order', 'created_at', 'raw_materials', 'transport_type', 'vehicle_type', 'status', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.85rem'
@@ -664,8 +676,8 @@ class TransportTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        # ستون‌های مورد نیاز: شماره سفارش، تاریخ ثبت، نوع حمل، نوع ماشین، وضعیت، جزئیات
-        sequence = ('purchase_order', 'created_at', 'transport_type', 'vehicle_type', 'status', 'actions')
+        # ستون‌های مورد نیاز: شماره سفارش، تاریخ ثبت، مواد اولیه، نوع حمل، نوع ماشین، وضعیت، جزئیات
+        sequence = ('purchase_order', 'created_at', 'raw_materials', 'transport_type', 'vehicle_type', 'status', 'actions')
     
     def render_purchase_order_status(self, record):
         """نمایش وضعیت سفارش خرید"""
@@ -676,6 +688,30 @@ class TransportTable(tables.Table):
                 status_class,
                 record.allocation.order.get_status_display()
             )
+        return '—'
+    
+    def render_raw_materials(self, record):
+        """نمایش مواد اولیه حمل با مقدار تخصیص یافته"""
+        from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
+        materials = RawMaterialInfo.objects.filter(transport=record).select_related('raw_material', 'order_item').all()
+        if materials:
+            items = []
+            for m in materials:
+                rm = m.raw_material
+                # نمایش: نام ماده اولیه (مقدار تخصیص یافته + واحد)
+                display_text = f"{rm.name or 'بدون نام'}"
+                if m.allocated_quantity:
+                    weight_formatted = format_number_persian(m.allocated_quantity, decimal_places=2)
+                    unit_display = m.get_weight_unit_display()
+                    display_text += f" ({weight_formatted} {unit_display})"
+                items.append((format_html('<strong>{}</strong>', display_text),))
+            
+            inner_html = format_html_join(
+                '',
+                '<div style="padding:4px 8px;background:#e3f2fd;border-radius:4px;margin:2px;font-size:0.75rem;border-right:3px solid #1976d2">{}</div>',
+                items
+            )
+            return format_html('<div style="display:flex;flex-direction:column;gap:2px">{}</div>', inner_html)
         return '—'
     
     def render_transport_type(self, record):
@@ -720,7 +756,7 @@ class TransportTable(tables.Table):
         identifier = record.transport_number or str(record.pk)
         detail_url = reverse('supply:purchase_transport_detail', args=[identifier])
         return format_html(
-            '<a href="{}" class="btn btn-secondary btn-sm">جزئیات</a>',
+            '<a href="{}" class="btn-outline-info">جزئیات</a>',
             detail_url
         )
 
@@ -1483,7 +1519,7 @@ class AwaitingPurchaseOrderTable(tables.Table):
         """نمایش دکمه تعریف حمل"""
         create_url = reverse('supply:create_purchase_transport') + f'?order={record.order_number}'
         return format_html(
-            '<a href="{}" class="btn btn-secondary btn-sm">تعریف حمل</a>',
+            '<a href="{}" class="btn-outline-info">تعریف حمل</a>',
             create_url
         )
 
