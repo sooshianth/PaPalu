@@ -931,6 +931,31 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endif %}
   }
   
+  // تابع برای فرمت کردن عدد به دو رقم اعشار (فقط برای نمایش)
+  // این تابع فقط برای نمایش استفاده می‌شود و مقدار واقعی را تغییر نمی‌دهد
+  function formatDecimal(value) {
+    if (value === null || value === undefined || value === '') {
+      return '0';
+    }
+    // تبدیل به string و سپس parseFloat برای اطمینان از دقت
+    const strValue = String(value).trim();
+    if (!strValue || strValue === '') {
+      return '0';
+    }
+    // استفاده از parseFloat برای تبدیل
+    const num = parseFloat(strValue);
+    if (isNaN(num)) {
+      return '0';
+    }
+    // اگر عدد صحیح است، بدون اعشار نمایش بده
+    if (num % 1 === 0) {
+      return num.toString();
+    }
+    // برای اعداد اعشاری، تا دو رقم اعشار نمایش بده
+    // استفاده از toFixed(2) برای نمایش دقیق
+    return num.toFixed(2);
+  }
+  
   // تابع برای نمایش اطلاعات سفارش
   function showOrderInfo(materials) {
     let orderInfoDiv = document.getElementById('order-info-display');
@@ -963,7 +988,7 @@ document.addEventListener('DOMContentLoaded', function() {
       materialsList.innerHTML = '';
       materials.forEach(mat => {
         const li = document.createElement('li');
-        li.innerHTML = `<strong>${mat.raw_material_name}:</strong> کل: ${mat.total_quantity} ${mat.weight_unit_display} | تخصیص یافته: ${mat.allocated_quantity} ${mat.weight_unit_display} | باقیمانده: ${mat.remaining_quantity} ${mat.weight_unit_display}`;
+        li.innerHTML = `<strong>${mat.raw_material_name}:</strong> کل: ${formatDecimal(mat.total_quantity)} ${mat.weight_unit_display} | تخصیص یافته: ${formatDecimal(mat.allocated_quantity)} ${mat.weight_unit_display} | باقیمانده: ${formatDecimal(mat.remaining_quantity)} ${mat.weight_unit_display}`;
         materialsList.appendChild(li);
       });
     }
@@ -1051,15 +1076,15 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="material-stats">
           <div class="material-stat">
             <span class="material-stat-label">کل سفارش</span>
-            <span class="material-stat-value">${material.total_quantity} ${material.weight_unit_display}</span>
+            <span class="material-stat-value">${formatDecimal(material.total_quantity)} ${material.weight_unit_display}</span>
           </div>
           <div class="material-stat">
             <span class="material-stat-label">تخصیص یافته</span>
-            <span class="material-stat-value allocated">${material.allocated_quantity} ${material.weight_unit_display}</span>
+            <span class="material-stat-value allocated">${formatDecimal(material.allocated_quantity)} ${material.weight_unit_display}</span>
           </div>
           <div class="material-stat">
             <span class="material-stat-label">باقیمانده</span>
-            <span class="material-stat-value remaining">${material.remaining_quantity} ${material.weight_unit_display}</span>
+            <span class="material-stat-value remaining">${formatDecimal(material.remaining_quantity)} ${material.weight_unit_display}</span>
           </div>
         </div>
       </div>
@@ -1071,15 +1096,15 @@ document.addEventListener('DOMContentLoaded', function() {
                    name="materials-${index}-allocated_quantity" 
                    id="id_materials-${index}-allocated_quantity"
                    class="form-control material-quantity-input" 
-                   step="0.001" 
+                   step="0.01" 
                    min="0" 
                    max="${material.remaining_quantity}"
-                   placeholder="مقدار (حداکثر ${material.remaining_quantity})"
+                   placeholder="مقدار (حداکثر ${formatDecimal(material.remaining_quantity)})"
                    data-max="${material.remaining_quantity}"
                    data-unit="${material.weight_unit_display}"
                    required>
             <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">
-              واحد: ${material.weight_unit_display} - حداکثر: ${material.remaining_quantity}
+              واحد: ${material.weight_unit_display} - حداکثر: ${formatDecimal(material.remaining_quantity)} ${material.weight_unit_display}
             </small>
           </div>
           <div class="col-md-6 mb-3">
@@ -1158,7 +1183,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const max = parseFloat(this.getAttribute('data-max'));
         
         if (value > max) {
-          this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${max} باشد`);
+          this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${formatDecimal(max)} باشد`);
           this.style.borderColor = '#dc3545';
         } else if (value < 0) {
           this.setCustomValidity('مقدار نمی‌تواند منفی باشد');
@@ -1365,7 +1390,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hasError = true;
             quantityInput.style.borderColor = '#dc3545';
             if (!errorMessage) {
-              errorMessage = `مقدار تخصیص برای "${materialName}" نمی‌تواند بیشتر از ${max} باشد.`;
+              errorMessage = `مقدار تخصیص برای "${materialName}" نمی‌تواند بیشتر از ${formatDecimal(max)} باشد.`;
             }
           } else {
             quantityInput.style.borderColor = '';
