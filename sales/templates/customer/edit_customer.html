@@ -263,25 +263,49 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // اعتبارسنجی شناسه ملی - فقط اعداد انگلیسی
+    // اعتبارسنجی شناسه ملی - اعداد فارسی و انگلیسی
     const nationalIdInput = document.querySelector('input[name="national_id"]');
     if (nationalIdInput) {
-        // اضافه کردن pattern attribute
-        nationalIdInput.setAttribute('pattern', '[0-9]*');
+        // تابع تبدیل اعداد فارسی به انگلیسی
+        function persianToEnglish(text) {
+            const persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+            const englishDigits = '0123456789';
+            let result = '';
+            for (let char of text) {
+                const index = persianDigits.indexOf(char);
+                if (index !== -1) {
+                    result += englishDigits[index];
+                } else {
+                    result += char;
+                }
+            }
+            return result;
+        }
+        
+        // تابع بررسی اینکه آیا کاراکتر عدد است (فارسی یا انگلیسی)
+        function isDigit(char) {
+            return /[0-9۰-۹]/.test(char);
+        }
+        
+        // اضافه کردن pattern attribute (هم فارسی و هم انگلیسی)
+        nationalIdInput.setAttribute('pattern', '[0-9۰-۹]*');
         nationalIdInput.setAttribute('inputmode', 'numeric');
         
-        // جلوگیری از ورود کاراکترهای غیر عددی
+        // تبدیل اعداد فارسی به انگلیسی هنگام تایپ
         nationalIdInput.addEventListener('input', function(e) {
-            // حذف تمام کاراکترهای غیر عددی
-            this.value = this.value.replace(/[^0-9]/g, '');
+            // حذف تمام کاراکترهای غیر عددی (فارسی یا انگلیسی)
+            this.value = this.value.replace(/[^0-9۰-۹]/g, '');
+            // تبدیل اعداد فارسی به انگلیسی
+            this.value = persianToEnglish(this.value);
         });
         
         // جلوگیری از paste کاراکترهای غیر عددی
         nationalIdInput.addEventListener('paste', function(e) {
             e.preventDefault();
             const paste = (e.clipboardData || window.clipboardData).getData('text');
-            const numbersOnly = paste.replace(/[^0-9]/g, '');
-            this.value = numbersOnly;
+            // حذف کاراکترهای غیر عددی و تبدیل فارسی به انگلیسی
+            const numbersOnly = paste.replace(/[^0-9۰-۹]/g, '');
+            this.value = persianToEnglish(numbersOnly);
         });
         
         // اعتبارسنجی در submit
@@ -289,9 +313,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (form) {
             form.addEventListener('submit', function(e) {
                 const value = nationalIdInput.value.trim();
-                if (value && !/^[0-9]+$/.test(value)) {
+                if (value && !/^[0-9۰-۹]+$/.test(value)) {
                     e.preventDefault();
-                    alert('شناسه ملی باید فقط شامل اعداد انگلیسی باشد.');
+                    alert('شناسه ملی باید فقط شامل اعداد باشد.');
                     nationalIdInput.focus();
                     return false;
                 }

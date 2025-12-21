@@ -26,6 +26,19 @@ def clean_empty_to_none(value):
     return value
 
 
+def persian_to_english_digits(text):
+    """تبدیل اعداد فارسی به انگلیسی"""
+    if not text:
+        return text
+    
+    persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+    english_digits = '0123456789'
+    
+    # ایجاد mapping برای تبدیل سریع
+    translation_table = str.maketrans(persian_digits, english_digits)
+    return text.translate(translation_table)
+
+
 class DeliveryAddressForm(forms.Form):
     """فرم آدرس تحویل"""
     
@@ -337,7 +350,7 @@ class CreateCustomerForm(forms.Form):
             'placeholder': 'مثال: 1234567890 (حقیقی) یا 12345678901 (حقوقی)',
             'dir': 'ltr',
             'maxlength': '11',
-            'pattern': '[0-9]*',
+            'pattern': '[0-9۰-۹]*',
             'inputmode': 'numeric'
         })
     )
@@ -486,9 +499,12 @@ class CreateCustomerForm(forms.Form):
         if not national_id:
             raise forms.ValidationError('کد ملی الزامی است.')
         
-        # بررسی عددی بودن - فقط اعداد انگلیسی
-        if not national_id.isdigit() or not all(c.isascii() and c.isdigit() for c in national_id):
-            raise forms.ValidationError('کد ملی باید فقط شامل اعداد انگلیسی باشد.')
+        # تبدیل اعداد فارسی به انگلیسی
+        national_id = persian_to_english_digits(national_id)
+        
+        # بررسی عددی بودن - فقط اعداد (بعد از تبدیل)
+        if not national_id.isdigit():
+            raise forms.ValidationError('کد ملی باید فقط شامل اعداد باشد.')
         
         # دریافت nature از cleaned_data یا data (اگر هنوز clean نشده)
         nature = self.cleaned_data.get('nature')
