@@ -1,4 +1,4 @@
-<div class="detail-card">
+<div class="detail-card" id="section-person">
   <div class="detail-card-title">اطلاعات شخص/شرکت</div>
   <div class="detail-row">
     <span class="detail-label">{% if person_form.national_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.national_id.label }}:</span>
@@ -40,7 +40,7 @@
 
 <!-- Phone numbers card moved to end of list -->
 
-<div class="detail-card">
+<div class="detail-card" id="section-financial">
   <div class="detail-card-title">اطلاعات مالی/بانکی</div>
   <div class="detail-row">
     <span class="detail-label">{{ fb_form.tax_group.label }}:</span>
@@ -72,7 +72,7 @@
   </div>
 </div>
 
-<div class="detail-card">
+<div class="detail-card" id="section-representatives">
   <div class="detail-card-title" style="display: flex; justify-content: space-between; align-items: center;">
     <span>نمایندگان</span>
     <button type="button" class="btn btn-sm btn-success" onclick="addFormsetRow('rep')" style="padding: 4px 12px; font-size: 0.85rem;">+ افزودن نماینده</button>
@@ -114,7 +114,7 @@
   </div>
 </div>
 
-<div class="detail-card">
+<div class="detail-card" id="section-bank-accounts">
   <div class="detail-card-title" style="display: flex; justify-content: space-between; align-items: center;">
     <span>حساب‌های بانکی</span>
     <button type="button" class="btn btn-sm btn-success" onclick="addFormsetRow('ba')" style="padding: 4px 12px; font-size: 0.85rem;">+ افزودن حساب</button>
@@ -148,7 +148,7 @@
   </div>
 </div>
 
-<div class="detail-card">
+<div class="detail-card" id="section-payment-preferences">
   <div class="detail-card-title" style="display: flex; justify-content: space-between; align-items: center;">
     <span>ترجیحات پرداخت</span>
     <button type="button" class="btn btn-sm btn-success" onclick="addFormsetRow('pay')" style="padding: 4px 12px; font-size: 0.85rem;">+ افزودن ترجیح پرداخت</button>
@@ -186,7 +186,7 @@
   </div>
 </div>
 
-<div class="detail-card">
+<div class="detail-card" id="section-social-networks">
   <div class="detail-card-title" style="display: flex; justify-content: space-between; align-items: center;">
     <span>شبکه‌های اجتماعی</span>
     <button type="button" class="btn btn-sm btn-success" onclick="addFormsetRow('sn')" style="padding: 4px 12px; font-size: 0.85rem;">+ افزودن شبکه اجتماعی</button>
@@ -241,7 +241,7 @@
   </div>
 </div>
 
-<div class="detail-card">
+<div class="detail-card" id="section-attachments">
   <div class="detail-card-title" style="display: flex; justify-content: space-between; align-items: center;">
     <span>پیوست‌ها</span>
     <button type="button" class="btn btn-sm btn-success" onclick="addFormsetRow('att')" style="padding: 4px 12px; font-size: 0.85rem;">+ افزودن پیوست</button>
