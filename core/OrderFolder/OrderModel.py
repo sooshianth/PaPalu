@@ -47,15 +47,9 @@ class Order(models.Model):
     ]
     
     FREIGHT_PAYMENT_CHOICES = [
-        # برای سفارش فروش
-        ('seller', 'فروشنده'),
-        ('buyer', 'خریدار'),
-        ('shared', 'مشترک'),
-        # برای سفارش خرید تامینی
-        ('cash', 'نقدی'),
-        ('credit', 'اعتباری'),
-        ('included', 'شامل در قیمت'),
-        ('separate', 'پرداخت جداگانه'),
+        ('calculated_in_invoice', 'کرایه محاسبه شده در فی'),
+        ('pay_to_supplier', 'پرداخت به شرکت فروشنده'),
+        ('pay_to_driver', 'پرداخت به راننده'),
     ]
     
     
@@ -124,7 +118,7 @@ class Order(models.Model):
     
     # نوع پرداخت کرایه
     freight_payment_type = models.CharField(
-        max_length=20,
+        max_length=30,
         choices=FREIGHT_PAYMENT_CHOICES,
         null=True,
         blank=True,

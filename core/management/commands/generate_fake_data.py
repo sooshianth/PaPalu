@@ -420,7 +420,7 @@ class Command(BaseCommand):
             'pending_factory',
             'pending_unloading_approval',
         ]
-        freight_types = ['seller', 'buyer', 'shared']
+        freight_types = ['calculated_in_invoice', 'pay_to_supplier', 'pay_to_driver']
         
         for i in range(count):
             order_number = Order.generate_order_number(order_type)
@@ -667,7 +667,7 @@ class Command(BaseCommand):
         orders = []
         statuses = ['draft', 'awaiting_transport_def', 'awaiting_vehicle_entry', 
                     'awaiting_delivery', 'awaiting_wh_reconciliation', 'completed']
-        freight_payment_types = ['cash', 'credit', 'included', 'separate']
+        freight_payment_types = ['calculated_in_invoice', 'pay_to_supplier', 'pay_to_driver']
         
         for i in range(count):
             order_number = Order.generate_order_number('purchase')
