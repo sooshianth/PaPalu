@@ -35,44 +35,60 @@
     }
     
     /* استایل جدول django-tables2 */
-    .table-container .table {
+    .data-table {
         width: 100%;
         border-collapse: collapse;
         background: white;
-        margin-bottom: 0;
     }
     
-    .table-container .table thead {
+    .data-table thead {
         background: var(--gray-100);
     }
     
-    .table-container .table thead th {
-        padding: 12px 15px;
-        text-align: center;
+    .data-table thead th {
+        padding: 15px;
+        text-align: right;
         font-weight: 600;
         color: var(--gray-800);
-        border: 1px solid var(--gray-300);
-        vertical-align: middle;
+        border-bottom: 2px solid var(--primary-green);
     }
     
-    .table-container .table tbody tr {
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
         transition: background-color 0.2s;
     }
     
-    .table-container .table tbody tr:hover {
+    .data-table tbody tr:hover {
         background-color: var(--light-green);
     }
     
-    .table-container .table tbody td {
-        padding: 12px 15px;
+    .data-table tbody td {
+        padding: 15px;
         color: var(--gray-600);
-        border: 1px solid var(--gray-300);
+    }
+    
+    /* استایل سلول actions */
+    .data-table tbody td.actions,
+    .data-table tbody td:has(.btn-group) {
+        white-space: nowrap;
         text-align: center;
+    }
+    
+    /* اطمینان از نمایش افقی دکمه‌ها در RTL */
+    .data-table .btn-group a,
+    .table-container .btn-group a {
+        display: inline-block !important;
         vertical-align: middle;
+        margin: 0;
+    }
+    
+    .data-table .btn-group {
+        direction: ltr;
+        text-align: left;
     }
     
     /* استایل‌های django-tables2 - لینک‌های عادی */
-    .table-container .table a:not(.btn):not(.btn-outline-warning):not(.btn-outline-info) {
+    .data-table a:not(.btn-outline-warning):not(.btn-outline-info) {
         color: inherit;
         text-decoration: none;
     }
@@ -88,24 +104,14 @@
         flex-wrap: wrap;
         list-style: none;
         padding: 0;
-        direction: ltr; /* برای قرار دادن در سمت چپ در RTL */
+        direction: ltr !important; /* برای قرار دادن در سمت چپ در RTL */
+        flex-direction: row !important; /* جهت طبیعی - JavaScript ترتیب را اصلاح می‌کند */
     }
     
     .pagination li {
         margin: 0;
         padding: 0;
         list-style: none;
-        order: 0; /* ترتیب پیش‌فرض برای اعداد */
-    }
-    
-    /* Previous (قبلی) - معمولاً در آخر است، باید در اول باشد */
-    .pagination li:last-child {
-        order: -1;
-    }
-    
-    /* Next (بعدی) - معمولاً در اول است، باید در آخر باشد */
-    .pagination li:first-child {
-        order: 999;
     }
     
     .pagination a,
@@ -183,12 +189,72 @@
         border-color: var(--primary-green) !important;
     }
     
+    .pagination .ellipsis {
+        padding: 10px 8px;
+        color: var(--gray-600);
+        border: none !important;
+        background: transparent !important;
+    }
+    
+    /* Override برای استایل‌های bootstrap که ممکن است اعمال شده باشند */
+    .pagination > li > a,
+    .pagination > li > span {
+        border: 1px solid var(--gray-300) !important;
+        border-radius: 8px !important;
+        color: var(--gray-700) !important;
+        background-color: white !important;
+        padding: 10px 16px !important;
+        margin: 0 2px !important;
+        min-width: 40px !important;
+    }
+    
+    .table-container + .pagination,
+    .table-container .pagination,
+    div.pagination {
+        direction: ltr !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+    }
+    
+    .pagination > li:first-child > a,
+    .pagination > li:first-child > span,
+    .pagination > li:last-child > a,
+    .pagination > li:last-child > span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .pagination > li > a:hover,
+    .pagination > li > a:focus {
+        background-color: var(--primary-green) !important;
+        color: white !important;
+        border-color: var(--primary-green) !important;
+    }
+    
     .pagination > .active > a,
-    .pagination > .active > span {
+    .pagination > .active > span,
+    .pagination > .active > a:hover,
+    .pagination > .active > span:hover,
+    .pagination > .active > a:focus,
+    .pagination > .active > span:focus {
         background-color: var(--primary-green) !important;
         color: white !important;
         border-color: var(--primary-green) !important;
         font-weight: 600;
+    }
+    
+    .pagination > .disabled > a,
+    .pagination > .disabled > span,
+    .pagination > .disabled > a:hover,
+    .pagination > .disabled > span:hover,
+    .pagination > .disabled > a:focus,
+    .pagination > .disabled > span:focus {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+        opacity: 0.5;
+        cursor: not-allowed;
     }
     
     .badge {
@@ -199,53 +265,70 @@
         font-weight: 500;
     }
     
-    .badge-legal {
+    .badge-green {
+        background-color: var(--primary-green);
+        color: white;
+    }
+    
+    .badge-nature {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .badge-nature-legal {
         background-color: #e3f2fd;
         color: #1976d2;
     }
     
-    .badge-natural {
+    .badge-nature-natural {
         background-color: #f3e5f5;
         color: #7b1fa2;
     }
     
+    /* استایل گروه دکمه‌ها */
     .btn-group {
-        display: flex;
+        display: flex !important;
+        flex-direction: row !important;
         gap: 5px;
-        justify-content: center;
+        align-items: center;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
     }
     
-    /* استایل دکمه‌ها */
-    .table-container .btn {
-        padding: 5px 12px;
+    .data-table .btn-group,
+    .table-container .btn-group {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
+    /* استایل دکمه جزئیات - آبی */
+    .data-table .btn-outline-info,
+    .table-container .btn-outline-info {
+        padding: 5px 10px;
         border-radius: 6px;
         text-decoration: none;
-        font-size: 0.8rem;
+        font-size: 0.875rem;
+        border: 1px solid #17a2b8;
         transition: all 0.3s;
-        display: inline-block;
-        border: 1px solid;
-    }
-    
-    .table-container .btn-info {
         color: #17a2b8 !important;
         border-color: #17a2b8 !important;
         background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
+        white-space: nowrap;
     }
     
-    .table-container .btn-info:hover {
+    .data-table .btn-outline-info:hover,
+    .table-container .btn-outline-info:hover {
         background-color: #17a2b8 !important;
         color: white !important;
-    }
-    
-    .table-container .btn-warning {
-        color: #ffc107 !important;
-        border-color: #ffc107 !important;
-        background-color: transparent !important;
-    }
-    
-    .table-container .btn-warning:hover {
-        background-color: #ffc107 !important;
-        color: #212529 !important;
+        border-color: #17a2b8 !important;
     }
 
     /* Red delete buttons (filled by default, white text) */
@@ -378,6 +461,20 @@
         margin-right: 4px;
     }
     
+    /* استایل برای highlight بخش‌های دارای خطا */
+    .detail-card.has-error {
+        border: 2px solid #dc3545;
+        border-radius: 12px;
+        background-color: #fff5f5;
+        animation: highlightError 0.5s ease-in-out;
+    }
+    
+    @keyframes highlightError {
+        0% { background-color: #fff5f5; }
+        50% { background-color: #ffe0e0; }
+        100% { background-color: #fff5f5; }
+    }
+    
     @media (max-width: 768px) {
         .page-header {
             flex-direction: column;
@@ -424,29 +521,180 @@
             <form method="post" enctype="multipart/form-data" novalidate>
               {% csrf_token %}
               
-              {% if person_form.errors or fb_form.errors %}
+              {% if form_has_errors %}
               <div class="alert alert-danger" style="margin-bottom: 20px;">
                 <strong>خطاهای فرم:</strong>
                 <ul style="margin: 10px 0 0 20px;">
-                  {% for field, errors in person_form.errors.items %}
-                    {% for error in errors %}
-                      <li>{{ error }}</li>
-                    {% endfor %}
-                  {% endfor %}
-                  {% for field, errors in fb_form.errors.items %}
-                    {% for error in errors %}
-                      <li>{{ error }}</li>
-                    {% endfor %}
-                  {% endfor %}
-                  {% if person_form.non_field_errors %}
-                    {% for error in person_form.non_field_errors %}
-                      <li>{{ error }}</li>
-                    {% endfor %}
+                  {% if section_errors.person %}
+                    <li>
+                      <strong>بخش اطلاعات شخص/شرکت:</strong>
+                      <a href="#section-person" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+                      <ul style="margin: 5px 0 0 20px;">
+                        {% for field, errors in person_form.errors.items %}
+                          {% for error in errors %}
+                            <li>{% if field != '__all__' %}{{ field }}: {% endif %}{{ error }}</li>
+                          {% endfor %}
+                        {% endfor %}
+                        {% if person_form.non_field_errors %}
+                          {% for error in person_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                          {% endfor %}
+                        {% endif %}
+                      </ul>
+                    </li>
                   {% endif %}
-                  {% if fb_form.non_field_errors %}
-                    {% for error in fb_form.non_field_errors %}
-                      <li>{{ error }}</li>
-                    {% endfor %}
+                  {% if section_errors.financial %}
+                    <li>
+                      <strong>بخش اطلاعات مالی/بانکی:</strong>
+                      <a href="#section-financial" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+                      <ul style="margin: 5px 0 0 20px;">
+                        {% for field, errors in fb_form.errors.items %}
+                          {% for error in errors %}
+                            <li>{% if field != '__all__' %}{{ field }}: {% endif %}{{ error }}</li>
+                          {% endfor %}
+                        {% endfor %}
+                        {% if fb_form.non_field_errors %}
+                          {% for error in fb_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                          {% endfor %}
+                        {% endif %}
+                      </ul>
+                    </li>
+                  {% endif %}
+                  {% if section_errors.representatives %}
+                    <li>
+                      <strong>بخش نمایندگان:</strong>
+                      <a href="#section-representatives" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+                      {% if rep_formset.non_form_errors %}
+                        <ul style="margin: 5px 0 0 20px;">
+                          {% for error in rep_formset.non_form_errors %}
+                            <li>{{ error }}</li>
+                          {% endfor %}
+                        </ul>
+                      {% endif %}
+                      {% for form in rep_formset.forms %}
+                        {% if form.errors %}
+                          <ul style="margin: 5px 0 0 20px;">
+                            <li>نماینده شماره {{ forloop.counter }}:</li>
+                            <ul style="margin: 5px 0 0 20px;">
+                              {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                  <li>{% if field != '__all__' and field != 'DELETE' %}{{ field }}: {% endif %}{{ error }}</li>
+                                {% endfor %}
+                              {% endfor %}
+                            </ul>
+                          </ul>
+                        {% endif %}
+                      {% endfor %}
+                    </li>
+                  {% endif %}
+                  {% if section_errors.bank_accounts %}
+                    <li>
+                      <strong>بخش حساب‌های بانکی:</strong>
+                      <a href="#section-bank-accounts" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+                      {% if ba_formset.non_form_errors %}
+                        <ul style="margin: 5px 0 0 20px;">
+                          {% for error in ba_formset.non_form_errors %}
+                            <li>{{ error }}</li>
+                          {% endfor %}
+                        </ul>
+                      {% endif %}
+                      {% for form in ba_formset.forms %}
+                        {% if form.errors %}
+                          <ul style="margin: 5px 0 0 20px;">
+                            <li>حساب شماره {{ forloop.counter }}:</li>
+                            <ul style="margin: 5px 0 0 20px;">
+                              {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                  <li>{% if field != '__all__' and field != 'DELETE' %}{{ field }}: {% endif %}{{ error }}</li>
+                                {% endfor %}
+                              {% endfor %}
+                            </ul>
+                          </ul>
+                        {% endif %}
+                      {% endfor %}
+                    </li>
+                  {% endif %}
+                  {% if section_errors.payment_preferences %}
+                    <li>
+                      <strong>بخش ترجیحات پرداخت:</strong>
+                      <a href="#section-payment-preferences" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+                      {% if pay_formset.non_form_errors %}
+                        <ul style="margin: 5px 0 0 20px;">
+                          {% for error in pay_formset.non_form_errors %}
+                            <li>{{ error }}</li>
+                          {% endfor %}
+                        </ul>
+                      {% endif %}
+                      {% for form in pay_formset.forms %}
+                        {% if form.errors %}
+                          <ul style="margin: 5px 0 0 20px;">
+                            <li>ترجیح شماره {{ forloop.counter }}:</li>
+                            <ul style="margin: 5px 0 0 20px;">
+                              {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                  <li>{% if field != '__all__' and field != 'DELETE' %}{{ field }}: {% endif %}{{ error }}</li>
+                                {% endfor %}
+                              {% endfor %}
+                            </ul>
+                          </ul>
+                        {% endif %}
+                      {% endfor %}
+                    </li>
+                  {% endif %}
+                  {% if section_errors.social_networks %}
+                    <li>
+                      <strong>بخش شبکه‌های اجتماعی:</strong>
+                      <a href="#section-social-networks" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+                      {% if sn_formset.non_form_errors %}
+                        <ul style="margin: 5px 0 0 20px;">
+                          {% for error in sn_formset.non_form_errors %}
+                            <li>{{ error }}</li>
+                          {% endfor %}
+                        </ul>
+                      {% endif %}
+                      {% for form in sn_formset.forms %}
+                        {% if form.errors %}
+                          <ul style="margin: 5px 0 0 20px;">
+                            <li>شبکه شماره {{ forloop.counter }}:</li>
+                            <ul style="margin: 5px 0 0 20px;">
+                              {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                  <li>{% if field != '__all__' and field != 'DELETE' %}{{ field }}: {% endif %}{{ error }}</li>
+                                {% endfor %}
+                              {% endfor %}
+                            </ul>
+                          </ul>
+                        {% endif %}
+                      {% endfor %}
+                    </li>
+                  {% endif %}
+                  {% if section_errors.attachments %}
+                    <li>
+                      <strong>بخش پیوست‌ها:</strong>
+                      <a href="#section-attachments" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+                      {% if att_formset.non_form_errors %}
+                        <ul style="margin: 5px 0 0 20px;">
+                          {% for error in att_formset.non_form_errors %}
+                            <li>{{ error }}</li>
+                          {% endfor %}
+                        </ul>
+                      {% endif %}
+                      {% for form in att_formset.forms %}
+                        {% if form.errors %}
+                          <ul style="margin: 5px 0 0 20px;">
+                            <li>پیوست شماره {{ forloop.counter }}:</li>
+                            <ul style="margin: 5px 0 0 20px;">
+                              {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                  <li>{% if field != '__all__' and field != 'DELETE' %}{{ field }}: {% endif %}{{ error }}</li>
+                                {% endfor %}
+                              {% endfor %}
+                            </ul>
+                          </ul>
+                        {% endif %}
+                      {% endfor %}
+                    </li>
                   {% endif %}
                 </ul>
               </div>
@@ -464,9 +712,115 @@
         </div>
     </div>
 
-    <div class="table-container">
-      {% render_table table %}
-    </div>
+    {% if table %}
+        <div class="table-container">
+            {% render_table table %}
+        </div>
+        <script>
+            // اصلاح ترتیب صفحه‌بندی برای RTL
+            (function() {
+                function fixPaginationOrder() {
+                    const paginations = document.querySelectorAll('.pagination');
+                    paginations.forEach(function(pagination) {
+                        // اگر قبلاً اصلاح شده، دوباره اصلاح نکن
+                        if (pagination.dataset.fixed === 'true') return;
+                        
+                        const items = Array.from(pagination.children);
+                        if (items.length === 0) return;
+                        
+                        // پیدا کردن Previous و Next
+                        let prevItem = null;
+                        let nextItem = null;
+                        const numberItems = [];
+                        
+                        items.forEach(function(item) {
+                            const link = item.querySelector('a');
+                            const text = (link ? link.textContent : item.textContent).trim();
+                            const isPrev = text.includes('قبلی') || text.includes('Previous') || text === '«';
+                            const isNext = text.includes('بعدی') || text.includes('Next') || text === '»';
+                            
+                            if (isPrev) {
+                                prevItem = item;
+                            } else if (isNext) {
+                                nextItem = item;
+                            } else {
+                                // بررسی اینکه آیا عدد است یا ellipsis
+                                const isNumber = /^\d+$/.test(text) || item.classList.contains('current');
+                                if (isNumber || item.classList.contains('ellipsis')) {
+                                    numberItems.push(item);
+                                }
+                            }
+                        });
+                        
+                        // اگر Next در اول و Previous در آخر است (RTL)
+                        if (nextItem && prevItem && items[0] === nextItem && items[items.length - 1] === prevItem) {
+                            // معکوس کردن ترتیب اعداد
+                            numberItems.reverse();
+                            
+                            // بازسازی لیست: Previous, اعداد معکوس شده, Next
+                            pagination.innerHTML = '';
+                            if (prevItem) {
+                                pagination.appendChild(prevItem);
+                            }
+                            numberItems.forEach(function(item) {
+                                pagination.appendChild(item);
+                            });
+                            if (nextItem) {
+                                pagination.appendChild(nextItem);
+                            }
+                            
+                            // علامت‌گذاری که اصلاح شده
+                            pagination.dataset.fixed = 'true';
+                        }
+                    });
+                }
+                
+                // اجرا بعد از لود شدن DOM
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', fixPaginationOrder);
+                } else {
+                    fixPaginationOrder();
+                }
+                
+                // اجرا بعد از تغییرات AJAX (برای django-tables2)
+                setTimeout(fixPaginationOrder, 100);
+                setTimeout(fixPaginationOrder, 500);
+            })();
+        </script>
+        <style>
+            /* استایل‌های اضافی برای اطمینان از اعمال صحیح */
+            .table-container .pagination,
+            .pagination {
+                margin-top: 30px !important;
+                margin-bottom: 20px !important;
+                justify-content: flex-start !important;
+                direction: ltr !important; /* برای قرار دادن در سمت چپ در RTL */
+                flex-direction: row !important; /* جهت طبیعی */
+            }
+            
+            /* دکمه‌های قبلی و بعدی هم اندازه با اعداد */
+            .table-container .pagination li:first-child a,
+            .table-container .pagination li:first-child span,
+            .table-container .pagination li:last-child a,
+            .table-container .pagination li:last-child span,
+            .pagination li:first-child a,
+            .pagination li:first-child span,
+            .pagination li:last-child a,
+            .pagination li:last-child span {
+                padding: 10px 16px !important;
+                min-width: 40px !important;
+                font-size: 0.9rem !important;
+            }
+        </style>
+    {% else %}
+        <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 3H21V21H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>هیچ تأمین‌کننده‌ای ثبت نشده است.</p>
+        </div>
+    {% endif %}
 </div>
 {% endblock %}
 
@@ -491,8 +845,60 @@
         // Scroll to form to show errors
         setTimeout(function() {
           formWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          
+          // Highlight sections with errors
+          {% if section_errors.person %}
+          const personSection = document.getElementById('section-person');
+          if (personSection) personSection.classList.add('has-error');
+          {% endif %}
+          {% if section_errors.financial %}
+          const financialSection = document.getElementById('section-financial');
+          if (financialSection) financialSection.classList.add('has-error');
+          {% endif %}
+          {% if section_errors.representatives %}
+          const representativesSection = document.getElementById('section-representatives');
+          if (representativesSection) representativesSection.classList.add('has-error');
+          {% endif %}
+          {% if section_errors.bank_accounts %}
+          const bankAccountsSection = document.getElementById('section-bank-accounts');
+          if (bankAccountsSection) bankAccountsSection.classList.add('has-error');
+          {% endif %}
+          {% if section_errors.payment_preferences %}
+          const paymentPreferencesSection = document.getElementById('section-payment-preferences');
+          if (paymentPreferencesSection) paymentPreferencesSection.classList.add('has-error');
+          {% endif %}
+          {% if section_errors.social_networks %}
+          const socialNetworksSection = document.getElementById('section-social-networks');
+          if (socialNetworksSection) socialNetworksSection.classList.add('has-error');
+          {% endif %}
+          {% if section_errors.attachments %}
+          const attachmentsSection = document.getElementById('section-attachments');
+          if (attachmentsSection) attachmentsSection.classList.add('has-error');
+          {% endif %}
         }, 100);
       }
+      
+      // Smooth scroll to error section when clicking error links
+      document.querySelectorAll('a[href^="#section-"]').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href').substring(1);
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            // Make sure form is open
+            if (formWrapper.style.display === 'none') {
+              formWrapper.style.display = 'block';
+              toggleFormBtn.innerHTML = '<span>-</span> بستن فرم';
+            }
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Highlight animation
+            targetElement.style.animation = 'none';
+            setTimeout(function() {
+              targetElement.style.animation = 'highlightError 0.5s ease-in-out';
+            }, 10);
+          }
+        });
+      });
       
       toggleFormBtn.addEventListener('click', function() {
         if (formWrapper.style.display === 'none') {
@@ -780,6 +1186,58 @@
       phoneHidden.value = values.join(',');
     }, true);
 
+    // Highlight sections with errors and scroll to them
+    document.addEventListener('DOMContentLoaded', function() {
+      {% if form_has_errors %}
+      // Highlight sections with errors
+      {% if section_errors.person %}
+      const personSection = document.getElementById('section-person');
+      if (personSection) personSection.classList.add('has-error');
+      {% endif %}
+      {% if section_errors.financial %}
+      const financialSection = document.getElementById('section-financial');
+      if (financialSection) financialSection.classList.add('has-error');
+      {% endif %}
+      {% if section_errors.representatives %}
+      const representativesSection = document.getElementById('section-representatives');
+      if (representativesSection) representativesSection.classList.add('has-error');
+      {% endif %}
+      {% if section_errors.bank_accounts %}
+      const bankAccountsSection = document.getElementById('section-bank-accounts');
+      if (bankAccountsSection) bankAccountsSection.classList.add('has-error');
+      {% endif %}
+      {% if section_errors.payment_preferences %}
+      const paymentPreferencesSection = document.getElementById('section-payment-preferences');
+      if (paymentPreferencesSection) paymentPreferencesSection.classList.add('has-error');
+      {% endif %}
+      {% if section_errors.social_networks %}
+      const socialNetworksSection = document.getElementById('section-social-networks');
+      if (socialNetworksSection) socialNetworksSection.classList.add('has-error');
+      {% endif %}
+      {% if section_errors.attachments %}
+      const attachmentsSection = document.getElementById('section-attachments');
+      if (attachmentsSection) attachmentsSection.classList.add('has-error');
+      {% endif %}
+      
+      // Smooth scroll to first error section when clicking error links
+      document.querySelectorAll('a[href^="#section-"]').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          const targetId = this.getAttribute('href').substring(1);
+          const targetElement = document.getElementById(targetId);
+          if (targetElement) {
+            targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Highlight animation
+            targetElement.style.animation = 'none';
+            setTimeout(function() {
+              targetElement.style.animation = 'highlightError 0.5s ease-in-out';
+            }, 10);
+          }
+        });
+      });
+      {% endif %}
+    });
+    
     // Initialize phone list from server value, if any
     document.addEventListener('DOMContentLoaded', function(){
       var hiddenFieldInForm = document.querySelector('input[name="phone_number"]');

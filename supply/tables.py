@@ -44,8 +44,8 @@ class SupplierTable(tables.Table):
         orderable=True,
         visible=False,
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -54,8 +54,8 @@ class SupplierTable(tables.Table):
         orderable=True,
         visible=False,
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -74,8 +74,8 @@ class SupplierTable(tables.Table):
         orderable=True,
         visible=False,
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -84,8 +84,8 @@ class SupplierTable(tables.Table):
         orderable=True,
         visible=False,
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -113,31 +113,47 @@ class SupplierTable(tables.Table):
     
     class Meta:
         model = Person
-        template_name = 'django_tables2/bootstrap4.html'
+        template_name = 'django_tables2/bootstrap.html'
         fields = ('national_id', 'name', 'nature', 'registration_number', 'phone_number', 'actions')
         attrs = {
-            'class': 'table table-hover table-bordered',
+            'class': 'data-table',
             'id': 'suppliersTable',
-            'style': 'border-collapse:collapse;font-size:.88rem'
+            'thead': {'class': ''}
         }
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
         sequence = ('national_id', 'name', 'nature', 'registration_number', 'phone_number', 'actions')
     
-    def render_name(self, value):
+    def render_national_id(self, value, record):
+        """نمایش کد ملی به صورت badge"""
+        return format_html('<span class="badge badge-green">{}</span>', value)
+    
+    def render_name(self, value, record):
         """نمایش نام به صورت bold"""
         if value:
             return format_html('<strong>{}</strong>', value)
         return '—'
     
-    def render_nature(self, value):
+    def render_nature(self, value, record):
         """نمایش نوع شخص به صورت badge"""
+        # اگر value None باشد یا خالی باشد، از record استفاده کن
+        if value is None or value == '':
+            value = getattr(record, 'nature', None)
+        
+        # اگر هنوز None است، از record.nature استفاده کن
+        if value is None:
+            value = record.nature if hasattr(record, 'nature') else None
+        
         if value == 'legal':
-            return format_html('<span class="badge badge-legal">حقوقی</span>')
+            return format_html('<span class="badge badge-nature badge-nature-legal">حقوقی</span>')
         elif value == 'natural':
-            return format_html('<span class="badge badge-natural">حقیقی</span>')
-        return '—'
+            return format_html('<span class="badge badge-nature badge-nature-natural">حقیقی</span>')
+        elif value:
+            # اگر مقدار دیگری دارد، آن را نمایش بده
+            return format_html('<span class="badge badge-nature">{}</span>', value)
+        else:
+            return format_html('<span class="badge badge-nature">-</span>')
     
     def render_registration_number(self, value):
         """نمایش شماره ثبت یا خط تیره"""
@@ -152,9 +168,10 @@ class SupplierTable(tables.Table):
         detail_url = reverse('supply:supplier_detail', args=[record.national_id])
         return format_html(
             '<div class="btn-group">'
-            '<a href="{}" class="btn btn-info btn-sm">جزئیات</a>'
+            '<a href="{}" class="btn-outline-info supplier-detail-link" data-supplier-id="{}" title="جزئیات">جزئیات</a>'
             '</div>',
-            detail_url
+            detail_url,
+            record.national_id
         )
 
 

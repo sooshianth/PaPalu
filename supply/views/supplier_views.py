@@ -163,7 +163,24 @@ def supplier_list_view(request):
 			person_form = SupplierPersonForm(request.POST, instance=None)
 			fb_form = FinancialBankingForm(request.POST)
 
-			if person_form.is_valid() and fb_form.is_valid():
+			# بررسی اعتبار فرم‌ها و formset ها
+			rep_fs = RepresentativeFormSet(request.POST, request.FILES, prefix='rep')
+			ba_fs = BankAccountFormSet(request.POST, prefix='ba')
+			pay_fs = PaymentPreferenceFormSet(request.POST, prefix='pay')
+			sn_fs = SocialNetworkFormSet(request.POST, prefix='sn')
+			att_fs = AttachmentFormSet(request.POST, request.FILES, prefix='att')
+			
+			person_valid = person_form.is_valid()
+			fb_valid = fb_form.is_valid()
+			rep_valid = rep_fs.is_valid()
+			ba_valid = ba_fs.is_valid()
+			pay_valid = pay_fs.is_valid()
+			sn_valid = sn_fs.is_valid()
+			att_valid = att_fs.is_valid()
+			
+			all_valid = person_valid and fb_valid and rep_valid and ba_valid and pay_valid and sn_valid and att_valid
+			
+			if all_valid:
 				with transaction.atomic():
 					person = person_form.save(commit=False)
 					person.type = 'supplier'
@@ -176,15 +193,11 @@ def supplier_list_view(request):
 					financial.save()
 
 					# اتصال و ذخیره formset ها
-					rep_fs = RepresentativeFormSet(request.POST, request.FILES, instance=person, prefix='rep')
-					ba_fs = BankAccountFormSet(request.POST, instance=financial, prefix='ba')
-					pay_fs = PaymentPreferenceFormSet(request.POST, instance=person, prefix='pay')
-					sn_fs = SocialNetworkFormSet(request.POST, instance=person, prefix='sn')
-					att_fs = AttachmentFormSet(request.POST, request.FILES, instance=person, prefix='att')
-
-					all_valid = rep_fs.is_valid() and ba_fs.is_valid() and pay_fs.is_valid() and sn_fs.is_valid() and att_fs.is_valid()
-					if not all_valid:
-						raise ValueError(f"invalid formsets: rep={rep_fs.errors} ba={ba_fs.errors} pay={pay_fs.errors} sn={sn_fs.errors} att={att_fs.errors}")
+					rep_fs.instance = person
+					ba_fs.instance = financial
+					pay_fs.instance = person
+					sn_fs.instance = person
+					att_fs.instance = person
 
 					rep_fs.save()
 					ba_fs.save()
@@ -195,14 +208,29 @@ def supplier_list_view(request):
 				messages.success(request, 'تامین‌کننده با موفقیت ثبت شد.')
 				return redirect(reverse('supply:supplier_list'))
 			else:
-				bug_logger.warning(f"Supplier form invalid person={person_form.errors} fb={fb_form.errors}")
-				messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
-				# بازسازی formset ها برای نمایش خطاها
-				rep_fs = RepresentativeFormSet(request.POST, request.FILES, prefix='rep')
-				ba_fs = BankAccountFormSet(request.POST, prefix='ba')
-				pay_fs = PaymentPreferenceFormSet(request.POST, prefix='pay')
-				sn_fs = SocialNetworkFormSet(request.POST, prefix='sn')
-				att_fs = AttachmentFormSet(request.POST, request.FILES, prefix='att')
+				bug_logger.warning(f"Supplier form invalid person={person_form.errors} fb={fb_form.errors} rep={rep_fs.errors} ba={ba_fs.errors} pay={pay_fs.errors} sn={sn_fs.errors} att={att_fs.errors}")
+				
+				# ایجاد پیام خطا برای هر بخش
+				error_sections = []
+				if not person_valid:
+					error_sections.append('اطلاعات شخص/شرکت')
+				if not fb_valid:
+					error_sections.append('اطلاعات مالی/بانکی')
+				if not rep_valid:
+					error_sections.append('نمایندگان')
+				if not ba_valid:
+					error_sections.append('حساب‌های بانکی')
+				if not pay_valid:
+					error_sections.append('ترجیحات پرداخت')
+				if not sn_valid:
+					error_sections.append('شبکه‌های اجتماعی')
+				if not att_valid:
+					error_sections.append('پیوست‌ها')
+				
+				if error_sections:
+					messages.error(request, f'لطفاً خطاهای بخش‌های زیر را برطرف کنید: {", ".join(error_sections)}')
+				else:
+					messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید.')
 		else:
 			person_form = SupplierPersonForm()
 			fb_form = FinancialBankingForm()
@@ -218,7 +246,22 @@ def supplier_list_view(request):
 		RequestConfig(request, paginate={'per_page': 25}).configure(table)
 		
 		# افزودن flag برای نمایان کردن فرم (در صورت وجود خطا)
-		form_has_errors = request.method == 'POST' and (not person_form.is_valid() or not fb_form.is_valid())
+		form_has_errors = request.method == 'POST' and (
+			not person_form.is_valid() or not fb_form.is_valid() or
+			not rep_fs.is_valid() or not ba_fs.is_valid() or
+			not pay_fs.is_valid() or not sn_fs.is_valid() or not att_fs.is_valid()
+		)
+		
+		# بررسی خطاهای هر بخش
+		section_errors = {
+			'person': not person_form.is_valid() if request.method == 'POST' else False,
+			'financial': not fb_form.is_valid() if request.method == 'POST' else False,
+			'representatives': not rep_fs.is_valid() if request.method == 'POST' else False,
+			'bank_accounts': not ba_fs.is_valid() if request.method == 'POST' else False,
+			'payment_preferences': not pay_fs.is_valid() if request.method == 'POST' else False,
+			'social_networks': not sn_fs.is_valid() if request.method == 'POST' else False,
+			'attachments': not att_fs.is_valid() if request.method == 'POST' else False,
+		}
 		
 		context = {
 			'table': table,
@@ -230,6 +273,7 @@ def supplier_list_view(request):
 			'sn_formset': sn_fs,
 			'att_formset': att_fs,
 			'form_has_errors': form_has_errors,
+			'section_errors': section_errors,
 			'accessible_person_fields': accessible_person_fields,
 		}
 		return render(request, 'supply_supplier_list.html', context)
