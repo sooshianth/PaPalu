@@ -263,6 +263,60 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // مدیریت حذف آدرس تحویل
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-delivery-btn')) {
+            const btn = e.target.closest('.delete-delivery-btn');
+            const postalCode = btn.getAttribute('data-postal-code');
+            
+            if (!postalCode) {
+                alert('خطا: کد پستی یافت نشد');
+                return;
+            }
+            
+            if (!confirm('آیا مطمئن هستید که می‌خواهید این آدرس تحویل را حذف کنید؟')) {
+                return;
+            }
+            
+            e.preventDefault();
+            
+            // ارسال درخواست حذف
+            fetch(`/sales/api/delivery-address/${encodeURIComponent(postalCode)}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message || 'آدرس تحویل با موفقیت حذف شد');
+                    // حذف فرم از DOM
+                    const formRow = btn.closest('.delivery-form-row');
+                    formRow.remove();
+                } else {
+                    alert('خطا: ' + (data.error || 'خطای نامشخص'));
+                }
+            })
+            .catch(error => {
+                console.error('خطا:', error);
+                alert('خطا در حذف آدرس تحویل');
+            });
+        }
+    });
+    
+    // نمایش خطاهای form
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // بررسی خطاهای نمایش شده
+            const errors = document.querySelectorAll('.text-danger, .is-invalid');
+            if (errors.length > 0) {
+                console.log('فرم دارای خطا است:', errors.length);
+            }
+        });
+    }
+    
     // مدیریت formset آدرس تحویل
     const deliveryContainer = document.getElementById('delivery-container');
     const addDeliveryBtn = document.getElementById('add-delivery-btn');
@@ -807,14 +861,13 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div id="delivery-container">
                                     {% for f in delivery_formset.forms %}
                                         <div class="delivery-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
-                                            {% if f.DELETE %}
-                                                <div style="position: absolute; left: 10px; top: 10px;">
-                                                    <label style="display: flex; align-items: center; cursor: pointer;">
-                                                        {{ f.DELETE }}
-                                                        <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
-                                                    </label>
-                                                </div>
-                                            {% endif %}
+                                            <div style="position: absolute; left: 10px; top: 10px;">
+                                                {% if f.instance and f.instance.postal_code %}
+                                                <button type="button" class="btn btn-sm btn-danger delete-delivery-btn" data-postal-code="{{ f.instance.postal_code }}" title="حذف آدرس تحویل">
+                                                    <i class="fas fa-trash"></i> حذف
+                                                </button>
+                                                {% endif %}
+                                            </div>
                                             <div class="row">
                                                 {% if accessible_delivery_fields.postal_code %}
                                                 <div class="col-md-6 mb-3">

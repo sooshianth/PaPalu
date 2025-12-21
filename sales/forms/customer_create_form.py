@@ -101,6 +101,20 @@ class DeliveryAddressForm(forms.Form):
         label='نوع تحویل گیرنده',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    
+    def clean(self):
+        """اعتبارسنجی فرم آدرس تحویل"""
+        cleaned_data = super().clean()
+        postal_code = cleaned_data.get('postal_code', '').strip()
+        
+        # اگر postal_code پر است، recipient_name و address الزامی است
+        if postal_code:
+            if not cleaned_data.get('recipient_name', '').strip():
+                raise forms.ValidationError('❌ اگر کد پستی وارد کردید، نام تحویل گیرنده الزامی است!')
+            if not cleaned_data.get('address', '').strip():
+                raise forms.ValidationError('❌ اگر کد پستی وارد کردید، آدرس تحویل الزامی است!')
+        
+        return cleaned_data
 
 
 class RepresentativeForm(forms.Form):
@@ -187,12 +201,18 @@ def build_delivery_address_formset(data=None, files=None, accessible_fields: Opt
     DeliveryFormSet = formset_factory(
         form=DeliveryAddressForm,
         extra=1,
-        can_delete=True
+        can_delete=False,
+        min_num=0,
+        validate_min=False
     )
     if data is None:
+        # GET request - استفاده از initial برای پیش‌پر کردن فرم‌ها
         if initial:
             return DeliveryFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields})
         return DeliveryFormSet(form_kwargs={'accessible_fields': accessible_fields})
+    
+    # POST request - نباید initial را پاس بدهیم، چون داده‌ها از request.POST می‌آیند
+    # initial فقط برای GET requests استفاده می‌شود
     return DeliveryFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
 
 

@@ -807,14 +807,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div id="delivery-container">
                                     {% for f in delivery_formset.forms %}
                                         <div class="delivery-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
-                                            {% if f.DELETE %}
-                                                <div style="position: absolute; left: 10px; top: 10px;">
-                                                    <label style="display: flex; align-items: center; cursor: pointer;">
-                                                        {{ f.DELETE }}
-                                                        <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
-                                                    </label>
-                                                </div>
-                                            {% endif %}
                                             <div class="row">
                                                 {% if accessible_delivery_fields.postal_code %}
                                                 <div class="col-md-6 mb-3">
