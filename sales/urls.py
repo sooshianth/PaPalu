@@ -83,6 +83,7 @@ urlpatterns = [
     path('api/allocation/<str:order_number>/postal-codes/search/', allocation_list_view.postal_code_search_api, name='postal_code_search_api'),
     path('api/allocation/<str:order_number>/delivery-address/create/', allocation_list_view.create_delivery_address_api, name='create_delivery_address_api'),
     path('api/allocation/<str:order_number>/delivery-info/<str:postal_code>/rendered/', allocation_list_view.get_delivery_info_rendered_api, name='get_delivery_info_rendered_api'),
+    path('api/delivery-address/<str:postal_code>/delete/', allocation_list_view.delete_delivery_address_api, name='delete_delivery_address_api'),
     
     # مسیرهای تأیید تخصیص
     path('approve-allocation/list/', allocation_approve_view.approve_allocation_list_view, name='approve_allocation_list'),

@@ -875,6 +875,8 @@ def edit_customer_view(request, national_id):
                 with transaction.atomic():
                     # به‌روزرسانی مشتری
                     person = form.save_customer(request.user, update=True)
+                    bug_logger.info(f"مشتری {person.name} دریافت شد")
+                    bug_logger.info(f"تعداد فرم‌های delivery: {len(delivery_formset.forms)}")
                     
                     # بررسی وجود حساب بانکی
                     has_bank_account = False
@@ -951,74 +953,86 @@ def edit_customer_view(request, national_id):
                                     bank_name=clean_empty_to_none(bank_form.cleaned_data.get('bank_name'))
                                 )
                     
-                    # مدیریت آدرس‌های تحویل
-                    for delivery_form in delivery_formset:
-                        if not getattr(delivery_form, 'cleaned_data', None):
+                    # مدیریت آدرس‌های تحویل - روش ساده: حذف همه و ایجاد دوباره
+                    delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+                    
+                    # حذف تمام آدرس‌های موجود و شماره‌های تماس مرتبط
+                    existing_addresses = DeliveryAddress.objects.filter(person=person)
+                    for existing_addr in existing_addresses:
+                        # حذف شماره‌های تماس مرتبط
+                        PhoneNumber.objects.filter(
+                            content_type=delivery_content_type,
+                            object_id=existing_addr.postal_code
+                        ).delete()
+                    # حذف تمام آدرس‌ها
+                    existing_addresses.delete()
+                    
+                    # ایجاد آدرس‌های جدید از formset - پردازش همه فرم‌ها
+                    bug_logger.info(f"تعداد کل فرم‌های delivery_formset: {len(delivery_formset.forms)}")
+                    bug_logger.info(f"تعداد کل فرم‌های formset (iterable): {len(list(delivery_formset))}")
+                    addresses_created = 0
+                    
+                    # پردازش همه فرم‌ها - استفاده از formset.forms برای اطمینان از پردازش همه
+                    for form_index, delivery_form in enumerate(delivery_formset.forms):
+                        bug_logger.debug(f"پردازش فرم {form_index}")
+                        
+                        # اگر فرم cleaned_data ندارد، skip کن
+                        if not hasattr(delivery_form, 'cleaned_data') or delivery_form.cleaned_data is None:
+                            bug_logger.debug(f"فرم {form_index}: cleaned_data وجود ندارد")
                             continue
-                        if delivery_form.cleaned_data.get('DELETE', False):
-                            # حذف آدرس تحویل
-                            if delivery_form.cleaned_data.get('postal_code'):
-                                DeliveryAddress.objects.filter(postal_code=delivery_form.cleaned_data['postal_code']).delete()
-                            continue
-                        postal_code = delivery_form.cleaned_data.get('postal_code')
+                        
+                        # دریافت postal_code - این فیلد الزامی است برای ایجاد آدرس
+                        postal_code = delivery_form.cleaned_data.get('postal_code', '')
+                        if postal_code:
+                            postal_code = str(postal_code).strip()
+                        
+                        # اگر postal_code خالی است، فرم را skip کن (فرم خالی)
                         if not postal_code:
+                            bug_logger.debug(f"فرم {form_index}: postal_code خالی است، skip می‌شود")
                             continue
                         
-                        delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+                        bug_logger.info(f"فرم {form_index}: ایجاد آدرس با postal_code={postal_code}")
                         
-                        # بررسی وجود آدرس
-                        existing_address = DeliveryAddress.objects.filter(postal_code=postal_code, person=person).first()
-                        if existing_address:
-                            # به‌روزرسانی آدرس موجود
-                            existing_address.recipient_name = delivery_form.cleaned_data.get('recipient_name', person.name)
-                            existing_address.recipient_national_id = clean_empty_to_none(delivery_form.cleaned_data.get('recipient_national_id'))
-                            existing_address.unique_delivery_id = clean_empty_to_none(delivery_form.cleaned_data.get('unique_delivery_id'))
-                            existing_address.province = delivery_form.cleaned_data.get('province', '')
-                            existing_address.city = delivery_form.cleaned_data.get('city', '')
-                            existing_address.address = delivery_form.cleaned_data.get('address', '')
-                            existing_address.delivery_limit = clean_empty_to_none(delivery_form.cleaned_data.get('delivery_limit'))
-                            existing_address.recipient_type = clean_empty_to_none(delivery_form.cleaned_data.get('recipient_type'))
-                            existing_address.save()
-                            delivery_address = existing_address
-                        else:
-                            # ایجاد آدرس جدید
+                        # ایجاد آدرس جدید
+                        try:
                             delivery_address = DeliveryAddress.objects.create(
                                 person=person,
                                 postal_code=postal_code,
-                                recipient_name=delivery_form.cleaned_data.get('recipient_name', person.name),
+                                recipient_name=delivery_form.cleaned_data.get('recipient_name', person.name) or person.name,
                                 recipient_national_id=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_national_id')),
                                 unique_delivery_id=clean_empty_to_none(delivery_form.cleaned_data.get('unique_delivery_id')),
-                                province=delivery_form.cleaned_data.get('province', ''),
-                                city=delivery_form.cleaned_data.get('city', ''),
-                                address=delivery_form.cleaned_data.get('address', ''),
+                                province=delivery_form.cleaned_data.get('province', '') or '',
+                                city=delivery_form.cleaned_data.get('city', '') or '',
+                                address=delivery_form.cleaned_data.get('address', '') or '',
                                 delivery_limit=clean_empty_to_none(delivery_form.cleaned_data.get('delivery_limit')),
                                 recipient_type=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_type'))
                             )
-                        
-                        # مدیریت شماره‌های تماس آدرس تحویل
-                        # حذف شماره‌های قدیمی
-                        PhoneNumber.objects.filter(
-                            content_type=delivery_content_type,
-                            object_id=delivery_address.postal_code
-                        ).delete()
-                        
-                        if delivery_form.cleaned_data.get('delivery_mobile'):
-                            PhoneNumber.objects.create(
-                                content_type=delivery_content_type,
-                                object_id=delivery_address.postal_code,
-                                phone_type='mobile',
-                                number=delivery_form.cleaned_data['delivery_mobile'],
-                                is_primary=True
-                            )
-                        
-                        if delivery_form.cleaned_data.get('delivery_landline'):
-                            PhoneNumber.objects.create(
-                                content_type=delivery_content_type,
-                                object_id=delivery_address.postal_code,
-                                phone_type='landline',
-                                number=delivery_form.cleaned_data['delivery_landline'],
-                                is_primary=False
-                            )
+                            addresses_created += 1
+                            bug_logger.info(f"آدرس {form_index} با موفقیت ایجاد شد: postal_code={postal_code}")
+                            
+                            # ایجاد شماره‌های تماس
+                            if delivery_form.cleaned_data.get('delivery_mobile'):
+                                PhoneNumber.objects.create(
+                                    content_type=delivery_content_type,
+                                    object_id=delivery_address.postal_code,
+                                    phone_type='mobile',
+                                    number=delivery_form.cleaned_data['delivery_mobile'],
+                                    is_primary=True
+                                )
+                            
+                            if delivery_form.cleaned_data.get('delivery_landline'):
+                                PhoneNumber.objects.create(
+                                    content_type=delivery_content_type,
+                                    object_id=delivery_address.postal_code,
+                                    phone_type='landline',
+                                    number=delivery_form.cleaned_data['delivery_landline'],
+                                    is_primary=False
+                                )
+                        except Exception as e:
+                            bug_logger.error(f"خطا در ایجاد آدرس {form_index}: {str(e)}", exc_info=True)
+                            raise
+                    
+                    bug_logger.info(f"تعداد آدرس‌های ایجاد شده: {addresses_created}")
                     
                     # مدیریت نمایندگان
                     for rep_form in rep_formset:
@@ -1088,6 +1102,21 @@ def edit_customer_view(request, national_id):
         else:
             # فرم معتبر نیست
             bug_logger.warning("فرم ویرایش مشتری معتبر نیست")
+            if not form.is_valid():
+                bug_logger.error(f"خطای form: {form.errors}")
+                messages.error(request, f"خطای اطلاعات مشتری: {form.errors}")
+            if not delivery_formset.is_valid():
+                bug_logger.error(f"خطای delivery_formset: {delivery_formset.errors}")
+                bug_logger.error(f"خطای delivery_formset non_form_errors: {delivery_formset.non_form_errors()}")
+                for i, form_err in enumerate(delivery_formset.errors):
+                    if form_err:
+                        messages.error(request, f"خطای آدرس تحویل {i}: {form_err}")
+                for err in delivery_formset.non_form_errors():
+                    messages.error(request, f"خطای عمومی آدرس‌های تحویل: {err}")
+            if not rep_formset.is_valid():
+                bug_logger.error(f"خطای rep_formset: {rep_formset.errors}")
+            if not bank_formset.is_valid():
+                bug_logger.error(f"خطای bank_formset: {bank_formset.errors}")
     else:
         # در GET نیز فیلدهای غیرمجاز را از فرم حذف کن تا در UI نمایش داده نشوند
         temp_form_for_access = CreateCustomerForm()

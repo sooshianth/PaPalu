@@ -857,3 +857,50 @@ def create_delivery_address_api(request, order_number):
     except Exception as e:
         bug_logger.error(f"خطا در ایجاد آدرس تحویل برای سفارش {order_number}: {str(e)}", exc_info=True)
         return JsonResponse({'error': f'خطا در ایجاد آدرس تحویل: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["DELETE"])
+def delete_delivery_address_api(request, postal_code):
+    """
+    API endpoint برای حذف آدرس تحویل
+    """
+    audit_logger.info(f"درخواست حذف آدرس تحویل - کد پستی: {postal_code}")
+    
+    # بررسی دسترسی TaskPermission
+    if not user_has_task(request.user, TaskChoices.SALES_CUSTOMER.value):
+        audit_logger.activity(f"تلاش برای دسترسی به API حذف آدرس تحویل بدون دسترسی - کد پستی: {postal_code}")
+        return JsonResponse({'error': 'شما دسترسی به این بخش ندارید'}, status=403)
+    
+    try:
+        delivery_address = DeliveryAddress.objects.get(postal_code=postal_code)
+        
+        # بررسی دسترسی - کاربر باید مالک مشتری باشد یا superuser
+        if not request.user.is_superuser and delivery_address.person.registered_by != request.user:
+            audit_logger.activity(f"تلاش برای حذف آدرس تحویل متعلق به کاربر دیگر - کد پستی: {postal_code}")
+            return JsonResponse({'error': 'دسترسی غیرمجاز'}, status=403)
+        
+        # حذف شماره‌های تماس مرتبط
+        delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+        PhoneNumber.objects.filter(
+            content_type=delivery_content_type,
+            object_id=postal_code
+        ).delete()
+        
+        # حذف آدرس
+        delivery_address.delete()
+        
+        bug_logger.info(f"آدرس تحویل با کد پستی {postal_code} حذف شد")
+        audit_logger.activity(f"آدرس تحویل با کد پستی {postal_code} حذف شد")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'آدرس تحویل با موفقیت حذف شد'
+        })
+        
+    except DeliveryAddress.DoesNotExist:
+        bug_logger.warning(f"آدرس تحویل با کد پستی {postal_code} یافت نشد")
+        return JsonResponse({'error': 'آدرس تحویل یافت نشد'}, status=404)
+    except Exception as e:
+        bug_logger.error(f"خطا در حذف آدرس تحویل - کد پستی {postal_code}: {str(e)}", exc_info=True)
+        return JsonResponse({'error': f'خطا در حذف آدرس: {str(e)}'}, status=500)
