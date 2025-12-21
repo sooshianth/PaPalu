@@ -250,6 +250,12 @@
         white-space: nowrap;
         padding: 10px 15px;
     }
+    
+    .show-delivery-info-btn {
+        width: 100%;
+        margin-top: 8px;
+        font-size: 0.95rem;
+    }
 </style>
 {% endblock %}
 
@@ -333,6 +339,9 @@
                     {% if form.delivery_postal_code.errors %}
                         <span class="text-danger">{{ form.delivery_postal_code.errors }}</span>
                     {% endif %}
+                    <button type="button" class="btn btn-info show-delivery-info-btn" id="show-delivery-info-btn" title="نمایش اطلاعات آدرس تحویل">
+                        <span>🔍 نمایش اطلاعات حمل</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -340,7 +349,10 @@
         <!-- اطلاعات آدرس تحویل (در صورت وجود) - این بخش با JavaScript به‌روزرسانی می‌شود -->
         <div id="delivery-info-container" style="display: none;">
             <div class="info-box" id="delivery-info-box">
-                <h6>اطلاعات آدرس تحویل</h6>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h6 style="margin: 0;">اطلاعات آدرس تحویل</h6>
+                    <button type="button" class="btn btn-sm btn-secondary" id="hide-delivery-info-btn" title="مخفی کردن اطلاعات">بستن</button>
+                </div>
                 <div id="delivery-info-content"></div>
             </div>
         </div>
@@ -469,11 +481,11 @@
                     
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">شماره ثابت</label>
+                            <label class="form-label">شماره ثابت هماهنگی تحویل</label>
                             <input type="text" name="landline_phone" class="form-control" dir="ltr" placeholder="02112345678" maxlength="11" pattern="0[0-9]{10}" title="شماره ثابت باید با 0 شروع شود و 11 رقم باشد">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">شماره همراه</label>
+                            <label class="form-label">شماره همراه هماهنگی تحویل</label>
                             <input type="text" name="mobile_phone" class="form-control" dir="ltr" placeholder="09123456789" maxlength="11" pattern="09[0-9]{9}" title="شماره همراه باید با 09 شروع شود و 11 رقم باشد">
                         </div>
                     </div>
@@ -502,6 +514,7 @@
     const orderNumber = '{{ order.order_number|escapejs }}';
     const postalCodeSearchUrl = '{% url "sales:postal_code_search_api" order_number="000000" %}'.replace('000000', orderNumber);
     const createAddressUrl = '{% url "sales:create_delivery_address_api" order_number="000000" %}'.replace('000000', orderNumber);
+    const baseDeliveryInfoRenderedUrl = '{% url "sales:get_delivery_info_rendered_api" order_number="000000" postal_code="PLACEHOLDER" %}'.replace('000000', orderNumber);
     let validPostalCode = null; // برای ذخیره کد پستی معتبر
     
     // تابع برای پاک کردن اطلاعات آدرس
@@ -538,8 +551,8 @@
         html += '<div class="info-row"><span class="info-label">استان:</span><span class="info-value">' + (deliveryInfo.province || '-') + '</span></div>';
         html += '<div class="info-row"><span class="info-label">شهر:</span><span class="info-value">' + (deliveryInfo.city || '-') + '</span></div>';
         html += '<div class="info-row"><span class="info-label">آدرس پستی:</span><span class="info-value">' + (deliveryInfo.address || '-') + '</span></div>';
-        html += '<div class="info-row"><span class="info-label">شماره ثابت:</span><span class="info-value">' + (deliveryInfo.landline_phone || '-') + '</span></div>';
-        html += '<div class="info-row"><span class="info-label">شماره همراه:</span><span class="info-value">' + (deliveryInfo.mobile_phone || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">شماره ثابت هماهنگی تحویل:</span><span class="info-value">' + (deliveryInfo.landline_phone || '-') + '</span></div>';
+        html += '<div class="info-row"><span class="info-label">شماره همراه هماهنگی تحویل:</span><span class="info-value">' + (deliveryInfo.mobile_phone || '-') + '</span></div>';
         html += '<div class="info-row"><span class="info-label">محدودیت تحویل:</span><span class="info-value">' + (deliveryInfo.delivery_limit || '-') + '</span></div>';
         html += '<div class="info-row"><span class="info-label">نوع تحویل گیرنده:</span><span class="info-value">' + (deliveryInfo.recipient_type || '-') + '</span></div>';
         
@@ -1107,6 +1120,56 @@
                 }
             }
         });
+        
+        // مدیریت دکمه نمایش اطلاعات حمل
+        const showDeliveryInfoBtn = document.getElementById('show-delivery-info-btn');
+        if (showDeliveryInfoBtn) {
+            showDeliveryInfoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const postalCodeInput2 = document.querySelector('#id_delivery_postal_code');
+                if (!postalCodeInput2) return;
+                
+                const postalCode = postalCodeInput2.value.trim();
+                if (!postalCode) {
+                    alert('لطفاً کد پستی را وارد کنید.');
+                    return;
+                }
+                
+                // درخواست اطلاعات از سرور - سرور خود بررسی می‌کند
+                const url = baseDeliveryInfoRenderedUrl.replace('PLACEHOLDER', encodeURIComponent(postalCode));
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.html) {
+                            // نمایش اطلاعات
+                            const container = document.getElementById('delivery-info-container');
+                            const content = document.getElementById('delivery-info-content');
+                            if (content) {
+                                content.innerHTML = data.html;
+                            }
+                            if (container) {
+                                container.style.display = 'block';
+                            }
+                        } else {
+                            alert('خطا: ' + (data.error || 'کد پستی معتبر نیست'));
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا:', error);
+                        alert('خطا در دریافت اطلاعات.');
+                    });
+            });
+        }
+        
+        // مدیریت دکمه بستن اطلاعات حمل
+        const hideDeliveryInfoBtn = document.getElementById('hide-delivery-info-btn');
+        if (hideDeliveryInfoBtn) {
+            hideDeliveryInfoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                clearDeliveryInfo();
+            });
+        }
     });
 </script>
 {% endblock %}

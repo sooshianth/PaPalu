@@ -34,14 +34,23 @@ def get_delivery_address_info(postal_code):
     """
     try:
         delivery_address = DeliveryAddress.objects.get(postal_code=postal_code)
-        person = delivery_address.person
         
-        # دریافت شماره تلفن‌ها
-        person_content_type = ContentType.objects.get_for_model(person)
-        phone_numbers = PhoneNumber.objects.filter(
-            content_type=person_content_type,
-            object_id=person.national_id
-        ).order_by('-is_primary', 'phone_type')
+        # دریافت شماره تلفن‌های مربوط به آدرس تحویل (نه مشتری)
+        # توجه: object_id در PhoneNumber یک PositiveIntegerField است، اما postal_code یک string است
+        # پس باید postal_code را به integer تبدیل کنیم (اگر فقط اعداد باشد)
+        delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+        try:
+            # تلاش برای تبدیل postal_code به integer
+            postal_code_int = int(postal_code) if postal_code.isdigit() else None
+            if postal_code_int:
+                phone_numbers = PhoneNumber.objects.filter(
+                    content_type=delivery_content_type,
+                    object_id=postal_code_int
+                ).order_by('-is_primary', 'phone_type')
+            else:
+                phone_numbers = PhoneNumber.objects.none()
+        except (ValueError, TypeError):
+            phone_numbers = PhoneNumber.objects.none()
         
         landline_phone = phone_numbers.filter(phone_type='landline').first()
         mobile_phone = phone_numbers.filter(phone_type='mobile').first()
@@ -609,11 +618,11 @@ def get_delivery_info_rendered_api(request, order_number, postal_code):
         <span class="info-value">{delivery_info.get('address', '-')}</span>
     </div>
     <div class="info-row">
-        <span class="info-label">شماره ثابت:</span>
+        <span class="info-label">شماره ثابت هماهنگی تحویل:</span>
         <span class="info-value">{delivery_info.get('landline_phone', '-')}</span>
     </div>
     <div class="info-row">
-        <span class="info-label">شماره همراه:</span>
+        <span class="info-label">شماره همراه هماهنگی تحویل:</span>
         <span class="info-value">{delivery_info.get('mobile_phone', '-')}</span>
     </div>
     <div class="info-row">
