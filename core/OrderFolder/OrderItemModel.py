@@ -118,7 +118,7 @@ class OrderItem(models.Model):
     
     # فی
     unit_price = models.DecimalField(
-        max_digits=12,
+        max_digits=50,
         decimal_places=2,
         null=True,
         blank=True,
@@ -127,7 +127,7 @@ class OrderItem(models.Model):
     
     # تخفیف
     discount = models.DecimalField(
-        max_digits=12,
+        max_digits=50,
         decimal_places=2,
         default=0,
         null=True,
@@ -137,7 +137,7 @@ class OrderItem(models.Model):
     
     # اضافات
     additional_charges = models.DecimalField(
-        max_digits=12,
+        max_digits=50,
         decimal_places=2,
         default=0,
         null=True,
@@ -147,7 +147,7 @@ class OrderItem(models.Model):
     
     # بهای تمام شده بدون احتساب کرایه
     cost_without_freight = models.DecimalField(
-        max_digits=12,
+        max_digits=50,
         decimal_places=2,
         null=True,
         blank=True,
@@ -166,7 +166,7 @@ class OrderItem(models.Model):
     
     # بهای تمام شده کرایه خرید
     freight_cost = models.DecimalField(
-        max_digits=12,
+        max_digits=50,
         decimal_places=2,
         null=True,
         blank=True,
@@ -175,7 +175,7 @@ class OrderItem(models.Model):
     
     # بهای تمام شده خرید
     total_purchase_cost = models.DecimalField(
-        max_digits=12,
+        max_digits=50,
         decimal_places=2,
         null=True,
         blank=True,

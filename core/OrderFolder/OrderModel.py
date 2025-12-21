@@ -161,7 +161,7 @@ class Order(models.Model):
     
     # فیلدهای مربوط به سفارش خرید تامینی
     subtotal_without_freight = models.DecimalField(
-        max_digits=15,
+        max_digits=50,
         decimal_places=2,
         verbose_name='جمع قیمت بدون کرایه',
         validators=[MinValueValidator(0)],
@@ -169,7 +169,7 @@ class Order(models.Model):
         blank=True
     )
     freight_cost = models.DecimalField(
-        max_digits=15,
+        max_digits=50,
         decimal_places=2,
         verbose_name='هزینه کرایه',
         validators=[MinValueValidator(0)],

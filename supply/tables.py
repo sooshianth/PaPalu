@@ -243,6 +243,17 @@ class ProcurementPurchaseOrderTable(tables.Table):
         }
     )
     
+    total_weight = tables.Column(
+        verbose_name='وزن کل',
+        empty_values=(),
+        orderable=False,
+        visible=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
     actions = tables.Column(
         verbose_name='عملیات',
         empty_values=(),
@@ -265,13 +276,14 @@ class ProcurementPurchaseOrderTable(tables.Table):
             self.columns['supplier'].column.visible = accessible_fields.get('supplier', False)
             self.columns['created_by'].column.visible = accessible_fields.get('created_by', False)
             self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
+            self.columns['total_weight'].column.visible = accessible_fields.get('total_weight', False)
             # Always show actions if any field is visible
             self.columns['actions'].column.visible = any(accessible_fields.values())
     
     class Meta:
         model = Order
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'actions')
+        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'total_weight', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.85rem'
@@ -279,7 +291,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'actions')
+        sequence = ('order_number', 'status', 'materials_list', 'total_weight', 'supplier', 'created_by', 'created_at', 'actions')
     
     def render_status(self, value, record):
         """نمایش وضعیت به صورت badge"""
@@ -297,16 +309,20 @@ class ProcurementPurchaseOrderTable(tables.Table):
         return '—'
     
     def render_materials_list(self, record):
-        """نمایش لیست مواد اولیه با جزئیات FK از RawMaterial"""
+        """نمایش لیست مواد اولیه با وزن"""
         materials = record.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
             items = []
             for m in materials:
                 rm = m.raw_material
-                # نمایش: شناسه - نام (شکل فیزیکی)
+                # محاسبه وزن ماده اولیه
+                weight_kg = m.get_weight_in_kg()
+                # نمایش: شناسه - نام (وزن)
                 display_text = f"{rm.raw_material_id or 'N/A'} - {rm.name or 'بدون نام'}"
-                if rm.physical_form:
-                    display_text += f" ({rm.get_physical_form_display()})"
+                if weight_kg > 0:
+                    # فرمت وزن با اعداد فارسی
+                    weight_formatted = format_number_persian(weight_kg, decimal_places=2)
+                    display_text += f" ({weight_formatted} کیلوگرم)"
                 items.append((format_html('<strong>{}</strong>', display_text),))
             
             inner_html = format_html_join(
@@ -315,6 +331,20 @@ class ProcurementPurchaseOrderTable(tables.Table):
                 items
             )
             return format_html('<div style="display:flex;flex-direction:column;gap:2px">{}</div>', inner_html)
+        return '—'
+    
+    def render_total_weight(self, record):
+        """نمایش وزن کل سفارش"""
+        total_weight = 0
+        materials = record.order_items.filter(raw_material__isnull=False).all()
+        for m in materials:
+            weight_kg = m.get_weight_in_kg()
+            total_weight += weight_kg
+        
+        if total_weight > 0:
+            # فرمت وزن با اعداد فارسی
+            weight_formatted = format_number_persian(total_weight, decimal_places=2)
+            return format_html('<strong>{}</strong>', f"{weight_formatted} کیلوگرم")
         return '—'
     
     def render_supplier(self, value):

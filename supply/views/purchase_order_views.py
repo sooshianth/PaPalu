@@ -629,6 +629,10 @@ def purchase_order_management_view(request):
             ),
             'created_by': accessible_po_fields.get('registered_by', False),
             'created_at': accessible_po_fields.get('created_at', False),
+            'total_weight': (
+                accessible_po_material_fields.get('quantity', False) and
+                accessible_po_material_fields.get('weight_unit', False)
+            ),
         }
         
         # Create tables
@@ -660,6 +664,7 @@ def purchase_order_management_view(request):
             'supplier': False,
             'created_by': accessible_po_fields.get('created_by', False),
             'created_at': accessible_po_fields.get('created_at', False),
+            'total_weight': False,
         }
         open_table = ProcurementPurchaseOrderTable([], prefix='open-', accessible_fields=table_accessible_fields)
         completed_table = ProcurementPurchaseOrderTable([], prefix='completed-', accessible_fields=table_accessible_fields)
