@@ -969,63 +969,80 @@ def edit_customer_view(request, national_id):
                     
                     # ایجاد آدرس‌های جدید از formset - پردازش همه فرم‌ها
                     bug_logger.info(f"تعداد کل فرم‌های delivery_formset: {len(delivery_formset.forms)}")
-                    bug_logger.info(f"تعداد کل فرم‌های formset (iterable): {len(list(delivery_formset))}")
                     addresses_created = 0
                     
-                    # پردازش همه فرم‌ها - استفاده از formset.forms برای اطمینان از پردازش همه
-                    for form_index, delivery_form in enumerate(delivery_formset.forms):
-                        bug_logger.debug(f"پردازش فرم {form_index}")
+                    # پردازش همه فرم‌ها - پیدا کردن همه فرم‌هایی که postal_code دارند
+                    # این روش مستقل از TOTAL_FORMS کار می‌کند
+                    
+                    # پیدا کردن همه کلیدهای postal_code در request.POST
+                    postal_code_keys = [key for key in request.POST.keys() if key.endswith('-postal_code')]
+                    bug_logger.info(f"تعداد فیلدهای postal_code پیدا شده: {len(postal_code_keys)}")
+                    
+                    # پردازش هر فرم که postal_code دارد
+                    for postal_code_key in postal_code_keys:
+                        postal_code = request.POST.get(postal_code_key, '').strip()
                         
-                        # اگر فرم cleaned_data ندارد، skip کن
-                        if not hasattr(delivery_form, 'cleaned_data') or delivery_form.cleaned_data is None:
-                            bug_logger.debug(f"فرم {form_index}: cleaned_data وجود ندارد")
-                            continue
-                        
-                        # دریافت postal_code - این فیلد الزامی است برای ایجاد آدرس
-                        postal_code = delivery_form.cleaned_data.get('postal_code', '')
-                        if postal_code:
-                            postal_code = str(postal_code).strip()
-                        
-                        # اگر postal_code خالی است، فرم را skip کن (فرم خالی)
+                        # اگر postal_code خالی است، skip کن
                         if not postal_code:
-                            bug_logger.debug(f"فرم {form_index}: postal_code خالی است، skip می‌شود")
+                            bug_logger.debug(f"فرم {postal_code_key}: postal_code خالی است، skip می‌شود")
                             continue
                         
-                        bug_logger.info(f"فرم {form_index}: ایجاد آدرس با postal_code={postal_code}")
+                        # استخراج prefix و index از کلید
+                        # فرمت: prefix-index-field_name
+                        parts = postal_code_key.rsplit('-', 2)  # split از آخر
+                        if len(parts) != 3:
+                            bug_logger.warning(f"فرمت کلید نامعتبر: {postal_code_key}")
+                            continue
+                        
+                        prefix = parts[0]
+                        form_index = parts[1]
+                        bug_logger.info(f"پردازش فرم {form_index} با prefix {prefix}, postal_code={postal_code}")
+                        
+                        # دریافت سایر فیلدها با همان prefix و index
+                        recipient_name = request.POST.get(f'{prefix}-{form_index}-recipient_name', '').strip() or person.name
+                        recipient_national_id = request.POST.get(f'{prefix}-{form_index}-recipient_national_id', '').strip()
+                        unique_delivery_id = request.POST.get(f'{prefix}-{form_index}-unique_delivery_id', '').strip()
+                        province = request.POST.get(f'{prefix}-{form_index}-province', '').strip()
+                        city = request.POST.get(f'{prefix}-{form_index}-city', '').strip()
+                        address = request.POST.get(f'{prefix}-{form_index}-address', '').strip()
+                        delivery_limit = request.POST.get(f'{prefix}-{form_index}-delivery_limit', '').strip()
+                        recipient_type = request.POST.get(f'{prefix}-{form_index}-recipient_type', '').strip()
+                        delivery_mobile = request.POST.get(f'{prefix}-{form_index}-delivery_mobile', '').strip()
+                        delivery_landline = request.POST.get(f'{prefix}-{form_index}-delivery_landline', '').strip()
                         
                         # ایجاد آدرس جدید
                         try:
                             delivery_address = DeliveryAddress.objects.create(
                                 person=person,
                                 postal_code=postal_code,
-                                recipient_name=delivery_form.cleaned_data.get('recipient_name', person.name) or person.name,
-                                recipient_national_id=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_national_id')),
-                                unique_delivery_id=clean_empty_to_none(delivery_form.cleaned_data.get('unique_delivery_id')),
-                                province=delivery_form.cleaned_data.get('province', '') or '',
-                                city=delivery_form.cleaned_data.get('city', '') or '',
-                                address=delivery_form.cleaned_data.get('address', '') or '',
-                                delivery_limit=clean_empty_to_none(delivery_form.cleaned_data.get('delivery_limit')),
-                                recipient_type=clean_empty_to_none(delivery_form.cleaned_data.get('recipient_type'))
+                                recipient_name=recipient_name,
+                                recipient_national_id=clean_empty_to_none(recipient_national_id),
+                                unique_delivery_id=clean_empty_to_none(unique_delivery_id),
+                                province=province,
+                                city=city,
+                                address=address,
+                                delivery_limit=clean_empty_to_none(delivery_limit),
+                                recipient_type=clean_empty_to_none(recipient_type)
                             )
                             addresses_created += 1
                             bug_logger.info(f"آدرس {form_index} با موفقیت ایجاد شد: postal_code={postal_code}")
                             
                             # ایجاد شماره‌های تماس
-                            if delivery_form.cleaned_data.get('delivery_mobile'):
+                            if delivery_mobile:
                                 PhoneNumber.objects.create(
                                     content_type=delivery_content_type,
                                     object_id=delivery_address.postal_code,
                                     phone_type='mobile',
-                                    number=delivery_form.cleaned_data['delivery_mobile'],
+                                    number=delivery_mobile,
                                     is_primary=True
                                 )
                             
-                            if delivery_form.cleaned_data.get('delivery_landline'):
+                            if delivery_landline:
                                 PhoneNumber.objects.create(
                                     content_type=delivery_content_type,
                                     object_id=delivery_address.postal_code,
                                     phone_type='landline',
-                                    number=delivery_form.cleaned_data['delivery_landline'],
+                                    number=delivery_landline,
                                     is_primary=False
                                 )
                         except Exception as e:
