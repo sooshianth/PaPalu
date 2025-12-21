@@ -253,6 +253,56 @@ class Order(models.Model):
         total = self.order_items.aggregate(total=Sum('total_purchase_cost'))['total']
         return total or 0
     
+    def is_fully_allocated(self):
+        """
+        بررسی اینکه آیا تمام مواد اولیه سفارش به حمل‌ها تخصیص داده شده‌اند
+        """
+        for item in self.order_items.all():
+            if not item.is_fully_allocated():
+                return False
+        return True
+    
+    def get_total_order_weight(self):
+        """
+        محاسبه مجموع وزن تمام مواد اولیه سفارش (به کیلوگرم)
+        """
+        from decimal import Decimal
+        total_weight = Decimal('0')
+        for item in self.order_items.all():
+            total_weight += Decimal(str(item.get_weight_in_kg()))
+        return total_weight
+    
+    def get_total_allocated_weight(self):
+        """
+        محاسبه مجموع وزن تخصیص یافته در تمام حمل‌ها (به کیلوگرم)
+        """
+        from decimal import Decimal
+        total_weight = Decimal('0')
+        for item in self.order_items.all():
+            # تبدیل مقدار تخصیص یافته به کیلوگرم بر اساس واحد
+            allocated = item.get_allocated_quantity()
+            if item.weight_unit == 'kg':
+                total_weight += allocated
+            elif item.weight_unit == 'ton':
+                total_weight += allocated * Decimal('1000')
+            elif item.weight_unit == 'bag' and item.bag_weight:
+                total_weight += allocated * Decimal(str(item.bag_weight))
+            elif item.weight_unit == 'piece':
+                total_weight += allocated
+        return total_weight
+    
+    def get_remaining_weight(self):
+        """
+        محاسبه وزن باقیمانده برای تخصیص (به کیلوگرم)
+        """
+        return self.get_total_order_weight() - self.get_total_allocated_weight()
+    
+    def can_create_transport(self):
+        """
+        بررسی امکان ایجاد حمل جدید - اگر هنوز مواد اولیه تخصیص نیافته وجود داشته باشد
+        """
+        return self.get_remaining_weight() > 0
+    
     @staticmethod
     def generate_order_number(order_type='sale'):
         """

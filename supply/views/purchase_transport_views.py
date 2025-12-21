@@ -3,16 +3,19 @@ from django.urls import reverse
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django import forms
-from django.forms import ModelForm
+from django.forms import ModelForm, inlineformset_factory, BaseInlineFormSet
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponseForbidden
+from decimal import Decimal
 import logging
 from core.logging_levels import *
 from django_tables2 import RequestConfig
 
 from core.TransportFolder.TransportModel import Transport
+from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
 from core.OrderFolder.OrderModel import Order
+from core.OrderFolder.OrderItemModel import OrderItem
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from core.PersonFolder.PersonModel import Person
 from django.contrib.auth import get_user_model
@@ -79,6 +82,128 @@ def get_accessible_user_fields_for_transport(user):
         'first_name': user_can_access_field(user, User, 'first_name', 'view'),
         'last_name': user_can_access_field(user, User, 'last_name', 'view'),
     }
+
+
+class RawMaterialInfoForm(ModelForm):
+    """فرم برای انتخاب و تخصیص مواد اولیه به حمل"""
+    
+    # فیلد سفارشی برای نمایش نام ماده اولیه
+    raw_material_display = forms.CharField(
+        required=False,
+        label='ماده اولیه',
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'readonly': True,
+            'style': 'background-color: #f5f5f5;'
+        })
+    )
+    
+    class Meta:
+        model = RawMaterialInfo
+        fields = ['order_item', 'raw_material', 'allocated_quantity', 'weight_unit', 'packaging_type', 'number_of_packages', 'notes']
+        labels = {
+            'order_item': 'قلم سفارش',
+            'raw_material': 'ماده اولیه',
+            'allocated_quantity': 'مقدار تخصیص یافته',
+            'weight_unit': 'واحد',
+            'packaging_type': 'نوع بسته‌بندی',
+            'number_of_packages': 'تعداد بسته',
+            'notes': 'یادداشت',
+        }
+        widgets = {
+            'order_item': forms.HiddenInput(),
+            'raw_material': forms.HiddenInput(),
+            'allocated_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0'}),
+            'weight_unit': forms.Select(attrs={'class': 'form-control', 'readonly': True}),
+            'packaging_type': forms.Select(attrs={'class': 'form-control'}),
+            'number_of_packages': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # اگر instance موجود است، مقادیر اولیه را تنظیم کن
+        if self.instance and self.instance.pk:
+            if self.instance.raw_material:
+                self.fields['raw_material_display'].initial = self.instance.raw_material.name
+                self.fields['weight_unit'].initial = self.instance.weight_unit
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # بررسی اینکه آیا فرم برای حذف علامت خورده است
+        if self.cleaned_data.get('DELETE', False):
+            return cleaned_data
+        
+        order_item = cleaned_data.get('order_item')
+        allocated_quantity = cleaned_data.get('allocated_quantity')
+        
+        # اگر فرم خالی است، آن را نادیده بگیر
+        if not order_item and not allocated_quantity:
+            return cleaned_data
+        
+        if not order_item:
+            self.add_error('order_item', 'این فیلد الزامی است.')
+            return cleaned_data
+        
+        if not allocated_quantity or allocated_quantity <= 0:
+            self.add_error('allocated_quantity', 'مقدار تخصیص یافته باید بیشتر از صفر باشد.')
+            return cleaned_data
+        
+        # بررسی که مقدار تخصیص یافته بیشتر از مقدار باقیمانده نباشد
+        remaining = order_item.get_remaining_quantity()
+        
+        # اگر در حال ویرایش هستیم، مقدار فعلی را به باقیمانده اضافه کن
+        if self.instance and self.instance.pk:
+            remaining += self.instance.allocated_quantity
+        
+        if allocated_quantity > remaining:
+            self.add_error(
+                'allocated_quantity',
+                f'مقدار تخصیص یافته ({allocated_quantity}) نمی‌تواند بیشتر از مقدار باقیمانده ({remaining}) باشد.'
+            )
+        
+        # تنظیم raw_material از order_item
+        if order_item and order_item.raw_material:
+            cleaned_data['raw_material'] = order_item.raw_material
+            # تنظیم واحد از order_item
+            cleaned_data['weight_unit'] = order_item.weight_unit
+        
+        return cleaned_data
+
+
+class RawMaterialInfoFormSetBase(BaseInlineFormSet):
+    """FormSet سفارشی برای مدیریت مواد اولیه در حمل"""
+    
+    def clean(self):
+        """اعتبارسنجی کلی formset"""
+        if any(self.errors):
+            return
+        
+        # بررسی اینکه حداقل یک ماده اولیه وارد شده باشد
+        valid_forms = 0
+        for form in self.forms:
+            if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+                order_item = form.cleaned_data.get('order_item')
+                allocated_quantity = form.cleaned_data.get('allocated_quantity')
+                if order_item and allocated_quantity and allocated_quantity > 0:
+                    valid_forms += 1
+        
+        if valid_forms == 0:
+            raise forms.ValidationError('حداقل یک ماده اولیه باید تخصیص داده شود.')
+
+
+# ایجاد formset برای مواد اولیه
+RawMaterialInfoFormSet = inlineformset_factory(
+    Transport,
+    RawMaterialInfo,
+    form=RawMaterialInfoForm,
+    formset=RawMaterialInfoFormSetBase,
+    fields=['order_item', 'raw_material', 'allocated_quantity', 'weight_unit', 'packaging_type', 'number_of_packages', 'notes'],
+    extra=1,
+    can_delete=True
+)
 
 
 class TransportForm(ModelForm):
@@ -419,7 +544,9 @@ def create_purchase_transport_view(request):
     try:
         if request.method == 'POST':
             form = TransportForm(request.POST)
-            if form.is_valid():
+            raw_material_formset = RawMaterialInfoFormSet(request.POST, prefix='materials')
+            
+            if form.is_valid() and raw_material_formset.is_valid():
                 try:
                     with transaction.atomic():
                         pt = form.save(commit=False)
@@ -441,6 +568,10 @@ def create_purchase_transport_view(request):
                             pt.transport_number = f"TRANSPORT-{date_str}-{unique_id}"
                         
                         pt.save()
+                        
+                        # ذخیره مواد اولیه
+                        raw_material_formset.instance = pt
+                        raw_material_formset.save()
                         
                         # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
                         pt.status = Transport.STATUS_AWAITING_VEHICLE_ENTRY
@@ -478,7 +609,7 @@ def create_purchase_transport_view(request):
                     bug_logger.error(f"خطا در ایجاد حمل: {e}", exc_info=True)
                     messages.error(request, f'خطا در ایجاد حمل: {str(e)}')
             else:
-                bug_logger.warning(f"Purchase transport form invalid: {form.errors}")
+                bug_logger.warning(f"Purchase transport form invalid: form={form.errors}, materials={raw_material_formset.errors}")
                 audit_logger.activity(f"فرم نامعتبر برای ایجاد حمل")
         else:
             if initial_order:
@@ -487,9 +618,12 @@ def create_purchase_transport_view(request):
                 form.fields['purchase_order'].disabled = True
             else:
                 form = TransportForm()
+            
+            raw_material_formset = RawMaterialInfoFormSet(prefix='materials')
         
         return render(request, 'supply_create_purchase_transport.html', {
             'form': form,
+            'raw_material_formset': raw_material_formset,
             'initial_order': initial_order,
             'accessible_transport_fields': accessible_transport_fields,
         })
@@ -498,6 +632,7 @@ def create_purchase_transport_view(request):
         messages.error(request, 'خطا در ایجاد حمل.')
         return render(request, 'supply_create_purchase_transport.html', {
             'form': TransportForm(),
+            'raw_material_formset': RawMaterialInfoFormSet(prefix='materials'),
             'initial_order': None,
             'accessible_transport_fields': accessible_transport_fields,
         })
@@ -758,3 +893,41 @@ def create_driver_api(request):
     except Exception as e:
         bug_logger.error(f"Create driver API error: {e}", exc_info=True)
         return JsonResponse({'error': f'خطا در ایجاد راننده: {str(e)}'}, status=500)
+
+
+@login_required
+def get_order_materials_api(request, order_number):
+    """API endpoint برای دریافت لیست مواد اولیه سفارش با مقادیر باقیمانده"""
+    from django.http import JsonResponse
+    
+    audit_logger.info(f"دریافت مواد اولیه سفارش از طریق API - شماره: {order_number}")
+    try:
+        order = get_object_or_404(Order, order_number=order_number)
+        materials_data = []
+        
+        for order_item in order.order_items.select_related('raw_material').all():
+            if order_item.raw_material:
+                remaining_quantity = order_item.get_remaining_quantity()
+                allocated_quantity = order_item.get_allocated_quantity()
+                
+                materials_data.append({
+                    'id': order_item.id,
+                    'raw_material_id': order_item.raw_material.id,
+                    'raw_material_name': order_item.raw_material.name,
+                    'total_quantity': str(order_item.quantity),
+                    'allocated_quantity': str(allocated_quantity),
+                    'remaining_quantity': str(remaining_quantity),
+                    'weight_unit': order_item.weight_unit,
+                    'weight_unit_display': order_item.get_weight_unit_display(),
+                    'is_fully_allocated': order_item.is_fully_allocated(),
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'materials': materials_data,
+            'order_number': order.order_number,
+            'can_create_transport': order.can_create_transport(),
+        })
+    except Exception as e:
+        bug_logger.error(f"Get order materials API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در دریافت مواد اولیه: {str(e)}'}, status=400)

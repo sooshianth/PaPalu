@@ -38,6 +38,7 @@ from .views import (
     raw_material_info_api,
     driver_search_api,
     create_driver_api,
+    get_order_materials_api,
     # Car Entrance Views
     car_entrance_list_view,
     register_driver_for_transport_view,
@@ -88,6 +89,7 @@ urlpatterns = [
     path('api/raw-material-info/<int:raw_material_id>/', raw_material_info_api, name='raw_material_info_api'),
     path('api/driver-search/', driver_search_api, name='driver_search_api'),
     path('api/driver-create/', create_driver_api, name='create_driver_api'),
+    path('api/order-materials/<str:order_number>/', get_order_materials_api, name='get_order_materials_api'),
     # Car Entrance (Gatekeeper)
     path('carentrance/', car_entrance_list_view, name='carentrance'),
     path('carentrance/<str:transport_number>/register/', register_driver_for_transport_view, name='carentrance_register_driver'),
