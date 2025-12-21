@@ -106,6 +106,7 @@ class AllocationTable(tables.Table):
                 'order_total_quantity': True,
                 'allocation_total_quantity': True,
                 'status': True,
+                'remaining_amount': True,
                 'actions': True,
             }
         
@@ -117,6 +118,7 @@ class AllocationTable(tables.Table):
             'order_total_quantity': None,  # محاسبه شده، همیشه نمایش داده می‌شود
             'allocation_total_quantity': None,  # محاسبه شده، همیشه نمایش داده می‌شود
             'status': None,  # محاسبه شده، همیشه نمایش داده می‌شود
+            'remaining_amount': None,  # محاسبه شده، همیشه نمایش داده می‌شود
             'actions': None,  # عملیات همیشه نمایش داده می‌شود
         }
         
@@ -233,6 +235,16 @@ class AllocationTable(tables.Table):
         }
     )
     
+    remaining_amount = tables.Column(
+        verbose_name='مقدار باقی مانده (کیلوگرم)',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
     status = tables.Column(
         verbose_name='وضعیت',
         empty_values=(),
@@ -257,12 +269,12 @@ class AllocationTable(tables.Table):
     class Meta:
         model = Order
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('order_number', 'customer', 'allocations_count', 'order_total_quantity', 'allocation_total_quantity', 'status', 'actions')
+        fields = ('order_number', 'customer', 'allocations_count', 'order_total_quantity', 'allocation_total_quantity', 'remaining_amount', 'status', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('order_number', 'customer', 'allocations_count', 'order_total_quantity', 'allocation_total_quantity', 'status', 'actions')
+        sequence = ('order_number', 'customer', 'allocations_count', 'order_total_quantity', 'allocation_total_quantity', 'remaining_amount', 'status', 'actions')
     
     def render_order_number(self, value, record):
         """نمایش شماره سفارش به صورت badge"""
@@ -329,6 +341,21 @@ class AllocationTable(tables.Table):
             return format_html(
                 '<span class="status-badge status-incomplete">در انتظار</span>'
             )
+    
+    def render_remaining_amount(self, value, record):
+        """نمایش مقدار باقی مانده"""
+        # استفاده از مقادیر annotate شده اگر موجود باشند
+        if hasattr(record, 'order_total_quantity_kg') and hasattr(record, 'allocation_total_quantity_kg'):
+            order_total = float(record.order_total_quantity_kg or 0)
+            allocation_total = float(record.allocation_total_quantity_kg or 0)
+        else:
+            # fallback: محاسبه دستی
+            order_total = calculate_order_total_quantity(record)
+            allocation_total = calculate_allocation_total_quantity(record)
+        
+        remaining = order_total - allocation_total
+        formatted_remaining = format_number_persian(remaining, decimal_places=2)
+        return format_html('{}', formatted_remaining)
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""

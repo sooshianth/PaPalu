@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum, Q, Count, Case, When, DecimalField, F
+from django.db.models import Sum, Q, Count, Case, When, DecimalField, F, OuterRef, Subquery
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.forms import inlineformset_factory
@@ -170,27 +170,36 @@ def allocation_list_view(request):
         orders_qs = orders_qs.filter(registered_by=request.user)
 
     # افزودن annotate برای فیلدهای محاسبه شده
+    # مهم: ابتدا مقدار سفارش را با استفاده از Subquery محاسبه می‌کنیم
+    # تا از تکرار مقادیر به دلیل join های متعدد جلوگیری شود
     
-    # تعداد تخصیص‌ها
-    orders_qs = orders_qs.annotate(
-        allocations_count=Count('allocations', distinct=True)
-    )
-    
-    # محاسبه مقدار سفارش (کیلوگرم) - استفاده از Sum با Case/When برای تبدیل واحدها
-    orders_qs = orders_qs.annotate(
-        order_total_quantity_kg=Sum(
+    # محاسبه مقدار سفارش با استفاده از Subquery
+    # این کار باعث می‌شود که join های allocations روی محاسبه تأثیر نگذارند
+    order_total_subquery = OrderItem.objects.filter(
+        order=OuterRef('pk')
+    ).values('order').annotate(
+        total=Sum(
             Case(
-                When(order_items__weight_unit='kg', then=F('order_items__quantity')),
-                When(order_items__weight_unit='ton', then=F('order_items__quantity') * 1000),
+                When(weight_unit='kg', then=F('quantity')),
+                When(weight_unit='ton', then=F('quantity') * 1000),
                 When(
-                    Q(order_items__weight_unit='bag') & Q(order_items__bag_weight__isnull=False),
-                    then=F('order_items__quantity') * F('order_items__bag_weight')
+                    Q(weight_unit='bag') & Q(bag_weight__isnull=False),
+                    then=F('quantity') * F('bag_weight')
                 ),
-                When(order_items__weight_unit='piece', then=F('order_items__quantity')),
+                When(weight_unit='piece', then=F('quantity')),
                 default=0,
                 output_field=DecimalField(max_digits=15, decimal_places=3)
             )
         )
+    ).values('total')[:1]
+    
+    orders_qs = orders_qs.annotate(
+        order_total_quantity_kg=Subquery(order_total_subquery, output_field=DecimalField(max_digits=15, decimal_places=3))
+    )
+    
+    # تعداد تخصیص‌ها
+    orders_qs = orders_qs.annotate(
+        allocations_count=Count('allocations', distinct=True)
     )
     
     # محاسبه مقدار تخصیص شده (کیلوگرم)
