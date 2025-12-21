@@ -62,7 +62,7 @@ class Order(models.Model):
     # شماره سفارش
     order_number = models.CharField(
         max_length=100,
-        primary_key=True,
+        unique=True,
         verbose_name='شماره سفارش'
     )
     
