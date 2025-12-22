@@ -44,6 +44,8 @@ def get_accessible_purchase_transport_fields(user):
         'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'view'),
         'driver_account_number': user_can_access_field(user, Transport, 'driver_account_number', 'view'),
         'driver_sheba_number': user_can_access_field(user, Transport, 'driver_sheba_number', 'view'),
+        'supplier_account_number': user_can_access_field(user, Transport, 'supplier_account_number', 'view'),
+        'supplier_sheba_number': user_can_access_field(user, Transport, 'supplier_sheba_number', 'view'),
         'expected_arrival_date': user_can_access_field(user, Transport, 'expected_arrival_date', 'view'),
         'actual_arrival_date': user_can_access_field(user, Transport, 'actual_arrival_date', 'view'),
         'loading_date': user_can_access_field(user, Transport, 'loading_date', 'view'),
@@ -267,6 +269,7 @@ class TransportForm(ModelForm):
             'freight_payment_type', 'initial_freight', 'total_freight',
             'discount', 'surplus', 'freight_payment',
             'driver_account_number', 'driver_sheba_number',
+            'supplier_account_number', 'supplier_sheba_number',
             'expected_arrival_date',
             'waybill_number', 'notes'
         ]
@@ -283,6 +286,8 @@ class TransportForm(ModelForm):
             'freight_payment': 'کرایه پرداختی',
             'driver_account_number': 'شماره حساب راننده',
             'driver_sheba_number': 'شماره شبا راننده',
+            'supplier_account_number': 'شماره حساب تامین‌کننده',
+            'supplier_sheba_number': 'شماره شبا تامین‌کننده',
             'expected_arrival_date': 'تاریخ پیش‌بینی ورود',
             'waybill_number': 'شماره بارنامه',
             'notes': 'یادداشت',
@@ -292,7 +297,7 @@ class TransportForm(ModelForm):
             'vehicle_type': forms.Select(attrs={'class': 'form-control'}),
             'plate_number': forms.TextInput(attrs={'class': 'form-control'}),
             'driver': forms.Select(attrs={'class': 'form-control'}),
-            'freight_payment_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'freight_payment_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_freight_payment_type'}),
             'initial_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'total_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -300,6 +305,8 @@ class TransportForm(ModelForm):
             'freight_payment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'driver_account_number': forms.TextInput(attrs={'class': 'form-control'}),
             'driver_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier_account_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
             'expected_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
             'waybill_number': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -309,6 +316,7 @@ class TransportForm(ModelForm):
         super().__init__(*args, **kwargs)
         from core.PersonFolder.PersonModel import Person
         from core.AllocationFolder.AllocationModel import Allocation
+        from core.OrderFolder.OrderModel import Order
         
         # فیلدهای اجباری
         self.fields['vehicle_type'].required = True
@@ -339,6 +347,13 @@ class TransportForm(ModelForm):
         # یک hidden field برای driver_id اضافه می‌کنیم
         self.fields['driver'].widget = forms.HiddenInput()
         self.fields['driver'].required = False
+        
+        # تنظیم choices برای freight_payment_type
+        self.fields['freight_payment_type'].choices = Order.FREIGHT_PAYMENT_CHOICES
+        
+        # مخفی کردن فیلدهای حساب بانکی تامین‌کننده (به صورت پیش‌فرض)
+        self.fields['supplier_account_number'].widget = forms.HiddenInput()
+        self.fields['supplier_sheba_number'].widget = forms.HiddenInput()
     
     def clean(self):
         cleaned_data = super().clean()
@@ -558,6 +573,8 @@ def create_purchase_transport_view(request):
         'freight_payment': user_can_access_field(request.user, Transport, 'freight_payment', 'edit'),
         'driver_account_number': user_can_access_field(request.user, Transport, 'driver_account_number', 'edit'),
         'driver_sheba_number': user_can_access_field(request.user, Transport, 'driver_sheba_number', 'edit'),
+        'supplier_account_number': user_can_access_field(request.user, Transport, 'supplier_account_number', 'edit'),
+        'supplier_sheba_number': user_can_access_field(request.user, Transport, 'supplier_sheba_number', 'edit'),
         'expected_arrival_date': user_can_access_field(request.user, Transport, 'expected_arrival_date', 'edit'),
         'actual_arrival_date': user_can_access_field(request.user, Transport, 'actual_arrival_date', 'edit'),
         'loading_date': user_can_access_field(request.user, Transport, 'loading_date', 'edit'),
@@ -1039,6 +1056,109 @@ def create_driver_bank_account_api(request):
         return JsonResponse({'error': 'شناسه راننده نامعتبر است'}, status=400)
     except Exception as e:
         bug_logger.error(f"Create driver bank account API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در ایجاد حساب بانکی: {str(e)}'}, status=500)
+
+
+@login_required
+def get_supplier_bank_accounts_api(request, order_id):
+    """API endpoint برای دریافت حساب‌های بانکی تامین‌کننده از طریق order_id"""
+    from django.http import JsonResponse
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    audit_logger.info(f"دریافت حساب‌های بانکی تامین‌کننده از طریق API - Order ID: {order_id}")
+    try:
+        order = get_object_or_404(Order, pk=order_id)
+        
+        # دریافت تامین‌کننده از سفارش
+        supplier = order.customer  # برای سفارش خرید، customer همان supplier است
+        if not supplier:
+            return JsonResponse({
+                'success': True,
+                'accounts': [],
+            })
+        
+        # دریافت FinancialBanking برای این تامین‌کننده
+        financial_banking = FinancialBanking.objects.filter(person=supplier).first()
+        
+        accounts_data = []
+        if financial_banking:
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).all()
+            for account in bank_accounts:
+                accounts_data.append({
+                    'id': account.pk,
+                    'account_number': account.account_number or '',
+                    'shaba_number': account.shaba_number or '',
+                    'bank_name': account.bank_name or '',
+                    'display': f"{account.bank_name or 'بدون نام'} - {account.account_number or 'بدون شماره حساب'}"
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'accounts': accounts_data,
+        })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Get supplier bank accounts API error: {e}")
+        return JsonResponse({'error': 'شناسه سفارش نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Get supplier bank accounts API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در دریافت حساب‌های بانکی: {str(e)}'}, status=400)
+
+
+@login_required
+def create_supplier_bank_account_api(request):
+    """API برای ایجاد حساب بانکی جدید برای تامین‌کننده"""
+    from django.http import JsonResponse
+    from django.db import transaction
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        order_id = request.POST.get('order_id', '').strip()
+        account_number = request.POST.get('account_number', '').strip()
+        shaba_number = request.POST.get('shaba_number', '').strip()
+        bank_name = request.POST.get('bank_name', '').strip()
+        
+        if not order_id:
+            return JsonResponse({'error': 'شناسه سفارش الزامی است'}, status=400)
+        
+        order = get_object_or_404(Order, pk=int(order_id))
+        supplier = order.customer  # برای سفارش خرید، customer همان supplier است
+        
+        if not supplier:
+            return JsonResponse({'error': 'تامین‌کننده برای این سفارش یافت نشد'}, status=400)
+        
+        # دریافت یا ایجاد FinancialBanking برای این تامین‌کننده
+        financial_banking, created = FinancialBanking.objects.get_or_create(person=supplier)
+        
+        with transaction.atomic():
+            bank_account = BankAccount.objects.create(
+                financial_banking=financial_banking,
+                account_number=account_number if account_number else None,
+                shaba_number=shaba_number if shaba_number else None,
+                bank_name=bank_name if bank_name else None,
+            )
+            
+            audit_logger.info(f"حساب بانکی جدید برای تامین‌کننده {supplier.name} ایجاد شد - حساب: {account_number} - توسط: {request.user.username}")
+            
+            return JsonResponse({
+                'success': True,
+                'account': {
+                    'id': bank_account.pk,
+                    'account_number': bank_account.account_number or '',
+                    'shaba_number': bank_account.shaba_number or '',
+                    'bank_name': bank_account.bank_name or '',
+                    'display': f"{bank_account.bank_name or 'بدون نام'} - {bank_account.account_number or 'بدون شماره حساب'}"
+                }
+            })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Create supplier bank account API error: {e}")
+        return JsonResponse({'error': 'شناسه سفارش نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Create supplier bank account API error: {e}", exc_info=True)
         return JsonResponse({'error': f'خطا در ایجاد حساب بانکی: {str(e)}'}, status=500)
 
 

@@ -227,12 +227,19 @@ class Transport(models.Model):
     )
     
     # فیلدهای مالی
+    FREIGHT_PAYMENT_CHOICES = [
+        ('calculated_in_invoice', 'کرایه محاسبه شده در فی'),
+        ('pay_to_supplier', 'پرداخت به شرکت فروشنده'),
+        ('pay_to_driver', 'پرداخت به راننده'),
+    ]
+    
     freight_payment_type = models.CharField(
-        max_length=20,
+        max_length=30,
+        choices=FREIGHT_PAYMENT_CHOICES,
         verbose_name='نوع کرایه',
         null=True,
         blank=True,
-        help_text='نقدی، اعتباری، و غیره'
+        help_text='نوع پرداخت کرایه'
     )
     
     initial_freight = models.DecimalField(
@@ -295,6 +302,23 @@ class Transport(models.Model):
         blank=True,
         verbose_name='شماره شبا راننده',
         help_text='شماره شبا بانکی راننده (24 رقم + IR)'
+    )
+    
+    # اطلاعات بانکی تامین‌کننده
+    supplier_account_number = models.CharField(
+        max_length=50,
+        null=True,
+        blank=True,
+        verbose_name='شماره حساب تامین‌کننده',
+        help_text='شماره حساب بانکی تامین‌کننده'
+    )
+    
+    supplier_sheba_number = models.CharField(
+        max_length=26,
+        null=True,
+        blank=True,
+        verbose_name='شماره شبا تامین‌کننده',
+        help_text='شماره شبا بانکی تامین‌کننده (24 رقم + IR)'
     )
     
     # تاریخ‌های اضافی
