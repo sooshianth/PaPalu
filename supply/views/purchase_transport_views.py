@@ -114,7 +114,7 @@ class RawMaterialInfoForm(ModelForm):
         widgets = {
             'order_item': forms.HiddenInput(),
             'raw_material': forms.HiddenInput(),
-            'allocated_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'allocated_quantity': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'pattern': '[0-9]+(\\.[0-9]{1,2})?'}),
             'weight_unit': forms.Select(attrs={'class': 'form-control', 'readonly': True}),
             'packaging_type': forms.Select(attrs={'class': 'form-control'}),
             'number_of_packages': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
@@ -129,6 +129,30 @@ class RawMaterialInfoForm(ModelForm):
             if self.instance.raw_material:
                 self.fields['raw_material_display'].initial = self.instance.raw_material.name
                 self.fields['weight_unit'].initial = self.instance.weight_unit
+    
+    def clean_allocated_quantity(self):
+        """تبدیل مقدار به Decimal بدون از دست دادن دقت"""
+        allocated_quantity = self.cleaned_data.get('allocated_quantity')
+        if allocated_quantity is None or allocated_quantity == '':
+            return None
+        
+        # تبدیل مستقیم به Decimal از string برای حفظ دقت
+        # اگر از float آمده باشد، ابتدا به string تبدیل می‌کنیم
+        if isinstance(allocated_quantity, (int, float)):
+            # استفاده از str برای جلوگیری از خطاهای float precision
+            return Decimal(str(allocated_quantity))
+        elif isinstance(allocated_quantity, Decimal):
+            return allocated_quantity
+        else:
+            # اگر string است، مستقیماً به Decimal تبدیل می‌کنیم
+            try:
+                # حذف فاصله‌ها و تبدیل به string
+                value_str = str(allocated_quantity).strip()
+                if not value_str:
+                    return None
+                return Decimal(value_str)
+            except (ValueError, TypeError) as e:
+                raise forms.ValidationError(f'مقدار وارد شده نامعتبر است: {str(e)}')
     
     def clean(self):
         cleaned_data = super().clean()
@@ -147,6 +171,17 @@ class RawMaterialInfoForm(ModelForm):
         if not order_item:
             self.add_error('order_item', 'این فیلد الزامی است.')
             return cleaned_data
+        
+        # تبدیل مقدار به Decimal با حفظ دقت
+        if allocated_quantity is not None:
+            if isinstance(allocated_quantity, (int, float)):
+                allocated_quantity = Decimal(str(allocated_quantity))
+            elif not isinstance(allocated_quantity, Decimal):
+                try:
+                    allocated_quantity = Decimal(str(allocated_quantity))
+                except (ValueError, TypeError):
+                    pass
+            cleaned_data['allocated_quantity'] = allocated_quantity
         
         if not allocated_quantity or allocated_quantity <= 0:
             self.add_error('allocated_quantity', 'مقدار تخصیص یافته باید بیشتر از صفر باشد.')
@@ -902,6 +937,97 @@ def create_driver_api(request):
     except Exception as e:
         bug_logger.error(f"Create driver API error: {e}", exc_info=True)
         return JsonResponse({'error': f'خطا در ایجاد راننده: {str(e)}'}, status=500)
+
+
+@login_required
+def get_driver_bank_accounts_api(request, driver_id):
+    """API endpoint برای دریافت حساب‌های بانکی راننده"""
+    from django.http import JsonResponse
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    audit_logger.info(f"دریافت حساب‌های بانکی راننده از طریق API - ID: {driver_id}")
+    try:
+        driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
+        
+        # دریافت FinancialBanking برای این راننده
+        financial_banking = FinancialBanking.objects.filter(person=driver).first()
+        
+        accounts_data = []
+        if financial_banking:
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).all()
+            for account in bank_accounts:
+                accounts_data.append({
+                    'id': account.pk,
+                    'account_number': account.account_number or '',
+                    'shaba_number': account.shaba_number or '',
+                    'bank_name': account.bank_name or '',
+                    'display': f"{account.bank_name or 'بدون نام'} - {account.account_number or 'بدون شماره حساب'}"
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'accounts': accounts_data,
+        })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Get driver bank accounts API error: {e}")
+        return JsonResponse({'error': 'شناسه راننده نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Get driver bank accounts API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در دریافت حساب‌های بانکی: {str(e)}'}, status=400)
+
+
+@login_required
+def create_driver_bank_account_api(request):
+    """API برای ایجاد حساب بانکی جدید برای راننده"""
+    from django.http import JsonResponse
+    from django.db import transaction
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        driver_id = request.POST.get('driver_id', '').strip()
+        account_number = request.POST.get('account_number', '').strip()
+        shaba_number = request.POST.get('shaba_number', '').strip()
+        bank_name = request.POST.get('bank_name', '').strip()
+        
+        if not driver_id:
+            return JsonResponse({'error': 'شناسه راننده الزامی است'}, status=400)
+        
+        driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
+        
+        # دریافت یا ایجاد FinancialBanking برای این راننده
+        financial_banking, created = FinancialBanking.objects.get_or_create(person=driver)
+        
+        with transaction.atomic():
+            bank_account = BankAccount.objects.create(
+                financial_banking=financial_banking,
+                account_number=account_number if account_number else None,
+                shaba_number=shaba_number if shaba_number else None,
+                bank_name=bank_name if bank_name else None,
+            )
+            
+            audit_logger.info(f"حساب بانکی جدید برای راننده {driver.name} ایجاد شد - حساب: {account_number} - توسط: {request.user.username}")
+            
+            return JsonResponse({
+                'success': True,
+                'account': {
+                    'id': bank_account.pk,
+                    'account_number': bank_account.account_number or '',
+                    'shaba_number': bank_account.shaba_number or '',
+                    'bank_name': bank_account.bank_name or '',
+                    'display': f"{bank_account.bank_name or 'بدون نام'} - {bank_account.account_number or 'بدون شماره حساب'}"
+                }
+            })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Create driver bank account API error: {e}")
+        return JsonResponse({'error': 'شناسه راننده نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Create driver bank account API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در ایجاد حساب بانکی: {str(e)}'}, status=500)
 
 
 @login_required

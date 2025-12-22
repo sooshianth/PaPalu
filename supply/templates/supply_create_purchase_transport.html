@@ -206,17 +206,21 @@
         justify-content: center;
     }
     .plate-input input[type="text"] {
-        width: 90px;
         text-align: center;
         padding: 10px 15px;
         border: 1px solid var(--gray-300);
         border-radius: 8px;
         font-size: 1rem;
     }
-    .plate-input .seg-5 { width: 120px; }
-    .plate-input .seg-letter { width: 60px; }
-    .plate-input .seg-2 { width: 70px; }
-    .plate-input .dash { opacity: 0.5; }
+    .plate-input .seg-iran { width: 70px; } /* 2 رقم ایران */
+    .plate-input .seg-3 { width: 90px; } /* 3 رقم */
+    .plate-input .seg-letter { width: 60px; } /* 1 حرف */
+    .plate-input .seg-2 { width: 100px; } /* 2 رقم */
+    .plate-input .dash { 
+        opacity: 0.5; 
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
     .plate-helper {
         font-size: 0.75rem;
         color: #666;
@@ -592,15 +596,17 @@
                         <label class="form-label">{{ form.plate_number.label }}</label>
                         <div class="plate-input">
                             <div class="plate-seg">
-                                <input type="text" id="plate-first" class="seg-5" maxlength="5" placeholder="12345" inputmode="numeric" pattern="\d*">
-                                <span class="dash">|</span>
-                                <input type="text" id="plate-letter" class="seg-letter" maxlength="2" placeholder="الف" dir="rtl">
-                                <span class="dash">|</span>
-                                <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="67" inputmode="numeric" pattern="\d*">
+                                <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="12" inputmode="numeric" pattern="\d*">
+                                <span class="dash">-</span>
+                                <input type="text" id="plate-letter" class="seg-letter" maxlength="1" placeholder="ب" dir="rtl">
+                                <span class="dash">-</span>
+                                <input type="text" id="plate-middle" class="seg-3" maxlength="3" placeholder="345" inputmode="numeric" pattern="\d*">
+                                <span class="dash">-</span>
+                                <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="(ایران) 11" inputmode="numeric" pattern="\d*">
                             </div>
                         </div>
                         <input type="hidden" id="id_plate_number" name="plate_number">
-                        <div class="plate-helper">الگو: 12345 | الف | 67</div>
+                        <div class="plate-helper">الگو: 11 - 345 - ب - 12 (نمایش نهایی: 11|345ب12)</div>
                         {% if form.plate_number.errors %}
                             <div class="text-danger">{{ form.plate_number.errors.0 }}</div>
                         {% endif %}
@@ -650,6 +656,34 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="closeAddDriverModal()">انصراف</button>
                     <button type="button" class="btn btn-primary" onclick="saveNewDriver()">ذخیره</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal برای افزودن حساب بانکی جدید -->
+        <div id="addBankAccountModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>افزودن حساب بانکی جدید</h3>
+                    <span class="close" onclick="closeAddBankAccountModal()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>نام بانک</label>
+                        <input type="text" id="new-bank-name" placeholder="نام بانک">
+                    </div>
+                    <div class="mb-3">
+                        <label>شماره حساب</label>
+                        <input type="text" id="new-account-number" placeholder="شماره حساب بانکی">
+                    </div>
+                    <div class="mb-3">
+                        <label>شماره شبا</label>
+                        <input type="text" id="new-sheba-number" placeholder="شماره شبا">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeAddBankAccountModal()">انصراف</button>
+                    <button type="button" class="btn btn-primary" onclick="saveNewBankAccount()">ذخیره</button>
                 </div>
             </div>
         </div>
@@ -724,26 +758,23 @@
                     </div>
                     {% endif %}
 
-                    {% if accessible_transport_fields.driver_account_number %}
+                    {% if accessible_transport_fields.driver_account_number or accessible_transport_fields.driver_sheba_number %}
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.driver_account_number.label }}</label>
-                        {{ form.driver_account_number }}
-                        {% if form.driver_account_number.errors %}
-                            <div class="text-danger">{{ form.driver_account_number.errors.0 }}</div>
-                        {% endif %}
-                        <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">شماره حساب راننده</small>
+                        <label class="form-label">حساب بانکی راننده</label>
+                        <select id="driver-bank-account-select" class="form-control">
+                            <option value="">-- انتخاب حساب بانکی --</option>
+                        </select>
+                        <button type="button" class="add-bank-account-btn" onclick="openAddBankAccountModal()" style="margin-top: 10px; padding: 8px 16px; font-size: 0.9rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer;">+ افزودن حساب بانکی جدید</button>
+                        <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">انتخاب حساب بانکی راننده یا افزودن حساب جدید</small>
                     </div>
                     {% endif %}
-
+                    
+                    <!-- Hidden fields for account number and sheba number -->
+                    {% if accessible_transport_fields.driver_account_number %}
+                    <input type="hidden" id="id_driver_account_number" name="driver_account_number" value="{{ form.driver_account_number.value|default:'' }}">
+                    {% endif %}
                     {% if accessible_transport_fields.driver_sheba_number %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.driver_sheba_number.label }}</label>
-                        {{ form.driver_sheba_number }}
-                        {% if form.driver_sheba_number.errors %}
-                            <div class="text-danger">{{ form.driver_sheba_number.errors.0 }}</div>
-                        {% endif %}
-                        <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">شماره شبا راننده</small>
-                    </div>
+                    <input type="hidden" id="id_driver_sheba_number" name="driver_sheba_number" value="{{ form.driver_sheba_number.value|default:'' }}">
                     {% endif %}
                 </div>
             </div>
@@ -903,6 +934,8 @@ document.addEventListener('DOMContentLoaded', function() {
           driverInput.value = item.text;
           if (driverIdInput) {
             driverIdInput.value = item.id;
+            // بارگذاری حساب‌های بانکی راننده
+            loadDriverBankAccounts(item.id);
           }
           driverSuggestions.style.display = 'none';
         });
@@ -1092,11 +1125,12 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="row">
           <div class="col-md-6 mb-3">
             <label class="form-label required-field">مقدار تخصیص به این حمل:</label>
-            <input type="number" 
+            <input type="text" 
                    name="materials-${index}-allocated_quantity" 
                    id="id_materials-${index}-allocated_quantity"
                    class="form-control material-quantity-input" 
-                   step="0.01" 
+                   inputmode="decimal"
+                   pattern="[0-9]+(\.[0-9]{1,2})?"
                    min="0" 
                    max="${material.remaining_quantity}"
                    placeholder="مقدار (حداکثر ${formatDecimal(material.remaining_quantity)})"
@@ -1178,15 +1212,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // اضافه کردن validation برای input مقدار
     const quantityInput = div.querySelector('.material-quantity-input');
     if (quantityInput) {
+      // فقط اعداد و نقطه اعشار مجاز
       quantityInput.addEventListener('input', function() {
+        // حذف کاراکترهای غیرمجاز (فقط اعداد و نقطه اعشار)
+        this.value = this.value.replace(/[^0-9.]/g, '');
+        
+        // فقط یک نقطه اعشار مجاز است
+        const parts = this.value.split('.');
+        if (parts.length > 2) {
+          this.value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // حداکثر 2 رقم اعشار
+        if (parts.length === 2 && parts[1].length > 2) {
+          this.value = parts[0] + '.' + parts[1].substring(0, 2);
+        }
+      });
+      
+      quantityInput.addEventListener('blur', function() {
         const value = parseFloat(this.value);
         const max = parseFloat(this.getAttribute('data-max'));
         
-        if (value > max) {
-          this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${formatDecimal(max)} باشد`);
+        if (isNaN(value) || value <= 0) {
+          this.setCustomValidity('مقدار باید بیشتر از صفر باشد');
           this.style.borderColor = '#dc3545';
-        } else if (value < 0) {
-          this.setCustomValidity('مقدار نمی‌تواند منفی باشد');
+        } else if (value > max) {
+          this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${formatDecimal(max)} باشد`);
           this.style.borderColor = '#dc3545';
         } else {
           this.setCustomValidity('');
@@ -1249,24 +1300,78 @@ function onlyDigits(el){ el.value = normalizeDigits(el.value).replace(/\D/g,'');
 function onlyLetters(el){
   // allow Persian letters mostly
   el.value = el.value.replace(/[^آ-یA-Za-z]/g,'');
+  // محدود کردن به یک حرف
+  if(el.value.length > 1) {
+    el.value = el.value.charAt(0);
+  }
 }
+// تابع برای parse کردن پلاک ذخیره شده (فرمت: 11|345ب12)
+function parsePlateNumber(plateNumber) {
+  if (!plateNumber) return null;
+  
+  // فرمت: 11|345ب12
+  const match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
+  if (match) {
+    return {
+      iran: match[1],
+      middle: match[2],
+      letter: match[3],
+      last: match[4]
+    };
+  }
+  
+  // فرمت قدیمی: 11-345-ب-12 یا 11|345-ب-12
+  const oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
+  if (oldMatch) {
+    return {
+      iran: oldMatch[1],
+      middle: oldMatch[2],
+      letter: oldMatch[3],
+      last: oldMatch[4]
+    };
+  }
+  
+  return null;
+}
+
+// اگر پلاک از قبل وجود دارد، آن را parse و نمایش بده
+document.addEventListener('DOMContentLoaded', function() {
+  const hiddenPlate = document.getElementById('id_plate_number');
+  if (hiddenPlate && hiddenPlate.value) {
+    const parsed = parsePlateNumber(hiddenPlate.value);
+    if (parsed) {
+      document.getElementById('plate-iran').value = parsed.iran;
+      document.getElementById('plate-middle').value = parsed.middle;
+      document.getElementById('plate-letter').value = parsed.letter;
+      document.getElementById('plate-last').value = parsed.last;
+    }
+  }
+});
+
 document.addEventListener('input', function(e){
-  if(e.target.id==='plate-first' || e.target.id==='plate-last') onlyDigits(e.target);
-  if(e.target.id==='plate-letter') onlyLetters(e.target);
+  if(e.target.id==='plate-iran' || e.target.id==='plate-middle' || e.target.id==='plate-last') {
+    onlyDigits(e.target);
+  }
+  if(e.target.id==='plate-letter') {
+    onlyLetters(e.target);
+  }
 });
 document.addEventListener('submit', function(e){
-  const first = normalizeDigits(document.getElementById('plate-first').value).trim();
-  const last = normalizeDigits(document.getElementById('plate-last').value).trim();
+  const iran = normalizeDigits(document.getElementById('plate-iran').value).trim();
+  const middle = normalizeDigits(document.getElementById('plate-middle').value).trim();
   const letter = document.getElementById('plate-letter').value.trim();
+  const last = normalizeDigits(document.getElementById('plate-last').value).trim();
   const hidden = document.getElementById('id_plate_number');
+  
   // Basic validation
-  const valid = first.length>=1 && last.length>=1 && letter.length>=1;
+  const valid = iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2;
   if(!valid){
-    alert('لطفاً شماره پلاک را کامل وارد کنید.');
+    alert('لطفاً شماره پلاک را کامل وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
     e.preventDefault();
     return false;
   }
-  hidden.value = `${first}-${letter}-${last}`;
+  // فرمت نهایی: 11|345ب12
+  hidden.value = `${iran}|${middle}${letter}${last}`;
 }, true);
 
 // Modal functions for adding new driver
@@ -1350,10 +1455,146 @@ function saveNewDriver() {
 
 // بستن modal با کلیک خارج از آن
 window.onclick = function(event) {
-  const modal = document.getElementById('addDriverModal');
-  if (event.target == modal) {
+  const driverModal = document.getElementById('addDriverModal');
+  const bankModal = document.getElementById('addBankAccountModal');
+  if (event.target == driverModal) {
     closeAddDriverModal();
   }
+  if (event.target == bankModal) {
+    closeAddBankAccountModal();
+  }
+}
+
+// تابع برای بارگذاری حساب‌های بانکی راننده
+function loadDriverBankAccounts(driverId) {
+  if (!driverId) {
+    return;
+  }
+  
+  const accountSelect = document.getElementById('driver-bank-account-select');
+  if (!accountSelect) {
+    return;
+  }
+  
+  // پاک کردن گزینه‌های قبلی
+  accountSelect.innerHTML = '<option value="">-- انتخاب حساب بانکی --</option>';
+  
+  fetch(`{% url "supply:get_driver_bank_accounts_api" 0 %}`.replace('0', driverId))
+    .then(response => response.json())
+    .then(data => {
+      if (data.success && data.accounts) {
+        data.accounts.forEach(function(account) {
+          const option = document.createElement('option');
+          option.value = account.id;
+          option.textContent = account.display;
+          option.dataset.accountNumber = account.account_number || '';
+          option.dataset.shebaNumber = account.shaba_number || '';
+          accountSelect.appendChild(option);
+        });
+      }
+    })
+    .catch(error => {
+      console.error('خطا در دریافت حساب‌های بانکی:', error);
+    });
+}
+
+// مدیریت تغییر حساب بانکی
+document.addEventListener('DOMContentLoaded', function() {
+  const accountSelect = document.getElementById('driver-bank-account-select');
+  if (accountSelect) {
+    accountSelect.addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      const accountNumberInput = document.getElementById('id_driver_account_number');
+      const shebaNumberInput = document.getElementById('id_driver_sheba_number');
+      
+      if (selectedOption.value && accountNumberInput && shebaNumberInput) {
+        accountNumberInput.value = selectedOption.dataset.accountNumber || '';
+        shebaNumberInput.value = selectedOption.dataset.shebaNumber || '';
+      } else {
+        if (accountNumberInput) accountNumberInput.value = '';
+        if (shebaNumberInput) shebaNumberInput.value = '';
+      }
+    });
+  }
+  
+  // اگر راننده از قبل انتخاب شده، حساب‌های بانکی را لود کن
+  const driverIdInput = document.getElementById('id_driver');
+  if (driverIdInput && driverIdInput.value) {
+    loadDriverBankAccounts(driverIdInput.value);
+  }
+});
+
+// Modal functions for adding new bank account
+function openAddBankAccountModal() {
+  const driverIdInput = document.getElementById('id_driver');
+  if (!driverIdInput || !driverIdInput.value) {
+    alert('لطفاً ابتدا راننده را انتخاب کنید.');
+    return;
+  }
+  
+  document.getElementById('addBankAccountModal').style.display = 'block';
+  document.getElementById('new-bank-name').value = '';
+  document.getElementById('new-account-number').value = '';
+  document.getElementById('new-sheba-number').value = '';
+}
+
+function closeAddBankAccountModal() {
+  document.getElementById('addBankAccountModal').style.display = 'none';
+}
+
+function saveNewBankAccount() {
+  const driverIdInput = document.getElementById('id_driver');
+  if (!driverIdInput || !driverIdInput.value) {
+    alert('لطفاً ابتدا راننده را انتخاب کنید.');
+    return;
+  }
+  
+  const bankName = document.getElementById('new-bank-name').value.trim();
+  const accountNumber = document.getElementById('new-account-number').value.trim();
+  const shebaNumber = document.getElementById('new-sheba-number').value.trim();
+  
+  const formData = new FormData();
+  formData.append('driver_id', driverIdInput.value);
+  if (bankName) formData.append('bank_name', bankName);
+  if (accountNumber) formData.append('account_number', accountNumber);
+  if (shebaNumber) formData.append('shaba_number', shebaNumber);
+  
+  fetch('{% url "supply:create_driver_bank_account_api" %}', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // اضافه کردن حساب جدید به dropdown
+      const accountSelect = document.getElementById('driver-bank-account-select');
+      const option = document.createElement('option');
+      option.value = data.account.id;
+      option.textContent = data.account.display;
+      option.dataset.accountNumber = data.account.account_number || '';
+      option.dataset.shebaNumber = data.account.shaba_number || '';
+      accountSelect.appendChild(option);
+      accountSelect.value = data.account.id;
+      
+      // به‌روزرسانی hidden fields
+      const accountNumberInput = document.getElementById('id_driver_account_number');
+      const shebaNumberInput = document.getElementById('id_driver_sheba_number');
+      if (accountNumberInput) accountNumberInput.value = data.account.account_number || '';
+      if (shebaNumberInput) shebaNumberInput.value = data.account.shaba_number || '';
+      
+      closeAddBankAccountModal();
+      alert('حساب بانکی با موفقیت اضافه شد.');
+    } else {
+      alert('خطا: ' + (data.error || 'خطا در ایجاد حساب بانکی'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('خطا در ارتباط با سرور');
+  });
 }
 
 // مدیریت submit فرم - فقط فرم‌های انتخاب شده را ارسال کن
@@ -1376,11 +1617,13 @@ document.addEventListener('DOMContentLoaded', function() {
       selectedMaterials.forEach(function(item) {
         const quantityInput = item.querySelector('.material-quantity-input');
         if (quantityInput) {
-          const value = parseFloat(quantityInput.value);
+          // استفاده از مقدار string برای حفظ دقت
+          const valueStr = quantityInput.value.trim();
+          const value = parseFloat(valueStr);
           const max = parseFloat(quantityInput.getAttribute('data-max'));
           const materialName = item.querySelector('.material-name').textContent.trim().replace(' (تمام شده)', '');
           
-          if (!value || value <= 0) {
+          if (!valueStr || isNaN(value) || value <= 0) {
             hasError = true;
             quantityInput.style.borderColor = '#dc3545';
             if (!errorMessage) {
@@ -1394,6 +1637,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           } else {
             quantityInput.style.borderColor = '';
+            // اطمینان از اینکه مقدار به درستی فرمت شده است (برای ارسال به سرور)
+            // مقدار string را حفظ می‌کنیم تا دقت از دست نرود
           }
         }
       });
