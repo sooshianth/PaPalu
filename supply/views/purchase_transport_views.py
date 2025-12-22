@@ -595,6 +595,12 @@ def create_purchase_transport_view(request):
                         if not pt.status:
                             pt.status = Transport.STATUS_DRAFT
                         
+                        # لاگ کردن پلاک قبل از ذخیره
+                        if pt.plate_number:
+                            bug_logger.info(f"پلاک قبل از ذخیره: {pt.plate_number}")
+                        else:
+                            bug_logger.warning(f"پلاک خالی است در فرم - request.POST: {request.POST.get('plate_number', 'NOT_FOUND')}")
+                        
                         # تولید خودکار شماره حمل
                         if not pt.transport_number:
                             import uuid
@@ -605,6 +611,12 @@ def create_purchase_transport_view(request):
                             pt.transport_number = f"TRANSPORT-{date_str}-{unique_id}"
                         
                         pt.save()
+                        
+                        # لاگ کردن پلاک بعد از ذخیره
+                        if pt.plate_number:
+                            bug_logger.info(f"پلاک بعد از ذخیره: {pt.plate_number}")
+                        else:
+                            bug_logger.warning(f"پلاک هنوز خالی است بعد از ذخیره")
                         
                         # ذخیره مواد اولیه
                         raw_material_formset.instance = pt

@@ -476,6 +476,26 @@
         border: 1px solid #ffb74d;
         color: #f57c00;
     }
+    
+    /* Date picker styles */
+    .p-datepicker-trigger {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 1.2rem;
+        z-index: 10;
+        user-select: none;
+    }
+    .p-datepicker-trigger:hover {
+        opacity: 0.7;
+    }
+    
+    #id_expected_arrival_date_display {
+        position: relative;
+        padding-left: 40px;
+    }
 </style>
 {% endblock %}
 
@@ -558,7 +578,7 @@
         <!-- بخش مواد اولیه -->
         <div class="form-section" id="materials-section" style="display:none;">
             <div class="form-section-header">
-                <h5>مواد اولیه حمل</h5>
+                <h5>مواد اولیه حمل <span style="color:#dc3545;font-size:1rem;">*</span></h5>
                 <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -602,7 +622,7 @@
                                 <span class="dash">-</span>
                                 <input type="text" id="plate-middle" class="seg-3" maxlength="3" placeholder="345" inputmode="numeric" pattern="\d*">
                                 <span class="dash">-</span>
-                                <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="(ایران) 11" inputmode="numeric" pattern="\d*">
+                                <input type="text" id="plate-iran" class="seg-iran" maxlength="2" placeholder="11" inputmode="numeric" pattern="\d*">
                             </div>
                         </div>
                         <input type="hidden" id="id_plate_number" name="plate_number">
@@ -793,7 +813,10 @@
                     {% if accessible_transport_fields.expected_arrival_date %}
                     <div class="col-md-6 mb-3">
                         <label class="form-label">{{ form.expected_arrival_date.label }}</label>
-                        {{ form.expected_arrival_date }}
+                        <div style="position: relative;">
+                            <input type="text" id="id_expected_arrival_date_display" class="form-control" placeholder="1403/09/15" readonly style="background-color: #fff; cursor: pointer;">
+                            {{ form.expected_arrival_date }}
+                        </div>
                         {% if form.expected_arrival_date.errors %}
                             <div class="text-danger">{{ form.expected_arrival_date.errors.0 }}</div>
                         {% endif %}
@@ -845,6 +868,13 @@
 </div>
 {% endblock %}
 {% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const orderSelect = document.getElementById('id_purchase_order');
@@ -1124,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="material-input-group">
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label class="form-label required-field">مقدار تخصیص به این حمل:</label>
+            <label class="form-label required-field">مقدار تخصیص به این حمل <span style="color:#dc3545;">*</span>:</label>
             <input type="text" 
                    name="materials-${index}-allocated_quantity" 
                    id="id_materials-${index}-allocated_quantity"
@@ -1283,6 +1313,93 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
+// راه‌اندازی تقویم شمسی برای expected_arrival_date
+$(document).ready(function() {
+  const expectedArrivalDateDisplay = $('#id_expected_arrival_date_display');
+  const expectedArrivalDateHidden = $('#id_expected_arrival_date');
+  
+  if (expectedArrivalDateDisplay.length && expectedArrivalDateHidden.length) {
+    // مخفی کردن فیلد hidden
+    expectedArrivalDateHidden.css('display', 'none');
+    
+    // اگر مقدار اولیه وجود دارد، آن را نمایش بده
+    let initialValue = '';
+    if (expectedArrivalDateHidden.val()) {
+      try {
+        // تبدیل تاریخ میلادی به شمسی
+        const dateParts = expectedArrivalDateHidden.val().split('-');
+        if (dateParts.length === 3) {
+          const gregorianDate = persianDate.fromCalendar('gregorian', 
+            parseInt(dateParts[0]), 
+            parseInt(dateParts[1]), 
+            parseInt(dateParts[2])
+          );
+          const persianDateObj = gregorianDate.toCalendar('persian');
+          initialValue = persianDateObj.year + '/' + 
+                        String(persianDateObj.month).padStart(2, '0') + '/' + 
+                        String(persianDateObj.day).padStart(2, '0');
+          expectedArrivalDateDisplay.val(initialValue);
+        }
+      } catch (e) {
+        console.error('خطا در تبدیل تاریخ:', e);
+      }
+    }
+    
+    // راه‌اندازی تقویم شمسی
+    expectedArrivalDateDisplay.pDatepicker({
+      observer: true,
+      format: 'YYYY/MM/DD',
+      altField: '#id_expected_arrival_date',
+      altFormat: 'YYYY-MM-DD',
+      calendarType: 'persian',
+      initialValue: initialValue || false,
+      timePicker: {
+        enabled: false
+      },
+      onSelect: function() {
+        // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+        const selectedDate = expectedArrivalDateDisplay.val();
+        if (selectedDate) {
+          try {
+            const persianDateParts = selectedDate.split('/');
+            if (persianDateParts.length === 3) {
+              const persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+              const gregorianDate = persianDateObj.toCalendar('gregorian');
+              const formattedDate = gregorianDate.year + '-' + 
+                                   String(gregorianDate.month).padStart(2, '0') + '-' + 
+                                   String(gregorianDate.day).padStart(2, '0');
+              
+              expectedArrivalDateHidden.val(formattedDate);
+            }
+          } catch (e) {
+            console.error('خطا در تبدیل تاریخ:', e);
+          }
+        }
+      }
+    });
+    
+    // اضافه کردن آیکون تقویم
+    if (!expectedArrivalDateDisplay.parent().find('.p-datepicker-trigger').length) {
+      const iconSpan = $('<span>', {
+        class: 'p-datepicker-trigger',
+        html: '📅',
+        css: {
+          'position': 'absolute',
+          'right': '10px',
+          'top': '50%',
+          'transform': 'translateY(-50%)',
+          'cursor': 'pointer',
+          'font-size': '1.2rem',
+          'z-index': '10',
+          'pointer-events': 'none'
+        }
+      });
+      
+      expectedArrivalDateDisplay.parent().css('position', 'relative').append(iconSpan);
+    }
+  }
+});
 // Plate formatting and serialization
 function normalizeDigits(str){
   // convert Persian/Arabic digits to ASCII
@@ -1356,23 +1473,68 @@ document.addEventListener('input', function(e){
     onlyLetters(e.target);
   }
 });
-document.addEventListener('submit', function(e){
-  const iran = normalizeDigits(document.getElementById('plate-iran').value).trim();
-  const middle = normalizeDigits(document.getElementById('plate-middle').value).trim();
-  const letter = document.getElementById('plate-letter').value.trim();
-  const last = normalizeDigits(document.getElementById('plate-last').value).trim();
-  const hidden = document.getElementById('id_plate_number');
-  
-  // Basic validation
-  const valid = iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2;
-  if(!valid){
-    alert('لطفاً شماره پلاک را کامل وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
-    e.preventDefault();
-    return false;
+// مدیریت submit فرم - ذخیره پلاک
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.querySelector('form[method="post"]');
+  if (form) {
+    // استفاده از capture phase برای اطمینان از اجرا قبل از سایر handlers
+    form.addEventListener('submit', function(e) {
+    const plateIran = document.getElementById('plate-iran');
+    const plateMiddle = document.getElementById('plate-middle');
+    const plateLetter = document.getElementById('plate-letter');
+    const plateLast = document.getElementById('plate-last');
+    const hidden = document.getElementById('id_plate_number');
+    
+    console.log('Submit event triggered - Plate fields check');
+    console.log('plateIran:', plateIran ? plateIran.value : 'NOT_FOUND');
+    console.log('plateMiddle:', plateMiddle ? plateMiddle.value : 'NOT_FOUND');
+    console.log('plateLetter:', plateLetter ? plateLetter.value : 'NOT_FOUND');
+    console.log('plateLast:', plateLast ? plateLast.value : 'NOT_FOUND');
+    console.log('hidden:', hidden ? hidden.value : 'NOT_FOUND');
+    
+    if (plateIran && plateMiddle && plateLetter && plateLast && hidden) {
+      const iran = normalizeDigits(plateIran.value).trim();
+      const middle = normalizeDigits(plateMiddle.value).trim();
+      const letter = plateLetter.value.trim();
+      const last = normalizeDigits(plateLast.value).trim();
+      
+      console.log('Normalized values - iran:', iran, 'middle:', middle, 'letter:', letter, 'last:', last);
+      
+      // بررسی اینکه آیا حداقل یکی از فیلدها پر شده است
+      const hasAnyValue = iran || middle || letter || last;
+      
+      if (hasAnyValue) {
+        // اگر حداقل یکی از فیلدها پر شده باشد، باید همه کامل باشند
+        if (iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2) {
+          // فرمت نهایی: 11|345ب12
+          hidden.value = `${iran}|${middle}${letter}${last}`;
+          console.log('پلاک ذخیره شد:', hidden.value);
+        } else {
+          // اگر کامل نباشد، خطا بده
+          alert('لطفاً شماره پلاک را کامل وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
+          e.preventDefault();
+          return false;
+        }
+      } else {
+        // اگر هیچ فیلدی پر نشده باشد، پلاک خالی می‌ماند (اختیاری است)
+        hidden.value = '';
+        console.log('پلاک خالی است (اختیاری)');
+      }
+      
+      // اطمینان از اینکه hidden field در DOM موجود است
+      console.log('Final hidden value before submit:', hidden.value);
+    } else {
+      console.error('فیلدهای پلاک پیدا نشدند!', {
+        plateIran: !!plateIran,
+        plateMiddle: !!plateMiddle,
+        plateLetter: !!plateLetter,
+        plateLast: !!plateLast,
+        hidden: !!hidden
+      });
+    }
+  }, true); // استفاده از capture phase
   }
-  // فرمت نهایی: 11|345ب12
-  hidden.value = `${iran}|${middle}${letter}${last}`;
-}, true);
+});
 
 // Modal functions for adding new driver
 function openAddDriverModal() {
