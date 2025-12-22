@@ -504,7 +504,7 @@ def purchase_transport_list_view(request):
                 'created_at': created_at_filter,
             },
         }
-        return render(request, 'supply_purchase_transport_list.html', context)
+        return render(request, 'transport/supply_transport_list.html', context)
     except Exception as e:
         bug_logger.error(f"Purchase transport list error: {e}")
         messages.error(request, 'خطا در بارگذاری لیست حمل‌ها.')
@@ -522,7 +522,7 @@ def purchase_transport_list_view(request):
         }
         active_table = TransportTable([], prefix='active-', accessible_fields=table_accessible_fields)
         completed_table = TransportTable([], prefix='completed-', accessible_fields=table_accessible_fields)
-        return render(request, 'supply_purchase_transport_list.html', {
+        return render(request, 'transport/supply_transport_list.html', {
             'active_table': active_table,
             'completed_table': completed_table,
             'accessible_transport_fields': accessible_transport_fields,
@@ -677,7 +677,7 @@ def create_purchase_transport_view(request):
             
             raw_material_formset = RawMaterialInfoFormSet(prefix='materials')
         
-        return render(request, 'supply_create_purchase_transport.html', {
+        return render(request, 'transport/create_supply_transport.html', {
             'form': form,
             'raw_material_formset': raw_material_formset,
             'initial_order': initial_order,
@@ -686,7 +686,7 @@ def create_purchase_transport_view(request):
     except Exception as e:
         bug_logger.error(f"Create purchase transport error: {e}")
         messages.error(request, 'خطا در ایجاد حمل.')
-        return render(request, 'supply_create_purchase_transport.html', {
+        return render(request, 'transport/create_supply_transport.html', {
             'form': TransportForm(),
             'raw_material_formset': RawMaterialInfoFormSet(prefix='materials'),
             'initial_order': None,
@@ -729,7 +729,7 @@ def purchase_transport_detail_view(request, transport_number):
     # لیست تمام وضعیت‌های ممکن
     next_status_choices = pt.STATUS_CHOICES
     
-    return render(request, 'supply_purchase_transport_detail.html', {
+    return render(request, 'transport/supply_transport_detail.html', {
         'pt': pt,
         'logs': logs,
         'log_table': log_table,
@@ -758,7 +758,7 @@ def edit_purchase_transport_view(request, transport_number):
                 bug_logger.warning(f"Edit transport invalid form={form.errors}")
         else:
             form = TransportForm(instance=pt)
-        return render(request, 'supply_edit_purchase_transport.html', {
+        return render(request, 'transport/edit_supply_transport.html', {
             'form': form,
             'pt': pt,
         })
