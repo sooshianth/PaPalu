@@ -44,7 +44,7 @@ def get_accessible_product_price_list_fields(user):
             'price': True,
             'deadline': True,
             'loading_date': True,
-            'condition': True,
+            'description': True,
             'created_at': True,
             'actions': True,
         }
@@ -56,7 +56,7 @@ def get_accessible_product_price_list_fields(user):
         'price': (ProductFinancialInfoModel, 'price'),
         'deadline': (ProductFinancialInfoModel, 'deadline'),
         'loading_date': (ProductFinancialInfoModel, 'loading_date'),
-        'condition': (ProductFinancialInfoModel, 'condition'),
+        'description': (ProductFinancialInfoModel, 'description'),
         'created_at': None,  # همیشه نمایش داده می‌شود
         'actions': None,  # عملیات همیشه نمایش داده می‌شود
     }
