@@ -455,6 +455,106 @@
             max-width: 100%;
         }
     }
+    
+    /* استایل پاپ‌آپ اطلاعات قیمت‌گذاری */
+    .price-info-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s;
+    }
+    
+    .price-info-modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 30px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.3s;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .price-info-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .price-info-modal-header h3 {
+        color: var(--primary-green);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .price-info-modal-close {
+        color: var(--gray-600);
+        font-size: 2rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.3s;
+        line-height: 1;
+        padding: 0;
+        background: none;
+        border: none;
+    }
+    
+    .price-info-modal-close:hover {
+        color: var(--primary-green);
+    }
+    
+    .price-info-section {
+        margin-bottom: 20px;
+    }
+    
+    .price-info-section h4 {
+        color: var(--primary-green);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--light-green);
+    }
+    
+    .price-info-section p {
+        color: var(--gray-700);
+        line-height: 1.8;
+        margin: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    .price-info-section.empty {
+        color: var(--gray-500);
+        font-style: italic;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideDown {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -645,5 +745,109 @@
             });
         }
     })();
+    
+    // مدیریت پاپ‌آپ اطلاعات قیمت‌گذاری
+    document.addEventListener('DOMContentLoaded', function() {
+        // ایجاد المان پاپ‌آپ
+        const modal = document.createElement('div');
+        modal.className = 'price-info-modal';
+        modal.id = 'price-info-modal';
+        modal.innerHTML = `
+            <div class="price-info-modal-content">
+                <div class="price-info-modal-header">
+                    <h3>اطلاعات قیمت‌گذاری</h3>
+                    <button class="price-info-modal-close" onclick="closePriceInfoModal()">&times;</button>
+                </div>
+                <div id="price-info-content">
+                    <!-- محتوا اینجا قرار می‌گیرد -->
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // اضافه کردن event listener به دکمه‌های "دیدن"
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-view-price-info')) {
+                e.preventDefault();
+                const button = e.target;
+                const condition = button.getAttribute('data-condition') || '';
+                const conditionDescription = button.getAttribute('data-condition-description') || '';
+                const description = button.getAttribute('data-description') || '';
+                
+                // پر کردن محتوای پاپ‌آپ
+                const content = document.getElementById('price-info-content');
+                let html = '';
+                
+                // بخش شرط
+                html += '<div class="price-info-section">';
+                html += '<h4>شرط</h4>';
+                if (condition) {
+                    html += '<p>' + escapeHtml(condition) + '</p>';
+                } else {
+                    html += '<p class="empty">-</p>';
+                }
+                html += '</div>';
+                
+                // بخش توضیحات شرایط
+                html += '<div class="price-info-section">';
+                html += '<h4>توضیحات شرایط</h4>';
+                if (conditionDescription) {
+                    html += '<p>' + escapeHtml(conditionDescription) + '</p>';
+                } else {
+                    html += '<p class="empty">-</p>';
+                }
+                html += '</div>';
+                
+                // بخش توضیحات
+                html += '<div class="price-info-section">';
+                html += '<h4>توضیحات</h4>';
+                if (description) {
+                    html += '<p>' + escapeHtml(description) + '</p>';
+                } else {
+                    html += '<p class="empty">-</p>';
+                }
+                html += '</div>';
+                
+                content.innerHTML = html;
+                
+                // نمایش پاپ‌آپ
+                modal.style.display = 'block';
+            }
+        });
+        
+        // بستن پاپ‌آپ با کلیک روی پس‌زمینه
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closePriceInfoModal();
+            }
+        });
+        
+        // بستن پاپ‌آپ با کلید ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                closePriceInfoModal();
+            }
+        });
+    });
+    
+    // تابع بستن پاپ‌آپ
+    function closePriceInfoModal() {
+        const modal = document.getElementById('price-info-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+    
+    // تابع escape HTML برای جلوگیری از XSS
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
 </script>
 {% endblock %}

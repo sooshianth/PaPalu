@@ -1,5 +1,5 @@
 import django_tables2 as tables
-from django.utils.html import format_html, mark_safe
+from django.utils.html import format_html, mark_safe, escapejs
 from django.urls import reverse
 from core.PersonFolder import Person
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
@@ -8,6 +8,7 @@ from core.helpers import check_field_access_prefer_edit
 from typing import Optional, Dict
 from core.OrderFolder.OrderModel import Order
 import jdatetime
+import json
 
 
 def convert_to_persian_numbers(text):
@@ -1008,7 +1009,7 @@ class ProductPriceTable(tables.Table):
                 'price': True,
                 'deadline': True,
                 'loading_date': True,
-                'condition': True,
+                'description': True,
                 'created_at': True,
                 'actions': True,
             }
@@ -1020,7 +1021,7 @@ class ProductPriceTable(tables.Table):
             'price': (ProductFinancialInfoModel, 'price'),
             'deadline': (ProductFinancialInfoModel, 'deadline'),
             'loading_date': (ProductFinancialInfoModel, 'loading_date'),
-            'condition': (ProductFinancialInfoModel, 'condition'),
+            'description': (ProductFinancialInfoModel, 'description'),
             'created_at': None,  # همیشه نمایش داده می‌شود
             'actions': None,  # عملیات همیشه نمایش داده می‌شود
         }
@@ -1130,12 +1131,13 @@ class ProductPriceTable(tables.Table):
         }
     )
     
-    condition = tables.Column(
-        verbose_name='شرط',
-        orderable=True,
+    description = tables.Column(
+        verbose_name='شرح',
+        orderable=False,
+        empty_values=(),
         attrs={
-            'td': {'class': 'text-right'},
-            'th': {'class': 'text-right'}
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
         }
     )
     
@@ -1162,12 +1164,12 @@ class ProductPriceTable(tables.Table):
         from core.ProductFolder.ProductFinancialInfoModel import ProductFinancialInfo
         model = ProductFinancialInfo
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('product_code', 'product_name', 'price', 'deadline', 'loading_date', 'condition', 'created_at', 'actions')
+        fields = ('product_code', 'product_name', 'price', 'deadline', 'loading_date', 'description', 'created_at', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('product_code', 'product_name', 'price', 'deadline', 'loading_date', 'condition', 'created_at', 'actions')
+        sequence = ('product_code', 'product_name', 'price', 'deadline', 'loading_date', 'description', 'created_at', 'actions')
     
     def render_product_code(self, value, record):
         """نمایش کد محصول به صورت badge"""
@@ -1216,14 +1218,38 @@ class ProductPriceTable(tables.Table):
             return str(value)
         return '-'
     
-    def render_condition(self, value, record):
-        """نمایش شرط"""
-        if value:
-            condition_text = str(value)
+    def render_description(self, record):
+        """نمایش دکمه دیدن برای نمایش اطلاعات قیمت‌گذاری در پاپ‌آپ"""
+        # بررسی اینکه آیا اطلاعاتی برای نمایش وجود دارد
+        has_info = bool(
+            record.condition or 
+            record.condition_description or 
+            record.description
+        )
+        
+        if has_info:
+            # Escape کردن داده‌ها برای استفاده در HTML attributes
+            condition_escaped = escapejs(str(record.condition or ''))
+            condition_desc_escaped = escapejs(str(record.condition_description or ''))
+            description_escaped = escapejs(str(record.description or ''))
+            
+            # ایجاد یک دکمه که پاپ‌آپ را باز می‌کند
             return format_html(
-                '<span style="max-width: 200px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{}">{}</span>',
-                condition_text,
-                condition_text[:50] + '...' if len(condition_text) > 50 else condition_text
+                '<button type="button" class="btn-view-price-info" '
+                'data-price-id="{}" '
+                'data-condition="{}" '
+                'data-condition-description="{}" '
+                'data-description="{}" '
+                'style="padding: 5px 15px; border-radius: 6px; border: 1px solid #17a2b8; background-color: transparent; color: #17a2b8; cursor: pointer; font-size: 0.875rem; transition: all 0.3s;" '
+                'onmouseover="this.style.backgroundColor=\'#17a2b8\'; this.style.color=\'white\';" '
+                'onmouseout="this.style.backgroundColor=\'transparent\'; this.style.color=\'#17a2b8\';" '
+                'title="مشاهده اطلاعات قیمت‌گذاری">'
+                'دیدن'
+                '</button>',
+                record.id,
+                condition_escaped,
+                condition_desc_escaped,
+                description_escaped
             )
         return '-'
     

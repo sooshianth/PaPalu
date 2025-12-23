@@ -746,7 +746,7 @@ def create_procurement_purchase_order_view(request):
                         po.subtotal_without_freight = total_subtotal
                         po.save()  # triggers order_number generation, status defaults to DRAFT
                         
-                        # Create initial status log
+                        # Create initial status log for DRAFT
                         OrderStatusLog.objects.create(
                             order=po,
                             old_status='',
@@ -757,6 +757,10 @@ def create_procurement_purchase_order_view(request):
                         
                         material_formset.instance = po
                         material_formset.save()
+                        
+                        # تغییر وضعیت به "در انتظار تعریف حمل" بعد از ذخیره مواد اولیه
+                        if po.status == Order.STATUS_DRAFT:
+                            po.transition(Order.STATUS_AWAITING_TRANSPORT_DEFINITION, user=request.user, note='مواد اولیه ثبت شد')
                     else:
                         bug_logger.warning(f"Material formset invalid on create: {material_formset.errors}")
                         messages.error(request, 'مواد اولیه تکراری یا نامعتبر هستند. لطفاً خطاهای فرم را بررسی و اصلاح کنید.')

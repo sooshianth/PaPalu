@@ -151,8 +151,12 @@ class ProductFinancialInfoForm(forms.ModelForm):
     
     def clean_deadline(self):
         """اعتبارسنجی deadline - تاریخ و ساعت شمسی"""
+        # ابتدا infinite_deadline را از data خام بخوان (قبل از clean)
+        infinite_deadline = self.data.get('infinite_deadline', False)
+        if isinstance(infinite_deadline, str):
+            infinite_deadline = infinite_deadline.lower() in ('true', 'on', '1')
+        
         deadline = self.cleaned_data.get('deadline')
-        infinite_deadline = self.cleaned_data.get('infinite_deadline', False)
         
         # اگر تاریخ بینهایت انتخاب شده، تاریخ 99 سال بعد را ست می‌کنیم
         if infinite_deadline:
@@ -236,9 +240,17 @@ class ProductFinancialInfoForm(forms.ModelForm):
                 self.add_error('product', 'شناسه محصول معتبر نیست.')
         
         # بررسی deadline یا infinite_deadline
-        infinite_deadline = cleaned_data.get('infinite_deadline', False)
+        # ابتدا از data خام بخوان (قبل از clean)
+        infinite_deadline_raw = self.data.get('infinite_deadline', False)
+        if isinstance(infinite_deadline_raw, str):
+            infinite_deadline = infinite_deadline_raw.lower() in ('true', 'on', '1')
+        else:
+            infinite_deadline = bool(infinite_deadline_raw)
+        
         deadline = cleaned_data.get('deadline')
         
+        # اگر infinite_deadline فعال است، deadline باید از clean_deadline آمده باشد
+        # اگر infinite_deadline فعال نیست و deadline هم نیست، خطا بده
         if not infinite_deadline and not deadline:
             self.add_error('deadline', 'لطفاً تاریخ مهلت اعتبار را وارد کنید یا گزینه "بینهایت" را انتخاب کنید.')
         

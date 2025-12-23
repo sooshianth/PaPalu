@@ -44,6 +44,8 @@ def get_accessible_purchase_transport_fields(user):
         'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'view'),
         'driver_account_number': user_can_access_field(user, Transport, 'driver_account_number', 'view'),
         'driver_sheba_number': user_can_access_field(user, Transport, 'driver_sheba_number', 'view'),
+        'supplier_account_number': user_can_access_field(user, Transport, 'supplier_account_number', 'view'),
+        'supplier_sheba_number': user_can_access_field(user, Transport, 'supplier_sheba_number', 'view'),
         'expected_arrival_date': user_can_access_field(user, Transport, 'expected_arrival_date', 'view'),
         'actual_arrival_date': user_can_access_field(user, Transport, 'actual_arrival_date', 'view'),
         'loading_date': user_can_access_field(user, Transport, 'loading_date', 'view'),
@@ -55,6 +57,7 @@ def get_accessible_purchase_transport_fields(user):
         'notes': user_can_access_field(user, Transport, 'notes', 'view'),
         'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
         'created_by': user_can_access_field(user, Transport, 'created_by', 'view'),
+        'raw_materials': user_can_access_field(user, Transport, 'raw_material_infos', 'view'),
     }
 
 
@@ -113,7 +116,7 @@ class RawMaterialInfoForm(ModelForm):
         widgets = {
             'order_item': forms.HiddenInput(),
             'raw_material': forms.HiddenInput(),
-            'allocated_quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001', 'min': '0'}),
+            'allocated_quantity': forms.TextInput(attrs={'class': 'form-control', 'inputmode': 'decimal', 'pattern': '[0-9]+(\\.[0-9]{1,2})?'}),
             'weight_unit': forms.Select(attrs={'class': 'form-control', 'readonly': True}),
             'packaging_type': forms.Select(attrs={'class': 'form-control'}),
             'number_of_packages': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
@@ -128,6 +131,30 @@ class RawMaterialInfoForm(ModelForm):
             if self.instance.raw_material:
                 self.fields['raw_material_display'].initial = self.instance.raw_material.name
                 self.fields['weight_unit'].initial = self.instance.weight_unit
+    
+    def clean_allocated_quantity(self):
+        """تبدیل مقدار به Decimal بدون از دست دادن دقت"""
+        allocated_quantity = self.cleaned_data.get('allocated_quantity')
+        if allocated_quantity is None or allocated_quantity == '':
+            return None
+        
+        # تبدیل مستقیم به Decimal از string برای حفظ دقت
+        # اگر از float آمده باشد، ابتدا به string تبدیل می‌کنیم
+        if isinstance(allocated_quantity, (int, float)):
+            # استفاده از str برای جلوگیری از خطاهای float precision
+            return Decimal(str(allocated_quantity))
+        elif isinstance(allocated_quantity, Decimal):
+            return allocated_quantity
+        else:
+            # اگر string است، مستقیماً به Decimal تبدیل می‌کنیم
+            try:
+                # حذف فاصله‌ها و تبدیل به string
+                value_str = str(allocated_quantity).strip()
+                if not value_str:
+                    return None
+                return Decimal(value_str)
+            except (ValueError, TypeError) as e:
+                raise forms.ValidationError(f'مقدار وارد شده نامعتبر است: {str(e)}')
     
     def clean(self):
         cleaned_data = super().clean()
@@ -146,6 +173,17 @@ class RawMaterialInfoForm(ModelForm):
         if not order_item:
             self.add_error('order_item', 'این فیلد الزامی است.')
             return cleaned_data
+        
+        # تبدیل مقدار به Decimal با حفظ دقت
+        if allocated_quantity is not None:
+            if isinstance(allocated_quantity, (int, float)):
+                allocated_quantity = Decimal(str(allocated_quantity))
+            elif not isinstance(allocated_quantity, Decimal):
+                try:
+                    allocated_quantity = Decimal(str(allocated_quantity))
+                except (ValueError, TypeError):
+                    pass
+            cleaned_data['allocated_quantity'] = allocated_quantity
         
         if not allocated_quantity or allocated_quantity <= 0:
             self.add_error('allocated_quantity', 'مقدار تخصیص یافته باید بیشتر از صفر باشد.')
@@ -231,6 +269,7 @@ class TransportForm(ModelForm):
             'freight_payment_type', 'initial_freight', 'total_freight',
             'discount', 'surplus', 'freight_payment',
             'driver_account_number', 'driver_sheba_number',
+            'supplier_account_number', 'supplier_sheba_number',
             'expected_arrival_date',
             'waybill_number', 'notes'
         ]
@@ -247,6 +286,8 @@ class TransportForm(ModelForm):
             'freight_payment': 'کرایه پرداختی',
             'driver_account_number': 'شماره حساب راننده',
             'driver_sheba_number': 'شماره شبا راننده',
+            'supplier_account_number': 'شماره حساب تامین‌کننده',
+            'supplier_sheba_number': 'شماره شبا تامین‌کننده',
             'expected_arrival_date': 'تاریخ پیش‌بینی ورود',
             'waybill_number': 'شماره بارنامه',
             'notes': 'یادداشت',
@@ -256,7 +297,7 @@ class TransportForm(ModelForm):
             'vehicle_type': forms.Select(attrs={'class': 'form-control'}),
             'plate_number': forms.TextInput(attrs={'class': 'form-control'}),
             'driver': forms.Select(attrs={'class': 'form-control'}),
-            'freight_payment_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'freight_payment_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_freight_payment_type'}),
             'initial_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'total_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -264,6 +305,8 @@ class TransportForm(ModelForm):
             'freight_payment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'driver_account_number': forms.TextInput(attrs={'class': 'form-control'}),
             'driver_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier_account_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'supplier_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
             'expected_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
             'waybill_number': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -273,6 +316,7 @@ class TransportForm(ModelForm):
         super().__init__(*args, **kwargs)
         from core.PersonFolder.PersonModel import Person
         from core.AllocationFolder.AllocationModel import Allocation
+        from core.OrderFolder.OrderModel import Order
         
         # فیلدهای اجباری
         self.fields['vehicle_type'].required = True
@@ -303,6 +347,13 @@ class TransportForm(ModelForm):
         # یک hidden field برای driver_id اضافه می‌کنیم
         self.fields['driver'].widget = forms.HiddenInput()
         self.fields['driver'].required = False
+        
+        # تنظیم choices برای freight_payment_type
+        self.fields['freight_payment_type'].choices = Order.FREIGHT_PAYMENT_CHOICES
+        
+        # مخفی کردن فیلدهای حساب بانکی تامین‌کننده (به صورت پیش‌فرض)
+        self.fields['supplier_account_number'].widget = forms.HiddenInput()
+        self.fields['supplier_sheba_number'].widget = forms.HiddenInput()
     
     def clean(self):
         cleaned_data = super().clean()
@@ -435,6 +486,7 @@ def purchase_transport_list_view(request):
                 accessible_transport_fields.get('purchase_order', False) and
                 accessible_po_fields.get('status', False)
             ),
+            'raw_materials': accessible_transport_fields.get('raw_materials', False),
             'transport_type': accessible_transport_fields.get('transport_type', False),
             'vehicle_type': accessible_transport_fields.get('vehicle_type', False),
             'status': accessible_transport_fields.get('status', False),
@@ -467,7 +519,7 @@ def purchase_transport_list_view(request):
                 'created_at': created_at_filter,
             },
         }
-        return render(request, 'supply_purchase_transport_list.html', context)
+        return render(request, 'transport/supply_transport_list.html', context)
     except Exception as e:
         bug_logger.error(f"Purchase transport list error: {e}")
         messages.error(request, 'خطا در بارگذاری لیست حمل‌ها.')
@@ -485,7 +537,7 @@ def purchase_transport_list_view(request):
         }
         active_table = TransportTable([], prefix='active-', accessible_fields=table_accessible_fields)
         completed_table = TransportTable([], prefix='completed-', accessible_fields=table_accessible_fields)
-        return render(request, 'supply_purchase_transport_list.html', {
+        return render(request, 'transport/supply_transport_list.html', {
             'active_table': active_table,
             'completed_table': completed_table,
             'accessible_transport_fields': accessible_transport_fields,
@@ -521,6 +573,8 @@ def create_purchase_transport_view(request):
         'freight_payment': user_can_access_field(request.user, Transport, 'freight_payment', 'edit'),
         'driver_account_number': user_can_access_field(request.user, Transport, 'driver_account_number', 'edit'),
         'driver_sheba_number': user_can_access_field(request.user, Transport, 'driver_sheba_number', 'edit'),
+        'supplier_account_number': user_can_access_field(request.user, Transport, 'supplier_account_number', 'edit'),
+        'supplier_sheba_number': user_can_access_field(request.user, Transport, 'supplier_sheba_number', 'edit'),
         'expected_arrival_date': user_can_access_field(request.user, Transport, 'expected_arrival_date', 'edit'),
         'actual_arrival_date': user_can_access_field(request.user, Transport, 'actual_arrival_date', 'edit'),
         'loading_date': user_can_access_field(request.user, Transport, 'loading_date', 'edit'),
@@ -558,6 +612,12 @@ def create_purchase_transport_view(request):
                         if not pt.status:
                             pt.status = Transport.STATUS_DRAFT
                         
+                        # لاگ کردن پلاک قبل از ذخیره
+                        if pt.plate_number:
+                            bug_logger.info(f"پلاک قبل از ذخیره: {pt.plate_number}")
+                        else:
+                            bug_logger.warning(f"پلاک خالی است در فرم - request.POST: {request.POST.get('plate_number', 'NOT_FOUND')}")
+                        
                         # تولید خودکار شماره حمل
                         if not pt.transport_number:
                             import uuid
@@ -569,6 +629,12 @@ def create_purchase_transport_view(request):
                         
                         pt.save()
                         
+                        # لاگ کردن پلاک بعد از ذخیره
+                        if pt.plate_number:
+                            bug_logger.info(f"پلاک بعد از ذخیره: {pt.plate_number}")
+                        else:
+                            bug_logger.warning(f"پلاک هنوز خالی است بعد از ذخیره")
+                        
                         # ذخیره مواد اولیه
                         raw_material_formset.instance = pt
                         raw_material_formset.save()
@@ -577,15 +643,22 @@ def create_purchase_transport_view(request):
                         pt.status = Transport.STATUS_AWAITING_VEHICLE_ENTRY
                         pt.save()
                         
-                        # تغییر وضعیت سفارش از "در انتظار تعریف حمل" به "در انتظار ورود خودرو"
+                        # بررسی وضعیت سفارش و تغییر آن در صورت نیاز
                         if pt.allocation and pt.allocation.order:
                             order = pt.allocation.order
                             if order.status == Order.STATUS_AWAITING_TRANSPORT_DEFINITION:
-                                try:
-                                    order.transition(Order.STATUS_AWAITING_VEHICLE_ENTRY, user=request.user, note='تعریف حمل انجام شد')
-                                    bug_logger.info(f"وضعیت سفارش {order.order_number} از 'در انتظار تعریف حمل' به 'در انتظار ورود خودرو' تغییر کرد")
-                                except Exception as order_transition_err:
-                                    bug_logger.warning(f"خطا در تغییر وضعیت سفارش {order.order_number}: {order_transition_err}")
+                                # بررسی اینکه آیا مجموع وزن حمل‌ها به اندازه وزن سفارش رسیده یا نه
+                                remaining_weight = order.get_remaining_weight()
+                                
+                                # اگر وزن باقیمانده صفر یا کمتر شد، وضعیت را تغییر بده
+                                if remaining_weight <= Decimal('0'):
+                                    try:
+                                        order.transition(Order.STATUS_AWAITING_VEHICLE_ENTRY, user=request.user, note='تمام مواد اولیه به حمل‌ها تخصیص یافت')
+                                        bug_logger.info(f"وضعیت سفارش {order.order_number} از 'در انتظار تعریف حمل' به 'در انتظار ورود خودرو' تغییر کرد - تمام مواد اولیه تخصیص یافت")
+                                    except Exception as order_transition_err:
+                                        bug_logger.warning(f"خطا در تغییر وضعیت سفارش {order.order_number}: {order_transition_err}")
+                                else:
+                                    bug_logger.info(f"سفارش {order.order_number} هنوز در وضعیت 'در انتظار تعریف حمل' باقی ماند - وزن باقیمانده: {remaining_weight} کیلوگرم")
                         
                         bug_logger.info(f"حمل جدید ایجاد شد: {pt.transport_number} - وضعیت: {pt.status} - ID: {pt.pk}")
                         
@@ -621,7 +694,7 @@ def create_purchase_transport_view(request):
             
             raw_material_formset = RawMaterialInfoFormSet(prefix='materials')
         
-        return render(request, 'supply_create_purchase_transport.html', {
+        return render(request, 'transport/create_supply_transport.html', {
             'form': form,
             'raw_material_formset': raw_material_formset,
             'initial_order': initial_order,
@@ -630,7 +703,7 @@ def create_purchase_transport_view(request):
     except Exception as e:
         bug_logger.error(f"Create purchase transport error: {e}")
         messages.error(request, 'خطا در ایجاد حمل.')
-        return render(request, 'supply_create_purchase_transport.html', {
+        return render(request, 'transport/create_supply_transport.html', {
             'form': TransportForm(),
             'raw_material_formset': RawMaterialInfoFormSet(prefix='materials'),
             'initial_order': None,
@@ -673,7 +746,7 @@ def purchase_transport_detail_view(request, transport_number):
     # لیست تمام وضعیت‌های ممکن
     next_status_choices = pt.STATUS_CHOICES
     
-    return render(request, 'supply_purchase_transport_detail.html', {
+    return render(request, 'transport/supply_transport_detail.html', {
         'pt': pt,
         'logs': logs,
         'log_table': log_table,
@@ -702,7 +775,7 @@ def edit_purchase_transport_view(request, transport_number):
                 bug_logger.warning(f"Edit transport invalid form={form.errors}")
         else:
             form = TransportForm(instance=pt)
-        return render(request, 'supply_edit_purchase_transport.html', {
+        return render(request, 'transport/edit_supply_transport.html', {
             'form': form,
             'pt': pt,
         })
@@ -896,6 +969,200 @@ def create_driver_api(request):
 
 
 @login_required
+def get_driver_bank_accounts_api(request, driver_id):
+    """API endpoint برای دریافت حساب‌های بانکی راننده"""
+    from django.http import JsonResponse
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    audit_logger.info(f"دریافت حساب‌های بانکی راننده از طریق API - ID: {driver_id}")
+    try:
+        driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
+        
+        # دریافت FinancialBanking برای این راننده
+        financial_banking = FinancialBanking.objects.filter(person=driver).first()
+        
+        accounts_data = []
+        if financial_banking:
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).all()
+            for account in bank_accounts:
+                accounts_data.append({
+                    'id': account.pk,
+                    'account_number': account.account_number or '',
+                    'shaba_number': account.shaba_number or '',
+                    'bank_name': account.bank_name or '',
+                    'display': f"{account.bank_name or 'بدون نام'} - {account.account_number or 'بدون شماره حساب'}"
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'accounts': accounts_data,
+        })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Get driver bank accounts API error: {e}")
+        return JsonResponse({'error': 'شناسه راننده نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Get driver bank accounts API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در دریافت حساب‌های بانکی: {str(e)}'}, status=400)
+
+
+@login_required
+def create_driver_bank_account_api(request):
+    """API برای ایجاد حساب بانکی جدید برای راننده"""
+    from django.http import JsonResponse
+    from django.db import transaction
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        driver_id = request.POST.get('driver_id', '').strip()
+        account_number = request.POST.get('account_number', '').strip()
+        shaba_number = request.POST.get('shaba_number', '').strip()
+        bank_name = request.POST.get('bank_name', '').strip()
+        
+        if not driver_id:
+            return JsonResponse({'error': 'شناسه راننده الزامی است'}, status=400)
+        
+        driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
+        
+        # دریافت یا ایجاد FinancialBanking برای این راننده
+        financial_banking, created = FinancialBanking.objects.get_or_create(person=driver)
+        
+        with transaction.atomic():
+            bank_account = BankAccount.objects.create(
+                financial_banking=financial_banking,
+                account_number=account_number if account_number else None,
+                shaba_number=shaba_number if shaba_number else None,
+                bank_name=bank_name if bank_name else None,
+            )
+            
+            audit_logger.info(f"حساب بانکی جدید برای راننده {driver.name} ایجاد شد - حساب: {account_number} - توسط: {request.user.username}")
+            
+            return JsonResponse({
+                'success': True,
+                'account': {
+                    'id': bank_account.pk,
+                    'account_number': bank_account.account_number or '',
+                    'shaba_number': bank_account.shaba_number or '',
+                    'bank_name': bank_account.bank_name or '',
+                    'display': f"{bank_account.bank_name or 'بدون نام'} - {bank_account.account_number or 'بدون شماره حساب'}"
+                }
+            })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Create driver bank account API error: {e}")
+        return JsonResponse({'error': 'شناسه راننده نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Create driver bank account API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در ایجاد حساب بانکی: {str(e)}'}, status=500)
+
+
+@login_required
+def get_supplier_bank_accounts_api(request, order_id):
+    """API endpoint برای دریافت حساب‌های بانکی تامین‌کننده از طریق order_id"""
+    from django.http import JsonResponse
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    audit_logger.info(f"دریافت حساب‌های بانکی تامین‌کننده از طریق API - Order ID: {order_id}")
+    try:
+        order = get_object_or_404(Order, pk=order_id)
+        
+        # دریافت تامین‌کننده از سفارش
+        supplier = order.customer  # برای سفارش خرید، customer همان supplier است
+        if not supplier:
+            return JsonResponse({
+                'success': True,
+                'accounts': [],
+            })
+        
+        # دریافت FinancialBanking برای این تامین‌کننده
+        financial_banking = FinancialBanking.objects.filter(person=supplier).first()
+        
+        accounts_data = []
+        if financial_banking:
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).all()
+            for account in bank_accounts:
+                accounts_data.append({
+                    'id': account.pk,
+                    'account_number': account.account_number or '',
+                    'shaba_number': account.shaba_number or '',
+                    'bank_name': account.bank_name or '',
+                    'display': f"{account.bank_name or 'بدون نام'} - {account.account_number or 'بدون شماره حساب'}"
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'accounts': accounts_data,
+        })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Get supplier bank accounts API error: {e}")
+        return JsonResponse({'error': 'شناسه سفارش نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Get supplier bank accounts API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در دریافت حساب‌های بانکی: {str(e)}'}, status=400)
+
+
+@login_required
+def create_supplier_bank_account_api(request):
+    """API برای ایجاد حساب بانکی جدید برای تامین‌کننده"""
+    from django.http import JsonResponse
+    from django.db import transaction
+    from core.PersonFolder.FinancialBankingModel import FinancialBanking
+    from core.PersonFolder.BankAccountModel import BankAccount
+    
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        order_id = request.POST.get('order_id', '').strip()
+        account_number = request.POST.get('account_number', '').strip()
+        shaba_number = request.POST.get('shaba_number', '').strip()
+        bank_name = request.POST.get('bank_name', '').strip()
+        
+        if not order_id:
+            return JsonResponse({'error': 'شناسه سفارش الزامی است'}, status=400)
+        
+        order = get_object_or_404(Order, pk=int(order_id))
+        supplier = order.customer  # برای سفارش خرید، customer همان supplier است
+        
+        if not supplier:
+            return JsonResponse({'error': 'تامین‌کننده برای این سفارش یافت نشد'}, status=400)
+        
+        # دریافت یا ایجاد FinancialBanking برای این تامین‌کننده
+        financial_banking, created = FinancialBanking.objects.get_or_create(person=supplier)
+        
+        with transaction.atomic():
+            bank_account = BankAccount.objects.create(
+                financial_banking=financial_banking,
+                account_number=account_number if account_number else None,
+                shaba_number=shaba_number if shaba_number else None,
+                bank_name=bank_name if bank_name else None,
+            )
+            
+            audit_logger.info(f"حساب بانکی جدید برای تامین‌کننده {supplier.name} ایجاد شد - حساب: {account_number} - توسط: {request.user.username}")
+            
+            return JsonResponse({
+                'success': True,
+                'account': {
+                    'id': bank_account.pk,
+                    'account_number': bank_account.account_number or '',
+                    'shaba_number': bank_account.shaba_number or '',
+                    'bank_name': bank_account.bank_name or '',
+                    'display': f"{bank_account.bank_name or 'بدون نام'} - {bank_account.account_number or 'بدون شماره حساب'}"
+                }
+            })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Create supplier bank account API error: {e}")
+        return JsonResponse({'error': 'شناسه سفارش نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Create supplier bank account API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در ایجاد حساب بانکی: {str(e)}'}, status=500)
+
+
+@login_required
 def get_order_materials_api(request, order_number):
     """API endpoint برای دریافت لیست مواد اولیه سفارش با مقادیر باقیمانده"""
     from django.http import JsonResponse
@@ -910,13 +1177,27 @@ def get_order_materials_api(request, order_number):
                 remaining_quantity = order_item.get_remaining_quantity()
                 allocated_quantity = order_item.get_allocated_quantity()
                 
+                # برگرداندن مقادیر واقعی (بدون فرمت) برای محاسبات
+                # استفاده از normalize برای اطمینان از نمایش دقیق
+                def format_decimal_for_api(value):
+                    """فرمت کردن Decimal برای API بدون گرد کردن"""
+                    if value is None:
+                        return '0'
+                    # تبدیل به Decimal و سپس normalize برای حذف صفرهای اضافی
+                    from decimal import Decimal
+                    d = Decimal(str(value))
+                    # normalize برای حذف صفرهای اضافی در انتها
+                    normalized = d.normalize()
+                    # تبدیل به string بدون فرمت اضافی
+                    return str(normalized)
+                
                 materials_data.append({
                     'id': order_item.id,
                     'raw_material_id': order_item.raw_material.id,
                     'raw_material_name': order_item.raw_material.name,
-                    'total_quantity': str(order_item.quantity),
-                    'allocated_quantity': str(allocated_quantity),
-                    'remaining_quantity': str(remaining_quantity),
+                    'total_quantity': format_decimal_for_api(order_item.quantity),
+                    'allocated_quantity': format_decimal_for_api(allocated_quantity),
+                    'remaining_quantity': format_decimal_for_api(remaining_quantity),
                     'weight_unit': order_item.weight_unit,
                     'weight_unit_display': order_item.get_weight_unit_display(),
                     'is_fully_allocated': order_item.is_fully_allocated(),
