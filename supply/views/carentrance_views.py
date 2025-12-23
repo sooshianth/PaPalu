@@ -21,6 +21,8 @@ from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 from core.PersonFolder.PersonModel import Person
+from core.PersonFolder.FinancialBankingModel import FinancialBanking
+from core.PersonFolder.BankAccountModel import BankAccount
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from django.contrib.auth import get_user_model
 from supply.tables import TransportTable
@@ -110,6 +112,7 @@ def get_accessible_purchase_transport_fields_edit(user):
         'freight_payment': user_can_access_field(user, Transport, 'freight_payment', 'edit'),
         'driver_account_number': user_can_access_field(user, Transport, 'driver_account_number', 'edit'),
         'driver_sheba_number': user_can_access_field(user, Transport, 'driver_sheba_number', 'edit'),
+        'driver_bank_account': user_can_access_field(user, Transport, 'driver_bank_account', 'edit'),
         'expected_arrival_date': user_can_access_field(user, Transport, 'expected_arrival_date', 'edit'),
         'actual_arrival_date': user_can_access_field(user, Transport, 'actual_arrival_date', 'edit'),
         'loading_date': user_can_access_field(user, Transport, 'loading_date', 'edit'),
@@ -189,10 +192,10 @@ class CarEntranceDriverForm(forms.Form):
     فیلدهای اجباری:
     - نام راننده
     - شماره تلفن راننده
-    - شماره حساب راننده
-    - شماره شبا راننده
     - پلاک
     - کد ملی راننده
+    - شماره حساب راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
+    - شماره شبا راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
     """
     phone = forms.CharField(
         label='شماره تلفن راننده',
@@ -216,14 +219,36 @@ class CarEntranceDriverForm(forms.Form):
     )
     account = forms.CharField(
         label='شماره حساب راننده',
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'شماره حساب بانکی'})
     )
     sheba = forms.CharField(
         label='شماره شبا راننده',
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'IR123456789012345678901234'})
     )
+    
+    def __init__(self, *args, freight_payment_type=None, driver=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.freight_payment_type = freight_payment_type
+        self.driver = driver
+        
+        # اگر نوع کرایه "پرداخت به راننده" باشد، فیلدهای حساب و شبا را required می‌کنیم
+        if freight_payment_type == 'pay_to_driver':
+            self.fields['account'].required = True
+            self.fields['sheba'].required = True
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        # بررسی اینکه اگر نوع کرایه "پرداخت به راننده" باشد، فیلدهای حساب و شبا باید پر شوند
+        if self.freight_payment_type == 'pay_to_driver':
+            account = cleaned_data.get('account')
+            sheba = cleaned_data.get('sheba')
+            if not account:
+                self.add_error('account', 'این فیلد برای نوع کرایه "پرداخت به راننده" اجباری است.')
+            if not sheba:
+                self.add_error('sheba', 'این فیلد برای نوع کرایه "پرداخت به راننده" اجباری است.')
+        return cleaned_data
 
 
 class CarEntranceTable(TransportTable):
@@ -301,7 +326,7 @@ class CarEntranceTable(TransportTable):
             transport_id = str(record.pk)
         register_url = reverse('supply:carentrance_register_driver', args=[str(transport_id)])
         return format_html(
-            '<a href="{}" class="btn-primary" title="ثبت راننده">ثبت راننده</a>',
+            '<a href="{}" class="btn-register-driver" title="ثبت راننده">ثبت راننده</a>',
             register_url
         )
     
@@ -460,7 +485,13 @@ def register_driver_for_transport_view(request, transport_number):
         return redirect(reverse('supply:carentrance'))
 
     if request.method == 'POST':
-        form = CarEntranceDriverForm(request.POST)
+        # ابتدا راننده را پیدا یا ایجاد می‌کنیم تا بتوانیم queryset فرم را تنظیم کنیم
+        phone = request.POST.get('phone', '').strip()
+        driver = None
+        if phone:
+            driver = Person.objects.filter(phone_number=phone, type='driver').first()
+        
+        form = CarEntranceDriverForm(request.POST, freight_payment_type=pt.freight_payment_type, driver=driver)
         if form.is_valid():
             data = form.cleaned_data
             phone = data.get('phone')
@@ -491,8 +522,59 @@ def register_driver_for_transport_view(request, transport_number):
                     # به‌روزرسانی فیلدهای حمل
                     pt.driver = driver
                     pt.plate_number = data.get('plate_number')
-                    pt.driver_account_number = data.get('account')
-                    pt.driver_sheba_number = data.get('sheba')
+                    # فقط اگر نوع کرایه "پرداخت به راننده" باشد، حساب بانکی را ثبت می‌کنیم
+                    if pt.freight_payment_type == 'pay_to_driver':
+                        account_number = data.get('account', '').strip()
+                        sheba_number = data.get('sheba', '').strip()
+                        
+                        if account_number or sheba_number:
+                            # دریافت یا ایجاد FinancialBanking برای راننده
+                            financial_banking, created = FinancialBanking.objects.get_or_create(
+                                person=driver
+                            )
+                            
+                            # جستجوی حساب بانکی موجود با این شماره حساب و شبا
+                            # ابتدا سعی می‌کنیم با هر دو فیلد پیدا کنیم
+                            bank_account = None
+                            if account_number and sheba_number:
+                                bank_account = BankAccount.objects.filter(
+                                    financial_banking=financial_banking,
+                                    account_number=account_number,
+                                    shaba_number=sheba_number
+                                ).first()
+                            
+                            # اگر پیدا نشد، با شماره حساب جستجو می‌کنیم
+                            if not bank_account and account_number:
+                                bank_account = BankAccount.objects.filter(
+                                    financial_banking=financial_banking,
+                                    account_number=account_number
+                                ).first()
+                            
+                            # اگر هنوز پیدا نشد، با شماره شبا جستجو می‌کنیم
+                            if not bank_account and sheba_number:
+                                bank_account = BankAccount.objects.filter(
+                                    financial_banking=financial_banking,
+                                    shaba_number=sheba_number
+                                ).first()
+                            
+                            # اگر حساب بانکی وجود نداشت، یکی بساز
+                            if not bank_account:
+                                bank_account = BankAccount.objects.create(
+                                    financial_banking=financial_banking,
+                                    account_number=account_number if account_number else None,
+                                    shaba_number=sheba_number if sheba_number else None,
+                                    bank_name=None  # می‌تواند بعداً پر شود
+                                )
+                                bug_logger.info(f"حساب بانکی جدید برای راننده {driver.name} ایجاد شد - حساب: {account_number}, شبا: {sheba_number}")
+                            else:
+                                bug_logger.info(f"حساب بانکی موجود برای راننده {driver.name} پیدا شد - حساب: {bank_account.account_number}")
+                            
+                            pt.driver_bank_account = bank_account
+                        else:
+                            pt.driver_bank_account = None
+                    else:
+                        # در غیر این صورت، آن را None می‌کنیم
+                        pt.driver_bank_account = None
                     
                     # ثبت زمان ورود خودرو (GateEntryTime)
                     today_jalali = jdatetime.date.today()
@@ -537,7 +619,12 @@ def register_driver_for_transport_view(request, transport_number):
             initial['name'] = pt.driver.name
             initial['national_id'] = getattr(pt.driver, 'national_id', '')
             initial['plate_number'] = pt.plate_number
-        form = CarEntranceDriverForm(initial=initial)
+            # اگر حساب بانکی وجود دارد، شماره حساب و شبا را پر کن
+            if pt.driver_bank_account:
+                initial['account'] = pt.driver_bank_account.account_number or ''
+                initial['sheba'] = pt.driver_bank_account.shaba_number or ''
+        # ارسال freight_payment_type و driver به فرم برای تعیین required بودن فیلدهای حساب و شبا
+        form = CarEntranceDriverForm(initial=initial, freight_payment_type=pt.freight_payment_type, driver=pt.driver)
 
     # تبدیل order_items به list برای جلوگیری از خطای Decimal در template
     # استفاده از values برای انتخاب فقط فیلدهای مورد نیاز و جلوگیری از خواندن فیلدهای Decimal نامعتبر
@@ -580,10 +667,7 @@ def register_driver_for_transport_view(request, transport_number):
 
 @login_required
 def driver_lookup_api(request):
-    """API برای جستجوی راننده با شماره تلفن (برای autofill)
-    
-    اطلاعات راننده را از آخرین حمل او نیز استخراج می‌کند (account و sheba)
-    """
+    """API برای جستجوی راننده با شماره تلفن (برای autofill)"""
     audit_logger.info("جستجوی راننده با شماره تلفن از طریق API")
     phone = request.GET.get('phone')
     if not phone:
@@ -595,21 +679,12 @@ def driver_lookup_api(request):
         if not driver:
             return JsonResponse({'found': False})
         
-        # جستجوی آخرین حمل راننده برای دریافت account و sheba
-        last_transport = Transport.objects.filter(
-            driver=driver
-        ).exclude(
-            driver_account_number__isnull=True,
-            driver_sheba_number__isnull=True
-        ).order_by('-created_at').first()
-        
         data = {
             'found': True,
+            'driver_id': driver.pk,
             'name': driver.name or '',
             'national_id': getattr(driver, 'national_id', '') or '',
             'phone': driver.phone_number or '',
-            'account': last_transport.driver_account_number if last_transport and last_transport.driver_account_number else '',
-            'sheba': last_transport.driver_sheba_number if last_transport and last_transport.driver_sheba_number else '',
         }
         
         bug_logger.debug(f"Driver lookup successful for phone {phone}: {data.get('name')}")
@@ -617,6 +692,42 @@ def driver_lookup_api(request):
     except Exception as e:
         bug_logger.error(f"Driver lookup error for phone {phone}: {e}", exc_info=True)
         return JsonResponse({'error': 'lookup_failed'}, status=500)
+
+
+@login_required
+def get_driver_bank_accounts_api(request, driver_id):
+    """API endpoint برای دریافت حساب‌های بانکی راننده"""
+    from django.http import JsonResponse
+    
+    audit_logger.info(f"دریافت حساب‌های بانکی راننده از طریق API - ID: {driver_id}")
+    try:
+        driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
+        
+        # دریافت FinancialBanking برای این راننده
+        financial_banking = FinancialBanking.objects.filter(person=driver).first()
+        
+        accounts_data = []
+        if financial_banking:
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).all()
+            for account in bank_accounts:
+                accounts_data.append({
+                    'id': account.pk,
+                    'account_number': account.account_number or '',
+                    'shaba_number': account.shaba_number or '',
+                    'bank_name': account.bank_name or '',
+                    'display': f"{account.bank_name or 'بدون نام'} - {account.account_number or 'بدون شماره حساب'}"
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'accounts': accounts_data,
+        })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Get driver bank accounts API error: {e}")
+        return JsonResponse({'error': 'شناسه راننده نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Get driver bank accounts API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در دریافت حساب‌های بانکی: {str(e)}'}, status=400)
 
 
 class CarExitTable(TransportTable):

@@ -851,18 +851,12 @@
                     {% endif %}
                 </div>
                     
-                    <!-- Hidden fields for account number and sheba number -->
-                    {% if accessible_transport_fields.driver_account_number %}
-                    <input type="hidden" id="id_driver_account_number" name="driver_account_number" value="{{ form.driver_account_number.value|default:'' }}">
+                    <!-- Hidden fields for bank account -->
+                    {% if accessible_transport_fields.driver_bank_account %}
+                    <input type="hidden" id="id_driver_bank_account" name="driver_bank_account" value="{{ form.driver_bank_account.value|default:'' }}">
                     {% endif %}
-                    {% if accessible_transport_fields.driver_sheba_number %}
-                    <input type="hidden" id="id_driver_sheba_number" name="driver_sheba_number" value="{{ form.driver_sheba_number.value|default:'' }}">
-                    {% endif %}
-                    {% if accessible_transport_fields.supplier_account_number %}
-                    <input type="hidden" id="id_supplier_account_number" name="supplier_account_number" value="{{ form.supplier_account_number.value|default:'' }}">
-                    {% endif %}
-                    {% if accessible_transport_fields.supplier_sheba_number %}
-                    <input type="hidden" id="id_supplier_sheba_number" name="supplier_sheba_number" value="{{ form.supplier_sheba_number.value|default:'' }}">
+                    {% if accessible_transport_fields.supplier_bank_account %}
+                    <input type="hidden" id="id_supplier_bank_account" name="supplier_bank_account" value="{{ form.supplier_bank_account.value|default:'' }}">
                     {% endif %}
                 </div>
             </div>
@@ -1796,15 +1790,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (accountSelect) {
     accountSelect.addEventListener('change', function() {
       const selectedOption = this.options[this.selectedIndex];
-      const accountNumberInput = document.getElementById('id_driver_account_number');
-      const shebaNumberInput = document.getElementById('id_driver_sheba_number');
+      const bankAccountInput = document.getElementById('id_driver_bank_account');
       
-      if (selectedOption.value && accountNumberInput && shebaNumberInput) {
-        accountNumberInput.value = selectedOption.dataset.accountNumber || '';
-        shebaNumberInput.value = selectedOption.dataset.shebaNumber || '';
+      if (selectedOption.value && bankAccountInput) {
+        bankAccountInput.value = selectedOption.value;
       } else {
-        if (accountNumberInput) accountNumberInput.value = '';
-        if (shebaNumberInput) shebaNumberInput.value = '';
+        if (bankAccountInput) bankAccountInput.value = '';
       }
     });
   }
@@ -1871,11 +1862,9 @@ function saveNewDriverBankAccount() {
       accountSelect.appendChild(option);
       accountSelect.value = data.account.id;
       
-      // به‌روزرسانی hidden fields
-      const accountNumberInput = document.getElementById('id_driver_account_number');
-      const shebaNumberInput = document.getElementById('id_driver_sheba_number');
-      if (accountNumberInput) accountNumberInput.value = data.account.account_number || '';
-      if (shebaNumberInput) shebaNumberInput.value = data.account.shaba_number || '';
+      // به‌روزرسانی hidden field
+      const bankAccountInput = document.getElementById('id_driver_bank_account');
+      if (bankAccountInput) bankAccountInput.value = data.account.id;
       
       closeAddDriverBankAccountModal();
       alert('حساب بانکی با موفقیت اضافه شد.');
@@ -1944,11 +1933,9 @@ function saveNewSupplierBankAccount() {
       accountSelect.appendChild(option);
       accountSelect.value = data.account.id;
       
-      // به‌روزرسانی hidden fields
-      const accountNumberInput = document.getElementById('id_supplier_account_number');
-      const shebaNumberInput = document.getElementById('id_supplier_sheba_number');
-      if (accountNumberInput) accountNumberInput.value = data.account.account_number || '';
-      if (shebaNumberInput) shebaNumberInput.value = data.account.shaba_number || '';
+      // به‌روزرسانی hidden field
+      const bankAccountInput = document.getElementById('id_supplier_bank_account');
+      if (bankAccountInput) bankAccountInput.value = data.account.id;
       
       closeAddSupplierBankAccountModal();
       alert('حساب بانکی با موفقیت اضافه شد.');
@@ -2001,15 +1988,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (supplierAccountSelect) {
     supplierAccountSelect.addEventListener('change', function() {
       const selectedOption = this.options[this.selectedIndex];
-      const accountNumberInput = document.getElementById('id_supplier_account_number');
-      const shebaNumberInput = document.getElementById('id_supplier_sheba_number');
+      const bankAccountInput = document.getElementById('id_supplier_bank_account');
       
-      if (selectedOption.value && accountNumberInput && shebaNumberInput) {
-        accountNumberInput.value = selectedOption.dataset.accountNumber || '';
-        shebaNumberInput.value = selectedOption.dataset.shebaNumber || '';
+      if (selectedOption.value && bankAccountInput) {
+        bankAccountInput.value = selectedOption.value;
       } else {
-        if (accountNumberInput) accountNumberInput.value = '';
-        if (shebaNumberInput) shebaNumberInput.value = '';
+        if (bankAccountInput) bankAccountInput.value = '';
       }
     });
   }

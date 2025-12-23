@@ -4,6 +4,7 @@ from django.conf import settings
 from django.core.validators import MinValueValidator
 from core.PersonFolder import Person, DeliveryAddress
 from core.AllocationFolder.AllocationModel import Allocation
+from core.PersonFolder.BankAccountModel import BankAccount
 
 
 class Transport(models.Model):
@@ -288,37 +289,58 @@ class Transport(models.Model):
     )
     
     # اطلاعات بانکی راننده
+    driver_bank_account = models.ForeignKey(
+        BankAccount,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='driver_transports',
+        verbose_name='حساب بانکی راننده',
+        help_text='حساب بانکی راننده'
+    )
+    
+    # اطلاعات بانکی تامین‌کننده
+    supplier_bank_account = models.ForeignKey(
+        BankAccount,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='supplier_transports',
+        verbose_name='حساب بانکی تامین‌کننده',
+        help_text='حساب بانکی تامین‌کننده'
+    )
+    
+    # فیلدهای قدیمی برای سازگاری (deprecated - استفاده نکنید)
     driver_account_number = models.CharField(
         max_length=50,
         null=True,
         blank=True,
-        verbose_name='شماره حساب راننده',
-        help_text='شماره حساب بانکی راننده'
+        verbose_name='شماره حساب راننده (قدیمی)',
+        help_text='DEPRECATED: از driver_bank_account استفاده کنید'
     )
     
     driver_sheba_number = models.CharField(
         max_length=26,
         null=True,
         blank=True,
-        verbose_name='شماره شبا راننده',
-        help_text='شماره شبا بانکی راننده (24 رقم + IR)'
+        verbose_name='شماره شبا راننده (قدیمی)',
+        help_text='DEPRECATED: از driver_bank_account استفاده کنید'
     )
     
-    # اطلاعات بانکی تامین‌کننده
     supplier_account_number = models.CharField(
         max_length=50,
         null=True,
         blank=True,
-        verbose_name='شماره حساب تامین‌کننده',
-        help_text='شماره حساب بانکی تامین‌کننده'
+        verbose_name='شماره حساب تامین‌کننده (قدیمی)',
+        help_text='DEPRECATED: از supplier_bank_account استفاده کنید'
     )
     
     supplier_sheba_number = models.CharField(
         max_length=26,
         null=True,
         blank=True,
-        verbose_name='شماره شبا تامین‌کننده',
-        help_text='شماره شبا بانکی تامین‌کننده (24 رقم + IR)'
+        verbose_name='شماره شبا تامین‌کننده (قدیمی)',
+        help_text='DEPRECATED: از supplier_bank_account استفاده کنید'
     )
     
     # تاریخ‌های اضافی
