@@ -7,7 +7,7 @@ from django import forms
 from django.db import transaction
 from django.db.models import Q
 from django.http import JsonResponse, HttpResponseForbidden
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from django.utils import timezone
 from django_tables2 import RequestConfig
 import jdatetime
@@ -231,10 +231,10 @@ class CarEntranceTable(TransportTable):
         verbose_name='نام مواد اولیه',
         empty_values=(),
         orderable=False,
-        visible=True,  # به صورت پیش‌فرض نمایش داده می‌شود
+        visible=True,
         attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
         }
     )
     
@@ -242,49 +242,77 @@ class CarEntranceTable(TransportTable):
         super().__init__(*args, **kwargs)
         
         # ستون‌های مورد نیاز برای نگهبان: نوع ماشین، نام ماده اولیه، زمان ثبت، وضعیت، عملیات
-        # این ستون‌ها باید همیشه نمایش داده شوند (حتی اگر accessible_fields محدود باشد)
         required_columns = ['vehicle_type', 'raw_materials', 'created_at', 'status', 'actions']
         
-        # همیشه ستون‌های مورد نیاز را نمایش بده - بعد از super().__init__ که ممکن است آن‌ها را مخفی کرده باشد
+        # همیشه ستون‌های مورد نیاز را نمایش بده
         for col_name in required_columns:
             if col_name == 'raw_materials':
-                # raw_materials یک ستون custom است که در base_columns تعریف شده
                 if 'raw_materials' in self.base_columns:
                     self.base_columns['raw_materials'].visible = True
             elif col_name in self.columns:
-                # ستون‌های عادی - مطمئن شویم که visible هستند
                 self.columns[col_name].column.visible = True
-        
-        # اگر accessible_fields وجود دارد، ستون‌های دیگر را بر اساس آن تنظیم کن
-        # اما ستون‌های مورد نیاز را تغییر نده (قبلاً visible=True شده‌اند)
     
     def render_raw_materials(self, record):
         """نمایش لیست مواد اولیه از سفارش خرید"""
         if not record.purchase_order:
             return '—'
-        # استفاده از order_items به جای materials
         materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
             names = [m.raw_material.name for m in materials if m.raw_material]
-            return format_html('<br>'.join(names)) if names else '—'
+            if names:
+                # نمایش badge برای هر ماده اولیه
+                badges = []
+                for name in names:
+                    badges.append(format_html(
+                        '<span class="badge badge-green">{}</span>',
+                        name
+                    ))
+                return format_html('<div style="display: flex; gap: 5px; flex-wrap: wrap;">{}</div>', mark_safe(' '.join(badges)))
+            return '—'
         return '—'
     
+    def render_vehicle_type(self, record):
+        """نمایش نوع ماشین"""
+        return record.get_vehicle_type_display() or '—'
+    
+    def render_status(self, value, record):
+        """نمایش وضعیت به صورت badge"""
+        status_display = record.get_status_display() if hasattr(record, 'get_status_display') else value
+        return format_html('<span class="status-badge status-{}">{}</span>', record.status, status_display)
+    
+    def render_created_at(self, value, record):
+        """نمایش تاریخ ایجاد"""
+        if hasattr(record, 'created_at') and record.created_at:
+            import jdatetime
+            dt = record.created_at
+            if isinstance(dt, jdatetime.datetime):
+                if dt.hour != 0 or dt.minute != 0 or dt.second != 0:
+                    return dt.strftime('%Y-%m-%d %H:%M')
+                else:
+                    return dt.strftime('%Y-%m-%d')
+            elif isinstance(dt, jdatetime.date):
+                return dt.strftime('%Y-%m-%d')
+        return value or '—'
+    
     def render_actions(self, record):
-        """نمایش دکمه ثبت راننده برای هر رکورد"""
-        # استفاده از transport_number یا pk در صورت None بودن
+        """نمایش دکمه ثبت راننده"""
         transport_id = record.transport_number
         if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
             transport_id = str(record.pk)
         register_url = reverse('supply:carentrance_register_driver', args=[str(transport_id)])
         return format_html(
-            '<a href="{}" class="btn btn-primary btn-sm">ثبت راننده</a>',
+            '<a href="{}" class="btn-primary" title="ثبت راننده">ثبت راننده</a>',
             register_url
         )
     
     class Meta(TransportTable.Meta):
-        # ستون‌های مورد نیاز: نوع ماشین، نام ماده اولیه، زمان ثبت حمل، وضعیت حمل، عملیات
-        sequence = ('vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        template_name = 'django_tables2/bootstrap.html'
         fields = ('vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
 
 @login_required

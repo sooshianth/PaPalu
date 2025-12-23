@@ -120,13 +120,13 @@ def create_supplier_view(request):
 			'sn_formset': sn_fs,
 			'att_formset': att_fs,
 		}
-		return render(request, 'supply_create_supplier.html', context)
+		return render(request, 'supplier/create_supplier.html', context)
 	except Exception as e:
 		bug_logger.error(f"Create supplier error: {e}")
 		if request.method == 'POST':
 			messages.error(request, 'خطا در ثبت تامین‌کننده. لطفاً مجدداً تلاش کنید.')
 		# نمایش فرم‌های خالی در صورت بروز خطا
-		return render(request, 'supply_create_supplier.html', {
+		return render(request, 'supplier/create_supplier.html', {
 			'person_form': SupplierPersonForm(),
 			'fb_form': FinancialBankingForm(),
 			'rep_formset': RepresentativeFormSet(prefix='rep'),
@@ -276,14 +276,14 @@ def supplier_list_view(request):
 			'section_errors': section_errors,
 			'accessible_person_fields': accessible_person_fields,
 		}
-		return render(request, 'supply_supplier_list.html', context)
+		return render(request, 'supplier/supplier_list.html', context)
 	except Exception as e:
 		bug_logger.error(f"Supplier list error: {e}")
 		messages.error(request, 'خطا در بارگذاری لیست تأمین‌کنندگان.')
 		from supply.tables import SupplierTable
 		accessible_person_fields = get_accessible_person_fields(request.user)
 		table = SupplierTable(Person.objects.none(), accessible_fields=accessible_person_fields)
-		return render(request, 'supply_supplier_list.html', {'table': table, 'accessible_person_fields': accessible_person_fields})
+		return render(request, 'supplier/supplier_list.html', {'table': table, 'accessible_person_fields': accessible_person_fields})
 
 
 def supplier_detail_view(request, national_id):
@@ -323,7 +323,7 @@ def supplier_detail_view(request, national_id):
 			'sn_table': sn_table,
 			'att_table': att_table,
 		}
-		return render(request, 'supply_supplier_detail.html', context)
+		return render(request, 'supplier/supplier_detail.html', context)
 	except Person.DoesNotExist:
 		bug_logger.warning(f"Supplier not found: {national_id}")
 		messages.error(request, 'تأمین‌کننده مورد نظر یافت نشد.')

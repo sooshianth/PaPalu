@@ -315,17 +315,6 @@
     </div>
     {% endif %}
     
-    {% if next_status_choices %}
-    <div class="workflow-section">
-        <h4>تغییر وضعیت حمل</h4>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          {% for code, label in next_status_choices %}
-          <a href="{% url 'supply:transition_purchase_transport_status' pt.transport_number code %}" class="btn btn-success" onclick="return confirm('تغییر وضعیت به {{ label }} ؟')">{{ label }}</a>
-          {% endfor %}
-        </div>
-    </div>
-    {% endif %}
-    
     <h3 class="section-title">تاریخچه تغییر وضعیت</h3>
     <div class="table-container">
       {% render_table log_table %}
