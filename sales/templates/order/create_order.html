@@ -191,6 +191,113 @@
         opacity: 0.5;
         background-color: #f8f9fa;
     }
+    
+    /* استایل دکمه مشاهده شرح محصول */
+    .view-product-description-btn:hover {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
+    }
+    
+    /* استایل پاپ‌آپ اطلاعات قیمت‌گذاری */
+    .price-info-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s;
+    }
+    
+    .price-info-modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 30px;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 600px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.3s;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .price-info-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--primary-green);
+    }
+    
+    .price-info-modal-header h3 {
+        color: var(--primary-green);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .price-info-modal-close {
+        color: var(--gray-600);
+        font-size: 2rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.3s;
+        line-height: 1;
+        padding: 0;
+        background: none;
+        border: none;
+    }
+    
+    .price-info-modal-close:hover {
+        color: var(--primary-green);
+    }
+    
+    .price-info-section {
+        margin-bottom: 20px;
+    }
+    
+    .price-info-section h4 {
+        color: var(--primary-green);
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--light-green);
+    }
+    
+    .price-info-section p {
+        color: var(--gray-700);
+        line-height: 1.8;
+        margin: 0;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+    
+    .price-info-section.empty {
+        color: var(--gray-500);
+        font-style: italic;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideDown {
+        from {
+            transform: translateY(-50px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -311,6 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const weightUnitSelect = formRow.querySelector('select[name*="-weight_unit"]');
         const unitPriceInput = formRow.querySelector('input[name*="-unit_price"]');
         const vatPercentInput = formRow.querySelector('input[name*="-vat_percent"]');
+        const viewDescriptionBtn = formRow.querySelector('.view-product-description-btn');
         
         if (productSelect && weightUnitSelect && unitPriceInput) {
             productSelect.addEventListener('change', function() {
@@ -342,6 +450,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (existingDropdown) {
                         existingDropdown.remove();
                     }
+                    // مخفی کردن دکمه مشاهده شرح
+                    if (viewDescriptionBtn) {
+                        viewDescriptionBtn.style.display = 'none';
+                        viewDescriptionBtn.removeAttribute('data-condition');
+                        viewDescriptionBtn.removeAttribute('data-condition-description');
+                        viewDescriptionBtn.removeAttribute('data-description');
+                    }
                     return;
                 }
                 
@@ -353,6 +468,21 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (data.error) {
                             console.error('خطا در دریافت اطلاعات محصول:', data.error);
                             return;
+                        }
+                        
+                        // نمایش/مخفی کردن دکمه مشاهده شرح بر اساس وجود اطلاعات قیمت‌گذاری
+                        if (viewDescriptionBtn) {
+                            if (data.price_info && (data.price_info.condition || data.price_info.condition_description || data.price_info.description)) {
+                                viewDescriptionBtn.style.display = 'inline-block';
+                                viewDescriptionBtn.setAttribute('data-condition', data.price_info.condition || '');
+                                viewDescriptionBtn.setAttribute('data-condition-description', data.price_info.condition_description || '');
+                                viewDescriptionBtn.setAttribute('data-description', data.price_info.description || '');
+                            } else {
+                                viewDescriptionBtn.style.display = 'none';
+                                viewDescriptionBtn.removeAttribute('data-condition');
+                                viewDescriptionBtn.removeAttribute('data-condition-description');
+                                viewDescriptionBtn.removeAttribute('data-description');
+                            }
                         }
                         
                         // به‌روزرسانی dropdown واحد با واحدهای محصول
@@ -674,7 +804,116 @@ document.addEventListener('DOMContentLoaded', function() {
             section.classList.toggle('collapsed');
         });
     });
+    
+    // ایجاد المان پاپ‌آپ (یکبار)
+    let modal = document.getElementById('price-info-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.className = 'price-info-modal';
+        modal.id = 'price-info-modal';
+        modal.innerHTML = `
+            <div class="price-info-modal-content">
+                <div class="price-info-modal-header">
+                    <h3>اطلاعات قیمت‌گذاری</h3>
+                    <button class="price-info-modal-close" onclick="closePriceInfoModal()">&times;</button>
+                </div>
+                <div id="price-info-content">
+                    <!-- محتوا اینجا قرار می‌گیرد -->
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        
+        // بستن پاپ‌آپ با کلیک روی پس‌زمینه
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closePriceInfoModal();
+            }
+        });
+        
+        // بستن پاپ‌آپ با کلید ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                closePriceInfoModal();
+            }
+        });
+    }
+    
+    // اضافه کردن event listener به دکمه‌های "مشاهده" (با event delegation)
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('view-product-description-btn') || e.target.closest('.view-product-description-btn')) {
+            e.preventDefault();
+            const button = e.target.classList.contains('view-product-description-btn') ? e.target : e.target.closest('.view-product-description-btn');
+            const condition = button.getAttribute('data-condition') || '';
+            const conditionDescription = button.getAttribute('data-condition-description') || '';
+            const description = button.getAttribute('data-description') || '';
+            
+            // پر کردن محتوای پاپ‌آپ
+            const content = document.getElementById('price-info-content');
+            if (!content) return;
+            
+            let html = '';
+            
+            // بخش شرط
+            html += '<div class="price-info-section">';
+            html += '<h4>شرط</h4>';
+            if (condition) {
+                html += '<p>' + escapeHtml(condition) + '</p>';
+            } else {
+                html += '<p class="empty">-</p>';
+            }
+            html += '</div>';
+            
+            // بخش توضیحات شرایط
+            html += '<div class="price-info-section">';
+            html += '<h4>توضیحات شرایط</h4>';
+            if (conditionDescription) {
+                html += '<p>' + escapeHtml(conditionDescription) + '</p>';
+            } else {
+                html += '<p class="empty">-</p>';
+            }
+            html += '</div>';
+            
+            // بخش توضیحات
+            html += '<div class="price-info-section">';
+            html += '<h4>توضیحات</h4>';
+            if (description) {
+                html += '<p>' + escapeHtml(description) + '</p>';
+            } else {
+                html += '<p class="empty">-</p>';
+            }
+            html += '</div>';
+            
+            content.innerHTML = html;
+            
+            // نمایش پاپ‌آپ
+            if (modal) {
+                modal.style.display = 'block';
+            }
+        }
+    });
 });
+
+// تابع بستن پاپ‌آپ (global)
+function closePriceInfoModal() {
+    const modal = document.getElementById('price-info-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// تابع escape HTML برای جلوگیری از XSS (global)
+function escapeHtml(text) {
+    if (!text) return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+}
 </script>
 {% endblock %}
 
@@ -805,7 +1044,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             {% if accessible_fields_item.product %}
                             <div class="col-md-3 mb-3">
                                 <label class="form-label required-field">{{ f.product.label }}</label>
-                                {{ f.product }}
+                                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        {{ f.product }}
+                                    </div>
+                                    <button type="button" class="btn-outline-info view-product-description-btn" 
+                                            style="display: none; padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.875rem; border: 1px solid #17a2b8; background-color: transparent; color: #17a2b8; cursor: pointer; transition: all 0.3s; white-space: nowrap;"
+                                            title="مشاهده شرح محصول">
+                                        مشاهده
+                                    </button>
+                                </div>
                                 {% if f.product.errors %}
                                     <div class="text-danger">{{ f.product.errors.0 }}</div>
                                 {% endif %}

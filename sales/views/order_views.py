@@ -441,6 +441,8 @@ def product_info_api(request, product_id):
                 'display': price_display,
                 'deadline': price_info.deadline.strftime('%Y/%m/%d') if price_info.deadline else '',
                 'condition': price_info.condition[:100] if price_info.condition else '',
+                'condition_description': price_info.condition_description or '',
+                'description': price_info.description or '',
             })
         
         # دریافت درصد مالیات از ProductSales
@@ -450,6 +452,11 @@ def product_info_api(request, product_id):
                 tax_percentage = str(product.sales_info.price_with_tax)
         except:
             pass
+        
+        # دریافت آخرین قیمت‌گذاری معتبر برای نمایش شرح
+        latest_price_info = None
+        if valid_prices.exists():
+            latest_price_info = valid_prices.first()
         
         # اطلاعات پاسخ
         data = {
@@ -461,6 +468,12 @@ def product_info_api(request, product_id):
             'prices_count': len(prices_list),
             'has_price': len(prices_list) > 0,
             'tax_percentage': tax_percentage,
+            # اطلاعات قیمت‌گذاری برای نمایش شرح
+            'price_info': {
+                'condition': latest_price_info.condition if latest_price_info and latest_price_info.condition else '',
+                'condition_description': latest_price_info.condition_description if latest_price_info and latest_price_info.condition_description else '',
+                'description': latest_price_info.description if latest_price_info and latest_price_info.description else '',
+            } if latest_price_info else None,
         }
         
         # برای سازگاری با کد قدیمی، آخرین قیمت را هم اضافه می‌کنیم

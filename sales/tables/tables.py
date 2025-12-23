@@ -1233,19 +1233,17 @@ class ProductPriceTable(tables.Table):
             condition_desc_escaped = escapejs(str(record.condition_description or ''))
             description_escaped = escapejs(str(record.description or ''))
             
-            # ایجاد یک دکمه که پاپ‌آپ را باز می‌کند
+            # ایجاد یک دکمه که پاپ‌آپ را باز می‌کند - با استایل btn-outline-info
             return format_html(
-                '<button type="button" class="btn-view-price-info" '
+                '<a href="#" class="btn-outline-info btn-view-price-info" '
                 'data-price-id="{}" '
                 'data-condition="{}" '
                 'data-condition-description="{}" '
                 'data-description="{}" '
-                'style="padding: 5px 15px; border-radius: 6px; border: 1px solid #17a2b8; background-color: transparent; color: #17a2b8; cursor: pointer; font-size: 0.875rem; transition: all 0.3s;" '
-                'onmouseover="this.style.backgroundColor=\'#17a2b8\'; this.style.color=\'white\';" '
-                'onmouseout="this.style.backgroundColor=\'transparent\'; this.style.color=\'#17a2b8\';" '
-                'title="مشاهده اطلاعات قیمت‌گذاری">'
+                'title="مشاهده اطلاعات قیمت‌گذاری" '
+                'style="padding: 5px 10px; border-radius: 6px; text-decoration: none; font-size: 0.875rem; border: 1px solid #17a2b8; background-color: transparent; color: #17a2b8; cursor: pointer; transition: all 0.3s; display: inline-block;">'
                 'دیدن'
-                '</button>',
+                '</a>',
                 record.id,
                 condition_escaped,
                 condition_desc_escaped,

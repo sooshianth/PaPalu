@@ -155,8 +155,8 @@ class ProductFinancialInfoForm(forms.ModelForm):
         infinite_deadline = self.data.get('infinite_deadline', False)
         if isinstance(infinite_deadline, str):
             infinite_deadline = infinite_deadline.lower() in ('true', 'on', '1')
-        
-        deadline = self.cleaned_data.get('deadline')
+        else:
+            infinite_deadline = bool(infinite_deadline)
         
         # اگر تاریخ بینهایت انتخاب شده، تاریخ 99 سال بعد را ست می‌کنیم
         if infinite_deadline:
@@ -171,6 +171,9 @@ class ProductFinancialInfoForm(forms.ModelForm):
             # اضافه کردن timezone
             infinite_aware = timezone.make_aware(infinite_gregorian)
             return infinite_aware
+        
+        # اگر infinite_deadline فعال نیست، deadline را از cleaned_data بخوان
+        deadline = self.cleaned_data.get('deadline')
         
         if deadline:
             try:
@@ -247,12 +250,28 @@ class ProductFinancialInfoForm(forms.ModelForm):
         else:
             infinite_deadline = bool(infinite_deadline_raw)
         
+        # deadline باید از clean_deadline آمده باشد (که infinite_deadline را هم بررسی می‌کند)
         deadline = cleaned_data.get('deadline')
         
-        # اگر infinite_deadline فعال است، deadline باید از clean_deadline آمده باشد
+        # اگر infinite_deadline فعال است، clean_deadline باید deadline را برگردانده باشد
+        # اگر infinite_deadline فعال است، باید deadline از clean_deadline آمده باشد
         # اگر infinite_deadline فعال نیست و deadline هم نیست، خطا بده
-        if not infinite_deadline and not deadline:
-            self.add_error('deadline', 'لطفاً تاریخ مهلت اعتبار را وارد کنید یا گزینه "بینهایت" را انتخاب کنید.')
+        if infinite_deadline:
+            # اگر infinite_deadline فعال است، باید deadline از clean_deadline آمده باشد
+            # اگر نیامده، دوباره clean_deadline را فراخوانی کن
+            if not deadline:
+                try:
+                    deadline = self.clean_deadline()
+                    if deadline:
+                        cleaned_data['deadline'] = deadline
+                except forms.ValidationError as e:
+                    self.add_error('deadline', e)
+                except Exception as e:
+                    self.add_error('deadline', f'خطا در تنظیم تاریخ بینهایت: {str(e)}')
+        else:
+            # اگر infinite_deadline فعال نیست و deadline هم نیست، خطا بده
+            if not deadline:
+                self.add_error('deadline', 'لطفاً تاریخ مهلت اعتبار را وارد کنید یا گزینه "بینهایت" را انتخاب کنید.')
         
         # بررسی اینکه سایر فیلدهای اجباری پر شده‌اند
         required_fields = ['price', 'condition', 'condition_description']
