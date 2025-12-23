@@ -18,6 +18,8 @@ from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from core.PersonFolder.PersonModel import Person
+from core.PersonFolder.BankAccountModel import BankAccount
+from core.PersonFolder.FinancialBankingModel import FinancialBanking
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -268,8 +270,7 @@ class TransportForm(ModelForm):
             'plate_number', 'driver',
             'freight_payment_type', 'initial_freight', 'total_freight',
             'discount', 'surplus', 'freight_payment',
-            'driver_account_number', 'driver_sheba_number',
-            'supplier_account_number', 'supplier_sheba_number',
+            'driver_bank_account', 'supplier_bank_account',
             'expected_arrival_date',
             'waybill_number', 'notes'
         ]
@@ -284,10 +285,8 @@ class TransportForm(ModelForm):
             'discount': 'تخفیف',
             'surplus': 'مازاد',
             'freight_payment': 'کرایه پرداختی',
-            'driver_account_number': 'شماره حساب راننده',
-            'driver_sheba_number': 'شماره شبا راننده',
-            'supplier_account_number': 'شماره حساب تامین‌کننده',
-            'supplier_sheba_number': 'شماره شبا تامین‌کننده',
+            'driver_bank_account': 'حساب بانکی راننده',
+            'supplier_bank_account': 'حساب بانکی تامین‌کننده',
             'expected_arrival_date': 'تاریخ پیش‌بینی ورود',
             'waybill_number': 'شماره بارنامه',
             'notes': 'یادداشت',
@@ -303,10 +302,8 @@ class TransportForm(ModelForm):
             'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'surplus': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'freight_payment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'driver_account_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'driver_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'supplier_account_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'supplier_sheba_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'driver_bank_account': forms.Select(attrs={'class': 'form-control'}),
+            'supplier_bank_account': forms.Select(attrs={'class': 'form-control'}),
             'expected_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
             'waybill_number': forms.TextInput(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -351,9 +348,33 @@ class TransportForm(ModelForm):
         # تنظیم choices برای freight_payment_type
         self.fields['freight_payment_type'].choices = Order.FREIGHT_PAYMENT_CHOICES
         
-        # مخفی کردن فیلدهای حساب بانکی تامین‌کننده (به صورت پیش‌فرض)
-        self.fields['supplier_account_number'].widget = forms.HiddenInput()
-        self.fields['supplier_sheba_number'].widget = forms.HiddenInput()
+        # تنظیم queryset برای حساب‌های بانکی راننده (اگر driver موجود است)
+        if self.instance and self.instance.pk and self.instance.driver:
+            try:
+                financial_banking = FinancialBanking.objects.filter(person=self.instance.driver).first()
+                if financial_banking:
+                    self.fields['driver_bank_account'].queryset = BankAccount.objects.filter(
+                        financial_banking=financial_banking
+                    )
+            except Exception:
+                pass
+        
+        # تنظیم queryset برای حساب‌های بانکی تامین‌کننده (اگر purchase_order موجود است)
+        if self.instance and self.instance.pk and self.instance.allocation and self.instance.allocation.order:
+            try:
+                supplier = self.instance.allocation.order.customer
+                if supplier:
+                    financial_banking = FinancialBanking.objects.filter(person=supplier).first()
+                    if financial_banking:
+                        self.fields['supplier_bank_account'].queryset = BankAccount.objects.filter(
+                            financial_banking=financial_banking
+                        )
+            except Exception:
+                pass
+        
+        # مخفی کردن فیلدهای حساب بانکی (به صورت پیش‌فرض - با JavaScript نمایش داده می‌شوند)
+        self.fields['driver_bank_account'].widget = forms.HiddenInput()
+        self.fields['supplier_bank_account'].widget = forms.HiddenInput()
     
     def clean(self):
         cleaned_data = super().clean()
