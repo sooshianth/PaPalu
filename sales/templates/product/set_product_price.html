@@ -321,9 +321,8 @@
                             بینهایت
                         </button>
                     </div>
-                    <div style="display: none;">
-                        {{ financial_info_form.infinite_deadline }}
-                    </div>
+                    <!-- Hidden input برای infinite_deadline که با JavaScript مقداردهی می‌شود -->
+                    <input type="hidden" name="infinite_deadline" id="id_infinite_deadline" value="">
                     {% if financial_info_form.deadline.errors %}
                         <div class="text-danger">{{ financial_info_form.deadline.errors.0 }}</div>
                     {% endif %}
@@ -535,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
 $(document).ready(function() {
     // تبدیل فیلد تاریخ مهلت اعتبار به تقویم شمسی با ساعت
     var deadlineInput = $('#id_deadline');
-    var infiniteCheckbox = $('#id_infinite_deadline');
+    var infiniteCheckbox = $('#id_infinite_deadline'); // این یک hidden input است
     var infiniteButton = $('#toggle-infinite-deadline');
     var isInfinite = false;
     
@@ -545,6 +544,9 @@ $(document).ready(function() {
         deadlineInput.attr('readonly', 'readonly');
         deadlineInput.css('cursor', 'pointer');
         
+        // حذف name از input اصلی تا فقط hiddenInput ارسال شود
+        deadlineInput.removeAttr('name');
+        
         // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
         var initialValue = deadlineInput.val();
         var persianDateValue = '';
@@ -553,10 +555,14 @@ $(document).ready(function() {
         if (initialValue) {
             var parts = initialValue.split('-');
             if (parts.length === 3) {
-                var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                var pDate = persianDate.fromGregorian(gregorianDate);
-                persianDateValue = pDate.format('YYYY/MM/DD HH:mm');
-                deadlineInput.val(persianDateValue);
+                try {
+                    var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    var pDate = new persianDate(gregorianDate);
+                    persianDateValue = pDate.format('YYYY/MM/DD HH:mm');
+                    deadlineInput.val(persianDateValue);
+                } catch (e) {
+                    console.error('خطا در تبدیل تاریخ میلادی به شمسی:', e);
+                }
             }
         }
         
@@ -620,21 +626,38 @@ $(document).ready(function() {
                 deadlineInput.prop('disabled', true);
                 deadlineInput.css('background-color', '#e9ecef');
                 deadlineInput.css('color', '#6c757d');
-                deadlineInput.val('تاریخ بینهایت (99 سال)');
-                infiniteCheckbox.prop('checked', true);
+                deadlineInput.val('تاریخ بینهایت (31 دسامبر 2039)');
+                // تنظیم مقدار hidden input به 'on' برای ارسال به سرور
+                infiniteCheckbox.val('on');
                 infiniteButton.addClass('btn-primary').removeClass('btn-outline-secondary');
                 
-                // پاک کردن hidden input چون از infinite_deadline استفاده می‌شود
+                // پاک کردن hidden input - چون در clean_deadline تاریخ تنظیم می‌شود
                 hiddenInput.val('');
+                
+                console.log('Infinite deadline activated');
+                console.log('Hidden input value:', infiniteCheckbox.val());
+                console.log('Hidden input name:', infiniteCheckbox.attr('name'));
             } else {
                 // غیرفعال کردن حالت بینهایت
                 deadlineInput.prop('disabled', false);
                 deadlineInput.css('background-color', '');
                 deadlineInput.css('color', '');
                 deadlineInput.val('');
-                infiniteCheckbox.prop('checked', false);
+                // پاک کردن مقدار hidden input
+                infiniteCheckbox.val('');
                 infiniteButton.removeClass('btn-primary').addClass('btn-outline-secondary');
+                
+                // پاک کردن hidden input
+                hiddenInput.val('');
             }
+        });
+        
+        // بررسی hidden input قبل از ارسال فرم
+        $('#price-form').on('submit', function(e) {
+            console.log('Form submitting...');
+            console.log('Infinite hidden input value:', infiniteCheckbox.val());
+            console.log('Infinite hidden input name:', infiniteCheckbox.attr('name'));
+            console.log('Deadline hidden input value:', hiddenInput.val());
         });
         
         // اضافه کردن آیکون تقویم

@@ -5,7 +5,7 @@ from django_jalali.forms.widgets import jDateTimeInput, jDateInput
 from django_jalali.forms import jDateField, jDateTimeField
 from core.helpers import check_field_access_prefer_edit
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
 import jdatetime
 
 
@@ -98,7 +98,7 @@ class ProductFinancialInfoForm(forms.ModelForm):
         # تنظیم فیلد deadline به صورت jDateTimeField با تقویم شمسی
         if 'deadline' in self.fields:
             self.fields['deadline'] = jDateTimeField(
-                required=True,
+                required=False,  # در clean_deadline بررسی می‌شود
                 label='مهلت اعتبار قیمت (تاریخ و ساعت)',
                 widget=jDateTimeInput(attrs={
                     'class': 'form-control jalali-datetime',
@@ -152,22 +152,27 @@ class ProductFinancialInfoForm(forms.ModelForm):
     def clean_deadline(self):
         """اعتبارسنجی deadline - تاریخ و ساعت شمسی"""
         # ابتدا infinite_deadline را از data خام بخوان (قبل از clean)
-        infinite_deadline = self.data.get('infinite_deadline', False)
-        if isinstance(infinite_deadline, str):
-            infinite_deadline = infinite_deadline.lower() in ('true', 'on', '1')
+        infinite_deadline_raw = self.data.get('infinite_deadline', False)
+        
+        # لاگ برای دیباگ
+        import logging
+        logger = logging.getLogger('bugs')
+        logger.debug(f'infinite_deadline_raw: {infinite_deadline_raw}, type: {type(infinite_deadline_raw)}')
+        
+        if isinstance(infinite_deadline_raw, str):
+            infinite_deadline = infinite_deadline_raw.lower() in ('true', 'on', '1')
+        else:
+            infinite_deadline = bool(infinite_deadline_raw)
+        
+        logger.debug(f'infinite_deadline processed: {infinite_deadline}')
         
         deadline = self.cleaned_data.get('deadline')
         
-        # اگر تاریخ بینهایت انتخاب شده، تاریخ 99 سال بعد را ست می‌کنیم
+        # اگر تاریخ بینهایت انتخاب شده، تاریخ ثابت 31 دسامبر 2039 را ست می‌کنیم
         if infinite_deadline:
-            # استفاده از timezone.now() برای گرفتن datetime با timezone
-            now = timezone.now()
-            # تبدیل به jdatetime
-            now_jalali = jdatetime.datetime.fromgregorian(datetime=now)
-            # تاریخ 99 سال بعد
-            infinite_jalali = jdatetime.datetime(now_jalali.year + 99, 12, 29, 23, 59, 59)
-            # تبدیل به gregorian datetime با timezone
-            infinite_gregorian = infinite_jalali.togregorian()
+            logger.debug('Setting infinite deadline to 2039-12-31')
+            # تاریخ ثابت: 31 دسامبر 2039، 23:59:59
+            infinite_gregorian = datetime(2039, 12, 31, 23, 59, 59)
             # اضافه کردن timezone
             infinite_aware = timezone.make_aware(infinite_gregorian)
             return infinite_aware
