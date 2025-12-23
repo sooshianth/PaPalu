@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django_jalali.db import models as jmodels
@@ -10,6 +11,54 @@ class StockEntry(models.Model):
     Main model representing stock entry/movement transaction in the warehouse.
     """
     
+    class StockEntryType(models.TextChoices):
+        OPENING = 'OPENING', 'موجودی اول دوره'
+        PURCHASE = 'PURCHASE', 'رسید خرید'
+        SALE = 'SALE', 'حواله فروش'
+        PRODUCTION = 'PRODUCTION', 'رسید تولید'
+        CONSUMPTION = 'CONSUMPTION', 'حواله مصرف'
+        TRANSFER = 'TRANSFER', 'انتقال بین انبار'
+        ADJUSTMENT = 'ADJUSTMENT', 'تعدیل موجودی/انبارگردانی'
+        SCRAP = 'SCRAP', 'ضایعات'
+        RETURN_IN = 'RETURN_IN', 'برگشت از فروش'
+        RETURN_OUT = 'RETURN_OUT', 'برگشت از خرید'
+        OTHER = 'OTHER', 'سایر'
+
+    entry_type = models.CharField(
+        max_length=20,
+        choices=StockEntryType.choices,
+        default=StockEntryType.OTHER,
+        verbose_name='نوع تراکنش',
+        db_index=True
+    )
+
+    # Reference Document (The "Why" / Origin)
+    reference_content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='stock_entries',
+        verbose_name='نوع سند مرجع'
+    )
+    reference_object_id = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name='شناسه سند مرجع',
+        db_index=True
+    )
+    reference_document = GenericForeignKey('reference_content_type', 'reference_object_id')
+
+    # Event Tracking (For Idempotency & Tracing)
+    event_id = models.CharField(
+        max_length=100,
+        null=True,
+        blank=True,
+        unique=True,
+        verbose_name='شناسه رخداد (Event ID)',
+        help_text='شناسه یکتا برای پیگیری رخداد سیستمی و جلوگیری از تکرار'
+    )
+
     transaction_date = jmodels.jDateTimeField(
         null=True,
         blank=True,
@@ -45,6 +94,9 @@ class StockEntry(models.Model):
         ordering = ['-transaction_date']
         indexes = [
             models.Index(fields=['transaction_date']),
+            models.Index(fields=['entry_type']),
+            models.Index(fields=['reference_content_type', 'reference_object_id']),
+            models.Index(fields=['event_id']),
         ]
     
     def __str__(self):
