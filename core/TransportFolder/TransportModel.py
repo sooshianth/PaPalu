@@ -492,6 +492,7 @@ class Transport(models.Model):
             allowed_statuses = [
                 'pending_vehicle_entry',
                 'pending_unloading',
+                'awaiting_wh_reconciliation',
                 'pending_logistics_approval',
                 'pending_settlement',
                 'completed',

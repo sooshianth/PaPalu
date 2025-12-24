@@ -251,11 +251,20 @@ def proforma_create_view(request):
             except Exception as e:
                 bug_logger.error(f"خطا در تنظیم سفارش از query string: {str(e)}", exc_info=True)
 
+    # استخراج اطلاعات مشتری و فیلدهای ناقص از فرم (اگر خطا وجود داشته باشد)
+    customer_id_for_edit = None
+    missing_fields_list = []
+    if hasattr(form, '_customer_id'):
+        customer_id_for_edit = form._customer_id
+        missing_fields_list = getattr(form, '_missing_fields', [])
+    
     context = {
         'form': form,
         'accessible_fields': access_map if 'access_map' in locals() else get_accessible_proforma_fields(request.user, form),
         'page_title': 'ایجاد پیش فاکتور جدید',
         'preselected_order_number': request.GET.get('order_number', '').strip(),
+        'customer_id_for_edit': customer_id_for_edit,
+        'missing_fields': missing_fields_list,
     }
     return render(request, 'proforma/proforma_create.html', context)
 
@@ -466,6 +475,157 @@ def get_order_customer_api(request, order_number):
         return JsonResponse({'error': 'سفارش یافت نشد'}, status=404)
     except Exception as e:
         bug_logger.error(f"خطا در دریافت اطلاعات مشتری سفارش {order_number}: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def get_customer_info_for_edit_api(request, customer_id):
+    """
+    API endpoint برای دریافت اطلاعات مشتری و فیلدهای ناقص
+    """
+    if not customer_id:
+        return JsonResponse({'error': 'شناسه مشتری الزامی است'}, status=400)
+    
+    try:
+        customer = Person.objects.get(national_id=customer_id, type='customer')
+        
+        # دریافت اطلاعات مالی بانکی
+        financial_info = FinancialBanking.objects.filter(person=customer).first()
+        
+        # دریافت آدرس تحویل
+        delivery_addresses = DeliveryAddress.objects.filter(person=customer)
+        primary_delivery_address = delivery_addresses.first() if delivery_addresses.exists() else None
+        
+        # دریافت شماره تلفن
+        person_content_type = ContentType.objects.get_for_model(customer)
+        phone_numbers = PhoneNumber.objects.filter(
+            content_type=person_content_type,
+            object_id=customer.national_id
+        ).order_by('-is_primary', 'phone_type')
+        primary_phone = phone_numbers.first() if phone_numbers.exists() else None
+        
+        # ساخت پاسخ
+        data = {
+            'customer_id': customer.national_id,
+            'name': customer.name or '',
+            'national_id': customer.national_id or '',
+            'registration_number': customer.registration_number or '',
+            'nature': customer.nature or '',
+            'economic_code': financial_info.economic_code if financial_info else '',
+            'tax_address': financial_info.tax_address if financial_info else '',
+            'tax_postal_code': financial_info.tax_postal_code if financial_info else '',
+            'tax_province': financial_info.tax_province if financial_info else '',
+            'tax_city': financial_info.tax_city if financial_info else '',
+            'delivery_address': primary_delivery_address.address if primary_delivery_address else '',
+            'delivery_postal_code': primary_delivery_address.postal_code if primary_delivery_address else '',
+            'delivery_province': primary_delivery_address.province if primary_delivery_address else '',
+            'delivery_city': primary_delivery_address.city if primary_delivery_address else '',
+            'phone_number': primary_phone.number if primary_phone else '',
+            'phone_type': primary_phone.phone_type if primary_phone else 'mobile',
+            'has_financial_info': financial_info is not None,
+            'has_delivery_address': primary_delivery_address is not None,
+            'has_phone': primary_phone is not None,
+        }
+        
+        return JsonResponse(data)
+    except Person.DoesNotExist:
+        return JsonResponse({'error': 'مشتری یافت نشد'}, status=404)
+    except Exception as e:
+        bug_logger.error(f"خطا در دریافت اطلاعات مشتری {customer_id}: {str(e)}", exc_info=True)
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def update_customer_info_api(request, customer_id):
+    """
+    API endpoint برای ویرایش اطلاعات مشتری
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'فقط POST مجاز است'}, status=405)
+    
+    if not customer_id:
+        return JsonResponse({'error': 'شناسه مشتری الزامی است'}, status=400)
+    
+    try:
+        customer = Person.objects.get(national_id=customer_id, type='customer')
+        
+        with transaction.atomic():
+            # به‌روزرسانی اطلاعات پایه مشتری
+            if 'name' in request.POST:
+                customer.name = request.POST.get('name', '').strip()
+            if 'registration_number' in request.POST:
+                customer.registration_number = request.POST.get('registration_number', '').strip()
+            customer.save()
+            
+            # به‌روزرسانی یا ایجاد اطلاعات مالی بانکی
+            financial_info, created = FinancialBanking.objects.get_or_create(person=customer)
+            if 'economic_code' in request.POST:
+                financial_info.economic_code = request.POST.get('economic_code', '').strip()
+            if 'tax_address' in request.POST:
+                financial_info.tax_address = request.POST.get('tax_address', '').strip()
+            if 'tax_postal_code' in request.POST:
+                financial_info.tax_postal_code = request.POST.get('tax_postal_code', '').strip()
+            if 'tax_province' in request.POST:
+                financial_info.tax_province = request.POST.get('tax_province', '').strip()
+            if 'tax_city' in request.POST:
+                financial_info.tax_city = request.POST.get('tax_city', '').strip()
+            financial_info.save()
+            
+            # به‌روزرسانی یا ایجاد آدرس تحویل (از همان اطلاعات مالیاتی استفاده می‌کنیم)
+            # استفاده از آدرس مالیاتی برای ایجاد/به‌روزرسانی آدرس تحویل
+            tax_postal_code = financial_info.tax_postal_code or ''
+            tax_address = financial_info.tax_address or ''
+            tax_province = financial_info.tax_province or ''
+            tax_city = financial_info.tax_city or ''
+            
+            if tax_postal_code and tax_address:
+                # اگر آدرس تحویل با این کدپستی وجود دارد، به‌روزرسانی کن
+                delivery_addr = DeliveryAddress.objects.filter(person=customer, postal_code=tax_postal_code).first()
+                if delivery_addr:
+                    delivery_addr.address = tax_address
+                    delivery_addr.recipient_name = customer.name or 'تحویل گیرنده'
+                    if tax_province:
+                        delivery_addr.province = tax_province
+                    if tax_city:
+                        delivery_addr.city = tax_city
+                    delivery_addr.save()
+                else:
+                    # ایجاد آدرس تحویل جدید از اطلاعات مالیاتی
+                    DeliveryAddress.objects.create(
+                        person=customer,
+                        postal_code=tax_postal_code,
+                        address=tax_address,
+                        recipient_name=customer.name or 'تحویل گیرنده',
+                        province=tax_province,
+                        city=tax_city,
+                    )
+            
+            # به‌روزرسانی یا ایجاد شماره تلفن
+            phone_number = request.POST.get('phone_number', '').strip()
+            phone_type = request.POST.get('phone_type', 'mobile').strip()
+            if phone_number:
+                person_content_type = ContentType.objects.get_for_model(customer)
+                # حذف شماره‌های قبلی (یا می‌توانیم فقط به‌روزرسانی کنیم)
+                PhoneNumber.objects.filter(
+                    content_type=person_content_type,
+                    object_id=customer.national_id,
+                    is_primary=True
+                ).delete()
+                # ایجاد شماره جدید
+                PhoneNumber.objects.create(
+                    content_type=person_content_type,
+                    object_id=customer.national_id,
+                    number=phone_number,
+                    phone_type=phone_type,
+                    is_primary=True
+                )
+        
+        bug_logger.info(f"اطلاعات مشتری {customer_id} با موفقیت به‌روزرسانی شد")
+        return JsonResponse({'success': True, 'message': 'اطلاعات مشتری با موفقیت به‌روزرسانی شد'})
+    except Person.DoesNotExist:
+        return JsonResponse({'error': 'مشتری یافت نشد'}, status=404)
+    except Exception as e:
+        bug_logger.error(f"خطا در به‌روزرسانی اطلاعات مشتری {customer_id}: {str(e)}", exc_info=True)
         return JsonResponse({'error': str(e)}, status=500)
 
 

@@ -319,6 +319,10 @@ class CreateProformaForm(forms.ModelForm):
             if missing_fields:
                 error_message = f'اطلاعات مشتری ناقص است. لطفاً فیلدهای زیر را تکمیل کنید: {", ".join(missing_fields)}'
                 self.add_error('customer', error_message)
+                # ذخیره اطلاعات مشتری و فیلدهای ناقص برای استفاده در تمپلیت
+                self._customer_id = customer_id
+                self._missing_fields = missing_fields
+                self._customer_obj = customer
                 return cleaned_data
             
         except Person.DoesNotExist:

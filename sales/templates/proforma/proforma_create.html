@@ -188,7 +188,14 @@
                     {{ form.customer }}
                     {{ form.customer_id }}
                     {% if form.customer.errors %}
-                        <div class="text-danger">{{ form.customer.errors.0 }}</div>
+                        <div class="text-danger">
+                            {{ form.customer.errors.0 }}
+                            {% if customer_id_for_edit %}
+                                <button type="button" class="btn btn-sm btn-primary mt-2" id="edit-customer-btn" style="display: inline-block; margin-right: 10px;">
+                                    تکمیل اطلاعات مشتری
+                                </button>
+                            {% endif %}
+                        </div>
                     {% endif %}
                     <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">
                         بعد از انتخاب سفارش، مشتری به صورت خودکار پر می‌شود
@@ -234,6 +241,80 @@
             <a href="{% url 'sales:proforma_list' %}" class="btn btn-secondary">انصراف</a>
         </div>
     </form>
+</div>
+
+<!-- Modal برای ویرایش اطلاعات مشتری -->
+<div class="modal-overlay" id="customerEditModal" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h5 class="modal-title">تکمیل اطلاعات مشتری</h5>
+            <button type="button" class="modal-close" id="closeCustomerModal">&times;</button>
+        </div>
+        <div class="modal-body">
+                <form id="customerEditForm">
+                    <input type="hidden" id="edit_customer_id" name="customer_id" value="{{ customer_id_for_edit|default:'' }}">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">نام</label>
+                            <input type="text" class="form-control" id="edit_name" name="name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">شماره ملی</label>
+                            <input type="text" class="form-control" id="edit_national_id" name="national_id" readonly style="background-color: var(--gray-200);">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">شماره ثبت شرکت</label>
+                            <input type="text" class="form-control" id="edit_registration_number" name="registration_number">
+                            <small class="text-muted">فقط برای اشخاص حقوقی</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">شماره اقتصادی</label>
+                            <input type="text" class="form-control" id="edit_economic_code" name="economic_code" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label class="form-label required-field">آدرس</label>
+                            <textarea class="form-control" id="edit_tax_address" name="tax_address" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">کدپستی</label>
+                            <input type="text" class="form-control" id="edit_tax_postal_code" name="tax_postal_code" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label required-field">شماره تلفن</label>
+                            <input type="text" class="form-control" id="edit_phone_number" name="phone_number" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">استان</label>
+                            <input type="text" class="form-control" id="edit_tax_province" name="tax_province">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">شهر</label>
+                            <input type="text" class="form-control" id="edit_tax_city" name="tax_city">
+                        </div>
+                    </div>
+                    
+                    <div id="customerEditError" class="alert alert-danger" style="display: none;"></div>
+                    <div id="customerEditSuccess" class="alert alert-success" style="display: none;"></div>
+                </form>
+            </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="cancelCustomerEdit">انصراف</button>
+            <button type="button" class="btn btn-primary" id="saveCustomerBtn">ذخیره</button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -546,6 +627,171 @@ $(document).ready(function() {
             validityDateInput.parent().append(iconSpan);
         }
     }
+    
+    // مدیریت modal ویرایش اطلاعات مشتری
+    const editCustomerBtn = document.getElementById('edit-customer-btn');
+    const customerEditModal = document.getElementById('customerEditModal');
+    const closeCustomerModal = document.getElementById('closeCustomerModal');
+    const cancelCustomerEdit = document.getElementById('cancelCustomerEdit');
+    const saveCustomerBtn = document.getElementById('saveCustomerBtn');
+    const customerEditForm = document.getElementById('customerEditForm');
+    const customerIdInput = document.getElementById('edit_customer_id');
+    
+    // تابع برای باز کردن modal
+    function openCustomerModal() {
+        if (customerEditModal) {
+            customerEditModal.style.display = 'flex';
+        }
+    }
+    
+    // تابع برای بستن modal
+    function closeCustomerModalFunc() {
+        if (customerEditModal) {
+            customerEditModal.style.display = 'none';
+        }
+    }
+    
+    // بستن modal با کلیک روی overlay
+    if (customerEditModal) {
+        customerEditModal.addEventListener('click', function(e) {
+            if (e.target === customerEditModal) {
+                closeCustomerModalFunc();
+            }
+        });
+    }
+    
+    // بستن modal با دکمه‌های بستن
+    if (closeCustomerModal) {
+        closeCustomerModal.addEventListener('click', closeCustomerModalFunc);
+    }
+    if (cancelCustomerEdit) {
+        cancelCustomerEdit.addEventListener('click', closeCustomerModalFunc);
+    }
+    
+    {% if customer_id_for_edit %}
+    const customerIdForEdit = '{{ customer_id_for_edit }}';
+    {% else %}
+    const customerIdForEdit = null;
+    {% endif %}
+    
+    if (editCustomerBtn && customerIdForEdit) {
+        editCustomerBtn.addEventListener('click', function() {
+            // بارگذاری اطلاعات مشتری
+            loadCustomerInfo(customerIdForEdit);
+            openCustomerModal();
+        });
+    }
+    
+    function loadCustomerInfo(customerId) {
+        // پاک کردن پیام‌های قبلی
+        document.getElementById('customerEditError').style.display = 'none';
+        document.getElementById('customerEditSuccess').style.display = 'none';
+        
+        // نمایش loading
+        saveCustomerBtn.disabled = true;
+        saveCustomerBtn.textContent = 'در حال بارگذاری...';
+        
+        fetch(`{% url "sales:get_customer_info_for_edit_api" customer_id="CUSTOMER_ID_PLACEHOLDER" %}`.replace('CUSTOMER_ID_PLACEHOLDER', customerId))
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('customerEditError').textContent = data.error;
+                    document.getElementById('customerEditError').style.display = 'block';
+                } else {
+                    // پر کردن فیلدها
+                    document.getElementById('edit_customer_id').value = data.customer_id || '';
+                    document.getElementById('edit_name').value = data.name || '';
+                    document.getElementById('edit_national_id').value = data.national_id || '';
+                    document.getElementById('edit_registration_number').value = data.registration_number || '';
+                    document.getElementById('edit_economic_code').value = data.economic_code || '';
+                    // استفاده از آدرس مالیاتی یا آدرس تحویل (اگر آدرس مالیاتی وجود نداشت)
+                    document.getElementById('edit_tax_address').value = data.tax_address || data.delivery_address || '';
+                    document.getElementById('edit_tax_postal_code').value = data.tax_postal_code || data.delivery_postal_code || '';
+                    document.getElementById('edit_tax_province').value = data.tax_province || data.delivery_province || '';
+                    document.getElementById('edit_tax_city').value = data.tax_city || data.delivery_city || '';
+                    document.getElementById('edit_phone_number').value = data.phone_number || '';
+                }
+                saveCustomerBtn.disabled = false;
+                saveCustomerBtn.textContent = 'ذخیره';
+            })
+            .catch(error => {
+                console.error('خطا در دریافت اطلاعات مشتری:', error);
+                document.getElementById('customerEditError').textContent = 'خطا در دریافت اطلاعات مشتری';
+                document.getElementById('customerEditError').style.display = 'block';
+                saveCustomerBtn.disabled = false;
+                saveCustomerBtn.textContent = 'ذخیره';
+            });
+    }
+    
+    if (saveCustomerBtn) {
+        saveCustomerBtn.addEventListener('click', function() {
+            const customerId = customerIdInput.value;
+            if (!customerId) {
+                document.getElementById('customerEditError').textContent = 'شناسه مشتری یافت نشد';
+                document.getElementById('customerEditError').style.display = 'block';
+                return;
+            }
+            
+            // پاک کردن پیام‌های قبلی
+            document.getElementById('customerEditError').style.display = 'none';
+            document.getElementById('customerEditSuccess').style.display = 'none';
+            
+            // بررسی اعتبار فرم
+            if (!customerEditForm.checkValidity()) {
+                customerEditForm.reportValidity();
+                return;
+            }
+            
+            // جمع‌آوری داده‌های فرم
+            const formData = new FormData(customerEditForm);
+            
+            // نمایش loading
+            saveCustomerBtn.disabled = true;
+            saveCustomerBtn.textContent = 'در حال ذخیره...';
+            
+            // ارسال درخواست
+            fetch(`{% url "sales:update_customer_info_api" customer_id="CUSTOMER_ID_PLACEHOLDER" %}`.replace('CUSTOMER_ID_PLACEHOLDER', customerId), {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('customerEditError').textContent = data.error;
+                    document.getElementById('customerEditError').style.display = 'block';
+                    saveCustomerBtn.disabled = false;
+                    saveCustomerBtn.textContent = 'ذخیره';
+                } else {
+                    document.getElementById('customerEditSuccess').textContent = data.message || 'اطلاعات مشتری با موفقیت به‌روزرسانی شد';
+                    document.getElementById('customerEditSuccess').style.display = 'block';
+                    
+                    // بعد از 1.5 ثانیه، فقط modal را ببند (بدون رفرش صفحه)
+                    setTimeout(function() {
+                        closeCustomerModalFunc();
+                        // پاک کردن پیام خطای قبلی از فرم اصلی
+                        const customerErrorDiv = document.querySelector('input[name="customer"]').closest('.mb-3').querySelector('.text-danger');
+                        if (customerErrorDiv) {
+                            const errorText = customerErrorDiv.textContent.trim();
+                            // اگر پیام خطا مربوط به ناقص بودن اطلاعات بود، آن را پاک کن
+                            if (errorText.includes('اطلاعات مشتری ناقص است')) {
+                                customerErrorDiv.innerHTML = '';
+                            }
+                        }
+                    }, 1500);
+                }
+            })
+            .catch(error => {
+                console.error('خطا در ذخیره اطلاعات مشتری:', error);
+                document.getElementById('customerEditError').textContent = 'خطا در ذخیره اطلاعات مشتری';
+                document.getElementById('customerEditError').style.display = 'block';
+                saveCustomerBtn.disabled = false;
+                saveCustomerBtn.textContent = 'ذخیره';
+            });
+        });
+    }
 });
 </script>
 
@@ -555,7 +801,7 @@ $(document).ready(function() {
     padding-left: 40px;
 }
 
-.p-datepicker-trigger {
+    .p-datepicker-trigger {
     position: absolute;
     right: 10px;
     top: 50%;
@@ -565,6 +811,80 @@ $(document).ready(function() {
     z-index: 10;
     pointer-events: none;
 }
+    
+    /* Modal Styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .modal-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .modal-header {
+        padding: 20px 30px;
+        border-bottom: 2px solid var(--gray-300);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin: 0;
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 2rem;
+        color: var(--gray-600);
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+    
+    .modal-close:hover {
+        color: var(--gray-800);
+    }
+    
+    .modal-body {
+        padding: 30px;
+        flex: 1;
+        overflow-y: auto;
+    }
+    
+    .modal-footer {
+        padding: 20px 30px;
+        border-top: 2px solid var(--gray-300);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
 </style>
 {% endblock %}
 
