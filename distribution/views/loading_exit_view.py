@@ -349,6 +349,7 @@ def register_loading_exit_view(request, waybill_number):
                         # ایجاد یک StockEntry برای تمام محصولات این حمل
                         stock_entry = StockEntry.objects.create(
                             transaction_date=timezone.now(),
+                            entry_type=StockEntry.StockEntryType.SALE,
                             notes=f'خروج کالا برای حمل {waybill_number} - انتقال از انبار {origin_warehouse_obj.name} به انبار {destination_warehouse_obj.name}',
                             is_committed=False
                         )
@@ -379,6 +380,27 @@ def register_loading_exit_view(request, waybill_number):
                             if not item or not content_type:
                                 bug_logger.warning(f"ProductInfo {product_info.id} برای حمل {waybill_number} فاقد محصول یا مواد اولیه است")
                                 continue
+                            
+                            # Tracing: Link to the parent StockEntry (Production or Purchase)
+                            # If parent is not set, try to find the latest confirmed Production/Purchase entry
+                            # for this item in the source warehouse.
+                            if not stock_entry.parent:
+                                parent_entry = StockEntry.objects.filter(
+                                    target_stocks__to_content_type=content_type,
+                                    target_stocks__to_object_id=item.id,
+                                    target_stocks__to_warehouse=origin_warehouse_obj,
+                                    entry_type__in=[
+                                        StockEntry.StockEntryType.PRODUCTION, 
+                                        StockEntry.StockEntryType.PURCHASE,
+                                        StockEntry.StockEntryType.OPENING
+                                    ],
+                                    is_committed=True
+                                ).order_by('-transaction_date').first()
+                                
+                                if parent_entry:
+                                    stock_entry.parent = parent_entry
+                                    stock_entry.save(update_fields=['parent'])
+                                    bug_logger.info(f"Linked Sale StockEntry {stock_entry.id} to Parent {parent_entry.id}")
                             
                             # ایجاد SourceStock (کاهش از انبار مبدا)
                             SourceStock.objects.create(
