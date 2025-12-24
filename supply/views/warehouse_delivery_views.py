@@ -555,6 +555,12 @@ def warehouse_delivery_detail_view(request, transport_number):
                     
                     # ثبت تاریخ تخلیه
                     pt.loading_date = jdatetime.date.today()
+                    
+                    # اطمینان از اینکه direction تنظیم شده است (برای inbound)
+                    if not pt.direction:
+                        pt.direction = 'inbound'
+                    
+                    # ذخیره اولیه برای ثبت وزن‌ها
                     pt.save()
                     
                     bug_logger.info(f"اطلاعات تخلیه برای حمل {transport_number} ثبت شد - وزن خالص: {net_weight}")

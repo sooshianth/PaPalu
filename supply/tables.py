@@ -851,64 +851,36 @@ class ProcurementPurchaseOrderStatusLogTable(tables.Table):
         return value or '—'
 
 
-class GuardExitTable(tables.Table):
+class GuardExitTable(TransportTable):
     """جدول حمل‌های در انتظار تایید خروج توسط نگهبان"""
     
-    transport_number = tables.Column(
-        verbose_name='شماره حمل',
-        orderable=True,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    purchase_order = tables.Column(
-        verbose_name='شماره سفارش',
-        accessor='allocation.order.order_number',
-        orderable=True,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    plate_number = tables.Column(
-        verbose_name='پلاک',
-        orderable=False,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    vehicle_type = tables.Column(
-        verbose_name='نوع ماشین',
-        orderable=True,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    net_weight = tables.Column(
-        verbose_name='وزن خالص (کیلوگرم)',
-        orderable=False,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    actions = tables.Column(
-        verbose_name='عملیات',
+    raw_materials = tables.Column(
+        verbose_name='نام ماده اولیه',
         empty_values=(),
         orderable=False,
+        visible=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    quantity = tables.Column(
+        verbose_name='مقدار',
+        empty_values=(),
+        orderable=False,
+        visible=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    unit = tables.Column(
+        verbose_name='واحد',
+        empty_values=(),
+        orderable=False,
+        visible=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -917,52 +889,69 @@ class GuardExitTable(tables.Table):
     
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if accessible_fields:
-            if hasattr(self.base_columns, 'transport_number'):
-                self.base_columns['transport_number'].visible = accessible_fields.get('transport_number', False)
-            if hasattr(self.base_columns, 'purchase_order'):
-                self.base_columns['purchase_order'].visible = accessible_fields.get('purchase_order', False)
-            if hasattr(self.base_columns, 'plate_number'):
-                self.base_columns['plate_number'].visible = accessible_fields.get('plate_number', False)
-            if hasattr(self.base_columns, 'vehicle_type'):
-                self.base_columns['vehicle_type'].visible = accessible_fields.get('vehicle_type', False)
-            if hasattr(self.base_columns, 'net_weight'):
-                self.base_columns['net_weight'].visible = accessible_fields.get('net_weight', False)
+        
+        # ستون‌های مورد نیاز: شماره سفارش، نوع ماده اولیه، مقدار، واحد، پلاک، نوع ماشین
+        # این ستون‌ها باید همیشه نمایش داده شوند
+        required_columns = ['purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions']
+        
+        # همیشه ستون‌های مورد نیاز را نمایش بده
+        for col_name in required_columns:
+            if col_name in ['raw_materials', 'quantity', 'unit']:
+                # ستون‌های custom که در base_columns تعریف شده‌اند
+                if col_name in self.base_columns:
+                    self.base_columns[col_name].visible = True
+            elif col_name in self.columns:
+                # ستون‌های عادی
+                self.columns[col_name].column.visible = True
     
-    def render_vehicle_type(self, record):
-        return record.get_vehicle_type_display() or '—'
+    def render_raw_materials(self, record):
+        """نمایش لیست مواد اولیه از سفارش خرید"""
+        if not record.purchase_order:
+            return '—'
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
+        if materials:
+            names = [m.raw_material.name for m in materials if m.raw_material]
+            return format_html('<br>'.join(names)) if names else '—'
+        return '—'
     
-    def render_plate_number(self, value):
-        return value or '—'
+    def render_quantity(self, record):
+        """نمایش مقدار سفارش"""
+        if not record.purchase_order:
+            return '—'
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
+        if materials:
+            quantities = [str(m.quantity) for m in materials if m.quantity]
+            return format_html('<br>'.join(quantities)) if quantities else '—'
+        return '—'
     
-    def render_net_weight(self, value):
-        if value:
-            formatted = format_number_persian(value, decimal_places=3)
-            return format_html('{} کیلوگرم', formatted)
+    def render_unit(self, record):
+        """نمایش واحد سفارش"""
+        if not record.purchase_order:
+            return '—'
+        # استفاده از order_items به جای materials
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
+        if materials:
+            units = [m.get_weight_unit_display() or '—' for m in materials]
+            return format_html('<br>'.join(units)) if units else '—'
         return '—'
     
     def render_actions(self, record):
-        identifier = record.transport_number or record.transport_id
-        exit_url = reverse('supply:guard_vehicle_exit', args=[identifier])
+        """نمایش دکمه تایید خروج خودرو"""
+        # استفاده از transport_number یا pk در صورت None بودن
+        transport_id = record.transport_number
+        if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
+            transport_id = str(record.pk)
+        exit_url = reverse('supply:guard_vehicle_exit', args=[str(transport_id)])
         return format_html(
             '<a href="{}" class="btn btn-success btn-sm">تایید خروج خودرو</a>',
             exit_url
         )
     
-    class Meta:
-        from core.TransportFolder.TransportModel import Transport
-        model = Transport
-        template_name = 'django_tables2/bootstrap.html'
-        fields = ('transport_number', 'purchase_order', 'plate_number', 'vehicle_type', 'net_weight', 'actions')
-        attrs = {
-            'class': 'data-table',
-            'id': 'guardExitTable',
-            'thead': {'class': ''}
-        }
-        row_attrs = {
-            'style': 'transition: background-color 0.2s ease;'
-        }
-        sequence = ('transport_number', 'purchase_order', 'plate_number', 'vehicle_type', 'net_weight', 'actions')
+    class Meta(TransportTable.Meta):
+        sequence = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+        fields = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
 
 
 class RawMaterialTable(tables.Table):
