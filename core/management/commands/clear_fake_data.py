@@ -11,7 +11,6 @@ from core.ProductionFolder.ProductionProgramModel import ProductionProgram
 from core.AllocationFolder.AllocationModel import Allocation
 from core.TransportFolder.TransportModel import Transport
 from core.TransportFolder.TruckInfoModel import TruckInfo
-from core.SupplyFolder.ProcurementPurchaseOrderModel import ProcurementPurchaseOrder, ProcurementPurchaseOrderMaterial
 from core.StockEntryFolder.StockEntryModel import StockEntry
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
@@ -54,12 +53,6 @@ class Command(BaseCommand):
             Order.objects.all().delete()
             self.stdout.write('Deleted Orders')
             
-            ProcurementPurchaseOrderMaterial.objects.all().delete()
-            self.stdout.write('Deleted ProcurementPurchaseOrderMaterials')
-            
-            ProcurementPurchaseOrder.objects.all().delete()
-            self.stdout.write('Deleted ProcurementPurchaseOrders')
-            
             StockEntry.objects.all().delete()
             self.stdout.write('Deleted StockEntries')
             
@@ -75,29 +68,29 @@ class Command(BaseCommand):
             ProductionProgram.objects.all().delete()
             self.stdout.write('Deleted ProductionPrograms')
             
-            PhoneNumber.objects.all().delete()
-            self.stdout.write('Deleted PhoneNumbers')
+            # PhoneNumber.objects.all().delete()
+            # self.stdout.write('Deleted PhoneNumbers')
             
-            DeliveryAddress.objects.all().delete()
-            self.stdout.write('Deleted DeliveryAddresses')
+            # DeliveryAddress.objects.all().delete()
+            # self.stdout.write('Deleted DeliveryAddresses')
             
-            BankAccount.objects.all().delete()
-            self.stdout.write('Deleted BankAccounts')
+            # BankAccount.objects.all().delete()
+            # self.stdout.write('Deleted BankAccounts')
             
-            FinancialBanking.objects.all().delete()
-            self.stdout.write('Deleted FinancialBankings')
+            # FinancialBanking.objects.all().delete()
+            # self.stdout.write('Deleted FinancialBankings')
             
-            Person.objects.all().delete()
-            self.stdout.write('Deleted Persons')
+            # Person.objects.all().delete()
+            # self.stdout.write('Deleted Persons')
             
-            Product.objects.all().delete()
-            self.stdout.write('Deleted Products')
+            # Product.objects.all().delete()
+            # self.stdout.write('Deleted Products')
             
-            RawMaterial.objects.all().delete()
-            self.stdout.write('Deleted RawMaterials')
+            # RawMaterial.objects.all().delete()
+            # self.stdout.write('Deleted RawMaterials')
             
-            Warehouse.objects.all().delete()
-            self.stdout.write('Deleted Warehouses')
+            # Warehouse.objects.all().delete()
+            # self.stdout.write('Deleted Warehouses')
         
         self.stdout.write(self.style.SUCCESS('All fake data cleared!'))
 
