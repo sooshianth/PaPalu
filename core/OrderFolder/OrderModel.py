@@ -305,22 +305,22 @@ class Order(models.Model):
         - برای سفارش خرید (purchase): از PF000001 شروع می‌شود و دونه دونه افزایش می‌یابد
         """
         if order_type == 'purchase':
-            # برای سفارش‌های خرید: فرمت PF000001
+            # برای سفارش‌های خرید: فرمت PO000001
             last_order = Order.objects.filter(
                 order_type='purchase',
-                order_number__startswith='PF'
+                order_number__startswith='PO-'
             ).order_by('-order_number').first()
             
             if last_order:
                 try:
-                    # استخراج عدد از PF000001
-                    last_num_str = last_order.order_number[2:]  # حذف PF از ابتدا
+                    # استخراج عدد از PO000001
+                    last_num_str = last_order.order_number[3:]  # حذف PO- از ابتدا
                     last_num = int(last_num_str)
-                    return f"PF{last_num + 1:06d}"
+                    return f"PO-{last_num + 1:06d}"
                 except (ValueError, TypeError):
-                    return 'PF000001'
+                    return 'PO-000001'
             else:
-                return 'PF000001'
+                return 'PO-000001'
         else:
             # برای سفارش‌های فروش: فرمت عددی از 100000
             # فقط سفارش‌های فروش که شماره آن‌ها عددی است و >= 100000
@@ -331,7 +331,7 @@ class Order(models.Model):
             sale_orders = Order.objects.filter(
                 order_type='sale'
             ).exclude(
-                order_number__startswith='PF'
+                order_number__startswith='PO-'
             ).exclude(
                 order_number__startswith='PO-'
             )

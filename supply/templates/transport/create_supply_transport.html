@@ -785,6 +785,7 @@
                             {% if form.total_freight.errors %}
                                 <div class="text-danger">{{ form.total_freight.errors.0 }}</div>
                             {% endif %}
+                            <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: کرایه اولیه + مازاد - تخفیف</small>
                         </div>
                         {% endif %}
                     </div>
@@ -819,6 +820,7 @@
                             {% if form.freight_payment.errors %}
                                 <div class="text-danger">{{ form.freight_payment.errors.0 }}</div>
                             {% endif %}
+                            <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: برابر با کرایه کل</small>
                         </div>
                         {% endif %}
                     </div>
@@ -1432,6 +1434,80 @@ document.addEventListener('DOMContentLoaded', function() {
     // اجرای اولیه برای تنظیم وضعیت اولیه
     updateFreightFieldsVisibility();
   }
+  
+  // محاسبه خودکار کرایه کل و پرداختی
+  function calculateFreight() {
+    const initialFreightInput = document.getElementById('id_initial_freight');
+    const discountInput = document.getElementById('id_discount');
+    const surplusInput = document.getElementById('id_surplus');
+    const totalFreightInput = document.getElementById('id_total_freight');
+    const freightPaymentInput = document.getElementById('id_freight_payment');
+    
+    // اگر فیلدهای اصلی وجود نداشتند، خروج
+    if (!initialFreightInput || !totalFreightInput) {
+      return;
+    }
+    
+    // دریافت مقادیر (اگر خالی باشند یا نامعتبر باشند، 0 در نظر گرفته می‌شوند)
+    let initialFreight = parseFloat(initialFreightInput.value);
+    if (isNaN(initialFreight) || initialFreight < 0) {
+      initialFreight = 0;
+    }
+    
+    let discount = 0;
+    if (discountInput && discountInput.value) {
+      discount = parseFloat(discountInput.value);
+      if (isNaN(discount) || discount < 0) {
+        discount = 0;
+      }
+    }
+    
+    let surplus = 0;
+    if (surplusInput && surplusInput.value) {
+      surplus = parseFloat(surplusInput.value);
+      if (isNaN(surplus) || surplus < 0) {
+        surplus = 0;
+      }
+    }
+    
+    // محاسبه: کرایه اولیه + مازاد - تخفیف
+    const totalFreight = initialFreight + surplus - discount;
+    
+    // تنظیم کرایه کل (حداقل 0)
+    const finalTotalFreight = Math.max(0, totalFreight);
+    
+    // فرمت کردن به 2 رقم اعشار
+    const formattedTotal = finalTotalFreight.toFixed(2);
+    totalFreightInput.value = formattedTotal;
+    
+    // کرایه پرداختی همان کرایه کل است
+    if (freightPaymentInput) {
+      freightPaymentInput.value = formattedTotal;
+    }
+  }
+  
+  // اضافه کردن event listener به فیلدهای کرایه اولیه، تخفیف و مازاد
+  const initialFreightInput = document.getElementById('id_initial_freight');
+  const discountInput = document.getElementById('id_discount');
+  const surplusInput = document.getElementById('id_surplus');
+  
+  if (initialFreightInput) {
+    initialFreightInput.addEventListener('input', calculateFreight);
+    initialFreightInput.addEventListener('blur', calculateFreight);
+  }
+  
+  if (discountInput) {
+    discountInput.addEventListener('input', calculateFreight);
+    discountInput.addEventListener('blur', calculateFreight);
+  }
+  
+  if (surplusInput) {
+    surplusInput.addEventListener('input', calculateFreight);
+    surplusInput.addEventListener('blur', calculateFreight);
+  }
+  
+  // محاسبه اولیه در صورت وجود مقادیر
+  calculateFreight();
 });
 
 // راه‌اندازی تقویم شمسی برای expected_arrival_date

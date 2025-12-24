@@ -46,9 +46,13 @@ class Transport(models.Model):
     ]
     
     VEHICLE_TYPE_CHOICES = [
-        ('truck', 'کامیون'),
-        ('trailer', 'تریلی'),
-        ('van', 'ون'),
+        ('trailer_dump', 'تریلی کمپرسی'),
+        ('trailer_non_dump', 'تریلی غیر کمپرسی'),
+        ('trailer_flatbed', 'تریلی کفس'),
+        ('single_axle', 'تک'),
+        ('tandem', 'جفت'),
+        ('khavar', 'خاور'),
+        ('nissan', 'نیسان'),
         ('pickup', 'وانت'),
         ('other', 'سایر'),
     ]

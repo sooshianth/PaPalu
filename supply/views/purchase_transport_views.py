@@ -298,10 +298,10 @@ class TransportForm(ModelForm):
             'driver': forms.Select(attrs={'class': 'form-control'}),
             'freight_payment_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_freight_payment_type'}),
             'initial_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'total_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'total_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly', 'style': 'background-color: #f5f5f5; cursor: not-allowed;'}),
             'discount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'surplus': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'freight_payment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'freight_payment': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': 'readonly', 'style': 'background-color: #f5f5f5; cursor: not-allowed;'}),
             'driver_bank_account': forms.Select(attrs={'class': 'form-control'}),
             'supplier_bank_account': forms.Select(attrs={'class': 'form-control'}),
             'expected_arrival_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'text', 'placeholder': '1403/09/15'}),
@@ -398,6 +398,22 @@ class TransportForm(ModelForm):
                 )
             
             cleaned_data['allocation'] = allocation
+        
+        # محاسبه خودکار کرایه کل و پرداختی
+        initial_freight = cleaned_data.get('initial_freight') or 0
+        discount = cleaned_data.get('discount') or 0
+        surplus = cleaned_data.get('surplus') or 0
+        
+        # محاسبه: کرایه اولیه + مازاد - تخفیف
+        total_freight = initial_freight + surplus - discount
+        # حداقل 0
+        total_freight = max(0, total_freight)
+        
+        # تنظیم کرایه کل
+        cleaned_data['total_freight'] = total_freight
+        
+        # کرایه پرداختی همان کرایه کل است
+        cleaned_data['freight_payment'] = total_freight
         
         return cleaned_data
 
