@@ -1,227 +1,650 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}ثبت اطلاعات تخلیه{% endblock %}
 
 {% block extra_css %}
 <style>
-  .form-wrapper {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:22px;background:#fff;padding:20px;border:1px solid #e0e5e8;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.04)}
-  .form-wrapper h4 {grid-column:1/-1;font-size:.95rem;margin:-4px 0 10px;font-weight:600;color:#2d3e50}
-  .form-group {display:flex;flex-direction:column}
-  .form-group label {font-size:.75rem;margin-bottom:4px;font-weight:600;color:#37474f}
-  .form-group input, .form-group select, .form-group textarea {padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
-  .form-group textarea {min-height:70px;resize:vertical}
-  .section-divider {grid-column:1/-1;border-top:2px dashed #e0e5e8;padding-top:14px;margin-top:10px}
-  .section-title {grid-column:1/-1;font-size:.85rem;margin:0 0 6px;font-weight:600;color:#455a64}
-  .info-box {grid-column:1/-1;background:#f0f4f8;padding:12px 16px;border-radius:8px;border-right:4px solid var(--primary-green);margin-bottom:16px}
-  .info-box p {margin:0;color:#546e7a;font-size:.75rem;line-height:1.5}
-  .readonly-field {background:#f5f5f5;cursor:not-allowed}
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 0;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+        overflow: hidden;
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
+    }
+    
+    .form-section-title {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-body {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: hidden;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    
+    .form-section.collapsed .form-section-body {
+        max-height: 0;
+        padding: 0 25px;
+    }
+    
+    .form-section-body.weight-fields {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    
+    .form-section-body.freight-fields {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    
+    .form-section-body.warehouse-fields {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+    
+    .form-group {
+        margin-bottom: 16px;
+    }
+    
+    .form-group:last-child {
+        margin-bottom: 0;
+    }
+    
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+    
+    .form-group label.required::after {
+        content: ' *';
+        color: #dc3545;
+    }
+    
+    .form-control,
+    .form-select {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .form-control[readonly] {
+        background-color: var(--gray-100);
+        cursor: not-allowed;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .readonly-info {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 16px 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+        border: 1px solid var(--gray-300);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 10px 16px;
+    }
+    
+    .readonly-info-item {
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .readonly-info-label {
+        font-weight: 600;
+        color: var(--gray-800);
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    
+    .readonly-info-value {
+        color: var(--gray-600);
+        word-break: break-word;
+    }
+    
+    .btn-success {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: none;
+        color: white;
+        background: var(--primary-green);
+        transition: all 0.2s;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }
+    
+    .btn-success:hover {
+        background: var(--dark-green);
+    }
+    
+    .btn-secondary {
+        padding: 8px 16px;
+        border-radius: 6px;
+        border: 1px solid var(--gray-300);
+        color: var(--gray-700);
+        background: white;
+        transition: all 0.2s;
+        cursor: pointer;
+        font-size: 0.9rem;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-secondary:hover {
+        background: var(--gray-50);
+        border-color: var(--gray-400);
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-error {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-warning {
+        background-color: #fff3e0;
+        color: #e65100;
+    }
+    
+    .freight-fields-group {
+        display: none;
+    }
+    
+    .freight-fields-group.show {
+        display: block;
+    }
+    
+    .calculated-field {
+        background-color: #e8f5e9 !important;
+        color: #2e7d32 !important;
+        font-weight: 600;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<form method="post" class="form-wrapper">
-  {% csrf_token %}
-  <h4>ثبت اطلاعات تخلیه برای حمل: {{ pt.transport_number }}</h4>
-  
-  <div class="info-box">
-    <p>
-      لطفاً تمام اطلاعات پایه و داده‌های مورد نیاز برای تکمیل تخلیه و خروج نمایش داده می‌شوند.
-    </p>
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">اطلاعات سفارش (فقط خواندنی)</div>
-  
-  <div class="form-group">
-    <label>شماره سفارش</label>
-    <input type="text" class="form-control readonly-field" value="{{ pt.purchase_order.order_number }}" readonly>
-  </div>
-  
-  <div class="form-group">
-    <label>نوع ماشین</label>
-    <input type="text" class="form-control readonly-field" value="{{ pt.get_vehicle_type_display }}" readonly>
-  </div>
-  
-  <div class="form-group">
-    <label>مقدار سفارش</label>
-    <input type="text" class="form-control readonly-field" value="{% for material in pt.purchase_order.materials.all %}{{ material.quantity }} {{ material.unit }}{% if not forloop.last %}, {% endif %}{% endfor %}" readonly>
-  </div>
-  
-  <div class="form-group">
-    <label>واحد</label>
-    <input type="text" class="form-control readonly-field" value="{% for material in pt.purchase_order.materials.all %}{{ material.unit }}{% if not forloop.last %}, {% endif %}{% endfor %}" readonly>
-  </div>
-  
-  <div class="form-group">
-    <label>پلاک</label>
-    <input type="text" class="form-control readonly-field" value="{{ pt.plate_number|default:'ثبت نشده' }}" readonly>
-  </div>
-  
-  <div class="form-group">
-    <label>نوع ماشین</label>
-    <input type="text" class="form-control readonly-field" value="{{ pt.get_vehicle_type_display }}" readonly>
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">داده‌های پرکردنی اجباری</div>
-  
-  {% if accessible_transport_fields.gross_weight %}
-  <div class="form-group">
-    <label>{{ form.gross_weight.label }}{% if form.gross_weight.field.required %} *{% endif %}</label>
-    {{ form.gross_weight }}
-    {% if form.gross_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.gross_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.tare_weight %}
-  <div class="form-group">
-    <label>{{ form.tare_weight.label }}{% if form.tare_weight.field.required %} *{% endif %}</label>
-    {{ form.tare_weight }}
-    {% if form.tare_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.tare_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.freight_payment_type %}
-  <div class="form-group">
-    <label>{{ form.freight_payment_type.label }}{% if form.freight_payment_type.field.required %} *{% endif %}</label>
-    {{ form.freight_payment_type }}
-    {% if form.freight_payment_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment_type.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  <div class="section-divider"></div>
-  <div class="section-title">داده‌های پرکردنی اختیاری</div>
-  
-  <div class="form-group">
-    <label>{{ form.freight_rate.label }}</label>
-    {{ form.freight_rate }}
-    {% if form.freight_rate.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_rate.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  {% if accessible_transport_fields.initial_freight %}
-  <div class="form-group">
-    <label>{{ form.initial_freight.label }}</label>
-    {{ form.initial_freight }}
-    {% if form.initial_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.initial_freight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.total_freight %}
-  <div class="form-group">
-    <label>{{ form.total_freight.label }}</label>
-    {{ form.total_freight }}
-    {% if form.total_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.total_freight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.discount %}
-  <div class="form-group">
-    <label>{{ form.discount.label }}</label>
-    {{ form.discount }}
-    {% if form.discount.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.discount.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.surplus %}
-  <div class="form-group">
-    <label>{{ form.surplus.label }}</label>
-    {{ form.surplus }}
-    {% if form.surplus.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.surplus.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  {% if accessible_transport_fields.freight_payment %}
-  <div class="form-group">
-    <label>{{ form.freight_payment.label }}</label>
-    {{ form.freight_payment }}
-    {% if form.freight_payment.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  {% endif %}
-  
-  <div class="form-group">
-    <div class="form-group">
-        <label>{{ form.source_warehouse.label }}{% if form.source_warehouse.field.required %} *{% endif %}</label>
-        {% if form.source_warehouse.help_text %}<small class="form-text text-muted">{{ form.source_warehouse.help_text }}</small>{% endif %}
-        {{ form.source_warehouse }}
-        {% if form.source_warehouse.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.source_warehouse.errors|join:'، ' }}</div>{% endif %}
+<div class="page-header">
+    <h2>ثبت اطلاعات تخلیه برای حمل: {{ pt.transport_number }}</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    <!-- اطلاعات فقط خواندنی -->
+    <div class="readonly-info">
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره حمل:</span>
+            <span class="readonly-info-value">{{ pt.transport_number|default:"—" }}</span>
+        </div>
+        {% if pt.allocation and pt.allocation.order %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره سفارش:</span>
+            <span class="readonly-info-value">{{ pt.allocation.order.order_number }}</span>
+        </div>
+        {% endif %}
+        {% if pt.plate_number %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">پلاک خودرو:</span>
+            <span class="readonly-info-value">{{ pt.plate_number }}</span>
+        </div>
+        {% endif %}
+        {% if pt.vehicle_type %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">نوع ماشین:</span>
+            <span class="readonly-info-value">{{ pt.get_vehicle_type_display }}</span>
+        </div>
+        {% endif %}
+        {% if pt.driver and accessible_transport_fields.driver %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">راننده:</span>
+            <span class="readonly-info-value">{{ pt.driver.name|default:"—" }}</span>
+        </div>
+        {% endif %}
+        {% if pt.gross_weight %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">وزن پر:</span>
+            <span class="readonly-info-value">{{ pt.gross_weight|persian_number:3 }} کیلوگرم</span>
+        </div>
+        {% endif %}
+        {% if pt.tare_weight %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">وزن خالی:</span>
+            <span class="readonly-info-value">{{ pt.tare_weight|persian_number:3 }} کیلوگرم</span>
+        </div>
+        {% endif %}
+        {% if pt.net_weight %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">وزن خالص:</span>
+            <span class="readonly-info-value">{{ pt.net_weight|persian_number:3 }} کیلوگرم</span>
+        </div>
+        {% endif %}
     </div>
     
-    <div class="form-group">
-        <label>{{ form.destination_warehouse.label }}{% if form.destination_warehouse.field.required %} *{% endif %}</label>
-        {% if form.destination_warehouse.help_text %}<small class="form-text text-muted">{{ form.destination_warehouse.help_text }}</small>{% endif %}
-        {{ form.destination_warehouse }}
-        {% if form.destination_warehouse.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.destination_warehouse.errors|join:'، ' }}</div>{% endif %}
-    </div>
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">وزن خالص محاسبه شده</div>
-  
-  <div class="form-group" style="grid-column:1/-1">
-    <label>وزن خالص (محاسبه خودکار)</label>
-    <input type="text" id="calculated_net_weight" class="form-control readonly-field" readonly value="—">
-  </div>
-  
-  {% if form.non_field_errors %}
-  <div style="grid-column:1/-1;background:#ffebee;padding:12px;border-radius:8px;border-right:4px solid #d32f2f;margin-top:10px">
-    <p style="color:#c62828;font-size:.75rem;margin:0">{{ form.non_field_errors|join:'، ' }}</p>
-  </div>
-  {% endif %}
-  
-  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
-    <a href="{% url 'supply:warehouse_delivery' %}" class="btn btn-secondary btn-sm">بازگشت</a>
-    {% if not read_only %}
-    <button type="submit" class="btn btn-primary btn-sm">ثبت و تکمیل تخلیه</button>
-    {% endif %}
-  </div>
-  
-  {% if awaiting_guard %}
-  <div style="grid-column:1/-1;background:#fff3e0;padding:15px;border-radius:8px;border-right:4px solid #ff9800;margin-top:15px">
-    <p style="color:#e65100;font-size:.8rem;margin:0">
-      ℹ️ اطلاعات تخلیه ثبت شده است. این حمل در انتظار تایید خروج توسط نگهبان می‌باشد.
-    </p>
-  </div>
-  {% endif %}
-</form>
+    <form method="post" id="warehouseDeliveryForm">
+        {% csrf_token %}
+        
+        <!-- بخش: اطلاعات وزن -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5 class="form-section-title">اطلاعات وزن (اجباری)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body weight-fields">
+                {% if accessible_transport_fields.gross_weight %}
+                <div class="form-group">
+                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label }}</label>
+                    {{ form.gross_weight }}
+                    {% if form.gross_weight.errors %}
+                        <div class="alert alert-error">
+                            {{ form.gross_weight.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if accessible_transport_fields.tare_weight %}
+                <div class="form-group">
+                    <label for="{{ form.tare_weight.id_for_label }}" class="required">{{ form.tare_weight.label }}</label>
+                    {{ form.tare_weight }}
+                    {% if form.tare_weight.errors %}
+                        <div class="alert alert-error">
+                            {{ form.tare_weight.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label>وزن خالص (محاسبه خودکار)</label>
+                    <input type="text" id="calculated_net_weight" class="form-control" readonly value="—">
+                </div>
+            </div>
+        </div>
+        
+        <!-- بخش: نوع کرایه -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5 class="form-section-title">نوع کرایه (اجباری)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body">
+                {% if accessible_transport_fields.freight_payment_type %}
+                <div class="form-group">
+                    <label for="{{ form.freight_payment_type.id_for_label }}" class="required">{{ form.freight_payment_type.label }}</label>
+                    {{ form.freight_payment_type }}
+                    {% if form.freight_payment_type.errors %}
+                        <div class="alert alert-error">
+                            {{ form.freight_payment_type.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- بخش: اطلاعات کرایه -->
+        <div class="form-section collapsed freight-fields-group" id="freight-section">
+            <div class="form-section-header">
+                <h5 class="form-section-title">اطلاعات کرایه</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body freight-fields">
+                {% if accessible_transport_fields.initial_freight %}
+                <div class="form-group" id="initial-freight-group">
+                    <label for="{{ form.initial_freight.id_for_label }}">{{ form.initial_freight.label }}</label>
+                    {{ form.initial_freight }}
+                    {% if form.initial_freight.errors %}
+                        <div class="alert alert-error">
+                            {{ form.initial_freight.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if accessible_transport_fields.discount %}
+                <div class="form-group" id="discount-group">
+                    <label for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
+                    {{ form.discount }}
+                    {% if form.discount.errors %}
+                        <div class="alert alert-error">
+                            {{ form.discount.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if accessible_transport_fields.surplus %}
+                <div class="form-group" id="surplus-group">
+                    <label for="{{ form.surplus.id_for_label }}">{{ form.surplus.label }}</label>
+                    {{ form.surplus }}
+                    {% if form.surplus.errors %}
+                        <div class="alert alert-error">
+                            {{ form.surplus.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if accessible_transport_fields.total_freight %}
+                <div class="form-group" id="total-freight-group">
+                    <label for="{{ form.total_freight.id_for_label }}">{{ form.total_freight.label }} (محاسبه خودکار)</label>
+                    {{ form.total_freight }}
+                    {% if form.total_freight.errors %}
+                        <div class="alert alert-error">
+                            {{ form.total_freight.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if accessible_transport_fields.freight_payment %}
+                <div class="form-group" id="freight-payment-group">
+                    <label for="{{ form.freight_payment.id_for_label }}">{{ form.freight_payment.label }} (محاسبه خودکار)</label>
+                    {{ form.freight_payment }}
+                    {% if form.freight_payment.errors %}
+                        <div class="alert alert-error">
+                            {{ form.freight_payment.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- بخش: انتخاب انبار -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5 class="form-section-title">انتخاب انبار (اجباری)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-body warehouse-fields">
+                <div class="form-group">
+                    <label for="{{ form.source_warehouse.id_for_label }}" class="required">{{ form.source_warehouse.label }}</label>
+                    {% if form.source_warehouse.help_text %}
+                        <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{ form.source_warehouse.help_text }}</small>
+                    {% endif %}
+                    {{ form.source_warehouse }}
+                    {% if form.source_warehouse.errors %}
+                        <div class="alert alert-error">
+                            {{ form.source_warehouse.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.destination_warehouse.id_for_label }}" class="required">{{ form.destination_warehouse.label }}</label>
+                    {% if form.destination_warehouse.help_text %}
+                        <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{ form.destination_warehouse.help_text }}</small>
+                    {% endif %}
+                    {{ form.destination_warehouse }}
+                    {% if form.destination_warehouse.errors %}
+                        <div class="alert alert-error">
+                            {{ form.destination_warehouse.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        {% if form.non_field_errors %}
+        <div class="alert alert-error">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        
+        {% if awaiting_guard %}
+        <div class="alert alert-warning">
+            ℹ️ اطلاعات تخلیه ثبت شده است. این حمل در انتظار تایید خروج توسط نگهبان می‌باشد.
+        </div>
+        {% endif %}
+        
+        <div class="form-actions">
+            <a href="{% url 'supply:warehouse_delivery' %}" class="btn-secondary">
+                بازگشت
+            </a>
+            {% if not read_only %}
+            <button type="submit" class="btn-success" id="submitBtn">
+                ثبت و تکمیل تخلیه
+            </button>
+            {% endif %}
+        </div>
+    </form>
+</div>
 
 {% block extra_js %}
 <script>
-  // محاسبه خودکار وزن خالص و نمایش آن
-  document.addEventListener('DOMContentLoaded', function(){
-    const grossInput = document.getElementById('id_gross_weight');
-    const tareInput = document.getElementById('id_tare_weight');
-    const netDisplay = document.getElementById('calculated_net_weight');
-    
-    function calculateNet() {
-      const gross = parseFloat(grossInput.value) || 0;
-      const tare = parseFloat(tareInput.value) || 0;
-      
-      if (gross > 0 && tare > 0) {
-        const net = gross - tare;
-        if (net > 0) {
-          netDisplay.value = net.toFixed(3) + ' کیلوگرم';
-          netDisplay.style.background = '#e8f5e9';
-          netDisplay.style.color = '#2e7d32';
-          netDisplay.style.fontWeight = '600';
-        } else {
-          netDisplay.value = 'خطا: وزن پر باید بزرگتر از وزن خالی باشد!';
-          netDisplay.style.background = '#ffebee';
-          netDisplay.style.color = '#c62828';
+    document.addEventListener('DOMContentLoaded', function(){
+        // مدیریت باز و بسته شدن بخش‌های فرم
+        document.querySelectorAll('.form-section-header').forEach(function(header) {
+            header.addEventListener('click', function() {
+                const section = this.closest('.form-section');
+                section.classList.toggle('collapsed');
+            });
+        });
+        
+        // محاسبه خودکار وزن خالص
+        const grossInput = document.getElementById('id_gross_weight');
+        const tareInput = document.getElementById('id_tare_weight');
+        const netDisplay = document.getElementById('calculated_net_weight');
+        
+        function calculateNet() {
+            const gross = parseFloat(grossInput.value) || 0;
+            const tare = parseFloat(tareInput.value) || 0;
+            
+            if (gross > 0 && tare > 0) {
+                const net = gross - tare;
+                if (net > 0) {
+                    netDisplay.value = net.toFixed(3) + ' کیلوگرم';
+                    netDisplay.classList.add('calculated-field');
+                } else {
+                    netDisplay.value = 'خطا: وزن پر باید بزرگتر از وزن خالی باشد!';
+                    netDisplay.style.background = '#ffebee';
+                    netDisplay.style.color = '#c62828';
+                    netDisplay.classList.remove('calculated-field');
+                }
+            } else {
+                netDisplay.value = '—';
+                netDisplay.style.background = '';
+                netDisplay.style.color = '';
+                netDisplay.classList.remove('calculated-field');
+            }
         }
-      } else {
-        netDisplay.value = '—';
-        netDisplay.style.background = '#f5f5f5';
-        netDisplay.style.color = '#546e7a';
-      }
-    }
-    
-    if (grossInput && tareInput && netDisplay) {
-      grossInput.addEventListener('input', calculateNet);
-      tareInput.addEventListener('input', calculateNet);
-      calculateNet(); // Initial calculation
-    }
-  });
+        
+        if (grossInput && tareInput && netDisplay) {
+            grossInput.addEventListener('input', calculateNet);
+            tareInput.addEventListener('input', calculateNet);
+            calculateNet();
+        }
+        
+        // مدیریت نمایش/مخفی کردن فیلدهای کرایه بر اساس نوع کرایه
+        const freightPaymentTypeSelect = document.getElementById('id_freight_payment_type');
+        const freightSection = document.getElementById('freight-section');
+        const freightFieldsGroups = [
+            document.getElementById('initial-freight-group'),
+            document.getElementById('discount-group'),
+            document.getElementById('surplus-group'),
+            document.getElementById('total-freight-group'),
+            document.getElementById('freight-payment-group')
+        ].filter(Boolean);
+        
+        function toggleFreightFields() {
+            const selectedType = freightPaymentTypeSelect ? freightPaymentTypeSelect.value : '';
+            
+            // اگر نوع کرایه "محاسبه شده در فی" باشد، فیلدهای کرایه را مخفی کن
+            if (selectedType === 'calculated_in_invoice') {
+                if (freightSection) {
+                    freightSection.style.display = 'none';
+                }
+            } else if (selectedType === 'pay_to_supplier' || selectedType === 'pay_to_driver') {
+                // برای سایر انواع، فیلدهای کرایه را نمایش بده
+                if (freightSection) {
+                    freightSection.style.display = 'block';
+                    freightSection.classList.remove('collapsed');
+                }
+            } else {
+                // اگر هیچ نوعی انتخاب نشده، مخفی کن
+                if (freightSection) {
+                    freightSection.style.display = 'none';
+                }
+            }
+        }
+        
+        if (freightPaymentTypeSelect) {
+            freightPaymentTypeSelect.addEventListener('change', toggleFreightFields);
+            toggleFreightFields(); // اجرای اولیه
+        }
+        
+        // محاسبه خودکار کرایه کل و کرایه پرداختی
+        const initialFreightInput = document.getElementById('id_initial_freight');
+        const discountInput = document.getElementById('id_discount');
+        const surplusInput = document.getElementById('id_surplus');
+        const totalFreightInput = document.getElementById('id_total_freight');
+        const freightPaymentInput = document.getElementById('id_freight_payment');
+        
+        function calculateFreight() {
+            const initial = parseFloat(initialFreightInput.value) || 0;
+            const discount = parseFloat(discountInput.value) || 0;
+            const surplus = parseFloat(surplusInput.value) || 0;
+            
+            // محاسبه: کرایه کل = کرایه اولیه - تخفیف + مازاد
+            const total = initial - discount + surplus;
+            
+            if (totalFreightInput) {
+                totalFreightInput.value = total.toFixed(2);
+                totalFreightInput.classList.add('calculated-field');
+            }
+            
+            if (freightPaymentInput) {
+                // کرایه پرداختی = کرایه کل
+                freightPaymentInput.value = total.toFixed(2);
+                freightPaymentInput.classList.add('calculated-field');
+            }
+        }
+        
+        if (initialFreightInput && discountInput && surplusInput) {
+            initialFreightInput.addEventListener('input', calculateFreight);
+            discountInput.addEventListener('input', calculateFreight);
+            surplusInput.addEventListener('input', calculateFreight);
+            calculateFreight(); // محاسبه اولیه
+        }
+    });
 </script>
 {% endblock %}
 
