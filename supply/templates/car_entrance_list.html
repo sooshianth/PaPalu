@@ -49,6 +49,7 @@
         overflow-x: auto;
     }
     
+    /* استایل جدول django-tables2 */
     .data-table {
         width: 100%;
         border-collapse: collapse;
@@ -88,8 +89,21 @@
         text-align: center;
     }
     
+    /* اطمینان از نمایش افقی دکمه‌ها در RTL */
+    .data-table .btn-group a,
+    .table-container .btn-group a {
+        display: inline-block !important;
+        vertical-align: middle;
+        margin: 0;
+    }
+    
+    .data-table .btn-group {
+        direction: ltr;
+        text-align: left;
+    }
+    
     /* استایل‌های django-tables2 - لینک‌های عادی */
-    .data-table a:not(.btn-outline-warning):not(.btn-outline-info):not(.btn-primary) {
+    .data-table a:not(.btn-outline-warning):not(.btn-outline-info):not(.btn-register-driver) {
         color: inherit;
         text-decoration: none;
     }
@@ -220,7 +234,7 @@
         background: transparent !important;
     }
     
-    /* Override برای استایل‌های bootstrap که ممکن است اعمال شده باشند */
+    /* Override برای استایل‌های bootstrap */
     .pagination > li > a,
     .pagination > li > span {
         border: 1px solid var(--gray-300) !important;
@@ -281,63 +295,6 @@
         cursor: not-allowed;
     }
     
-    .badge {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-    
-    .badge-green {
-        background-color: var(--primary-green);
-        color: white;
-    }
-    
-    /* استایل وضعیت‌های حمل */
-    .status-badge {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        font-weight: 500;
-    }
-    
-    .status-draft {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-    
-    .status-awaiting_vehicle_entry {
-        background-color: #cce5ff;
-        color: #004085;
-    }
-    
-    .status-vehicle_entered {
-        background-color: #d1ecf1;
-        color: #0c5460;
-    }
-    
-    .status-awaiting_unloading {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-    
-    .status-awaiting_delivery {
-        background-color: #e2e3e5;
-        color: #383d41;
-    }
-    
-    .status-awaiting_wh_reconciliation {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-    
-    .status-completed {
-        background-color: var(--light-green);
-        color: var(--dark-green);
-    }
-    
     .alert {
         border-radius: 8px;
         padding: 15px 20px;
@@ -373,9 +330,15 @@
         opacity: 0.5;
     }
     
-    .empty-state p {
-        font-size: 1.1rem;
+    .empty-state h3 {
+        font-size: 1.2rem;
         margin-bottom: 10px;
+        color: var(--gray-700);
+    }
+    
+    .empty-state p {
+        font-size: 0.95rem;
+        color: var(--gray-600);
     }
     
     @media (max-width: 768px) {
@@ -426,102 +389,6 @@
         <div class="table-container">
             {% render_table table %}
         </div>
-        <script>
-            // اصلاح ترتیب صفحه‌بندی برای RTL
-            (function() {
-                function fixPaginationOrder() {
-                    const paginations = document.querySelectorAll('.pagination');
-                    paginations.forEach(function(pagination) {
-                        // اگر قبلاً اصلاح شده، دوباره اصلاح نکن
-                        if (pagination.dataset.fixed === 'true') return;
-                        
-                        const items = Array.from(pagination.children);
-                        if (items.length === 0) return;
-                        
-                        // پیدا کردن Previous و Next
-                        let prevItem = null;
-                        let nextItem = null;
-                        const numberItems = [];
-                        
-                        items.forEach(function(item) {
-                            const link = item.querySelector('a');
-                            const text = (link ? link.textContent : item.textContent).trim();
-                            const isPrev = text.includes('قبلی') || text.includes('Previous') || text === '«';
-                            const isNext = text.includes('بعدی') || text.includes('Next') || text === '»';
-                            
-                            if (isPrev) {
-                                prevItem = item;
-                            } else if (isNext) {
-                                nextItem = item;
-                            } else {
-                                // بررسی اینکه آیا عدد است یا ellipsis
-                                const isNumber = /^\d+$/.test(text) || item.classList.contains('current');
-                                if (isNumber || item.classList.contains('ellipsis')) {
-                                    numberItems.push(item);
-                                }
-                            }
-                        });
-                        
-                        // اگر Next در اول و Previous در آخر است (RTL)
-                        if (nextItem && prevItem && items[0] === nextItem && items[items.length - 1] === prevItem) {
-                            // معکوس کردن ترتیب اعداد
-                            numberItems.reverse();
-                            
-                            // بازسازی لیست: Previous, اعداد معکوس شده, Next
-                            pagination.innerHTML = '';
-                            if (prevItem) {
-                                pagination.appendChild(prevItem);
-                            }
-                            numberItems.forEach(function(item) {
-                                pagination.appendChild(item);
-                            });
-                            if (nextItem) {
-                                pagination.appendChild(nextItem);
-                            }
-                            
-                            // علامت‌گذاری که اصلاح شده
-                            pagination.dataset.fixed = 'true';
-                        }
-                    });
-                }
-                
-                // اجرا بعد از لود شدن DOM
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', fixPaginationOrder);
-                } else {
-                    fixPaginationOrder();
-                }
-                
-                // اجرا بعد از تغییرات AJAX (برای django-tables2)
-                setTimeout(fixPaginationOrder, 100);
-                setTimeout(fixPaginationOrder, 500);
-            })();
-        </script>
-        <style>
-            /* استایل‌های اضافی برای اطمینان از اعمال صحیح */
-            .table-container .pagination,
-            .pagination {
-                margin-top: 30px !important;
-                margin-bottom: 20px !important;
-                justify-content: flex-start !important;
-                direction: ltr !important;
-                flex-direction: row !important;
-            }
-            
-            /* دکمه‌های قبلی و بعدی هم اندازه با اعداد */
-            .table-container .pagination li:first-child a,
-            .table-container .pagination li:first-child span,
-            .table-container .pagination li:last-child a,
-            .table-container .pagination li:last-child span,
-            .pagination li:first-child a,
-            .pagination li:first-child span,
-            .pagination li:last-child a,
-            .pagination li:last-child span {
-                padding: 10px 16px !important;
-                min-width: 40px !important;
-                font-size: 0.9rem !important;
-            }
-        </style>
     {% else %}
         <div class="empty-state">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -529,10 +396,8 @@
                 <circle cx="7" cy="18" r="2" stroke="currentColor" stroke-width="2"/>
                 <circle cx="17" cy="18" r="2" stroke="currentColor" stroke-width="2"/>
             </svg>
-            <p>هیچ خودرویی در انتظار ورود نیست.</p>
-            <p style="font-size: 0.9rem; margin-top: 10px;">
-                تمام حمل‌های تعریف شده وارد شده‌اند یا هنوز حملی در وضعیت "در انتظار ورود خودرو" ثبت نشده است.
-            </p>
+            <h3>هیچ خودرویی در انتظار ورود نیست</h3>
+            <p>تمام حمل‌های تعریف شده وارد شده‌اند یا هنوز حملی در وضعیت "در انتظار ورود خودرو" ثبت نشده است.</p>
         </div>
     {% endif %}
 </div>

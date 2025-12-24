@@ -666,12 +666,13 @@ class TransportTable(tables.Table):
     class Meta:
         from core.TransportFolder.TransportModel import Transport
         model = Transport
-        template_name = 'django_tables2/bootstrap4.html'
+        template_name = 'django_tables2/bootstrap.html'
         # فیلدهای مورد نیاز برای لیست حمل‌ها
         fields = ('purchase_order', 'created_at', 'raw_materials', 'transport_type', 'vehicle_type', 'status', 'actions')
         attrs = {
-            'class': 'table table-hover table-bordered',
-            'style': 'border-collapse:collapse;font-size:.85rem'
+            'class': 'data-table',
+            'id': 'transportsTable',
+            'thead': {'class': ''}
         }
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
@@ -865,7 +866,7 @@ class GuardExitTable(tables.Table):
     
     purchase_order = tables.Column(
         verbose_name='شماره سفارش',
-        accessor='purchase_order.order_number',
+        accessor='allocation.order.order_number',
         orderable=True,
         visible=False,
         attrs={
@@ -951,11 +952,15 @@ class GuardExitTable(tables.Table):
     class Meta:
         from core.TransportFolder.TransportModel import Transport
         model = Transport
-        template_name = 'django_tables2/bootstrap4.html'
+        template_name = 'django_tables2/bootstrap.html'
         fields = ('transport_number', 'purchase_order', 'plate_number', 'vehicle_type', 'net_weight', 'actions')
         attrs = {
-            'class': 'table table-hover table-bordered',
-            'style': 'border-collapse:collapse;font-size:.85rem'
+            'class': 'data-table',
+            'id': 'guardExitTable',
+            'thead': {'class': ''}
+        }
+        row_attrs = {
+            'style': 'transition: background-color 0.2s ease;'
         }
         sequence = ('transport_number', 'purchase_order', 'plate_number', 'vehicle_type', 'net_weight', 'actions')
 
