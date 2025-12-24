@@ -26,6 +26,7 @@ from distribution.tables import LoadingExitTable
 from core.StockEntryFolder.StockEntryModel import StockEntry
 from core.StockEntryFolder.SourceStockModel import SourceStock
 from core.StockEntryFolder.TargetStockModel import TargetStock
+from core.StockEntryFolder.StockEntryParentModel import StockEntryParent
 from core.ProductFolder.ProductModel import Product
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 import re
@@ -381,26 +382,58 @@ def register_loading_exit_view(request, waybill_number):
                                 bug_logger.warning(f"ProductInfo {product_info.id} برای حمل {waybill_number} فاقد محصول یا مواد اولیه است")
                                 continue
                             
-                            # Tracing: Link to the parent StockEntry (Production or Purchase)
-                            # If parent is not set, try to find the latest confirmed Production/Purchase entry
-                            # for this item in the source warehouse.
-                            if not stock_entry.parent:
-                                parent_entry = StockEntry.objects.filter(
-                                    target_stocks__to_content_type=content_type,
-                                    target_stocks__to_object_id=item.id,
-                                    target_stocks__to_warehouse=origin_warehouse_obj,
+                            
+                            # -------------------------------------------------------------------------
+                            # FIFO Tracing: Link to Parent (Production/Purchase) Entries
+                            # -------------------------------------------------------------------------
+                            try:
+                                remaining_needed = product_info.weight
+                                
+                                # Find valid parent candidates:
+                                # 1. Production (Finished Good) or Purchase (Trading) or Opening
+                                # 2. Must contain the specific Item (TargetStock matches matches to_object_id)
+                                # 3. Must be in the SOURCE warehouse
+                                # 4. Must be committed
+                                candidates = StockEntry.objects.filter(
                                     entry_type__in=[
                                         StockEntry.StockEntryType.PRODUCTION, 
                                         StockEntry.StockEntryType.PURCHASE,
-                                        StockEntry.StockEntryType.OPENING
+                                        StockEntry.StockEntryType.OPENING,
+                                        StockEntry.StockEntryType.RETURN_IN
                                     ],
+                                    target_stocks__to_content_type=content_type,
+                                    target_stocks__to_object_id=item.id,
+                                    target_stocks__to_warehouse=origin_warehouse_obj,
                                     is_committed=True
-                                ).order_by('-transaction_date').first()
-                                
-                                if parent_entry:
-                                    stock_entry.parent = parent_entry
-                                    stock_entry.save(update_fields=['parent'])
-                                    bug_logger.info(f"Linked Sale StockEntry {stock_entry.id} to Parent {parent_entry.id}")
+                                ).distinct().order_by('transaction_date')
+
+                                for candidate in candidates:
+                                    if remaining_needed <= 0:
+                                        break
+                                        
+                                    # Check how much is available in this parent entry
+                                    available = candidate.get_remaining_quantity()
+                                    if available <= 0:
+                                        continue
+                                        
+                                    take = min(remaining_needed, available)
+                                    
+                                    # Create or Update Link
+                                    link, created_link = StockEntryParent.objects.get_or_create(
+                                        parent=candidate,
+                                        child=stock_entry,
+                                        defaults={'quantity': 0}
+                                    )
+                                    # Use F expression to avoid race condition if possible, but we need 'take' value
+                                    link.quantity = models.F('quantity') + take
+                                    link.save()
+                                    
+                                    remaining_needed -= take
+                                    bug_logger.info(f"FIFO Sales: Took {take} from Parent {candidate.id} for {item.name}")
+
+                            except Exception as e:
+                                bug_logger.warning(f"FIFO Tracing failed for sale of {item.name}: {e}")
+                            # -------------------------------------------------------------------------
                             
                             # ایجاد SourceStock (کاهش از انبار مبدا)
                             SourceStock.objects.create(

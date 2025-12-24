@@ -29,6 +29,7 @@ from core.ProductFolder.ProductModel import Product
 from core.StockEntryFolder.StockEntryModel import StockEntry
 from core.StockEntryFolder.SourceStockModel import SourceStock
 from core.StockEntryFolder.TargetStockModel import TargetStock
+from core.StockEntryFolder.StockEntryParentModel import StockEntryParent
 from production.forms.program_form import ProductionProgramForm
 from production.forms.production_form import ProductionForm
 # Reuse dashboard helper for inventory snapshot auto-fill (used in program create)
@@ -321,9 +322,22 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
                     transaction_date=timezone.now(),
                     entry_type=StockEntry.StockEntryType.PRODUCTION,
                     notes=f'تکمیل تولید برنامه {production_program.program_id or production_program.id} - تبدیل مواد اولیه به محصول نهایی',
-                    parent=consumption_entry,  # Link to the consumption entry
                     is_committed=False
                 )
+
+                if consumption_entry:
+                    # Link Consumption as Parent of Production (Consumption -> Production)
+                    # For simplificty, we assume specific linking helps tracing.
+                    # Quantity linked? Ideally the total weight of raw materials, or just 0 as a symbolic link?
+                    # Let's link it with produced_weight to indicate "This production output came from that consumption event"
+                    # But wait, StockEntryParent.quantity represents "How much of PARENT was used".
+                    # The parent (Consumption) consumed Raw Materials. It doesn't "have" quantity in the same way Purchase does.
+                    # However, strictly for tracing, we can just link them.
+                    StockEntryParent.objects.create(
+                        parent=consumption_entry,
+                        child=completion_entry,
+                        quantity=produced_weight # Symbolic: effectively 1-to-1 event link
+                    )
                 
                 # Decrease all raw materials from production warehouse (based on total actual consumption)
                 for bom in production_program.production_info.bom_items.all():
@@ -496,6 +510,56 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
                             quantity=amount,
                         )
                         bug_logger.debug(f"TargetStock created to production warehouse: {target_stock}")
+
+                        # -------------------------------------------------------------------------
+                        # FIFO Tracing: Link to Parent (Purchase/Opening) Entries
+                        # -------------------------------------------------------------------------
+                        try:
+                            remaining_needed = amount
+                            
+                            # Find valid parent candidates:
+                            # 1. Purchase or Opening or Production (if reusing material?) - usually Purchase/Opening
+                            # 2. Must contain the specific Raw Material (TargetStock matches matches to_object_id)
+                            # 3. Must be in the SOURCE warehouse
+                            # 4. Must be committed
+                            candidates = StockEntry.objects.filter(
+                                entry_type__in=[
+                                    StockEntry.StockEntryType.PURCHASE,
+                                    StockEntry.StockEntryType.OPENING,
+                                    StockEntry.StockEntryType.RETURN_IN
+                                ],
+                                target_stocks__to_content_type=raw_material_ct,
+                                target_stocks__to_object_id=bom.raw_material.id,
+                                target_stocks__to_warehouse=source_warehouse,
+                                is_committed=True
+                            ).distinct().order_by('transaction_date')
+
+                            for candidate in candidates:
+                                if remaining_needed <= 0:
+                                    break
+                                    
+                                available = candidate.get_remaining_quantity()
+                                if available <= 0:
+                                    continue
+                                    
+                                take = min(remaining_needed, available)
+                                
+                                # Create or Update Link
+                                link, created_link = StockEntryParent.objects.get_or_create(
+                                    parent=candidate,
+                                    child=stock_entry,
+                                    defaults={'quantity': 0}
+                                )
+                                link.quantity = models.F('quantity') + take
+                                link.save()
+                                
+                                remaining_needed -= take
+                                bug_logger.debug(f"FIFO: Took {take} from Parent {candidate.id} for {bom.raw_material.name}")
+
+                        except Exception as e:
+                            bug_logger.warning(f"FIFO Tracing failed for {bom.raw_material.name}: {e}")
+                            # Continue without failing the main transaction, as tracing is secondary
+                        # -------------------------------------------------------------------------
             
             # Commit transaction
             stock_entry.commit()

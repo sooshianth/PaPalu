@@ -50,15 +50,16 @@ class StockEntry(models.Model):
     )
     reference_document = GenericForeignKey('reference_content_type', 'reference_object_id')
 
-    # Tracing
-    parent = models.ForeignKey(
+    reference_document = GenericForeignKey('reference_content_type', 'reference_object_id')
+
+    # Tracing (Many-to-Many via Through Model)
+    parents = models.ManyToManyField(
         'self',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        through='core.StockEntryParent',
+        symmetrical=False,
         related_name='children',
-        verbose_name='تراکنش والد',
-        help_text='برای رهگیری زنجیره تامین (مثلاً رسید تولید به حواله مصرف، یا حواله مصرف به رسید خرید)'
+        verbose_name='تراکنش‌های والد',
+        blank=True
     )
 
     # Event Tracking (For Idempotency & Tracing)
@@ -119,18 +120,33 @@ class StockEntry(models.Model):
     def get_upstream_trace(self, include_self=True):
         """
         Get the lineage of this stock entry (parents, grandparents, etc.)
-        Returns a list of StockEntry objects ordered from root to this entry.
+        Returns a set of StockEntry objects.
         """
-        chain = []
-        current = self
-        while current:
-            chain.append(current)
-            current = current.parent
-        
-        if not include_self and chain:
-            chain.pop(0)  # Remove self
+        chain = set()
+        if include_self:
+            chain.add(self)
             
-        return list(reversed(chain))
+        # Recursive DFS
+        parents = self.parents.all()
+        for p in parents:
+            chain.add(p)
+            chain.update(p.get_upstream_trace(include_self=False))
+            
+        return list(chain)
+
+    def get_total_quantity(self):
+        """Returns the total QTY moved in this entry (Sum of TargetStocks)"""
+        return sum(item.quantity for item in self.target_stocks.all())
+
+    def get_consumed_quantity(self):
+        """Returns the total QTY consumed by children (Sum of StockEntryParent links where is_parent)"""
+        # We need to import the through model locally to avoid circular import if defined elsewhere
+        # Or use the reverse relation 'child_links' defined in StockEntryParent
+        return sum(link.quantity for link in self.child_links.all())
+
+    def get_remaining_quantity(self):
+        """Returns Initial - Consumed"""
+        return self.get_total_quantity() - self.get_consumed_quantity()
     
     def commit(self):
         """
