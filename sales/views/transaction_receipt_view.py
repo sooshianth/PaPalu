@@ -155,8 +155,20 @@ def transaction_receipt_upload_view(request, order_number):
                 all_documents_amount = all_documents.aggregate(total=Sum('document_amount'))['total'] or 0
                 remaining_amount = float(settlement.original_document_amount) - float(all_documents_amount)
                 
+                # محاسبه مجموع کل با سند جدید
+                total_with_new = float(all_documents_amount) + float(new_document_amount)
+                
+                # چک کردن اینکه مجموع کل با سند جدید از مبلغ کل بیشتر نشود
+                if total_with_new > float(settlement.original_document_amount):
+                    form.add_error(
+                        'document_amount',
+                        f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({settlement.original_document_amount:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
+                    )
+                    bug_logger.warning(
+                        f"تلاش برای ثبت تراکنش با مبلغ {new_document_amount} که مجموع را به {total_with_new} می‌رساند (بیشتر از {settlement.original_document_amount}) برای سفارش {order_number}"
+                    )
                 # چک کردن اینکه مبلغ جدید از باقیمانده بیشتر نباشد
-                if float(new_document_amount) > remaining_amount:
+                elif float(new_document_amount) > remaining_amount:
                     form.add_error(
                         'document_amount',
                         f'مبلغ تراکنش ({new_document_amount:,.0f}) نمی‌تواند از مبلغ باقیمانده ({remaining_amount:,.0f}) بیشتر باشد.'
@@ -306,14 +318,28 @@ def transaction_receipt_edit_view(request, order_number, document_id):
             settlement = document.settlement
             
             if settlement.original_document_amount:
-                # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
-                # باید مبلغ قبلی را کم کنیم و مبلغ جدید را اضافه کنیم
-                all_documents_amount = settlement.transaction_documents.aggregate(total=Sum('document_amount'))['total'] or 0
-                # کم کردن مبلغ قبلی و اضافه کردن مبلغ جدید
-                remaining_amount = float(settlement.original_document_amount) - float(all_documents_amount) + float(old_document_amount)
+                # محاسبه مجموع همه تراکنش‌های موجود به جز سند فعلی
+                other_documents_amount = settlement.transaction_documents.exclude(id=document.id).aggregate(
+                    total=Sum('document_amount')
+                )['total'] or 0
                 
+                # محاسبه باقیمانده = مبلغ کل - مجموع سایر اسناد
+                remaining_amount = float(settlement.original_document_amount) - float(other_documents_amount)
+                
+                # محاسبه مجموع کل با سند جدید
+                total_with_new = float(other_documents_amount) + float(new_document_amount)
+                
+                # چک کردن اینکه مجموع کل با سند جدید از مبلغ کل بیشتر نشود
+                if total_with_new > float(settlement.original_document_amount):
+                    form.add_error(
+                        'document_amount',
+                        f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({settlement.original_document_amount:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
+                    )
+                    bug_logger.warning(
+                        f"تلاش برای ویرایش تراکنش با مبلغ {new_document_amount} که مجموع را به {total_with_new} می‌رساند (بیشتر از {settlement.original_document_amount}) برای سفارش {order_number}"
+                    )
                 # چک کردن اینکه مبلغ جدید از باقیمانده بیشتر نباشد
-                if float(new_document_amount) > remaining_amount:
+                elif float(new_document_amount) > remaining_amount:
                     form.add_error(
                         'document_amount',
                         f'مبلغ تراکنش ({new_document_amount:,.0f}) نمی‌تواند از مبلغ باقیمانده ({remaining_amount:,.0f}) بیشتر باشد.'

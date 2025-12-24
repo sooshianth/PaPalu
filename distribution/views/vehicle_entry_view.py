@@ -67,7 +67,8 @@ def vehicle_entry_list_view(request):
     
     # دریافت حمل‌های در انتظار ورود به کارخانه
     transports = Transport.objects.filter(
-        status='pending_vehicle_entry'
+        status='pending_vehicle_entry',
+        direction='outbound'
     ).select_related('driver', 'allocation').prefetch_related(
         'truck_infos'
     ).order_by('-waybill_date', 'waybill_number')
