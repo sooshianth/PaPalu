@@ -443,10 +443,14 @@ def product_info_api(request, product_id):
                 'condition': price_info.condition[:100] if price_info.condition else '',
             })
         
-        # دریافت درصد مالیات از ProductSales
+        # دریافت درصد مالیات - اول از Product.tax_percentage، سپس از ProductSales.price_with_tax
         tax_percentage = '0'
         try:
-            if hasattr(product, 'sales_info') and product.sales_info and product.sales_info.price_with_tax:
+            # اولویت اول: tax_percentage از مدل Product
+            if product.tax_percentage is not None:
+                tax_percentage = str(product.tax_percentage)
+            # اولویت دوم: price_with_tax از ProductSales
+            elif hasattr(product, 'sales_info') and product.sales_info and product.sales_info.price_with_tax:
                 tax_percentage = str(product.sales_info.price_with_tax)
         except:
             pass

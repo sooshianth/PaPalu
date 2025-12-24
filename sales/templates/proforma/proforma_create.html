@@ -405,6 +405,56 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // تابع برای تنظیم فیلد سفارش به read-only
+    function setOrderReadOnly() {
+        if (orderInput) {
+            orderInput.setAttribute('readonly', 'readonly');
+            orderInput.style.backgroundColor = '#e9ecef';
+            orderInput.style.cursor = 'not-allowed';
+            // مخفی کردن container پیشنهادات
+            const suggestionsContainer = document.querySelector('.order-suggestions');
+            if (suggestionsContainer) {
+                suggestionsContainer.style.display = 'none';
+            }
+        }
+    }
+    
+    // اگر order_number در query string باشد، آن را به صورت خودکار انتخاب کن
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedOrderNumber = urlParams.get('order_number');
+    if (preselectedOrderNumber && orderInput && orderIdInput) {
+        // تنظیم فیلد سفارش به read-only از ابتدا (قبل از پر شدن)
+        setOrderReadOnly();
+        
+        // درخواست اطلاعات سفارش
+        fetch('{% url "sales:order_search_api" %}?q=' + encodeURIComponent(preselectedOrderNumber))
+            .then(response => response.json())
+            .then(data => {
+                if (data.results && data.results.length > 0) {
+                    const order = data.results[0];
+                    // تنظیم فیلدهای فرم
+                    if (orderInput) {
+                        orderInput.value = order.text;
+                    }
+                    if (orderIdInput) {
+                        orderIdInput.value = order.id;
+                    }
+                    // تنظیم مشتری
+                    if (order.customer_id && customerInput && customerIdInput) {
+                        customerInput.value = order.customer_name || '';
+                        customerIdInput.value = order.customer_id;
+                    }
+                    // تولید شماره پیش فاکتور
+                    if (proformaNumberInput) {
+                        generateProformaNumber(order.id);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('خطا در دریافت اطلاعات سفارش:', error);
+            });
+    }
 });
 
 $(document).ready(function() {

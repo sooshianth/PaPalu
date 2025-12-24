@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django.utils.html import format_html, mark_safe
 from django.urls import reverse
 from core.OrderFolder.ProformaModel import Proforma
+from core.OrderFolder.OrderModel import Order
 from core.helpers import check_field_access_prefer_edit
 import json
 import html
@@ -493,3 +494,96 @@ class ApproveProformaTable(tables.Table):
             error_msg = f'{str(e)} - {traceback.format_exc()}'
             return format_html('<span style="color: red;">خطا: {}</span>', error_msg)
 
+
+class PendingProformaOrderTable(tables.Table):
+    """جدول لیست سفارش‌های در انتظار صدور پیش فاکتور با استفاده از django-tables2"""
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    order_number = tables.Column(
+        verbose_name='شماره سفارش',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    customer = tables.Column(
+        verbose_name='مشتری',
+        accessor='customer.name',
+        orderable=True,
+        order_by='customer__name',
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    created_at = tables.Column(
+        verbose_name='تاریخ ایجاد',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        model = Order
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('order_number', 'customer', 'created_at', 'actions')
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = ('order_number', 'customer', 'created_at', 'actions')
+    
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش"""
+        if value:
+            return format_html('<span class="badge badge-success">{}</span>', value)
+        return '-'
+    
+    def render_customer(self, value, record):
+        """نمایش نام مشتری"""
+        return value if value else '-'
+    
+    def render_created_at(self, value, record):
+        """نمایش تاریخ ایجاد"""
+        if value:
+            try:
+                # برای jDateTimeField از strftime استفاده می‌کنیم
+                return value.strftime('%Y/%m/%d')
+            except (AttributeError, TypeError):
+                # اگر strftime کار نکرد، از str استفاده می‌کنیم
+                return str(value)
+        return '-'
+    
+    def render_actions(self, record):
+        """نمایش دکمه ایجاد پیش فاکتور"""
+        try:
+            create_url = reverse('sales:proforma_create') + f'?order_number={record.order_number}'
+            
+            html = format_html(
+                '<div class="btn-group">'
+                '<a href="{}" class="btn-outline-success" title="ایجاد پیش فاکتور">ایجاد پیش فاکتور</a>'
+                '</div>',
+                create_url
+            )
+            return html
+        except Exception as e:
+            # در صورت بروز خطا، یک پیام خطا برگردان
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))

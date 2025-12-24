@@ -395,7 +395,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // پر کردن درصد مالیات
                         if (data.tax_percentage && vatPercentInput) {
-                            vatPercentInput.value = data.tax_percentage;
+                            const taxValue = data.tax_percentage.trim();
+                            if (taxValue && taxValue !== '0' && taxValue !== '') {
+                                vatPercentInput.value = taxValue;
+                            } else if (taxValue === '0' || taxValue === '') {
+                                // اگر مالیات 0 است یا خالی است، مقدار را 0 قرار بده
+                                vatPercentInput.value = '0';
+                            }
                         }
                         
                         // مدیریت قیمت‌ها

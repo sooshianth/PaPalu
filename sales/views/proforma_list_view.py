@@ -140,38 +140,37 @@ def get_accessible_proforma_fields_for_view(user):
 @login_required
 def proforma_list_view(request):
     """
-    لیست پیش فاکتورها با استفاده از django-tables2
+    لیست سفارش‌های در انتظار صدور پیش فاکتور با استفاده از django-tables2
     """
-    audit_logger.info("درخواست مشاهده لیست پیش فاکتورها")
+    audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار صدور پیش فاکتور")
     
     # بررسی TaskPermission
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA_PRICE.value):
-        audit_logger.activity("تلاش برای مشاهده لیست پیش فاکتورها بدون دسترسی")
-        messages.error(request, 'شما دسترسی به مشاهده لیست پیش فاکتورها ندارید.')
+    if not user_has_task(request.user, TaskChoices.SALES_ISSUE_PROFORMA.value):
+        audit_logger.activity("تلاش برای مشاهده لیست سفارش‌های در انتظار صدور پیش فاکتور بدون دسترسی")
+        messages.error(request, 'شما دسترسی به مشاهده لیست سفارش‌های در انتظار صدور پیش فاکتور ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    # نمایش همه پیش فاکتورها
-    if request.user.is_superuser:
-        proformas = Proforma.objects.all().select_related('order', 'customer', 'company').order_by('-created_at')
-    else:
-        proformas = Proforma.objects.filter(
-            order__registered_by=request.user
-        ).select_related('order', 'customer', 'company').order_by('-created_at')
+    # دریافت سفارش‌های در وضعیت "در انتظار صدور پیش فاکتور"
+    orders_qs = Order.objects.filter(
+        status='pending_proforma_issue',
+        order_type='sale'
+    ).select_related('customer').order_by('-created_at')
+    
+    # فیلتر بر اساس کاربر (اگر superuser نیست)
+    if not request.user.is_superuser:
+        orders_qs = orders_qs.filter(registered_by=request.user)
 
-    # دریافت فیلدهای قابل دسترسی برای نمایش
-    accessible_fields = get_accessible_proforma_fields_for_view(request.user)
+    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار صدور پیش فاکتور لود شد")
 
-    bug_logger.debug(f"تعداد {proformas.count()} پیش فاکتور برای نمایش لود شد")
-
-    # ایجاد جدول با django-tables2 و پاس دادن دسترسی فیلدها
-    table = ProformaTable(proformas, user=request.user, accessible_fields=accessible_fields)
+    # ایجاد جدول سفارش‌ها
+    from sales.tables.tables_proforma import PendingProformaOrderTable
+    table = PendingProformaOrderTable(orders_qs, user=request.user)
     
     RequestConfig(request, paginate={'per_page': 20}).configure(table)
 
     context = {
         'table': table,
-        'accessible_fields': accessible_fields,
-        'page_title': 'لیست پیش فاکتورها',
+        'page_title': 'سفارش‌های در انتظار صدور پیش فاکتور',
     }
     return render(request, 'proforma/proforma_list.html', context)
 
@@ -223,11 +222,40 @@ def proforma_create_view(request):
         company_info = get_company_info()
         if company_info:
             form.company_display = company_info
+        
+        # اگر order_number در query string باشد، آن را تنظیم کن
+        order_number = request.GET.get('order_number', '').strip()
+        if order_number:
+            try:
+                order = Order.objects.get(order_number=order_number, order_type='sale')
+                # بررسی دسترسی
+                if not request.user.is_superuser:
+                    if order.registered_by != request.user:
+                        messages.error(request, 'شما دسترسی به این سفارش ندارید.')
+                        return redirect('sales:proforma_list')
+                
+                # تنظیم مقدار اولیه برای فیلد order
+                form.initial['order'] = f"{order.order_number} - {order.customer.name if order.customer else 'بدون مشتری'}"
+                form.initial['order_id'] = order.order_number
+                
+                # تنظیم مقدار اولیه برای فیلد customer
+                if order.customer:
+                    form.initial['customer'] = f"{order.customer.name} ({order.customer.national_id})"
+                    form.initial['customer_id'] = order.customer.national_id
+                
+                # تولید خودکار شماره پیش فاکتور
+                if not form.initial.get('proforma_number'):
+                    form.initial['proforma_number'] = form._generate_proforma_number(order_number)
+            except Order.DoesNotExist:
+                messages.error(request, 'سفارش یافت نشد.')
+            except Exception as e:
+                bug_logger.error(f"خطا در تنظیم سفارش از query string: {str(e)}", exc_info=True)
 
     context = {
         'form': form,
         'accessible_fields': access_map if 'access_map' in locals() else get_accessible_proforma_fields(request.user, form),
         'page_title': 'ایجاد پیش فاکتور جدید',
+        'preselected_order_number': request.GET.get('order_number', '').strip(),
     }
     return render(request, 'proforma/proforma_create.html', context)
 

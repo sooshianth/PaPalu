@@ -256,7 +256,7 @@
         border-radius: 6px;
         font-size: 0.95rem;
     }
-    .plate-input .seg-iran { width: 60px; } /* 2 رقم ایران */
+    .plate-input .seg-iran { width: 80px; } /* 2 رقم ایران */
     .plate-input .seg-3 { width: 75px; } /* 3 رقم */
     .plate-input .seg-letter { width: 50px; } /* 1 حرف */
     .plate-input .seg-2 { width: 60px; } /* 2 رقم */
@@ -408,7 +408,7 @@
                                 <span class="dash">-</span>
                                 <input type="text" id="plate-middle" class="seg-3" maxlength="3" placeholder="345" inputmode="numeric" pattern="\d*">
                                 <span class="dash">-</span>
-                                <input type="text" id="plate-iran" class="seg-iran" maxlength="2" placeholder="11" inputmode="numeric" pattern="\d*">
+                                <input type="text" id="plate-iran" class="seg-iran" maxlength="2" placeholder="11 (ایران)" inputmode="numeric" pattern="\d*">
                             </div>
                         </div>
                         <input type="hidden" id="id_plate_number" name="plate_number" value="{{ form.plate_number.value|default:'' }}">
