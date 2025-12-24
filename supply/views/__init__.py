@@ -55,7 +55,7 @@ from .purchase_transport_views import (
 )
 
 # Car Entrance Views
-from .carentrance_views import (
+from .car_entrance_views import (
     car_entrance_list_view,
     register_driver_for_transport_view,
     driver_lookup_api,

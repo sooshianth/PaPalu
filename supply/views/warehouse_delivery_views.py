@@ -144,69 +144,56 @@ class WarehouseDeliveryForm(forms.Form):
     # نوع کرایه
     freight_payment_type = forms.ChoiceField(
         label='نوع کرایه',
-        choices=[
-            ('', 'انتخاب کنید'),
-            ('cash', 'نقدی'),
-            ('credit', 'اعتباری'),
-        ],
+        choices=[('', 'انتخاب کنید')] + Transport.FREIGHT_PAYMENT_CHOICES,
         required=True,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
-    
-    # فی حمل
-    freight_rate = forms.DecimalField(
-        label='فی حمل',
-        required=True,
-        max_digits=15,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_freight_payment_type'})
     )
     
     # کرایه اولیه
     initial_freight = forms.DecimalField(
         label='کرایه اولیه',
-        required=True,
+        required=False,
         max_digits=15,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_initial_freight'})
     )
     
-    # کرایه کل
+    # کرایه کل (read-only - محاسبه خودکار)
     total_freight = forms.DecimalField(
         label='کرایه کل',
-        required=True,
+        required=False,
         max_digits=15,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True, 'id': 'id_total_freight'})
     )
     
     # تخفیف
     discount = forms.DecimalField(
         label='تخفیف',
-        required=True,
+        required=False,
         max_digits=15,
         decimal_places=2,
         initial=0,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0', 'id': 'id_discount'})
     )
     
     # مازاد
     surplus = forms.DecimalField(
         label='مازاد',
-        required=True,
+        required=False,
         max_digits=15,
         decimal_places=2,
         initial=0,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0', 'id': 'id_surplus'})
     )
     
-    # کرایه پرداختی
+    # کرایه پرداختی (read-only - محاسبه خودکار)
     freight_payment = forms.DecimalField(
         label='کرایه پرداختی',
-        required=True,
+        required=False,
         max_digits=15,
         decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True, 'id': 'id_freight_payment'})
     )
     
     # انبار مبدأ (انبار مجازی تامین‌کننده)
@@ -232,8 +219,9 @@ class WarehouseDeliveryForm(forms.Form):
         cleaned_data = super().clean()
         gross = cleaned_data.get('gross_weight')
         tare = cleaned_data.get('tare_weight')
+        freight_payment_type = cleaned_data.get('freight_payment_type')
         
-        bug_logger.debug(f"Form validation - gross_weight: {gross}, tare_weight: {tare}")
+        bug_logger.debug(f"Form validation - gross_weight: {gross}, tare_weight: {tare}, freight_payment_type: {freight_payment_type}")
         
         # وزن پر باید بزرگتر از وزن خالی باشد
         if gross and tare:
@@ -250,6 +238,21 @@ class WarehouseDeliveryForm(forms.Form):
                 raise forms.ValidationError(
                     'مقدار تحویلی (وزن پر − وزن خالی) نامعقول است.'
                 )
+        
+        # اگر نوع کرایه "محاسبه شده در فی" نباشد، فیلدهای کرایه باید پر شوند
+        if freight_payment_type and freight_payment_type != 'calculated_in_invoice':
+            initial_freight = cleaned_data.get('initial_freight')
+            if not initial_freight or initial_freight <= 0:
+                raise forms.ValidationError(
+                    'برای نوع کرایه انتخاب شده، کرایه اولیه باید وارد شود.'
+                )
+            
+            # محاسبه کرایه کل و کرایه پرداختی
+            discount = cleaned_data.get('discount') or 0
+            surplus = cleaned_data.get('surplus') or 0
+            total_freight = initial_freight - discount + surplus
+            cleaned_data['total_freight'] = total_freight
+            cleaned_data['freight_payment'] = total_freight
         
         return cleaned_data
 
@@ -486,7 +489,6 @@ def warehouse_delivery_detail_view(request, transport_number):
             'gross_weight': pt.gross_weight,
             'tare_weight': pt.tare_weight,
             'freight_payment_type': pt.freight_payment_type,
-            'freight_rate': getattr(pt, 'freight_rate', None),
             'initial_freight': pt.initial_freight,
             'total_freight': pt.total_freight,
             'discount': pt.discount,
@@ -533,11 +535,23 @@ def warehouse_delivery_detail_view(request, transport_number):
                     pt.tare_weight = tare
                     pt.net_weight = net_weight
                     pt.freight_payment_type = data.get('freight_payment_type')
-                    pt.initial_freight = data.get('initial_freight')
-                    pt.total_freight = data.get('total_freight')
-                    pt.discount = data.get('discount', 0)
-                    pt.surplus = data.get('surplus', 0)
-                    pt.freight_payment = data.get('freight_payment')
+                    
+                    # اگر نوع کرایه "محاسبه شده در فی" نباشد، فیلدهای کرایه را تنظیم کن
+                    if data.get('freight_payment_type') != 'calculated_in_invoice':
+                        pt.initial_freight = data.get('initial_freight') or 0
+                        pt.discount = data.get('discount', 0) or 0
+                        pt.surplus = data.get('surplus', 0) or 0
+                        # محاسبه کرایه کل: کرایه اولیه - تخفیف + مازاد
+                        pt.total_freight = (pt.initial_freight or 0) - (pt.discount or 0) + (pt.surplus or 0)
+                        # کرایه پرداختی = کرایه کل
+                        pt.freight_payment = pt.total_freight
+                    else:
+                        # اگر نوع کرایه "محاسبه شده در فی" باشد، فیلدهای کرایه را صفر کن
+                        pt.initial_freight = None
+                        pt.discount = None
+                        pt.surplus = None
+                        pt.total_freight = None
+                        pt.freight_payment = None
                     
                     # ثبت تاریخ تخلیه
                     pt.loading_date = jdatetime.date.today()
@@ -655,8 +669,8 @@ def warehouse_delivery_detail_view(request, transport_number):
             'freight_payment_type': pt.freight_payment_type,
             'initial_freight': pt.initial_freight,
             'total_freight': pt.total_freight,
-            'discount': pt.discount,
-            'surplus': pt.surplus,
+            'discount': pt.discount or 0,
+            'surplus': pt.surplus or 0,
             'freight_payment': pt.freight_payment,
         }
         form = WarehouseDeliveryForm(initial=initial)

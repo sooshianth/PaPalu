@@ -427,11 +427,11 @@ def car_entrance_list_view(request):
             'accessible_raw_material_fields': accessible_raw_material_fields,
             'accessible_person_fields': accessible_person_fields,
         }
-        return render(request, 'supply_carentrance_list.html', context)
+        return render(request, 'car_entrance_list.html', context)
     except Exception as e:
         bug_logger.error(f"Car entrance list error: {e}")
         messages.error(request, 'خطا در بارگذاری لیست ورود خودروها.')
-        return render(request, 'supply_carentrance_list.html', {
+        return render(request, 'car_entrance_list.html', {
             'table': TransportTable([], prefix='car-'),
             'accessible_transport_fields': accessible_transport_fields,
             'accessible_po_fields': accessible_po_fields,
@@ -619,10 +619,18 @@ def register_driver_for_transport_view(request, transport_number):
             initial['name'] = pt.driver.name
             initial['national_id'] = getattr(pt.driver, 'national_id', '')
             initial['plate_number'] = pt.plate_number
-            # اگر حساب بانکی وجود دارد، شماره حساب و شبا را پر کن
+            # اگر حساب بانکی در حمل وجود دارد، از آن استفاده کن
             if pt.driver_bank_account:
                 initial['account'] = pt.driver_bank_account.account_number or ''
                 initial['sheba'] = pt.driver_bank_account.shaba_number or ''
+            else:
+                # اگر حساب بانکی در حمل وجود نداشت، از حساب بانکی راننده استفاده کن
+                financial_banking = FinancialBanking.objects.filter(person=pt.driver).first()
+                if financial_banking:
+                    bank_account = BankAccount.objects.filter(financial_banking=financial_banking).first()
+                    if bank_account:
+                        initial['account'] = bank_account.account_number or ''
+                        initial['sheba'] = bank_account.shaba_number or ''
         # ارسال freight_payment_type و driver به فرم برای تعیین required بودن فیلدهای حساب و شبا
         form = CarEntranceDriverForm(initial=initial, freight_payment_type=pt.freight_payment_type, driver=pt.driver)
 
@@ -660,7 +668,7 @@ def register_driver_for_transport_view(request, transport_number):
         'accessible_raw_material_fields': accessible_raw_material_fields,
         'accessible_person_fields': accessible_person_fields,
     }
-    return render(request, 'supply_carentrance_register.html', context)
+    return render(request, 'car_entrance_register.html', context)
 
 
 
@@ -679,12 +687,24 @@ def driver_lookup_api(request):
         if not driver:
             return JsonResponse({'found': False})
         
+        # دریافت حساب بانکی راننده (اولین حساب بانکی)
+        account_number = ''
+        sheba_number = ''
+        financial_banking = FinancialBanking.objects.filter(person=driver).first()
+        if financial_banking:
+            bank_account = BankAccount.objects.filter(financial_banking=financial_banking).first()
+            if bank_account:
+                account_number = bank_account.account_number or ''
+                sheba_number = bank_account.shaba_number or ''
+        
         data = {
             'found': True,
             'driver_id': driver.pk,
             'name': driver.name or '',
             'national_id': getattr(driver, 'national_id', '') or '',
             'phone': driver.phone_number or '',
+            'account_number': account_number,
+            'sheba_number': sheba_number,
         }
         
         bug_logger.debug(f"Driver lookup successful for phone {phone}: {data.get('name')}")

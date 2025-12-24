@@ -536,9 +536,19 @@
             // پر کردن فیلدها در صورت خالی بودن
             const nameEl = document.getElementById('id_name');
             const nidEl = document.getElementById('id_national_id');
+            const accountEl = document.getElementById('id_account');
+            const shebaEl = document.getElementById('id_sheba');
             
             if (nameEl && !nameEl.value) nameEl.value = data.name || '';
             if (nidEl && !nidEl.value) nidEl.value = data.national_id || '';
+            
+            // پر کردن حساب بانکی اگر وجود داشته باشد (فقط اگر فیلدها خالی باشند)
+            if (accountEl && data.account_number && !accountEl.value) {
+              accountEl.value = data.account_number;
+            }
+            if (shebaEl && data.sheba_number && !shebaEl.value) {
+              shebaEl.value = data.sheba_number;
+            }
           }
         }).catch(e => {
           console.error('driver lookup error', e);
