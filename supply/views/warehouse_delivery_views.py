@@ -429,7 +429,7 @@ def warehouse_delivery_list_view(request):
             'accessible_person_fields': accessible_person_fields,
             'accessible_po_material_fields': accessible_po_material_fields,
         }
-        return render(request, 'supply_warehouse_delivery_list.html', context)
+        return render(request, 'warehouse_delivery_list.html', context)
     except Exception as e:
         bug_logger.error(f"Warehouse delivery list error: {e}")
         messages.error(request, 'خطا در بارگذاری لیست تحویل انبار.')
@@ -441,7 +441,7 @@ def warehouse_delivery_list_view(request):
             'accessible_person_fields': accessible_person_fields,
             'accessible_po_material_fields': accessible_po_material_fields,
         }
-        return render(request, 'supply_warehouse_delivery_list.html', context)
+        return render(request, 'warehouse_delivery_list.html', context)
 
 
 @login_required
@@ -511,7 +511,7 @@ def warehouse_delivery_detail_view(request, transport_number):
             'accessible_raw_material_fields': accessible_raw_material_fields,
             'accessible_po_material_fields': accessible_po_material_fields,
         }
-        return render(request, 'supply_warehouse_delivery_detail.html', context)
+        return render(request, 'warehouse_delivery_detail.html', context)
     
     if request.method == 'POST':
         form = WarehouseDeliveryForm(request.POST)
@@ -684,7 +684,7 @@ def warehouse_delivery_detail_view(request, transport_number):
         'accessible_raw_material_fields': accessible_raw_material_fields,
         'accessible_po_material_fields': accessible_po_material_fields,
     }
-    return render(request, 'supply_warehouse_delivery_detail.html', context)
+    return render(request, 'warehouse_delivery_detail.html', context)
 
 
 @login_required  

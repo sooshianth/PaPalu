@@ -378,58 +378,6 @@
             <div class="detail-value">{{ product.updated_at|date:"Y/m/d H:i" }}</div>
         </div>
     </div>
-    
-    <!-- اطلاعات تولید -->
-    {% if production_infos %}
-    <div class="detail-section">
-        <h5>اطلاعات تولید</h5>
-        {% for production_info in production_infos %}
-        <div style="margin-bottom: 30px; padding: 20px; background: white; border-radius: 8px; border: 1px solid var(--gray-300);">
-            <div class="detail-row">
-                <div class="detail-label">شناسه فرمول:</div>
-                <div class="detail-value"><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ production_info.formula_id|default:"-" }}</code></div>
-            </div>
-            
-            <div class="detail-row">
-                <div class="detail-label">حداقل بچ تولید (کیلوگرم):</div>
-                <div class="detail-value">{% if production_info.min_batch_production %}{{ production_info.min_batch_production }} کیلوگرم{% else %}-{% endif %}</div>
-            </div>
-            
-            <div class="detail-row">
-                <div class="detail-label">دستور العمل خاص تولید:</div>
-                <div class="detail-value">{{ production_info.specific_production_instruction|default:"-"|linebreaks }}</div>
-            </div>
-            
-            <!-- BOM های مربوط به این ProductionInfo -->
-            {% if production_info.bom_items.all %}
-            <div style="margin-top: 20px;">
-                <h6 style="color: var(--primary-green); margin-bottom: 15px; font-weight: 600;">مواد اولیه (BOM):</h6>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>شناسه ماده اولیه</th>
-                            <th>ماده اولیه</th>
-                            <th>واحد به کار رفته</th>
-                            <th>درصد</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for bom in production_info.bom_items.all %}
-                        <tr>
-                            <td><code style="background-color: var(--gray-100); padding: 3px 6px; border-radius: 4px;">{{ bom.raw_material.raw_material_id|default:"-" }}</code></td>
-                            <td>{{ bom.raw_material.name|default:"-" }}</td>
-                            <td>{{ bom.raw_material.primary_unit|default:"-" }}</td>
-                            <td>{% if bom.percentage %}{{ bom.percentage }}%{% else %}-{% endif %}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 </div>
 {% endblock %}
 
