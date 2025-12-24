@@ -559,6 +559,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                                     # ایجاد StockEntry
                                     stock_entry = StockEntry.objects.create(
                                         transaction_date=jdatetime_datetime.now(),
+                                        entry_type=StockEntry.StockEntryType.PURCHASE,
                                         notes=f"تخلیه حمل {transport_number} - انتقال از انبار {source_warehouse.warehouse_id} به انبار {destination_warehouse.warehouse_id}",
                                         is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
                                     )

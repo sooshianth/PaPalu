@@ -310,9 +310,18 @@ def create_completion_stock_entries(production_program, actual_consumption, prod
             produced_weight = production_program.produced_weight_ton or Decimal('0')
             
             if produced_weight > 0 and production_program.product:
+                # Find the "Start Production" (Consumption) entry to link as parent
+                # We look for the entry associated with this program that moved materials to production
+                consumption_entry = StockEntry.objects.filter(
+                    notes__contains=f'شروع تولید برنامه {production_program.program_id or production_program.id}',
+                    is_committed=True
+                ).order_by('-created_at').first()
+
                 completion_entry = StockEntry.objects.create(
                     transaction_date=timezone.now(),
+                    entry_type=StockEntry.StockEntryType.PRODUCTION,
                     notes=f'تکمیل تولید برنامه {production_program.program_id or production_program.id} - تبدیل مواد اولیه به محصول نهایی',
+                    parent=consumption_entry,  # Link to the consumption entry
                     is_committed=False
                 )
                 
@@ -403,6 +412,7 @@ def create_production_stock_entry(production_program, warehouse_distribution, re
             # ایجاد ثبت انبار (create after validation)
             stock_entry = StockEntry.objects.create(
                 transaction_date=timezone.now(),
+                entry_type=StockEntry.StockEntryType.CONSUMPTION,
                 notes=f'شروع تولید برنامه {production_program.program_id or production_program.id} - انتقال مواد اولیه به انبار تولید',
                 is_committed=False
             )

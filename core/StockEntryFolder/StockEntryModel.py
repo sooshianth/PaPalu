@@ -9,6 +9,7 @@ from django_jalali.db import models as jmodels
 class StockEntry(models.Model):
     """
     Main model representing stock entry/movement transaction in the warehouse.
+    لاگ موجودیت
     """
     
     class StockEntryType(models.TextChoices):
@@ -48,6 +49,17 @@ class StockEntry(models.Model):
         db_index=True
     )
     reference_document = GenericForeignKey('reference_content_type', 'reference_object_id')
+
+    # Tracing
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='children',
+        verbose_name='تراکنش والد',
+        help_text='برای رهگیری زنجیره تامین (مثلاً رسید تولید به حواله مصرف، یا حواله مصرف به رسید خرید)'
+    )
 
     # Event Tracking (For Idempotency & Tracing)
     event_id = models.CharField(
@@ -89,8 +101,8 @@ class StockEntry(models.Model):
     )
     
     class Meta:
-        verbose_name = 'انبار | لاگ انبار'
-        verbose_name_plural = 'انبار | لاگ‌های انبار'
+        verbose_name = 'انبار | لاگ موجودیت'
+        verbose_name_plural = 'انبار | لاگ‌های موجودیت ها'
         ordering = ['-transaction_date']
         indexes = [
             models.Index(fields=['transaction_date']),
@@ -103,6 +115,22 @@ class StockEntry(models.Model):
         status = "تأیید شده" if self.is_committed else "در انتظار تأیید"
         date_str = self.transaction_date.strftime('%Y-%m-%d %H:%M') if self.transaction_date else 'بدون تاریخ'
         return f"تراکنش انبار - {date_str} ({status})"
+
+    def get_upstream_trace(self, include_self=True):
+        """
+        Get the lineage of this stock entry (parents, grandparents, etc.)
+        Returns a list of StockEntry objects ordered from root to this entry.
+        """
+        chain = []
+        current = self
+        while current:
+            chain.append(current)
+            current = current.parent
+        
+        if not include_self and chain:
+            chain.pop(0)  # Remove self
+            
+        return list(reversed(chain))
     
     def commit(self):
         """
