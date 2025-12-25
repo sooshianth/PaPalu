@@ -38,9 +38,11 @@ def upload_fare_payment_docs_list_view(request):
         ).filter(
             Q(freight_payment_document__isnull=True) | Q(freight_payment_document='')  # NULL or empty string
         ).select_related(
-            'purchase_order',
-            'purchase_order__supplier',
+            'allocation__order',
+            'allocation__order__customer',
             'driver'
+        ).prefetch_related(
+            'allocation__order__order_items__raw_material'
         ).order_by('-created_at')
         
         bug_logger.debug(f"تعداد حمل‌های در انتظار بارگذاری اسناد: {transports.count()}")
@@ -76,9 +78,11 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
     try:
         transport = get_object_or_404(
             Transport.objects.select_related(
-                'purchase_order',
-                'purchase_order__supplier',
+                'allocation__order',
+                'allocation__order__customer',
                 'driver'
+            ).prefetch_related(
+                'allocation__order__order_items__raw_material'
             ),
             transport_number=transport_number
         )
@@ -111,11 +115,8 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
                     transport.save()
                     
                     # Transition to payment_doc_uploaded status
-                    transport.transition(
-                        new_status=Transport.STATUS_PAYMENT_DOC_UPLOADED,
-                        user=request.user,
-                        note='بارگذاری سند پرداخت کرایه'
-                    )
+                    transport.status = Transport.STATUS_PAYMENT_DOC_UPLOADED
+                    transport.save()
                     
                     # Log successful upload
                     audit_logger.info(

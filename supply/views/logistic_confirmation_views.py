@@ -308,7 +308,7 @@ def logistic_confirmation_detail_view(request, transport_number):
                         
                         # اگر تمام حمل‌های سفارش تسویه شدند، وضعیت سفارش را به "در انتظار تسویه نهایی" تغییر می‌دهیم
                         if all_settled:
-                            if po.status == Order.STATUS_AWAITING_WH_RECONCILIATION:
+                            if po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
                                 po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"تمام حمل‌های سفارش تسویه شدند.")
                                 bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
                                 audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تسویه همه حمل‌ها به‌روزرسانی شد")

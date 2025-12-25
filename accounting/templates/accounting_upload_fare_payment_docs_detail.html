@@ -260,8 +260,10 @@
         <div class="info-item">
             <span class="info-label">نوع ماده اولیه</span>
             <span class="info-value">
-                {% for material in purchase_order.materials.all %}
-                    {{ material.raw_material.name }}{% if not forloop.last %}, {% endif %}
+                {% for order_item in purchase_order.order_items.all %}
+                    {% if order_item.raw_material %}
+                        {{ order_item.raw_material.name }}{% if not forloop.last %}, {% endif %}
+                    {% endif %}
                 {% empty %}
                     —
                 {% endfor %}

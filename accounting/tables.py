@@ -19,7 +19,7 @@ class UploadFarePaymentDocsTable(tables.Table):
     
     purchase_order = tables.Column(
         verbose_name='شماره سفارش',
-        accessor='purchase_order__order_number',
+        accessor='allocation.order.order_number',
         orderable=True,
         attrs={
             'td': {'class': 'text-center'},
@@ -90,12 +90,14 @@ class UploadFarePaymentDocsTable(tables.Table):
     
     def render_raw_materials(self, record):
         """نمایش مواد اولیه سفارش"""
-        materials = record.purchase_order.materials.select_related('raw_material').all()
+        if not record.purchase_order:
+            return '—'
+        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
         if materials:
-            names = [m.raw_material.name for m in materials]
+            names = [m.raw_material.name for m in materials if m.raw_material]
             if len(names) > 2:
                 return format_html('{}, ...', ', '.join(names[:2]))
-            return ', '.join(names)
+            return ', '.join(names) if names else '—'
         return '—'
     
     def render_transport_number(self, value):
