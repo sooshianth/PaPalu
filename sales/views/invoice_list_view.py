@@ -344,8 +344,8 @@ def order_search_api(request):
     bug_logger.debug(f"Superuser: {request.user.is_superuser}")
     
     if not query:
-        bug_logger.debug("query خالی است، لیست خالی برگردانده می‌شود")
-        return JsonResponse({'results': []})
+        bug_logger.debug("query خالی است، 20 سفارش اخیر برگردانده می‌شود")
+        # ادامه کد برای بازگشت سفارش‌ها (فیلتر icontains روی رشته خالی همه را برمی‌گرداند)
     
     # فیلتر کردن سفارش‌ها - فقط سفارش‌های فروش که پرداخت انجام شده
     # سفارش‌هایی که وضعیت از pending_accounting_approval به بعد دارند

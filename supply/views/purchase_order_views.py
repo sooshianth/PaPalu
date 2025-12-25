@@ -962,14 +962,17 @@ def supplier_search_api(request):
     query = request.GET.get('q', '').strip()
     
     if not query:
-        return JsonResponse({'results': []})
-    
-    # فیلتر کردن تامین‌کننده‌ها
-    suppliers = Person.objects.filter(
-        type='supplier'
-    ).filter(
-        Q(name__icontains=query) | Q(national_id__icontains=query)
-    ).order_by('name')[:20]
+        # اگر کوئری خالی است، 20 تامین‌کننده اخیر را برگردان
+        suppliers = Person.objects.filter(
+            type='supplier'
+        ).order_by('name')[:20]
+    else:
+        # فیلتر کردن تامین‌کننده‌ها
+        suppliers = Person.objects.filter(
+            type='supplier'
+        ).filter(
+            Q(name__icontains=query) | Q(national_id__icontains=query)
+        ).order_by('name')[:20]
     
     results = []
     for supplier in suppliers:
@@ -991,14 +994,17 @@ def raw_material_search_api(request):
     query = request.GET.get('q', '').strip()
     
     if not query:
-        return JsonResponse({'results': []})
-    
-    # فیلتر کردن مواد اولیه فعال
-    raw_materials = RawMaterial.objects.filter(
-        status='active'
-    ).filter(
-        Q(name__icontains=query) | Q(raw_material_id__icontains=query)
-    ).order_by('name')[:20]
+        # اگر کوئری خالی است، 20 ماده اولیه فعال را برگردان
+        raw_materials = RawMaterial.objects.filter(
+            status='active'
+        ).order_by('name')[:20]
+    else:
+        # فیلتر کردن مواد اولیه فعال
+        raw_materials = RawMaterial.objects.filter(
+            status='active'
+        ).filter(
+            Q(name__icontains=query) | Q(raw_material_id__icontains=query)
+        ).order_by('name')[:20]
     
     results = []
     for rm in raw_materials:

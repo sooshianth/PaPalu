@@ -597,12 +597,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         let searchTimeout;
         
-        customerInput.addEventListener('input', function() {
-            const query = this.value.trim();
-            
+        const MIN_SEARCH_LENGTH = 0; // اجازه جستجو با کوئری خالی
+        
+        // تابع انجام جستجو
+        function performSearch(query) {
             clearTimeout(searchTimeout);
             
-            if (query.length < 2) {
+            // نمایش لودینگ یا وضعیت خالی
+            if (query.length === 0) {
+                 // اگر کوئری خالی است، مستقیماً جستجو کن (برای نمایش پیش‌فرض‌ها)
+            } else if (query.length < MIN_SEARCH_LENGTH) {
                 suggestionsContainer.style.display = 'none';
                 customerSuggestions = [];
                 selectedCustomerId = null;
@@ -621,6 +625,24 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.error('خطا در جستجوی مشتری:', error);
                     });
             }, 300);
+        }
+
+        // جستجو هنگام تایپ
+        customerInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            performSearch(query);
+        });
+
+        // جستجو هنگام فوکوس (برای نمایش پیشنهادات اولیه)
+        customerInput.addEventListener('focus', function() {
+            const query = this.value.trim();
+            // اگر فیلد خالی است، جستجو را انجام بده تا پیشنهادات پیش‌فرض نمایش داده شوند
+            if (query.length === 0) {
+                performSearch('');
+            } else {
+                // اگر متنی دارد، همان را جستجو کن
+                performSearch(query);
+            }
         });
         
         function displaySuggestions() {

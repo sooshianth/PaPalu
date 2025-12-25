@@ -5,930 +5,1035 @@
 
 {% block extra_css %}
 <style>
-    .form-card {
-        background: white;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        padding: 30px;
-        margin-bottom: 30px;
-        position: relative;
-        z-index: 1;
-        overflow: visible;
-    }
-    
-    .page-header {
-        margin-bottom: 30px;
-        padding-bottom: 20px;
-        border-bottom: 3px solid var(--primary-green);
-    }
-    
-    .page-header h2 {
-        color: var(--gray-800);
-        font-size: 1.8rem;
-        font-weight: 600;
-        margin: 0;
-    }
-    
-    .form-section {
-        background: var(--gray-100);
-        padding: 0;
-        border-radius: 10px;
-        margin-bottom: 25px;
-        border-right: 4px solid var(--primary-green);
-        overflow: visible;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .form-section-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 20px 25px;
-        cursor: pointer;
-        user-select: none;
-        background: var(--gray-100);
-        transition: background-color 0.3s ease;
-    }
-    
-    .form-section-header:hover {
-        background: var(--gray-200);
-    }
-    
-    .form-section h5 {
-        color: var(--primary-green);
-        font-size: 1.2rem;
-        font-weight: 600;
-        margin: 0;
-        padding: 0;
-        border: none;
-    }
-    
-    .form-section-toggle-icon {
-        width: 20px;
-        height: 20px;
-        transition: transform 0.3s ease;
-        color: var(--primary-green);
-        flex-shrink: 0;
-    }
-    
-    .form-section.collapsed .form-section-toggle-icon {
-        transform: rotate(-90deg);
-    }
-    
-    .form-section-content {
-        padding: 0 25px 25px 25px;
-        max-height: 5000px;
-        overflow: visible;
-        transition: max-height 0.4s ease, padding 0.3s ease;
-        position: relative;
-        z-index: 1;
-    }
-    
-    .form-section.collapsed .form-section-content {
-        max-height: 0;
-        padding: 0 25px;
-    }
-    
-    .form-label {
-        color: var(--gray-800);
-        font-weight: 500;
-        margin-bottom: 8px;
-        display: block;
-    }
-    
-    .required-field::after {
-        content: '*';
-        color: #dc3545;
-        margin-right: 5px;
-    }
-    
-    .form-control,
-    .form-select {
-        border: 1px solid var(--gray-300);
-        border-radius: 8px;
-        padding: 10px 15px;
-        font-size: 1rem;
-        transition: all 0.3s;
-        width: 100%;
-        font-family: inherit;
-    }
-    
-    .form-control:focus,
-    .form-select:focus {
-        border-color: var(--primary-green);
-        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
-        outline: none;
-    }
-    
-    .text-danger {
-        color: #dc3545;
-        font-size: 0.875rem;
-        margin-top: 5px;
-        display: block;
-    }
-    
-    .form-actions {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-top: 30px;
-        padding-top: 30px;
-        border-top: 1px solid var(--gray-300);
-    }
-    
-    .mb-3 { margin-bottom: 1rem; }
-    
-    .row {
-        display: flex;
-        flex-wrap: wrap;
-        margin-right: -15px;
-        margin-left: -15px;
-    }
-    .col-12 {
-        flex: 0 0 100%;
-        max-width: 100%;
-        padding-right: 15px;
-        padding-left: 15px;
-    }
-    .col-md-6 {
-        flex: 0 0 50%;
-        max-width: 50%;
-        padding-right: 15px;
-        padding-left: 15px;
-    }
-    .col-md-4 {
-        flex: 0 0 33.3333%;
-        max-width: 33.3333%;
-        padding-right: 15px;
-        padding-left: 15px;
-    }
-    .col-md-3 {
-        flex: 0 0 25%;
-        max-width: 25%;
-        padding-right: 15px;
-        padding-left: 15px;
-    }
+  .form-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    margin-bottom: 30px;
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid var(--primary-green);
+  }
+
+  .page-header h2 {
+    color: var(--gray-800);
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .form-section {
+    background: var(--gray-100);
+    padding: 0;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    border-right: 4px solid var(--primary-green);
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+  }
+
+  .form-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--gray-100);
+    transition: background-color 0.3s ease;
+  }
+
+  .form-section-header:hover {
+    background: var(--gray-200);
+  }
+
+  .form-section h5 {
+    color: var(--primary-green);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .form-section-toggle-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+    color: var(--primary-green);
+    flex-shrink: 0;
+  }
+
+  .form-section.collapsed .form-section-toggle-icon {
+    transform: rotate(-90deg);
+  }
+
+  .form-section-content {
+    padding: 0 25px 25px 25px;
+    max-height: 5000px;
+    overflow: visible;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .form-section.collapsed .form-section-content {
+    max-height: 0;
+    padding: 0 25px;
+  }
+
+  .form-label {
+    color: var(--gray-800);
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .required-field::after {
+    content: '*';
+    color: #dc3545;
+    margin-right: 5px;
+  }
+
+  .form-control,
+  .form-select {
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-size: 1rem;
+    transition: all 0.3s;
+    width: 100%;
+    font-family: inherit;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    outline: none;
+  }
+
+  .text-danger {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 5px;
+    display: block;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 1px solid var(--gray-300);
+  }
+
+  .mb-3 {
+    margin-bottom: 1rem;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+  }
+
+  .col-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-4 {
+    flex: 0 0 33.3333%;
+    max-width: 33.3333%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-8 {
+    flex: 0 0 66.6667%;
+    max-width: 66.6667%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  @media (max-width: 768px) {
+
+    .col-md-6,
+    .col-md-4,
+    .col-md-3,
     .col-md-8 {
-        flex: 0 0 66.6667%;
-        max-width: 66.6667%;
-        padding-right: 15px;
-        padding-left: 15px;
+      flex: 0 0 100%;
+      max-width: 100%;
     }
-    
-    @media (max-width: 768px) {
-        .col-md-6, .col-md-4, .col-md-3, .col-md-8 {
-            flex: 0 0 100%;
-            max-width: 100%;
-        }
-        .form-card { padding: 20px; }
-        .form-section-header {
-            padding: 18px 20px;
-            min-height: 50px;
-        }
-        .form-section-content {
-            padding: 0 20px 20px 20px;
-        }
-        .form-section.collapsed .form-section-content {
-            padding: 0 20px;
-        }
-        .form-actions { flex-direction: column; }
-        .btn { width: 100%; }
+
+    .form-card {
+      padding: 20px;
     }
-    
-    /* License plate input (Iran style) */
-    .plate-input {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        direction: ltr;
-        justify-content: flex-start;
-        width: 100%;
+
+    .form-section-header {
+      padding: 18px 20px;
+      min-height: 50px;
     }
-    .plate-seg {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-        justify-content: center;
+
+    .form-section-content {
+      padding: 0 20px 20px 20px;
     }
-    .plate-input input[type="text"] {
-        text-align: center;
-        padding: 8px 10px;
-        border: 1px solid var(--gray-300);
-        border-radius: 6px;
-        font-size: 0.95rem;
+
+    .form-section.collapsed .form-section-content {
+      padding: 0 20px;
     }
-    .plate-input .seg-iran { width: 60px; } /* 2 رقم ایران */
-    .plate-input .seg-3 { width: 75px; } /* 3 رقم */
-    .plate-input .seg-letter { width: 50px; } /* 1 حرف */
-    .plate-input .seg-2 { width: 60px; } /* 2 رقم */
-    .plate-input .dash { 
-        opacity: 0.5; 
-        font-size: 1rem;
-        font-weight: bold;
+
+    .form-actions {
+      flex-direction: column;
     }
-    .plate-helper {
-        font-size: 0.75rem;
-        color: #666;
-        margin-top: 4px;
+
+    .btn {
+      width: 100%;
     }
-    
-    /* Driver autocomplete styles */
-    .driver-autocomplete-wrapper {
-        position: relative;
-    }
-    .driver-autocomplete-input {
-        width: 100%;
-        padding: 10px 15px;
-        font-size: 1rem;
-        border: 1px solid var(--gray-300);
-        border-radius: 8px;
-        background: #fff;
-    }
-    .suggestions-container {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: white;
-        border: 1px solid var(--gray-300);
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 999999 !important;
-        max-height: 300px;
-        overflow-y: auto;
-        display: none;
-        margin-top: 4px;
-    }
-    .suggestion-item {
-        padding: 12px 15px;
-        cursor: pointer;
-        border-bottom: 1px solid #f0f0f0;
-        font-size: 0.95rem;
-        transition: background 0.2s;
-    }
-    .suggestion-item:hover {
-        background-color: #f5f5f5;
-    }
-    .suggestion-item:last-child {
-        border-bottom: none;
-    }
-    .add-driver-btn {
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        background: var(--primary-green);
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background 0.3s;
-        white-space: nowrap;
-    }
-    .add-driver-btn:hover {
-        background: #218838;
-    }
-    
-    /* Modal styles */
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 2000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.5);
-    }
-    .modal-content {
-        background-color: #fefefe;
-        margin: 5% auto;
-        padding: 20px;
-        border: 1px solid #888;
-        width: 90%;
-        max-width: 500px;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-    }
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #e0e0e0;
-    }
-    .modal-header h3 {
-        margin: 0;
-        font-size: 1.1rem;
-        color: #2d3e50;
-    }
-    .close {
-        color: #aaa;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-        line-height: 1;
-    }
-    .close:hover {
-        color: #000;
-    }
-    .modal-body .mb-3 {
-        margin-bottom: 16px;
-    }
-    .modal-body label {
-        display: block;
-        margin-bottom: 6px;
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: var(--gray-800);
-    }
-    .modal-body input {
-        width: 100%;
-        padding: 10px 15px;
-        font-size: 1rem;
-        border: 1px solid var(--gray-300);
-        border-radius: 8px;
-    }
-    .modal-footer {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 20px;
-        padding-top: 15px;
-        border-top: 2px solid #e0e0e0;
-    }
-    
-    .info-box {
-        background: #f5f5f5;
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 10px;
-        border-right: 4px solid var(--primary-green);
-    }
-    .info-box-title {
-        font-weight: 600;
-        margin-bottom: 10px;
-        color: var(--gray-800);
-    }
-    .info-box-content {
-        font-size: 0.9rem;
-        color: var(--gray-700);
-    }
-    
-    /* Material item styles */
-    .material-item {
-        border: 2px solid #e0e0e0;
-        border-radius: 8px;
-        padding: 15px;
-        margin-bottom: 15px;
-        background: #fafafa;
-        transition: all 0.3s ease;
-    }
-    .material-item.selected {
-        border-color: var(--primary-green);
-        background: #f0f8f0;
-    }
-    .material-item:hover {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .material-item-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 10px;
-        padding-bottom: 10px;
-        border-bottom: 1px solid #e0e0e0;
-    }
-    .material-checkbox-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-    .material-checkbox {
-        width: 20px;
-        height: 20px;
-        cursor: pointer;
-        accent-color: var(--primary-green);
-    }
-    .material-name {
-        font-weight: 600;
-        font-size: 1rem;
-        color: var(--gray-800);
-        flex: 1;
-    }
-    .material-stats {
-        display: flex;
-        gap: 15px;
-        font-size: 0.85rem;
-        color: var(--gray-600);
-    }
-    .material-stat {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 8px 12px;
-        background: white;
-        border-radius: 6px;
-        border: 1px solid #e0e0e0;
-    }
-    .material-stat-label {
-        font-size: 0.75rem;
-        color: var(--gray-500);
-        margin-bottom: 4px;
-    }
-    .material-stat-value {
-        font-weight: 600;
-        color: var(--primary-green);
-    }
-    .material-stat-value.allocated {
-        color: #ff9800;
-    }
-    .material-stat-value.remaining {
-        color: #2196f3;
-    }
-    .material-input-group {
-        display: none;
-        margin-top: 15px;
-        padding-top: 15px;
-        border-top: 1px solid #e0e0e0;
-    }
-    .material-item.selected .material-input-group {
-        display: block;
-    }
-    .material-input-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        color: var(--gray-800);
-    }
-    .material-input-group input,
-    .material-input-group select,
-    .material-input-group textarea {
-        width: 100%;
-    }
-    .alert {
-        padding: 12px 15px;
-        border-radius: 8px;
-        margin-bottom: 15px;
-    }
-    .alert-info {
-        background-color: #e3f2fd;
-        border: 1px solid #90caf9;
-        color: #1976d2;
-    }
-    .alert-warning {
-        background-color: #fff3e0;
-        border: 1px solid #ffb74d;
-        color: #f57c00;
-    }
-    
-    /* Date picker styles */
-    .p-datepicker-trigger {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        cursor: pointer;
-        font-size: 1.2rem;
-        z-index: 10;
-        user-select: none;
-    }
-    .p-datepicker-trigger:hover {
-        opacity: 0.7;
-    }
-    
-    #id_expected_arrival_date_display {
-        position: relative;
-        padding-left: 40px;
-    }
+  }
+
+  /* License plate input (Iran style) */
+  .plate-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    direction: ltr;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .plate-seg {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .plate-input input[type="text"] {
+    text-align: center;
+    padding: 8px 10px;
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  .plate-input .seg-iran {
+    width: 60px;
+  }
+
+  /* 2 رقم ایران */
+  .plate-input .seg-3 {
+    width: 75px;
+  }
+
+  /* 3 رقم */
+  .plate-input .seg-letter {
+    width: 50px;
+  }
+
+  /* 1 حرف */
+  .plate-input .seg-2 {
+    width: 60px;
+  }
+
+  /* 2 رقم */
+  .plate-input .dash {
+    opacity: 0.5;
+    font-size: 1rem;
+    font-weight: bold;
+  }
+
+  .plate-helper {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* Driver autocomplete styles */
+  .driver-autocomplete-wrapper {
+    position: relative;
+  }
+
+  .driver-autocomplete-input {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .suggestions-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 999999 !important;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    margin-top: 4px;
+  }
+
+  .suggestion-item {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.95rem;
+    transition: background 0.2s;
+  }
+
+  .suggestion-item:hover {
+    background-color: #f5f5f5;
+  }
+
+  .suggestion-item:last-child {
+    border-bottom: none;
+  }
+
+  .add-driver-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    background: var(--primary-green);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+    white-space: nowrap;
+  }
+
+  .add-driver-btn:hover {
+    background: #218838;
+  }
+
+  /* Modal styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2d3e50;
+  }
+
+  .close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .close:hover {
+    color: #000;
+  }
+
+  .modal-body .mb-3 {
+    margin-bottom: 16px;
+  }
+
+  .modal-body label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--gray-800);
+  }
+
+  .modal-body input {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid #e0e0e0;
+  }
+
+  .info-box {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 10px;
+    border-right: 4px solid var(--primary-green);
+  }
+
+  .info-box-title {
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--gray-800);
+  }
+
+  .info-box-content {
+    font-size: 0.9rem;
+    color: var(--gray-700);
+  }
+
+  /* Material item styles */
+  .material-item {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: #fafafa;
+    transition: all 0.3s ease;
+  }
+
+  .material-item.selected {
+    border-color: var(--primary-green);
+    background: #f0f8f0;
+  }
+
+  .material-item:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .material-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .material-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .material-checkbox {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary-green);
+  }
+
+  .material-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-800);
+    flex: 1;
+  }
+
+  .material-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 0.85rem;
+    color: var(--gray-600);
+  }
+
+  .material-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+  }
+
+  .material-stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-bottom: 4px;
+  }
+
+  .material-stat-value {
+    font-weight: 600;
+    color: var(--primary-green);
+  }
+
+  .material-stat-value.allocated {
+    color: #ff9800;
+  }
+
+  .material-stat-value.remaining {
+    color: #2196f3;
+  }
+
+  .material-input-group {
+    display: none;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .material-item.selected .material-input-group {
+    display: block;
+  }
+
+  .material-input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--gray-800);
+  }
+
+  .material-input-group input,
+  .material-input-group select,
+  .material-input-group textarea {
+    width: 100%;
+  }
+
+  .alert {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+  }
+
+  .alert-info {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+    color: #1976d2;
+  }
+
+  .alert-warning {
+    background-color: #fff3e0;
+    border: 1px solid #ffb74d;
+    color: #f57c00;
+  }
+
+  /* Date picker styles */
+  .p-datepicker-trigger {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    z-index: 10;
+    user-select: none;
+  }
+
+  .p-datepicker-trigger:hover {
+    opacity: 0.7;
+  }
+
+  #id_expected_arrival_date_display {
+    position: relative;
+    padding-left: 40px;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="page-header">
-    <h2>ایجاد حمل خرید جدید</h2>
+  <h2>ایجاد حمل خرید جدید</h2>
 </div>
 
 <div class="form-card">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" role="alert">
-                {{ message }}
-            </div>
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}" role="alert">
+    {{ message }}
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- بخش اطلاعات اجباری -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>اطلاعات اجباری</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          {% if accessible_transport_fields.purchase_order %}
+          <div class="col-md-6 mb-3">
+            <label class="form-label required-field">{{ form.purchase_order.label }}</label>
+            {% if initial_order %}
+            <input type="text" class="form-control" value="{{ initial_order.order_number }}" readonly
+              style="background:#f5f5f5;cursor:not-allowed">
+            <input type="hidden" name="purchase_order" value="{{ initial_order.pk }}">
+            {% else %}
+            {{ form.purchase_order }}
+            {% endif %}
+            {% if form.purchase_order.errors %}
+            <div class="text-danger">{{ form.purchase_order.errors.0 }}</div>
+            {% endif %}
+            <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">انتخاب سفارش خرید که در وضعیت "در
+              انتظار تعریف حمل" یا بعد از آن است</small>
+          </div>
+          {% endif %}
+
+          {% if accessible_transport_fields.vehicle_type %}
+          <div class="col-md-6 mb-3">
+            <label class="form-label required-field">{{ form.vehicle_type.label }}</label>
+            {{ form.vehicle_type }}
+            {% if form.vehicle_type.errors %}
+            <div class="text-danger">{{ form.vehicle_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+
+        {% if initial_order %}
+        <div id="order-info-display" class="info-box">
+          <div class="info-box-title">اطلاعات سفارش خرید:</div>
+          <div class="info-box-content" id="order-info-content">
+            <div><strong>تاریخ سفارش:</strong> {{ initial_order.created_at|date:"Y/m/d" }}</div>
+            <div style="margin-top:8px"><strong>مواد اولیه:</strong></div>
+            <ul style="margin:6px 0 0 20px;padding:0" id="order-materials-list">
+              <!-- مواد اولیه به صورت داینامیک از API لود می‌شوند -->
+            </ul>
+          </div>
+        </div>
+        {% else %}
+        <div id="order-info-display" class="info-box" style="display:none">
+          <div class="info-box-title">اطلاعات سفارش خرید:</div>
+          <div class="info-box-content" id="order-info-content">
+            <!-- محتوا به صورت داینامیک پر می‌شود -->
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- بخش مواد اولیه -->
+    <div class="form-section" id="materials-section" style="display:none;">
+      <div class="form-section-header">
+        <h5>مواد اولیه حمل <span style="color:#dc3545;font-size:1rem;">*</span></h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="alert alert-info" style="margin-bottom: 20px;">
+          <strong>توجه:</strong> مواد اولیه مورد نظر را انتخاب کنید و مقدار تخصیص به این حمل را وارد کنید. الزامی نیست
+          همه مواد اولیه انتخاب شوند.
+        </div>
+
+        {{ raw_material_formset.management_form }}
+        <div id="materials-container">
+          <!-- مواد اولیه به صورت داینامیک از API لود می‌شوند -->
+        </div>
+
+        {% if raw_material_formset.non_form_errors %}
+        {% for err in raw_material_formset.non_form_errors %}
+        <div class="text-danger">{{ err }}</div>
         {% endfor %}
-    {% endif %}
+        {% endif %}
+      </div>
+    </div>
 
-    <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-
-        <!-- بخش اطلاعات اجباری -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>اطلاعات اجباری</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+    <!-- بخش اطلاعات خودرو و راننده -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>اطلاعات خودرو و راننده</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          {% if accessible_transport_fields.plate_number %}
+          <div class="col-md-4 mb-3">
+            <label class="form-label">{{ form.plate_number.label }}</label>
+            <div class="plate-input">
+              <div class="plate-seg">
+                <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="12" inputmode="numeric"
+                  pattern="\d*">
+                <span class="dash">-</span>
+                <input type="text" id="plate-letter" class="seg-letter" maxlength="1" placeholder="ب" dir="rtl">
+                <span class="dash">-</span>
+                <input type="text" id="plate-middle" class="seg-3" maxlength="3" placeholder="345" inputmode="numeric"
+                  pattern="\d*">
+                <span class="dash">-</span>
+                <input type="text" id="plate-iran" class="seg-iran" maxlength="2" placeholder="11" inputmode="numeric"
+                  pattern="\d*">
+              </div>
             </div>
-            <div class="form-section-content">
-                <div class="row">
-                    {% if accessible_transport_fields.purchase_order %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">{{ form.purchase_order.label }}</label>
-                        {% if initial_order %}
-                            <input type="text" class="form-control" value="{{ initial_order.order_number }}" readonly style="background:#f5f5f5;cursor:not-allowed">
-                            <input type="hidden" name="purchase_order" value="{{ initial_order.pk }}">
-                        {% else %}
-                            {{ form.purchase_order }}
-                        {% endif %}
-                        {% if form.purchase_order.errors %}
-                            <div class="text-danger">{{ form.purchase_order.errors.0 }}</div>
-                        {% endif %}
-                        <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">انتخاب سفارش خرید که در وضعیت "در انتظار تعریف حمل" یا بعد از آن است</small>
-                    </div>
-                    {% endif %}
+            <input type="hidden" id="id_plate_number" name="plate_number">
+            <small class="plate-helper" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">الگو:
+              11-345-ب-12</small>
+            {% if form.plate_number.errors %}
+            <div class="text-danger">{{ form.plate_number.errors.0 }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
 
-                    {% if accessible_transport_fields.vehicle_type %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">{{ form.vehicle_type.label }}</label>
-                        {{ form.vehicle_type }}
-                        {% if form.vehicle_type.errors %}
-                            <div class="text-danger">{{ form.vehicle_type.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-
-                {% if initial_order %}
-                <div id="order-info-display" class="info-box">
-                    <div class="info-box-title">اطلاعات سفارش خرید:</div>
-                    <div class="info-box-content" id="order-info-content">
-                        <div><strong>تاریخ سفارش:</strong> {{ initial_order.created_at|date:"Y/m/d" }}</div>
-                        <div style="margin-top:8px"><strong>مواد اولیه:</strong></div>
-                        <ul style="margin:6px 0 0 20px;padding:0" id="order-materials-list">
-                            <!-- مواد اولیه به صورت داینامیک از API لود می‌شوند -->
-                        </ul>
-                    </div>
-                </div>
-                {% else %}
-                <div id="order-info-display" class="info-box" style="display:none">
-                    <div class="info-box-title">اطلاعات سفارش خرید:</div>
-                    <div class="info-box-content" id="order-info-content">
-                        <!-- محتوا به صورت داینامیک پر می‌شود -->
-                    </div>
-                </div>
-                {% endif %}
+          {% if accessible_transport_fields.driver %}
+          <div class="col-md-8 mb-3">
+            <label class="form-label">{{ form.driver.label }}</label>
+            <div class="driver-autocomplete-wrapper">
+              <input type="text" id="driver-autocomplete" class="driver-autocomplete-input"
+                placeholder="جستجوی راننده (نام، تلفن یا کد ملی)..." autocomplete="off">
+              {{ form.driver }}
+              <div id="driver-suggestions" class="suggestions-container"></div>
             </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+              <button type="button" class="add-driver-btn" onclick="openAddDriverModal()"
+                style="padding: 6px 12px; font-size: 0.85rem; margin: 0;">+ افزودن راننده</button>
+              <small style="font-size:0.75rem;color:#666;margin:0">جستجو یا افزودن راننده جدید</small>
+            </div>
+            {% if form.driver.errors %}
+            <div class="text-danger">{{ form.driver.errors.0 }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal برای افزودن راننده جدید -->
+    <div id="addDriverModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>افزودن راننده جدید</h3>
+          <span class="close" onclick="closeAddDriverModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>نام راننده <span style="color:#d32f2f">*</span></label>
+            <input type="text" id="new-driver-name" placeholder="نام و نام خانوادگی">
+          </div>
+          <div class="mb-3">
+            <label>شماره تلفن <span style="color:#d32f2f">*</span></label>
+            <input type="text" id="new-driver-phone" placeholder="09123456789">
+          </div>
+          <div class="mb-3">
+            <label>کد ملی <span style="color:#d32f2f">*</span></label>
+            <input type="text" id="new-driver-national-id" placeholder="کد ملی 10 رقمی">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAddDriverModal()">انصراف</button>
+          <button type="button" class="btn btn-primary" onclick="saveNewDriver()">ذخیره</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal برای افزودن حساب بانکی راننده -->
+    <div id="addDriverBankAccountModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>افزودن حساب بانکی راننده</h3>
+          <span class="close" onclick="closeAddDriverBankAccountModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>نام بانک</label>
+            <input type="text" id="new-driver-bank-name" placeholder="نام بانک">
+          </div>
+          <div class="mb-3">
+            <label>شماره حساب</label>
+            <input type="text" id="new-driver-account-number" placeholder="شماره حساب بانکی">
+          </div>
+          <div class="mb-3">
+            <label>شماره شبا</label>
+            <input type="text" id="new-driver-sheba-number" placeholder="شماره شبا">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAddDriverBankAccountModal()">انصراف</button>
+          <button type="button" class="btn btn-primary" onclick="saveNewDriverBankAccount()">ذخیره</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal برای افزودن حساب بانکی تامین‌کننده -->
+    <div id="addSupplierBankAccountModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>افزودن حساب بانکی تامین‌کننده</h3>
+          <span class="close" onclick="closeAddSupplierBankAccountModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>نام بانک</label>
+            <input type="text" id="new-supplier-bank-name" placeholder="نام بانک">
+          </div>
+          <div class="mb-3">
+            <label>شماره حساب</label>
+            <input type="text" id="new-supplier-account-number" placeholder="شماره حساب بانکی">
+          </div>
+          <div class="mb-3">
+            <label>شماره شبا</label>
+            <input type="text" id="new-supplier-sheba-number" placeholder="شماره شبا">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAddSupplierBankAccountModal()">انصراف</button>
+          <button type="button" class="btn btn-primary" onclick="saveNewSupplierBankAccount()">ذخیره</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- بخش اطلاعات کرایه -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>اطلاعات کرایه (اختیاری)</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          {% if accessible_transport_fields.freight_payment_type %}
+          <div class="col-md-6 mb-3">
+            <label class="form-label">{{ form.freight_payment_type.label }}</label>
+            {{ form.freight_payment_type }}
+            {% if form.freight_payment_type.errors %}
+            <div class="text-danger">{{ form.freight_payment_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+          {% endif %}
         </div>
 
-        <!-- بخش مواد اولیه -->
-        <div class="form-section" id="materials-section" style="display:none;">
-            <div class="form-section-header">
-                <h5>مواد اولیه حمل <span style="color:#dc3545;font-size:1rem;">*</span></h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
+        <!-- فیلدهای کرایه که فقط برای pay_to_driver و pay_to_supplier نمایش داده می‌شوند -->
+        <div class="freight-fields-container" style="display: none;">
+          <div class="row">
+            {% if accessible_transport_fields.initial_freight %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.initial_freight.label }}</label>
+              {{ form.initial_freight }}
+              {% if form.initial_freight.errors %}
+              <div class="text-danger">{{ form.initial_freight.errors.0 }}</div>
+              {% endif %}
             </div>
-            <div class="form-section-content">
-                <div class="alert alert-info" style="margin-bottom: 20px;">
-                    <strong>توجه:</strong> مواد اولیه مورد نظر را انتخاب کنید و مقدار تخصیص به این حمل را وارد کنید. الزامی نیست همه مواد اولیه انتخاب شوند.
-                </div>
-                
-                {{ raw_material_formset.management_form }}
-                <div id="materials-container">
-                    <!-- مواد اولیه به صورت داینامیک از API لود می‌شوند -->
-                </div>
-                
-                {% if raw_material_formset.non_form_errors %}
-                    {% for err in raw_material_formset.non_form_errors %}
-                        <div class="text-danger">{{ err }}</div>
-                    {% endfor %}
-                {% endif %}
+            {% endif %}
+
+            {% if accessible_transport_fields.total_freight %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.total_freight.label }}</label>
+              {{ form.total_freight }}
+              {% if form.total_freight.errors %}
+              <div class="text-danger">{{ form.total_freight.errors.0 }}</div>
+              {% endif %}
+              <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: کرایه اولیه +
+                مازاد - تخفیف</small>
             </div>
+            {% endif %}
+          </div>
+
+          <div class="row">
+            {% if accessible_transport_fields.discount %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.discount.label }}</label>
+              {{ form.discount }}
+              {% if form.discount.errors %}
+              <div class="text-danger">{{ form.discount.errors.0 }}</div>
+              {% endif %}
+            </div>
+            {% endif %}
+
+            {% if accessible_transport_fields.surplus %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.surplus.label }}</label>
+              {{ form.surplus }}
+              {% if form.surplus.errors %}
+              <div class="text-danger">{{ form.surplus.errors.0 }}</div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+
+          <div class="row">
+            {% if accessible_transport_fields.freight_payment %}
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.freight_payment.label }}</label>
+              {{ form.freight_payment }}
+              {% if form.freight_payment.errors %}
+              <div class="text-danger">{{ form.freight_payment.errors.0 }}</div>
+              {% endif %}
+              <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: برابر با کرایه
+                کل</small>
+            </div>
+            {% endif %}
+          </div>
         </div>
 
-        <!-- بخش اطلاعات خودرو و راننده -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>اطلاعات خودرو و راننده</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-            <div class="form-section-content">
-                <div class="row">
-                    {% if accessible_transport_fields.plate_number %}
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">{{ form.plate_number.label }}</label>
-                        <div class="plate-input">
-                            <div class="plate-seg">
-                                <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="12" inputmode="numeric" pattern="\d*">
-                                <span class="dash">-</span>
-                                <input type="text" id="plate-letter" class="seg-letter" maxlength="1" placeholder="ب" dir="rtl">
-                                <span class="dash">-</span>
-                                <input type="text" id="plate-middle" class="seg-3" maxlength="3" placeholder="345" inputmode="numeric" pattern="\d*">
-                                <span class="dash">-</span>
-                                <input type="text" id="plate-iran" class="seg-iran" maxlength="2" placeholder="11" inputmode="numeric" pattern="\d*">
-                            </div>
-                        </div>
-                        <input type="hidden" id="id_plate_number" name="plate_number">
-                        <small class="plate-helper" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">الگو: 11-345-ب-12</small>
-                        {% if form.plate_number.errors %}
-                            <div class="text-danger">{{ form.plate_number.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
+        <!-- حساب بانکی راننده و تامین‌کننده -->
+        <div class="row">
+          <!-- حساب بانکی راننده - فقط برای pay_to_driver -->
+          {% if accessible_transport_fields.driver_account_number or accessible_transport_fields.driver_sheba_number %}
+          <div class="col-md-6 mb-3 driver-bank-account-container" style="display: none;">
+            <label class="form-label">حساب بانکی راننده</label>
+            <select id="driver-bank-account-select" class="form-control">
+              <option value="">-- انتخاب حساب بانکی --</option>
+            </select>
+            <button type="button" class="add-bank-account-btn" onclick="openAddDriverBankAccountModal()"
+              style="margin-top: 10px; padding: 8px 16px; font-size: 0.9rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer;">+
+              افزودن حساب بانکی جدید</button>
+            <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">انتخاب حساب بانکی راننده یا افزودن
+              حساب جدید</small>
+          </div>
+          {% endif %}
 
-                    {% if accessible_transport_fields.driver %}
-                    <div class="col-md-8 mb-3">
-                        <label class="form-label">{{ form.driver.label }}</label>
-                        <div class="driver-autocomplete-wrapper">
-                            <input type="text" id="driver-autocomplete" class="driver-autocomplete-input" placeholder="جستجوی راننده (نام، تلفن یا کد ملی)..." autocomplete="off">
-                            {{ form.driver }}
-                            <div id="driver-suggestions" class="suggestions-container"></div>
-                        </div>
-                        <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
-                            <button type="button" class="add-driver-btn" onclick="openAddDriverModal()" style="padding: 6px 12px; font-size: 0.85rem; margin: 0;">+ افزودن راننده</button>
-                            <small style="font-size:0.75rem;color:#666;margin:0">جستجو یا افزودن راننده جدید</small>
-                        </div>
-                        {% if form.driver.errors %}
-                            <div class="text-danger">{{ form.driver.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-  
-        <!-- Modal برای افزودن راننده جدید -->
-        <div id="addDriverModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>افزودن راننده جدید</h3>
-                    <span class="close" onclick="closeAddDriverModal()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label>نام راننده <span style="color:#d32f2f">*</span></label>
-                        <input type="text" id="new-driver-name" placeholder="نام و نام خانوادگی">
-                    </div>
-                    <div class="mb-3">
-                        <label>شماره تلفن <span style="color:#d32f2f">*</span></label>
-                        <input type="text" id="new-driver-phone" placeholder="09123456789">
-                    </div>
-                    <div class="mb-3">
-                        <label>کد ملی</label>
-                        <input type="text" id="new-driver-national-id" placeholder="کد ملی 10 رقمی">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeAddDriverModal()">انصراف</button>
-                    <button type="button" class="btn btn-primary" onclick="saveNewDriver()">ذخیره</button>
-                </div>
-            </div>
+          <!-- حساب بانکی تامین‌کننده - فقط برای pay_to_supplier -->
+          {% if accessible_transport_fields.supplier_account_number or accessible_transport_fields.supplier_sheba_number %}
+          <div class="col-md-6 mb-3 supplier-bank-account-container" style="display: none;">
+            <label class="form-label">حساب بانکی تامین‌کننده</label>
+            <select id="supplier-bank-account-select" class="form-control">
+              <option value="">-- انتخاب حساب بانکی --</option>
+            </select>
+            <button type="button" class="add-bank-account-btn" onclick="openAddSupplierBankAccountModal()"
+              style="margin-top: 10px; padding: 8px 16px; font-size: 0.9rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer;">+
+              افزودن حساب بانکی جدید</button>
+            <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">انتخاب حساب بانکی تامین‌کننده یا
+              افزودن حساب جدید</small>
+          </div>
+          {% endif %}
         </div>
 
-        <!-- Modal برای افزودن حساب بانکی راننده -->
-        <div id="addDriverBankAccountModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>افزودن حساب بانکی راننده</h3>
-                    <span class="close" onclick="closeAddDriverBankAccountModal()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label>نام بانک</label>
-                        <input type="text" id="new-driver-bank-name" placeholder="نام بانک">
-                    </div>
-                    <div class="mb-3">
-                        <label>شماره حساب</label>
-                        <input type="text" id="new-driver-account-number" placeholder="شماره حساب بانکی">
-                    </div>
-                    <div class="mb-3">
-                        <label>شماره شبا</label>
-                        <input type="text" id="new-driver-sheba-number" placeholder="شماره شبا">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeAddDriverBankAccountModal()">انصراف</button>
-                    <button type="button" class="btn btn-primary" onclick="saveNewDriverBankAccount()">ذخیره</button>
-                </div>
-            </div>
+        <!-- Hidden fields for bank account -->
+        {% if accessible_transport_fields.driver_bank_account %}
+        <input type="hidden" id="id_driver_bank_account" name="driver_bank_account"
+          value="{{ form.driver_bank_account.value|default:'' }}">
+        {% endif %}
+        {% if accessible_transport_fields.supplier_bank_account %}
+        <input type="hidden" id="id_supplier_bank_account" name="supplier_bank_account"
+          value="{{ form.supplier_bank_account.value|default:'' }}">
+        {% endif %}
+      </div>
+    </div>
+</div>
+
+<!-- بخش تاریخ‌ها -->
+<div class="form-section">
+  <div class="form-section-header">
+    <h5>تاریخ‌های حمل (اختیاری)</h5>
+    <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </div>
+  <div class="form-section-content">
+    <div class="row">
+      {% if accessible_transport_fields.expected_arrival_date %}
+      <div class="col-md-6 mb-3">
+        <label class="form-label">{{ form.expected_arrival_date.label }}</label>
+        <div style="position: relative;">
+          <input type="text" id="id_expected_arrival_date_display" class="form-control" placeholder="1403/09/15"
+            readonly style="background-color: #fff; cursor: pointer;">
+          {{ form.expected_arrival_date }}
         </div>
+        {% if form.expected_arrival_date.errors %}
+        <div class="text-danger">{{ form.expected_arrival_date.errors.0 }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 
-        <!-- Modal برای افزودن حساب بانکی تامین‌کننده -->
-        <div id="addSupplierBankAccountModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>افزودن حساب بانکی تامین‌کننده</h3>
-                    <span class="close" onclick="closeAddSupplierBankAccountModal()">&times;</span>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label>نام بانک</label>
-                        <input type="text" id="new-supplier-bank-name" placeholder="نام بانک">
-                    </div>
-                    <div class="mb-3">
-                        <label>شماره حساب</label>
-                        <input type="text" id="new-supplier-account-number" placeholder="شماره حساب بانکی">
-                    </div>
-                    <div class="mb-3">
-                        <label>شماره شبا</label>
-                        <input type="text" id="new-supplier-sheba-number" placeholder="شماره شبا">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" onclick="closeAddSupplierBankAccountModal()">انصراف</button>
-                    <button type="button" class="btn btn-primary" onclick="saveNewSupplierBankAccount()">ذخیره</button>
-                </div>
-            </div>
-        </div>
+<!-- بخش سایر اطلاعات -->
+<div class="form-section">
+  <div class="form-section-header">
+    <h5>سایر اطلاعات (اختیاری)</h5>
+    <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    </svg>
+  </div>
+  <div class="form-section-content">
+    <div class="row">
+      {% if accessible_transport_fields.waybill_number %}
+      <div class="col-md-6 mb-3">
+        <label class="form-label">{{ form.waybill_number.label }}</label>
+        {{ form.waybill_number }}
+        {% if form.waybill_number.errors %}
+        <div class="text-danger">{{ form.waybill_number.errors.0 }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
 
-        <!-- بخش اطلاعات کرایه -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>اطلاعات کرایه (اختیاری)</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-            <div class="form-section-content">
-                <div class="row">
-                    {% if accessible_transport_fields.freight_payment_type %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.freight_payment_type.label }}</label>
-                        {{ form.freight_payment_type }}
-                        {% if form.freight_payment_type.errors %}
-                            <div class="text-danger">{{ form.freight_payment_type.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
+      {% if accessible_transport_fields.notes %}
+      <div class="col-12 mb-3">
+        <label class="form-label">{{ form.notes.label }}</label>
+        {{ form.notes }}
+        {% if form.notes.errors %}
+        <div class="text-danger">{{ form.notes.errors.0 }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
 
-                <!-- فیلدهای کرایه که فقط برای pay_to_driver و pay_to_supplier نمایش داده می‌شوند -->
-                <div class="freight-fields-container" style="display: none;">
-                    <div class="row">
-                        {% if accessible_transport_fields.initial_freight %}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ form.initial_freight.label }}</label>
-                            {{ form.initial_freight }}
-                            {% if form.initial_freight.errors %}
-                                <div class="text-danger">{{ form.initial_freight.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                        {% if accessible_transport_fields.total_freight %}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ form.total_freight.label }}</label>
-                            {{ form.total_freight }}
-                            {% if form.total_freight.errors %}
-                                <div class="text-danger">{{ form.total_freight.errors.0 }}</div>
-                            {% endif %}
-                            <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: کرایه اولیه + مازاد - تخفیف</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="row">
-                        {% if accessible_transport_fields.discount %}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ form.discount.label }}</label>
-                            {{ form.discount }}
-                            {% if form.discount.errors %}
-                                <div class="text-danger">{{ form.discount.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-
-                        {% if accessible_transport_fields.surplus %}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ form.surplus.label }}</label>
-                            {{ form.surplus }}
-                            {% if form.surplus.errors %}
-                                <div class="text-danger">{{ form.surplus.errors.0 }}</div>
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="row">
-                        {% if accessible_transport_fields.freight_payment %}
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">{{ form.freight_payment.label }}</label>
-                            {{ form.freight_payment }}
-                            {% if form.freight_payment.errors %}
-                                <div class="text-danger">{{ form.freight_payment.errors.0 }}</div>
-                            {% endif %}
-                            <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: برابر با کرایه کل</small>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <!-- حساب بانکی راننده و تامین‌کننده -->
-                <div class="row">
-                    <!-- حساب بانکی راننده - فقط برای pay_to_driver -->
-                    {% if accessible_transport_fields.driver_account_number or accessible_transport_fields.driver_sheba_number %}
-                    <div class="col-md-6 mb-3 driver-bank-account-container" style="display: none;">
-                        <label class="form-label">حساب بانکی راننده</label>
-                        <select id="driver-bank-account-select" class="form-control">
-                            <option value="">-- انتخاب حساب بانکی --</option>
-                        </select>
-                        <button type="button" class="add-bank-account-btn" onclick="openAddDriverBankAccountModal()" style="margin-top: 10px; padding: 8px 16px; font-size: 0.9rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer;">+ افزودن حساب بانکی جدید</button>
-                        <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">انتخاب حساب بانکی راننده یا افزودن حساب جدید</small>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- حساب بانکی تامین‌کننده - فقط برای pay_to_supplier -->
-                    {% if accessible_transport_fields.supplier_account_number or accessible_transport_fields.supplier_sheba_number %}
-                    <div class="col-md-6 mb-3 supplier-bank-account-container" style="display: none;">
-                        <label class="form-label">حساب بانکی تامین‌کننده</label>
-                        <select id="supplier-bank-account-select" class="form-control">
-                            <option value="">-- انتخاب حساب بانکی --</option>
-                        </select>
-                        <button type="button" class="add-bank-account-btn" onclick="openAddSupplierBankAccountModal()" style="margin-top: 10px; padding: 8px 16px; font-size: 0.9rem; background: var(--primary-green); color: white; border: none; border-radius: 8px; cursor: pointer;">+ افزودن حساب بانکی جدید</button>
-                        <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">انتخاب حساب بانکی تامین‌کننده یا افزودن حساب جدید</small>
-                    </div>
-                    {% endif %}
-                </div>
-                    
-                    <!-- Hidden fields for bank account -->
-                    {% if accessible_transport_fields.driver_bank_account %}
-                    <input type="hidden" id="id_driver_bank_account" name="driver_bank_account" value="{{ form.driver_bank_account.value|default:'' }}">
-                    {% endif %}
-                    {% if accessible_transport_fields.supplier_bank_account %}
-                    <input type="hidden" id="id_supplier_bank_account" name="supplier_bank_account" value="{{ form.supplier_bank_account.value|default:'' }}">
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- بخش تاریخ‌ها -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>تاریخ‌های حمل (اختیاری)</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-            <div class="form-section-content">
-                <div class="row">
-                    {% if accessible_transport_fields.expected_arrival_date %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.expected_arrival_date.label }}</label>
-                        <div style="position: relative;">
-                            <input type="text" id="id_expected_arrival_date_display" class="form-control" placeholder="1403/09/15" readonly style="background-color: #fff; cursor: pointer;">
-                            {{ form.expected_arrival_date }}
-                        </div>
-                        {% if form.expected_arrival_date.errors %}
-                            <div class="text-danger">{{ form.expected_arrival_date.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- بخش سایر اطلاعات -->
-        <div class="form-section">
-            <div class="form-section-header">
-                <h5>سایر اطلاعات (اختیاری)</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            </div>
-            <div class="form-section-content">
-                <div class="row">
-                    {% if accessible_transport_fields.waybill_number %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.waybill_number.label }}</label>
-                        {{ form.waybill_number }}
-                        {% if form.waybill_number.errors %}
-                            <div class="text-danger">{{ form.waybill_number.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                    {% if accessible_transport_fields.notes %}
-                    <div class="col-12 mb-3">
-                        <label class="form-label">{{ form.notes.label }}</label>
-                        {{ form.notes }}
-                        {% if form.notes.errors %}
-                            <div class="text-danger">{{ form.notes.errors.0 }}</div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-
-        <!-- دکمه‌ها -->
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">ثبت حمل</button>
-            <a href="{% url 'supply:purchase_transport_list' %}" class="btn btn-secondary">بازگشت</a>
-        </div>
-    </form>
+<!-- دکمه‌ها -->
+<div class="form-actions">
+  <button type="submit" class="btn btn-primary">ثبت حمل</button>
+  <a href="{% url 'supply:purchase_transport_list' %}" class="btn btn-secondary">بازگشت</a>
+</div>
+</form>
 </div>
 {% endblock %}
 {% block extra_js %}
@@ -940,271 +1045,298 @@
 <script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 <script>
-// تابع برای دریافت order_id (از select یا hidden input)
-function getOrderId() {
-  // اول سعی می‌کنیم از select بگیریم
-  const purchaseOrderSelect = document.getElementById('id_purchase_order');
-  if (purchaseOrderSelect && purchaseOrderSelect.value) {
-    return purchaseOrderSelect.value;
-  }
-  
-  // اگر select وجود نداشت، از hidden input بگیریم (برای initial_order)
-  const purchaseOrderHidden = document.querySelector('input[name="purchase_order"][type="hidden"]');
-  if (purchaseOrderHidden && purchaseOrderHidden.value) {
-    return purchaseOrderHidden.value;
-  }
-  
-  return null;
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  const orderSelect = document.getElementById('id_purchase_order');
-  
-  {% if not initial_order %}
-  // Only enable dynamic loading if not pre-filled
-  if (orderSelect) {
-    orderSelect.addEventListener('change', function() {
-      const orderNumber = this.options[this.selectedIndex].text.split(' ')[0]; // Extract order number from option text
-      
-      if (orderNumber && orderNumber !== '---------') {
-        // Fetch order materials via AJAX
-        fetch(`/supply/api/order-materials/${orderNumber}/`)
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              // نمایش بخش مواد اولیه
-              document.getElementById('materials-section').style.display = 'block';
-              
-              // پر کردن مواد اولیه
-              loadMaterialsToFormset(data.materials);
-              
-              // نمایش اطلاعات سفارش
-              showOrderInfo(data.materials);
-            } else {
-              alert('خطا در دریافت مواد اولیه سفارش');
-            }
-          })
-          .catch(error => {
-            console.error('Error fetching order materials:', error);
-            alert('خطا در دریافت مواد اولیه سفارش');
-          });
-      } else {
-        // پنهان کردن بخش مواد اولیه اگر سفارش انتخاب نشده
-        document.getElementById('materials-section').style.display = 'none';
-      }
-    });
-  }
-  {% endif %}
-  
-  // Driver autocomplete
-  const driverInput = document.getElementById('driver-autocomplete');
-  const driverIdInput = document.getElementById('id_driver');
-  const driverSuggestions = document.getElementById('driver-suggestions');
-  let driverSearchTimeout;
-  let driverSuggestionsList = [];
-  
-  if (driverInput) {
-    driverInput.addEventListener('input', function() {
-      const query = this.value.trim();
-      
-      clearTimeout(driverSearchTimeout);
-      
-      if (query.length < 2) {
-        driverSuggestions.style.display = 'none';
-        driverSuggestionsList = [];
-        if (driverIdInput) driverIdInput.value = '';
-        return;
-      }
-      
-      driverSearchTimeout = setTimeout(function() {
-        fetch('{% url "supply:driver_search_api" %}?q=' + encodeURIComponent(query))
-          .then(response => response.json())
-          .then(data => {
-            driverSuggestionsList = data.results || [];
-            displayDriverSuggestions();
-          })
-          .catch(error => {
-            console.error('خطا در جستجوی راننده:', error);
-          });
-      }, 300);
-    });
-    
-    function displayDriverSuggestions() {
-      driverSuggestions.innerHTML = '';
-      
-      if (driverSuggestionsList.length === 0) {
-        driverSuggestions.style.display = 'none';
-        return;
-      }
-      
-      driverSuggestionsList.forEach(function(item) {
-        const suggestionItem = document.createElement('div');
-        suggestionItem.className = 'suggestion-item';
-        suggestionItem.textContent = item.text;
-        suggestionItem.addEventListener('click', function() {
-          driverInput.value = item.text;
-          if (driverIdInput) {
-            driverIdInput.value = item.id;
-            // بارگذاری حساب‌های بانکی راننده
-            loadDriverBankAccounts(item.id);
-          }
-          driverSuggestions.style.display = 'none';
-        });
-        driverSuggestions.appendChild(suggestionItem);
-      });
-      
-      driverSuggestions.style.display = 'block';
+  // تابع برای دریافت order_id (از select یا hidden input)
+  function getOrderId() {
+    // اول سعی می‌کنیم از select بگیریم
+    const purchaseOrderSelect = document.getElementById('id_purchase_order');
+    if (purchaseOrderSelect && purchaseOrderSelect.value) {
+      return purchaseOrderSelect.value;
     }
-    
-    // بستن پیشنهادات با کلیک خارج
-    document.addEventListener('click', function(e) {
-      if (!driverInput.contains(e.target) && !driverSuggestions.contains(e.target)) {
-        driverSuggestions.style.display = 'none';
-      }
-    });
-    
-    // اگر راننده قبلاً انتخاب شده، نمایش بده
-    {% if form.driver.value %}
-    fetch('{% url "supply:driver_search_api" %}?id={{ form.driver.value }}')
-      .then(response => response.json())
-      .then(data => {
-        if (data.results && data.results.length > 0) {
-          driverInput.value = data.results[0].text;
+
+    // اگر select وجود نداشت، از hidden input بگیریم (برای initial_order)
+    const purchaseOrderHidden = document.querySelector('input[name="purchase_order"][type="hidden"]');
+    if (purchaseOrderHidden && purchaseOrderHidden.value) {
+      return purchaseOrderHidden.value;
+    }
+
+    return null;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const orderSelect = document.getElementById('id_purchase_order');
+
+    {% if not initial_order %}
+    // Only enable dynamic loading if not pre-filled
+    if (orderSelect) {
+      orderSelect.addEventListener('change', function () {
+        const orderNumber = this.options[this.selectedIndex].text.split(' ')[0]; // Extract order number from option text
+
+        if (orderNumber && orderNumber !== '---------') {
+          // Fetch order materials via AJAX
+          fetch(`/supply/api/order-materials/${orderNumber}/`)
+            .then(response => response.json())
+            .then(data => {
+              if (data.success) {
+                // نمایش بخش مواد اولیه
+                document.getElementById('materials-section').style.display = 'block';
+
+                // پر کردن مواد اولیه
+                loadMaterialsToFormset(data.materials);
+
+                // نمایش اطلاعات سفارش
+                showOrderInfo(data.materials);
+              } else {
+                alert('خطا در دریافت مواد اولیه سفارش');
+              }
+            })
+            .catch(error => {
+              console.error('Error fetching order materials:', error);
+              alert('خطا در دریافت مواد اولیه سفارش');
+            });
+        } else {
+          // پنهان کردن بخش مواد اولیه اگر سفارش انتخاب نشده
+          document.getElementById('materials-section').style.display = 'none';
         }
       });
+    }
     {% endif %}
-  }
-  
-  // تابع برای فرمت کردن عدد به دو رقم اعشار (فقط برای نمایش)
-  // این تابع فقط برای نمایش استفاده می‌شود و مقدار واقعی را تغییر نمی‌دهد
-  function formatDecimal(value) {
-    if (value === null || value === undefined || value === '') {
-      return '0';
-    }
-    // تبدیل به string و سپس parseFloat برای اطمینان از دقت
-    const strValue = String(value).trim();
-    if (!strValue || strValue === '') {
-      return '0';
-    }
-    // استفاده از parseFloat برای تبدیل
-    const num = parseFloat(strValue);
-    if (isNaN(num)) {
-      return '0';
-    }
-    // اگر عدد صحیح است، بدون اعشار نمایش بده
-    if (num % 1 === 0) {
-      return num.toString();
-    }
-    // برای اعداد اعشاری، تا دو رقم اعشار نمایش بده
-    // استفاده از toFixed(2) برای نمایش دقیق
-    return num.toFixed(2);
-  }
-  
-  // تابع برای نمایش اطلاعات سفارش
-  function showOrderInfo(materials) {
-    let orderInfoDiv = document.getElementById('order-info-display');
-    let orderInfoContent = document.getElementById('order-info-content');
-    let materialsList = document.getElementById('order-materials-list');
-    
-    if (!orderInfoDiv) {
-      orderInfoDiv = document.createElement('div');
-      orderInfoDiv.id = 'order-info-display';
-      orderInfoDiv.className = 'info-box';
-      orderInfoDiv.innerHTML = '<div class="info-box-title">اطلاعات سفارش خرید:</div><div class="info-box-content" id="order-info-content"></div>';
-      const purchaseOrderGroup = document.getElementById('id_purchase_order') ? document.getElementById('id_purchase_order').closest('.mb-3') : null;
-      if (purchaseOrderGroup && purchaseOrderGroup.parentNode) {
-        purchaseOrderGroup.parentNode.insertBefore(orderInfoDiv, purchaseOrderGroup.nextSibling);
+
+    // Driver autocomplete
+    const driverInput = document.getElementById('driver-autocomplete');
+    const driverIdInput = document.getElementById('id_driver');
+    const driverSuggestions = document.getElementById('driver-suggestions');
+    let driverSearchTimeout;
+    let driverSuggestionsList = [];
+
+    if (driverInput) {
+      const MIN_SEARCH_LENGTH = 0; // اجازه جستجو با کوئری خالی
+
+      // تابع انجام جستجو
+      function performDriverSearch(query) {
+        clearTimeout(driverSearchTimeout);
+
+        // نمایش لودینگ یا وضعیت خالی
+        if (query.length === 0) {
+          // اگر کوئری خالی است، مستقیماً جستجو کن (برای نمایش پیش‌فرض‌ها)
+        } else if (query.length < MIN_SEARCH_LENGTH) {
+          driverSuggestions.style.display = 'none';
+          driverSuggestionsList = [];
+          if (driverIdInput) driverIdInput.value = '';
+          return;
+        }
+
+        driverSearchTimeout = setTimeout(function () {
+          fetch('{% url "supply:driver_search_api" %}?q=' + encodeURIComponent(query))
+            .then(response => response.json())
+            .then(data => {
+              driverSuggestionsList = data.results || [];
+              displayDriverSuggestions();
+            })
+            .catch(error => {
+              console.error('خطا در جستجوی راننده:', error);
+            });
+        }, 300);
       }
-      orderInfoContent = document.getElementById('order-info-content');
-    }
-    
-    if (!materialsList) {
-      // اگر materialsList وجود ندارد، آن را ایجاد کن
-      if (orderInfoContent) {
-        let materialsHtml = '<div style="margin-top:8px"><strong>مواد اولیه:</strong></div>';
-        materialsHtml += '<ul style="margin:6px 0 0 20px;padding:0" id="order-materials-list"></ul>';
-        orderInfoContent.innerHTML = materialsHtml;
-        materialsList = document.getElementById('order-materials-list');
-      }
-    }
-    
-    if (materialsList) {
-      materialsList.innerHTML = '';
-      materials.forEach(mat => {
-        const li = document.createElement('li');
-        li.innerHTML = `<strong>${mat.raw_material_name}:</strong> کل: ${formatDecimal(mat.total_quantity)} ${mat.weight_unit_display} | تخصیص یافته: ${formatDecimal(mat.allocated_quantity)} ${mat.weight_unit_display} | باقیمانده: ${formatDecimal(mat.remaining_quantity)} ${mat.weight_unit_display}`;
-        materialsList.appendChild(li);
+
+      // جستجو هنگام تایپ
+      driverInput.addEventListener('input', function () {
+        const query = this.value.trim();
+        performDriverSearch(query);
       });
-    }
-    
-    if (orderInfoDiv) {
-      orderInfoDiv.style.display = 'block';
-    }
-  }
-  
-  // تابع برای پر کردن formset با مواد اولیه
-  function loadMaterialsToFormset(materials) {
-    const container = document.getElementById('materials-container');
-    container.innerHTML = ''; // پاک کردن محتوای قبلی
-    
-    const totalFormsInput = document.querySelector('input[name="materials-TOTAL_FORMS"]');
-    if (!totalFormsInput) {
-      console.error('فیلد TOTAL_FORMS پیدا نشد');
-      return;
-    }
-    
-    // نمایش همه مواد اولیه (حتی اگر مقدار باقیمانده صفر باشد)
-    materials.forEach(function(material, index) {
-      const materialDiv = createMaterialFormRow(material, index);
-      container.appendChild(materialDiv);
-    });
-    
-    // به‌روزرسانی تعداد کل فرم‌ها (بر اساس تعداد مواد اولیه)
-    totalFormsInput.value = materials.length;
-    
-    // تابع برای به‌روزرسانی تعداد فرم‌های انتخاب شده
-    updateFormsetCount();
-  }
-  
-  // تابع برای به‌روزرسانی تعداد فرم‌های انتخاب شده
-  function updateFormsetCount() {
-    const selectedMaterials = document.querySelectorAll('.material-item.selected');
-    const totalFormsInput = document.querySelector('input[name="materials-TOTAL_FORMS"]');
-    
-    if (totalFormsInput) {
-      // شماره‌گذاری مجدد فرم‌های انتخاب شده
-      let formIndex = 0;
-      selectedMaterials.forEach(function(item) {
-        const inputs = item.querySelectorAll('input[name^="materials-"], select[name^="materials-"], textarea[name^="materials-"]');
-        inputs.forEach(function(input) {
-          const oldName = input.name;
-          const newName = oldName.replace(/materials-\d+-/, `materials-${formIndex}-`);
-          input.name = newName;
-          if (input.id) {
-            input.id = input.id.replace(/id_materials-\d+-/, `id_materials-${formIndex}-`);
+
+      // جستجو هنگام فوکوس (برای نمایش پیشنهادات اولیه)
+      driverInput.addEventListener('focus', function () {
+        const query = this.value.trim();
+        // اگر فیلد خالی است، جستجو را انجام بده تا پیشنهادات پیش‌فرض نمایش داده شوند
+        if (query.length === 0) {
+          performDriverSearch('');
+        } else {
+          // اگر متنی دارد، همان را جستجو کن
+          performDriverSearch(query);
+        }
+      });
+
+      function displayDriverSuggestions() {
+        driverSuggestions.innerHTML = '';
+
+        if (driverSuggestionsList.length === 0) {
+          driverSuggestions.style.display = 'none';
+          return;
+        }
+
+        driverSuggestionsList.forEach(function (item) {
+          const suggestionItem = document.createElement('div');
+          suggestionItem.className = 'suggestion-item';
+          suggestionItem.textContent = item.text;
+          suggestionItem.addEventListener('click', function () {
+            driverInput.value = item.text;
+            if (driverIdInput) {
+              driverIdInput.value = item.id;
+              // بارگذاری حساب‌های بانکی راننده
+              loadDriverBankAccounts(item.id);
+            }
+            driverSuggestions.style.display = 'none';
+          });
+          driverSuggestions.appendChild(suggestionItem);
+        });
+
+        driverSuggestions.style.display = 'block';
+      }
+
+      // بستن پیشنهادات با کلیک خارج
+      document.addEventListener('click', function (e) {
+        if (!driverInput.contains(e.target) && !driverSuggestions.contains(e.target)) {
+          driverSuggestions.style.display = 'none';
+        }
+      });
+
+      // لود کردن 20 مورد اولیه در ابتدا (اگر فیلد خالی است)
+      {% if not form.driver.value %}
+      performDriverSearch('');
+      {% endif %}
+
+      // اگر راننده قبلاً انتخاب شده، نمایش بده
+      {% if form.driver.value %}
+      fetch('{% url "supply:driver_search_api" %}?id={{ form.driver.value }}')
+        .then(response => response.json())
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            driverInput.value = data.results[0].text;
           }
         });
-        formIndex++;
-      });
-      
-      // به‌روزرسانی TOTAL_FORMS
-      totalFormsInput.value = formIndex;
+      {% endif %}
     }
-  }
-  
-  // تابع برای ایجاد یک row برای هر ماده اولیه
-  function createMaterialFormRow(material, index) {
-    const div = document.createElement('div');
-    div.className = 'material-item';
-    div.dataset.materialIndex = index;
-    div.dataset.orderItemId = material.id;
-    div.dataset.rawMaterialId = material.raw_material_id;
-    div.dataset.weightUnit = material.weight_unit;
-    div.dataset.remainingQuantity = material.remaining_quantity;
-    
-    const isDisabled = parseFloat(material.remaining_quantity) <= 0;
-    
-    div.innerHTML = `
+
+    // تابع برای فرمت کردن عدد به دو رقم اعشار (فقط برای نمایش)
+    // این تابع فقط برای نمایش استفاده می‌شود و مقدار واقعی را تغییر نمی‌دهد
+    function formatDecimal(value) {
+      if (value === null || value === undefined || value === '') {
+        return '0';
+      }
+      // تبدیل به string و سپس parseFloat برای اطمینان از دقت
+      const strValue = String(value).trim();
+      if (!strValue || strValue === '') {
+        return '0';
+      }
+      // استفاده از parseFloat برای تبدیل
+      const num = parseFloat(strValue);
+      if (isNaN(num)) {
+        return '0';
+      }
+      // اگر عدد صحیح است، بدون اعشار نمایش بده
+      if (num % 1 === 0) {
+        return num.toString();
+      }
+      // برای اعداد اعشاری، تا دو رقم اعشار نمایش بده
+      // استفاده از toFixed(2) برای نمایش دقیق
+      return num.toFixed(2);
+    }
+
+    // تابع برای نمایش اطلاعات سفارش
+    function showOrderInfo(materials) {
+      let orderInfoDiv = document.getElementById('order-info-display');
+      let orderInfoContent = document.getElementById('order-info-content');
+      let materialsList = document.getElementById('order-materials-list');
+
+      if (!orderInfoDiv) {
+        orderInfoDiv = document.createElement('div');
+        orderInfoDiv.id = 'order-info-display';
+        orderInfoDiv.className = 'info-box';
+        orderInfoDiv.innerHTML = '<div class="info-box-title">اطلاعات سفارش خرید:</div><div class="info-box-content" id="order-info-content"></div>';
+        const purchaseOrderGroup = document.getElementById('id_purchase_order') ? document.getElementById('id_purchase_order').closest('.mb-3') : null;
+        if (purchaseOrderGroup && purchaseOrderGroup.parentNode) {
+          purchaseOrderGroup.parentNode.insertBefore(orderInfoDiv, purchaseOrderGroup.nextSibling);
+        }
+        orderInfoContent = document.getElementById('order-info-content');
+      }
+
+      if (!materialsList) {
+        // اگر materialsList وجود ندارد، آن را ایجاد کن
+        if (orderInfoContent) {
+          let materialsHtml = '<div style="margin-top:8px"><strong>مواد اولیه:</strong></div>';
+          materialsHtml += '<ul style="margin:6px 0 0 20px;padding:0" id="order-materials-list"></ul>';
+          orderInfoContent.innerHTML = materialsHtml;
+          materialsList = document.getElementById('order-materials-list');
+        }
+      }
+
+      if (materialsList) {
+        materialsList.innerHTML = '';
+        materials.forEach(mat => {
+          const li = document.createElement('li');
+          li.innerHTML = `<strong>${mat.raw_material_name}:</strong> کل: ${formatDecimal(mat.total_quantity)} ${mat.weight_unit_display} | تخصیص یافته: ${formatDecimal(mat.allocated_quantity)} ${mat.weight_unit_display} | باقیمانده: ${formatDecimal(mat.remaining_quantity)} ${mat.weight_unit_display}`;
+          materialsList.appendChild(li);
+        });
+      }
+
+      if (orderInfoDiv) {
+        orderInfoDiv.style.display = 'block';
+      }
+    }
+
+    // تابع برای پر کردن formset با مواد اولیه
+    function loadMaterialsToFormset(materials) {
+      const container = document.getElementById('materials-container');
+      container.innerHTML = ''; // پاک کردن محتوای قبلی
+
+      const totalFormsInput = document.querySelector('input[name="materials-TOTAL_FORMS"]');
+      if (!totalFormsInput) {
+        console.error('فیلد TOTAL_FORMS پیدا نشد');
+        return;
+      }
+
+      // نمایش همه مواد اولیه (حتی اگر مقدار باقیمانده صفر باشد)
+      materials.forEach(function (material, index) {
+        const materialDiv = createMaterialFormRow(material, index);
+        container.appendChild(materialDiv);
+      });
+
+      // به‌روزرسانی تعداد کل فرم‌ها (بر اساس تعداد مواد اولیه)
+      totalFormsInput.value = materials.length;
+
+      // تابع برای به‌روزرسانی تعداد فرم‌های انتخاب شده
+      updateFormsetCount();
+    }
+
+    // تابع برای به‌روزرسانی تعداد فرم‌های انتخاب شده
+    function updateFormsetCount() {
+      const selectedMaterials = document.querySelectorAll('.material-item.selected');
+      const totalFormsInput = document.querySelector('input[name="materials-TOTAL_FORMS"]');
+
+      if (totalFormsInput) {
+        // شماره‌گذاری مجدد فرم‌های انتخاب شده
+        let formIndex = 0;
+        selectedMaterials.forEach(function (item) {
+          const inputs = item.querySelectorAll('input[name^="materials-"], select[name^="materials-"], textarea[name^="materials-"]');
+          inputs.forEach(function (input) {
+            const oldName = input.name;
+            const newName = oldName.replace(/materials-\d+-/, `materials-${formIndex}-`);
+            input.name = newName;
+            if (input.id) {
+              input.id = input.id.replace(/id_materials-\d+-/, `id_materials-${formIndex}-`);
+            }
+          });
+          formIndex++;
+        });
+
+        // به‌روزرسانی TOTAL_FORMS
+        totalFormsInput.value = formIndex;
+      }
+    }
+
+    // تابع برای ایجاد یک row برای هر ماده اولیه
+    function createMaterialFormRow(material, index) {
+      const div = document.createElement('div');
+      div.className = 'material-item';
+      div.dataset.materialIndex = index;
+      div.dataset.orderItemId = material.id;
+      div.dataset.rawMaterialId = material.raw_material_id;
+      div.dataset.weightUnit = material.weight_unit;
+      div.dataset.remainingQuantity = material.remaining_quantity;
+
+      const isDisabled = parseFloat(material.remaining_quantity) <= 0;
+
+      div.innerHTML = `
       <div class="material-checkbox-wrapper">
         <input type="checkbox" 
                class="material-checkbox" 
@@ -1289,883 +1421,893 @@ document.addEventListener('DOMContentLoaded', function() {
         <input type="hidden" name="materials-${index}-weight_unit" value="${material.weight_unit}">
       </div>
     `;
-    
-    // مدیریت انتخاب/عدم انتخاب ماده اولیه
-    const checkbox = div.querySelector('.material-checkbox');
-    checkbox.addEventListener('change', function() {
-      if (this.checked) {
-        div.classList.add('selected');
-        // فعال کردن فیلدهای ورودی
-        const inputs = div.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-          if (input.type !== 'checkbox') {
-            input.disabled = false;
-            if (input.name.includes('allocated_quantity')) {
-              input.required = true;
+
+      // مدیریت انتخاب/عدم انتخاب ماده اولیه
+      const checkbox = div.querySelector('.material-checkbox');
+      checkbox.addEventListener('change', function () {
+        if (this.checked) {
+          div.classList.add('selected');
+          // فعال کردن فیلدهای ورودی
+          const inputs = div.querySelectorAll('input, select, textarea');
+          inputs.forEach(input => {
+            if (input.type !== 'checkbox') {
+              input.disabled = false;
+              if (input.name.includes('allocated_quantity')) {
+                input.required = true;
+              }
             }
+          });
+        } else {
+          div.classList.remove('selected');
+          // غیرفعال کردن و پاک کردن فیلدهای ورودی
+          const inputs = div.querySelectorAll('input, select, textarea');
+          inputs.forEach(input => {
+            if (input.type !== 'checkbox') {
+              input.disabled = true;
+              input.value = '';
+              input.required = false;
+            }
+          });
+        }
+        updateFormsetCount();
+      });
+
+      // اضافه کردن validation برای input مقدار
+      const quantityInput = div.querySelector('.material-quantity-input');
+      if (quantityInput) {
+        // فقط اعداد و نقطه اعشار مجاز
+        quantityInput.addEventListener('input', function () {
+          // حذف کاراکترهای غیرمجاز (فقط اعداد و نقطه اعشار)
+          this.value = this.value.replace(/[^0-9.]/g, '');
+
+          // فقط یک نقطه اعشار مجاز است
+          const parts = this.value.split('.');
+          if (parts.length > 2) {
+            this.value = parts[0] + '.' + parts.slice(1).join('');
+          }
+
+          // حداکثر 2 رقم اعشار
+          if (parts.length === 2 && parts[1].length > 2) {
+            this.value = parts[0] + '.' + parts[1].substring(0, 2);
           }
         });
-      } else {
-        div.classList.remove('selected');
-        // غیرفعال کردن و پاک کردن فیلدهای ورودی
+
+        quantityInput.addEventListener('blur', function () {
+          const value = parseFloat(this.value);
+          const max = parseFloat(this.getAttribute('data-max'));
+
+          if (isNaN(value) || value <= 0) {
+            this.setCustomValidity('مقدار باید بیشتر از صفر باشد');
+            this.style.borderColor = '#dc3545';
+          } else if (value > max) {
+            this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${formatDecimal(max)} باشد`);
+            this.style.borderColor = '#dc3545';
+          } else {
+            this.setCustomValidity('');
+            this.style.borderColor = '';
+          }
+        });
+      }
+
+      // غیرفعال کردن فیلدها در ابتدا
+      if (!checkbox.checked) {
         const inputs = div.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
           if (input.type !== 'checkbox') {
             input.disabled = true;
-            input.value = '';
-            input.required = false;
           }
         });
       }
-      updateFormsetCount();
+
+      return div;
+    }
+
+    // اگر سفارش از قبل انتخاب شده، مواد اولیه را لود کن
+    {% if initial_order %}
+    fetch(`/supply/api/order-materials/{{ initial_order.order_number }}/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('materials-section').style.display = 'block';
+          loadMaterialsToFormset(data.materials);
+          showOrderInfo(data.materials);
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching initial order materials:', error);
+      });
+    {% endif %}
+
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function (header) {
+      header.addEventListener('click', function () {
+        const section = this.closest('.form-section');
+        section.classList.toggle('collapsed');
+      });
     });
-    
-    // اضافه کردن validation برای input مقدار
-    const quantityInput = div.querySelector('.material-quantity-input');
-    if (quantityInput) {
-      // فقط اعداد و نقطه اعشار مجاز
-      quantityInput.addEventListener('input', function() {
-        // حذف کاراکترهای غیرمجاز (فقط اعداد و نقطه اعشار)
-        this.value = this.value.replace(/[^0-9.]/g, '');
-        
-        // فقط یک نقطه اعشار مجاز است
-        const parts = this.value.split('.');
-        if (parts.length > 2) {
-          this.value = parts[0] + '.' + parts.slice(1).join('');
-        }
-        
-        // حداکثر 2 رقم اعشار
-        if (parts.length === 2 && parts[1].length > 2) {
-          this.value = parts[0] + '.' + parts[1].substring(0, 2);
-        }
-      });
-      
-      quantityInput.addEventListener('blur', function() {
-        const value = parseFloat(this.value);
-        const max = parseFloat(this.getAttribute('data-max'));
-        
-        if (isNaN(value) || value <= 0) {
-          this.setCustomValidity('مقدار باید بیشتر از صفر باشد');
-          this.style.borderColor = '#dc3545';
-        } else if (value > max) {
-          this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${formatDecimal(max)} باشد`);
-          this.style.borderColor = '#dc3545';
-        } else {
-          this.setCustomValidity('');
-          this.style.borderColor = '';
-        }
-      });
-    }
-    
-    // غیرفعال کردن فیلدها در ابتدا
-    if (!checkbox.checked) {
-      const inputs = div.querySelectorAll('input, select, textarea');
-      inputs.forEach(input => {
-        if (input.type !== 'checkbox') {
-          input.disabled = true;
-        }
-      });
-    }
-    
-    return div;
-  }
-  
-  // اگر سفارش از قبل انتخاب شده، مواد اولیه را لود کن
-  {% if initial_order %}
-  fetch(`/supply/api/order-materials/{{ initial_order.order_number }}/`)
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        document.getElementById('materials-section').style.display = 'block';
-        loadMaterialsToFormset(data.materials);
-        showOrderInfo(data.materials);
+
+    // مدیریت نمایش/مخفی کردن فیلدهای کرایه بر اساس نوع کرایه
+    const freightPaymentTypeSelect = document.getElementById('id_freight_payment_type');
+    const freightFieldsContainer = document.querySelector('.freight-fields-container');
+    const driverBankAccountContainer = document.querySelector('.driver-bank-account-container');
+    const supplierBankAccountContainer = document.querySelector('.supplier-bank-account-container');
+
+    function updateFreightFieldsVisibility() {
+      const selectedType = freightPaymentTypeSelect ? freightPaymentTypeSelect.value : '';
+
+      if (selectedType === 'calculated_in_invoice') {
+        // اگر کرایه روی فی حساب شده، همه فیلدها را مخفی کن
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
+        if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'none';
+        if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'none';
+      } else if (selectedType === 'pay_to_driver') {
+        // اگر پرداخت به راننده، فیلدهای کرایه و حساب بانکی راننده را نمایش بده
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'block';
+        if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'block';
+        if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'none';
+      } else if (selectedType === 'pay_to_supplier') {
+        // اگر پرداخت به تامین‌کننده، فیلدهای کرایه و حساب بانکی تامین‌کننده را نمایش بده
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'block';
+        if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'none';
+        if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'block';
+
+        // بارگذاری حساب‌های بانکی تامین‌کننده
+        loadSupplierBankAccounts();
+      } else {
+        // اگر هیچ نوعی انتخاب نشده، همه را مخفی کن
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
+        if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'none';
+        if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'none';
       }
-    })
-    .catch(error => {
-      console.error('Error fetching initial order materials:', error);
-    });
-  {% endif %}
-  
-  // مدیریت باز و بسته شدن بخش‌های فرم
-  document.querySelectorAll('.form-section-header').forEach(function(header) {
-    header.addEventListener('click', function() {
-      const section = this.closest('.form-section');
-      section.classList.toggle('collapsed');
-    });
-  });
-  
-  // مدیریت نمایش/مخفی کردن فیلدهای کرایه بر اساس نوع کرایه
-  const freightPaymentTypeSelect = document.getElementById('id_freight_payment_type');
-  const freightFieldsContainer = document.querySelector('.freight-fields-container');
-  const driverBankAccountContainer = document.querySelector('.driver-bank-account-container');
-  const supplierBankAccountContainer = document.querySelector('.supplier-bank-account-container');
-  
-  function updateFreightFieldsVisibility() {
-    const selectedType = freightPaymentTypeSelect ? freightPaymentTypeSelect.value : '';
-    
-    if (selectedType === 'calculated_in_invoice') {
-      // اگر کرایه روی فی حساب شده، همه فیلدها را مخفی کن
-      if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
-      if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'none';
-      if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'none';
-    } else if (selectedType === 'pay_to_driver') {
-      // اگر پرداخت به راننده، فیلدهای کرایه و حساب بانکی راننده را نمایش بده
-      if (freightFieldsContainer) freightFieldsContainer.style.display = 'block';
-      if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'block';
-      if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'none';
-    } else if (selectedType === 'pay_to_supplier') {
-      // اگر پرداخت به تامین‌کننده، فیلدهای کرایه و حساب بانکی تامین‌کننده را نمایش بده
-      if (freightFieldsContainer) freightFieldsContainer.style.display = 'block';
-      if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'none';
-      if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'block';
-      
-      // بارگذاری حساب‌های بانکی تامین‌کننده
-      loadSupplierBankAccounts();
-    } else {
-      // اگر هیچ نوعی انتخاب نشده، همه را مخفی کن
-      if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
-      if (driverBankAccountContainer) driverBankAccountContainer.style.display = 'none';
-      if (supplierBankAccountContainer) supplierBankAccountContainer.style.display = 'none';
     }
-  }
-  
-  if (freightPaymentTypeSelect) {
-    freightPaymentTypeSelect.addEventListener('change', updateFreightFieldsVisibility);
-    // اجرای اولیه برای تنظیم وضعیت اولیه
-    updateFreightFieldsVisibility();
-  }
-  
-  // محاسبه خودکار کرایه کل و پرداختی
-  function calculateFreight() {
+
+    if (freightPaymentTypeSelect) {
+      freightPaymentTypeSelect.addEventListener('change', updateFreightFieldsVisibility);
+      // اجرای اولیه برای تنظیم وضعیت اولیه
+      updateFreightFieldsVisibility();
+    }
+
+    // محاسبه خودکار کرایه کل و پرداختی
+    function calculateFreight() {
+      const initialFreightInput = document.getElementById('id_initial_freight');
+      const discountInput = document.getElementById('id_discount');
+      const surplusInput = document.getElementById('id_surplus');
+      const totalFreightInput = document.getElementById('id_total_freight');
+      const freightPaymentInput = document.getElementById('id_freight_payment');
+
+      // اگر فیلدهای اصلی وجود نداشتند، خروج
+      if (!initialFreightInput || !totalFreightInput) {
+        return;
+      }
+
+      // دریافت مقادیر (اگر خالی باشند یا نامعتبر باشند، 0 در نظر گرفته می‌شوند)
+      let initialFreight = parseFloat(initialFreightInput.value);
+      if (isNaN(initialFreight) || initialFreight < 0) {
+        initialFreight = 0;
+      }
+
+      let discount = 0;
+      if (discountInput && discountInput.value) {
+        discount = parseFloat(discountInput.value);
+        if (isNaN(discount) || discount < 0) {
+          discount = 0;
+        }
+      }
+
+      let surplus = 0;
+      if (surplusInput && surplusInput.value) {
+        surplus = parseFloat(surplusInput.value);
+        if (isNaN(surplus) || surplus < 0) {
+          surplus = 0;
+        }
+      }
+
+      // محاسبه: کرایه اولیه + مازاد - تخفیف
+      const totalFreight = initialFreight + surplus - discount;
+
+      // تنظیم کرایه کل (حداقل 0)
+      const finalTotalFreight = Math.max(0, totalFreight);
+
+      // فرمت کردن به 2 رقم اعشار
+      const formattedTotal = finalTotalFreight.toFixed(2);
+      totalFreightInput.value = formattedTotal;
+
+      // کرایه پرداختی همان کرایه کل است
+      if (freightPaymentInput) {
+        freightPaymentInput.value = formattedTotal;
+      }
+    }
+
+    // اضافه کردن event listener به فیلدهای کرایه اولیه، تخفیف و مازاد
     const initialFreightInput = document.getElementById('id_initial_freight');
     const discountInput = document.getElementById('id_discount');
     const surplusInput = document.getElementById('id_surplus');
-    const totalFreightInput = document.getElementById('id_total_freight');
-    const freightPaymentInput = document.getElementById('id_freight_payment');
-    
-    // اگر فیلدهای اصلی وجود نداشتند، خروج
-    if (!initialFreightInput || !totalFreightInput) {
-      return;
-    }
-    
-    // دریافت مقادیر (اگر خالی باشند یا نامعتبر باشند، 0 در نظر گرفته می‌شوند)
-    let initialFreight = parseFloat(initialFreightInput.value);
-    if (isNaN(initialFreight) || initialFreight < 0) {
-      initialFreight = 0;
-    }
-    
-    let discount = 0;
-    if (discountInput && discountInput.value) {
-      discount = parseFloat(discountInput.value);
-      if (isNaN(discount) || discount < 0) {
-        discount = 0;
-      }
-    }
-    
-    let surplus = 0;
-    if (surplusInput && surplusInput.value) {
-      surplus = parseFloat(surplusInput.value);
-      if (isNaN(surplus) || surplus < 0) {
-        surplus = 0;
-      }
-    }
-    
-    // محاسبه: کرایه اولیه + مازاد - تخفیف
-    const totalFreight = initialFreight + surplus - discount;
-    
-    // تنظیم کرایه کل (حداقل 0)
-    const finalTotalFreight = Math.max(0, totalFreight);
-    
-    // فرمت کردن به 2 رقم اعشار
-    const formattedTotal = finalTotalFreight.toFixed(2);
-    totalFreightInput.value = formattedTotal;
-    
-    // کرایه پرداختی همان کرایه کل است
-    if (freightPaymentInput) {
-      freightPaymentInput.value = formattedTotal;
-    }
-  }
-  
-  // اضافه کردن event listener به فیلدهای کرایه اولیه، تخفیف و مازاد
-  const initialFreightInput = document.getElementById('id_initial_freight');
-  const discountInput = document.getElementById('id_discount');
-  const surplusInput = document.getElementById('id_surplus');
-  
-  if (initialFreightInput) {
-    initialFreightInput.addEventListener('input', calculateFreight);
-    initialFreightInput.addEventListener('blur', calculateFreight);
-  }
-  
-  if (discountInput) {
-    discountInput.addEventListener('input', calculateFreight);
-    discountInput.addEventListener('blur', calculateFreight);
-  }
-  
-  if (surplusInput) {
-    surplusInput.addEventListener('input', calculateFreight);
-    surplusInput.addEventListener('blur', calculateFreight);
-  }
-  
-  // محاسبه اولیه در صورت وجود مقادیر
-  calculateFreight();
-});
 
-// راه‌اندازی تقویم شمسی برای expected_arrival_date
-$(document).ready(function() {
-  const expectedArrivalDateDisplay = $('#id_expected_arrival_date_display');
-  const expectedArrivalDateHidden = $('#id_expected_arrival_date');
-  
-  if (expectedArrivalDateDisplay.length && expectedArrivalDateHidden.length) {
-    // مخفی کردن فیلد hidden
-    expectedArrivalDateHidden.css('display', 'none');
-    
-    // اگر مقدار اولیه وجود دارد، آن را نمایش بده
-    let initialValue = '';
-    if (expectedArrivalDateHidden.val()) {
-      try {
-        // تبدیل تاریخ میلادی به شمسی
-        const dateParts = expectedArrivalDateHidden.val().split('-');
-        if (dateParts.length === 3) {
-          const gregorianDate = persianDate.fromCalendar('gregorian', 
-            parseInt(dateParts[0]), 
-            parseInt(dateParts[1]), 
-            parseInt(dateParts[2])
-          );
-          const persianDateObj = gregorianDate.toCalendar('persian');
-          initialValue = persianDateObj.year + '/' + 
-                        String(persianDateObj.month).padStart(2, '0') + '/' + 
-                        String(persianDateObj.day).padStart(2, '0');
-          expectedArrivalDateDisplay.val(initialValue);
-        }
-      } catch (e) {
-        console.error('خطا در تبدیل تاریخ:', e);
-      }
+    if (initialFreightInput) {
+      initialFreightInput.addEventListener('input', calculateFreight);
+      initialFreightInput.addEventListener('blur', calculateFreight);
     }
-    
-    // راه‌اندازی تقویم شمسی
-    expectedArrivalDateDisplay.pDatepicker({
-      observer: true,
-      format: 'YYYY/MM/DD',
-      altField: '#id_expected_arrival_date',
-      altFormat: 'YYYY-MM-DD',
-      calendarType: 'persian',
-      initialValue: initialValue || false,
-      timePicker: {
-        enabled: false
-      },
-      onSelect: function() {
-        // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
-        const selectedDate = expectedArrivalDateDisplay.val();
-        if (selectedDate) {
-          try {
-            const persianDateParts = selectedDate.split('/');
-            if (persianDateParts.length === 3) {
-              const persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
-              const gregorianDate = persianDateObj.toCalendar('gregorian');
-              const formattedDate = gregorianDate.year + '-' + 
-                                   String(gregorianDate.month).padStart(2, '0') + '-' + 
-                                   String(gregorianDate.day).padStart(2, '0');
-              
-              expectedArrivalDateHidden.val(formattedDate);
+
+    if (discountInput) {
+      discountInput.addEventListener('input', calculateFreight);
+      discountInput.addEventListener('blur', calculateFreight);
+    }
+
+    if (surplusInput) {
+      surplusInput.addEventListener('input', calculateFreight);
+      surplusInput.addEventListener('blur', calculateFreight);
+    }
+
+    // محاسبه اولیه در صورت وجود مقادیر
+    calculateFreight();
+  });
+
+  // راه‌اندازی تقویم شمسی برای expected_arrival_date
+  $(document).ready(function () {
+    const expectedArrivalDateDisplay = $('#id_expected_arrival_date_display');
+    const expectedArrivalDateHidden = $('#id_expected_arrival_date');
+
+    if (expectedArrivalDateDisplay.length && expectedArrivalDateHidden.length) {
+      // مخفی کردن فیلد hidden
+      expectedArrivalDateHidden.css('display', 'none');
+
+      // اگر مقدار اولیه وجود دارد، آن را نمایش بده
+      let initialValue = '';
+      if (expectedArrivalDateHidden.val()) {
+        try {
+          // تبدیل تاریخ میلادی به شمسی
+          const dateParts = expectedArrivalDateHidden.val().split('-');
+          if (dateParts.length === 3) {
+            const gregorianDate = persianDate.fromCalendar('gregorian',
+              parseInt(dateParts[0]),
+              parseInt(dateParts[1]),
+              parseInt(dateParts[2])
+            );
+            const persianDateObj = gregorianDate.toCalendar('persian');
+            initialValue = persianDateObj.year + '/' +
+              String(persianDateObj.month).padStart(2, '0') + '/' +
+              String(persianDateObj.day).padStart(2, '0');
+            expectedArrivalDateDisplay.val(initialValue);
+          }
+        } catch (e) {
+          console.error('خطا در تبدیل تاریخ:', e);
+        }
+      }
+
+      // راه‌اندازی تقویم شمسی
+      expectedArrivalDateDisplay.pDatepicker({
+        observer: true,
+        format: 'YYYY/MM/DD',
+        altField: '#id_expected_arrival_date',
+        altFormat: 'YYYY-MM-DD',
+        calendarType: 'persian',
+        initialValue: initialValue || false,
+        timePicker: {
+          enabled: false
+        },
+        onSelect: function () {
+          // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+          const selectedDate = expectedArrivalDateDisplay.val();
+          if (selectedDate) {
+            try {
+              const persianDateParts = selectedDate.split('/');
+              if (persianDateParts.length === 3) {
+                const persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                const gregorianDate = persianDateObj.toCalendar('gregorian');
+                const formattedDate = gregorianDate.year + '-' +
+                  String(gregorianDate.month).padStart(2, '0') + '-' +
+                  String(gregorianDate.day).padStart(2, '0');
+
+                expectedArrivalDateHidden.val(formattedDate);
+              }
+            } catch (e) {
+              console.error('خطا در تبدیل تاریخ:', e);
             }
-          } catch (e) {
-            console.error('خطا در تبدیل تاریخ:', e);
           }
         }
-      }
-    });
-    
-    // اضافه کردن آیکون تقویم
-    if (!expectedArrivalDateDisplay.parent().find('.p-datepicker-trigger').length) {
-      const iconSpan = $('<span>', {
-        class: 'p-datepicker-trigger',
-        html: '📅',
-        css: {
-          'position': 'absolute',
-          'right': '10px',
-          'top': '50%',
-          'transform': 'translateY(-50%)',
-          'cursor': 'pointer',
-          'font-size': '1.2rem',
-          'z-index': '10',
-          'pointer-events': 'none'
-        }
       });
-      
-      expectedArrivalDateDisplay.parent().css('position', 'relative').append(iconSpan);
+
+      // اضافه کردن آیکون تقویم
+      if (!expectedArrivalDateDisplay.parent().find('.p-datepicker-trigger').length) {
+        const iconSpan = $('<span>', {
+          class: 'p-datepicker-trigger',
+          html: '📅',
+          css: {
+            'position': 'absolute',
+            'right': '10px',
+            'top': '50%',
+            'transform': 'translateY(-50%)',
+            'cursor': 'pointer',
+            'font-size': '1.2rem',
+            'z-index': '10',
+            'pointer-events': 'none'
+          }
+        });
+
+        expectedArrivalDateDisplay.parent().css('position', 'relative').append(iconSpan);
+      }
+    }
+  });
+  // Plate formatting and serialization
+  function normalizeDigits(str) {
+    // convert Persian/Arabic digits to ASCII
+    const persian = '۰۱۲۳۴۵۶۷۸۹';
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    return String(str || '').split('').map(ch => {
+      const pIdx = persian.indexOf(ch);
+      if (pIdx > -1) return String(pIdx);
+      const aIdx = arabic.indexOf(ch);
+      if (aIdx > -1) return String(aIdx);
+      return ch;
+    }).join('');
+  }
+  function onlyDigits(el) { el.value = normalizeDigits(el.value).replace(/\D/g, ''); }
+  function onlyLetters(el) {
+    // allow Persian letters mostly
+    el.value = el.value.replace(/[^آ-یA-Za-z]/g, '');
+    // محدود کردن به یک حرف
+    if (el.value.length > 1) {
+      el.value = el.value.charAt(0);
     }
   }
-});
-// Plate formatting and serialization
-function normalizeDigits(str){
-  // convert Persian/Arabic digits to ASCII
-  const persian = '۰۱۲۳۴۵۶۷۸۹';
-  const arabic = '٠١٢٣٤٥٦٧٨٩';
-  return String(str||'').split('').map(ch=>{
-    const pIdx = persian.indexOf(ch);
-    if(pIdx>-1) return String(pIdx);
-    const aIdx = arabic.indexOf(ch);
-    if(aIdx>-1) return String(aIdx);
-    return ch;
-  }).join('');
-}
-function onlyDigits(el){ el.value = normalizeDigits(el.value).replace(/\D/g,''); }
-function onlyLetters(el){
-  // allow Persian letters mostly
-  el.value = el.value.replace(/[^آ-یA-Za-z]/g,'');
-  // محدود کردن به یک حرف
-  if(el.value.length > 1) {
-    el.value = el.value.charAt(0);
-  }
-}
-// تابع برای parse کردن پلاک ذخیره شده (فرمت: 11|345ب12)
-function parsePlateNumber(plateNumber) {
-  if (!plateNumber) return null;
-  
-  // فرمت: 11|345ب12
-  const match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
-  if (match) {
-    return {
-      iran: match[1],
-      middle: match[2],
-      letter: match[3],
-      last: match[4]
-    };
-  }
-  
-  // فرمت قدیمی: 11-345-ب-12 یا 11|345-ب-12
-  const oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
-  if (oldMatch) {
-    return {
-      iran: oldMatch[1],
-      middle: oldMatch[2],
-      letter: oldMatch[3],
-      last: oldMatch[4]
-    };
-  }
-  
-  return null;
-}
+  // تابع برای parse کردن پلاک ذخیره شده (فرمت: 11|345ب12)
+  function parsePlateNumber(plateNumber) {
+    if (!plateNumber) return null;
 
-// اگر پلاک از قبل وجود دارد، آن را parse و نمایش بده
-document.addEventListener('DOMContentLoaded', function() {
-  const hiddenPlate = document.getElementById('id_plate_number');
-  if (hiddenPlate && hiddenPlate.value) {
-    const parsed = parsePlateNumber(hiddenPlate.value);
-    if (parsed) {
-      document.getElementById('plate-iran').value = parsed.iran;
-      document.getElementById('plate-middle').value = parsed.middle;
-      document.getElementById('plate-letter').value = parsed.letter;
-      document.getElementById('plate-last').value = parsed.last;
+    // فرمت: 11|345ب12
+    const match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
+    if (match) {
+      return {
+        iran: match[1],
+        middle: match[2],
+        letter: match[3],
+        last: match[4]
+      };
     }
-  }
-});
 
-document.addEventListener('input', function(e){
-  if(e.target.id==='plate-iran' || e.target.id==='plate-middle' || e.target.id==='plate-last') {
-    onlyDigits(e.target);
+    // فرمت قدیمی: 11-345-ب-12 یا 11|345-ب-12
+    const oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
+    if (oldMatch) {
+      return {
+        iran: oldMatch[1],
+        middle: oldMatch[2],
+        letter: oldMatch[3],
+        last: oldMatch[4]
+      };
+    }
+
+    return null;
   }
-  if(e.target.id==='plate-letter') {
-    onlyLetters(e.target);
-  }
-});
-// مدیریت submit فرم - ذخیره پلاک
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.querySelector('form[method="post"]');
-  if (form) {
-    // استفاده از capture phase برای اطمینان از اجرا قبل از سایر handlers
-    form.addEventListener('submit', function(e) {
-    const plateIran = document.getElementById('plate-iran');
-    const plateMiddle = document.getElementById('plate-middle');
-    const plateLetter = document.getElementById('plate-letter');
-    const plateLast = document.getElementById('plate-last');
-    const hidden = document.getElementById('id_plate_number');
-    
-    console.log('Submit event triggered - Plate fields check');
-    console.log('plateIran:', plateIran ? plateIran.value : 'NOT_FOUND');
-    console.log('plateMiddle:', plateMiddle ? plateMiddle.value : 'NOT_FOUND');
-    console.log('plateLetter:', plateLetter ? plateLetter.value : 'NOT_FOUND');
-    console.log('plateLast:', plateLast ? plateLast.value : 'NOT_FOUND');
-    console.log('hidden:', hidden ? hidden.value : 'NOT_FOUND');
-    
-    if (plateIran && plateMiddle && plateLetter && plateLast && hidden) {
-      const iran = normalizeDigits(plateIran.value).trim();
-      const middle = normalizeDigits(plateMiddle.value).trim();
-      const letter = plateLetter.value.trim();
-      const last = normalizeDigits(plateLast.value).trim();
-      
-      console.log('Normalized values - iran:', iran, 'middle:', middle, 'letter:', letter, 'last:', last);
-      
-      // بررسی اینکه آیا حداقل یکی از فیلدها پر شده است
-      const hasAnyValue = iran || middle || letter || last;
-      
-      if (hasAnyValue) {
-        // اگر حداقل یکی از فیلدها پر شده باشد، باید همه کامل باشند
-        if (iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2) {
-          // فرمت نهایی: 11|345ب12
-          hidden.value = `${iran}|${middle}${letter}${last}`;
-          console.log('پلاک ذخیره شد:', hidden.value);
+
+  // اگر پلاک از قبل وجود دارد، آن را parse و نمایش بده
+  document.addEventListener('DOMContentLoaded', function () {
+    const hiddenPlate = document.getElementById('id_plate_number');
+    if (hiddenPlate && hiddenPlate.value) {
+      const parsed = parsePlateNumber(hiddenPlate.value);
+      if (parsed) {
+        document.getElementById('plate-iran').value = parsed.iran;
+        document.getElementById('plate-middle').value = parsed.middle;
+        document.getElementById('plate-letter').value = parsed.letter;
+        document.getElementById('plate-last').value = parsed.last;
+      }
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'plate-iran' || e.target.id === 'plate-middle' || e.target.id === 'plate-last') {
+      onlyDigits(e.target);
+    }
+    if (e.target.id === 'plate-letter') {
+      onlyLetters(e.target);
+    }
+  });
+  // مدیریت submit فرم - ذخیره پلاک
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form[method="post"]');
+    if (form) {
+      // استفاده از capture phase برای اطمینان از اجرا قبل از سایر handlers
+      form.addEventListener('submit', function (e) {
+        const plateIran = document.getElementById('plate-iran');
+        const plateMiddle = document.getElementById('plate-middle');
+        const plateLetter = document.getElementById('plate-letter');
+        const plateLast = document.getElementById('plate-last');
+        const hidden = document.getElementById('id_plate_number');
+
+        console.log('Submit event triggered - Plate fields check');
+        console.log('plateIran:', plateIran ? plateIran.value : 'NOT_FOUND');
+        console.log('plateMiddle:', plateMiddle ? plateMiddle.value : 'NOT_FOUND');
+        console.log('plateLetter:', plateLetter ? plateLetter.value : 'NOT_FOUND');
+        console.log('plateLast:', plateLast ? plateLast.value : 'NOT_FOUND');
+        console.log('hidden:', hidden ? hidden.value : 'NOT_FOUND');
+
+        if (plateIran && plateMiddle && plateLetter && plateLast && hidden) {
+          const iran = normalizeDigits(plateIran.value).trim();
+          const middle = normalizeDigits(plateMiddle.value).trim();
+          const letter = plateLetter.value.trim();
+          const last = normalizeDigits(plateLast.value).trim();
+
+          console.log('Normalized values - iran:', iran, 'middle:', middle, 'letter:', letter, 'last:', last);
+
+          // بررسی اینکه آیا حداقل یکی از فیلدها پر شده است
+          const hasAnyValue = iran || middle || letter || last;
+
+          if (hasAnyValue) {
+            // اگر حداقل یکی از فیلدها پر شده باشد، باید همه کامل باشند
+            if (iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2) {
+              // فرمت نهایی: 11|345ب12
+              hidden.value = `${iran}|${middle}${letter}${last}`;
+              console.log('پلاک ذخیره شد:', hidden.value);
+            } else {
+              // اگر کامل نباشد، خطا بده
+              alert('لطفاً شماره پلاک را کامل وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
+              e.preventDefault();
+              return false;
+            }
+          } else {
+            // اگر هیچ فیلدی پر نشده باشد، پلاک خالی می‌ماند (اختیاری است)
+            hidden.value = '';
+            console.log('پلاک خالی است (اختیاری)');
+          }
+
+          // اطمینان از اینکه hidden field در DOM موجود است
+          console.log('Final hidden value before submit:', hidden.value);
         } else {
-          // اگر کامل نباشد، خطا بده
-          alert('لطفاً شماره پلاک را کامل وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
-          e.preventDefault();
-          return false;
+          console.error('فیلدهای پلاک پیدا نشدند!', {
+            plateIran: !!plateIran,
+            plateMiddle: !!plateMiddle,
+            plateLetter: !!plateLetter,
+            plateLast: !!plateLast,
+            hidden: !!hidden
+          });
         }
-      } else {
-        // اگر هیچ فیلدی پر نشده باشد، پلاک خالی می‌ماند (اختیاری است)
-        hidden.value = '';
-        console.log('پلاک خالی است (اختیاری)');
-      }
-      
-      // اطمینان از اینکه hidden field در DOM موجود است
-      console.log('Final hidden value before submit:', hidden.value);
-    } else {
-      console.error('فیلدهای پلاک پیدا نشدند!', {
-        plateIran: !!plateIran,
-        plateMiddle: !!plateMiddle,
-        plateLetter: !!plateLetter,
-        plateLast: !!plateLast,
-        hidden: !!hidden
-      });
+      }, true); // استفاده از capture phase
     }
-  }, true); // استفاده از capture phase
-  }
-});
+  });
 
-// Modal functions for adding new driver
-function openAddDriverModal() {
-  document.getElementById('addDriverModal').style.display = 'block';
-  document.getElementById('new-driver-name').value = '';
-  document.getElementById('new-driver-phone').value = '';
-  document.getElementById('new-driver-national-id').value = '';
-}
-
-function closeAddDriverModal() {
-  document.getElementById('addDriverModal').style.display = 'none';
-}
-
-function saveNewDriver() {
-  const name = document.getElementById('new-driver-name').value.trim();
-  const phone = document.getElementById('new-driver-phone').value.trim();
-  const nationalId = document.getElementById('new-driver-national-id').value.trim();
-  
-  if (!name || !phone) {
-    alert('لطفاً نام و شماره تلفن را وارد کنید.');
-    return;
+  // Modal functions for adding new driver
+  function openAddDriverModal() {
+    document.getElementById('addDriverModal').style.display = 'block';
+    document.getElementById('new-driver-name').value = '';
+    document.getElementById('new-driver-phone').value = '';
+    document.getElementById('new-driver-national-id').value = '';
   }
-  
-  const formData = new FormData();
-  formData.append('name', name);
-  formData.append('phone', phone);
-  if (nationalId) {
-    formData.append('national_id', nationalId);
+
+  function closeAddDriverModal() {
+    document.getElementById('addDriverModal').style.display = 'none';
   }
-  
-  fetch('{% url "supply:create_driver_api" %}', {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+
+  function saveNewDriver() {
+    const name = document.getElementById('new-driver-name').value.trim();
+    const phone = document.getElementById('new-driver-phone').value.trim();
+    const nationalId = document.getElementById('new-driver-national-id').value.trim();
+
+    if (!name || !phone || !nationalId) {
+      let errorMsg = 'لطفاً فیلدهای اجباری زیر را پر کنید:\n';
+      if (!name) errorMsg += '- نام راننده\n';
+      if (!phone) errorMsg += '- شماره تلفن\n';
+      if (!nationalId) errorMsg += '- کد ملی\n';
+      alert(errorMsg);
+      return;
     }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // پر کردن فیلد autocomplete با راننده جدید
-      const driverInput = document.getElementById('driver-autocomplete');
-      const driverIdInput = document.getElementById('id_driver');
-      
-      if (driverInput) {
-        driverInput.value = data.driver.text;
+
+    // بررسی صحت کد ملی (باید 10 رقم باشد)
+    if (nationalId.length !== 10 || !/^\d+$/.test(nationalId)) {
+      alert('کد ملی باید دقیقاً 10 رقم باشد.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('phone', phone);
+    if (nationalId) {
+      formData.append('national_id', nationalId);
+    }
+
+    fetch('{% url "supply:create_driver_api" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
       }
-      if (driverIdInput) {
-        driverIdInput.value = data.driver.id;
-      }
-      
-      closeAddDriverModal();
-      alert('راننده با موفقیت اضافه شد.');
-    } else {
-      if (data.driver) {
-        // راننده قبلاً وجود دارد
-        if (confirm('راننده با این اطلاعات قبلاً ثبت شده است. آیا می‌خواهید از راننده موجود استفاده کنید؟')) {
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // پر کردن فیلد autocomplete با راننده جدید
           const driverInput = document.getElementById('driver-autocomplete');
           const driverIdInput = document.getElementById('id_driver');
-          
+
           if (driverInput) {
-            driverInput.value = `${data.driver.name} - ${data.driver.phone}`;
+            driverInput.value = data.driver.text;
           }
           if (driverIdInput) {
             driverIdInput.value = data.driver.id;
           }
-          
+
           closeAddDriverModal();
+          alert('راننده با موفقیت اضافه شد.');
+        } else {
+          if (data.driver) {
+            // راننده قبلاً وجود دارد
+            if (confirm('راننده با این اطلاعات قبلاً ثبت شده است. آیا می‌خواهید از راننده موجود استفاده کنید؟')) {
+              const driverInput = document.getElementById('driver-autocomplete');
+              const driverIdInput = document.getElementById('id_driver');
+
+              if (driverInput) {
+                driverInput.value = `${data.driver.name} - ${data.driver.phone}`;
+              }
+              if (driverIdInput) {
+                driverIdInput.value = data.driver.id;
+              }
+
+              closeAddDriverModal();
+            }
+          } else {
+            alert('خطا: ' + (data.error || 'خطا در ایجاد راننده'));
+          }
         }
-      } else {
-        alert('خطا: ' + (data.error || 'خطا در ایجاد راننده'));
-      }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('خطا در ارتباط با سرور');
+      });
+  }
+
+  // بستن modal با کلیک خارج از آن
+  window.onclick = function (event) {
+    const driverModal = document.getElementById('addDriverModal');
+    const driverBankModal = document.getElementById('addDriverBankAccountModal');
+    const supplierBankModal = document.getElementById('addSupplierBankAccountModal');
+    if (event.target == driverModal) {
+      closeAddDriverModal();
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('خطا در ارتباط با سرور');
-  });
-}
-
-// بستن modal با کلیک خارج از آن
-window.onclick = function(event) {
-  const driverModal = document.getElementById('addDriverModal');
-  const driverBankModal = document.getElementById('addDriverBankAccountModal');
-  const supplierBankModal = document.getElementById('addSupplierBankAccountModal');
-  if (event.target == driverModal) {
-    closeAddDriverModal();
-  }
-  if (event.target == driverBankModal) {
-    closeAddDriverBankAccountModal();
-  }
-  if (event.target == supplierBankModal) {
-    closeAddSupplierBankAccountModal();
-  }
-}
-
-// تابع برای بارگذاری حساب‌های بانکی راننده
-function loadDriverBankAccounts(driverId) {
-  if (!driverId) {
-    return;
-  }
-  
-  const accountSelect = document.getElementById('driver-bank-account-select');
-  if (!accountSelect) {
-    return;
-  }
-  
-  // پاک کردن گزینه‌های قبلی
-  accountSelect.innerHTML = '<option value="">-- انتخاب حساب بانکی --</option>';
-  
-  fetch(`{% url "supply:get_driver_bank_accounts_api" 0 %}`.replace('0', driverId))
-    .then(response => response.json())
-    .then(data => {
-      if (data.success && data.accounts) {
-        data.accounts.forEach(function(account) {
-          const option = document.createElement('option');
-          option.value = account.id;
-          option.textContent = account.display;
-          option.dataset.accountNumber = account.account_number || '';
-          option.dataset.shebaNumber = account.shaba_number || '';
-          accountSelect.appendChild(option);
-        });
-      }
-    })
-    .catch(error => {
-      console.error('خطا در دریافت حساب‌های بانکی:', error);
-    });
-}
-
-// مدیریت تغییر حساب بانکی
-document.addEventListener('DOMContentLoaded', function() {
-  const accountSelect = document.getElementById('driver-bank-account-select');
-  if (accountSelect) {
-    accountSelect.addEventListener('change', function() {
-      const selectedOption = this.options[this.selectedIndex];
-      const bankAccountInput = document.getElementById('id_driver_bank_account');
-      
-      if (selectedOption.value && bankAccountInput) {
-        bankAccountInput.value = selectedOption.value;
-      } else {
-        if (bankAccountInput) bankAccountInput.value = '';
-      }
-    });
-  }
-  
-  // اگر راننده از قبل انتخاب شده، حساب‌های بانکی را لود کن
-  const driverIdInput = document.getElementById('id_driver');
-  if (driverIdInput && driverIdInput.value) {
-    loadDriverBankAccounts(driverIdInput.value);
-  }
-});
-
-// Modal functions for adding driver bank account
-function openAddDriverBankAccountModal() {
-  const driverIdInput = document.getElementById('id_driver');
-  if (!driverIdInput || !driverIdInput.value) {
-    alert('لطفاً ابتدا راننده را انتخاب کنید.');
-    return;
-  }
-  
-  document.getElementById('addDriverBankAccountModal').style.display = 'block';
-  document.getElementById('new-driver-bank-name').value = '';
-  document.getElementById('new-driver-account-number').value = '';
-  document.getElementById('new-driver-sheba-number').value = '';
-}
-
-function closeAddDriverBankAccountModal() {
-  document.getElementById('addDriverBankAccountModal').style.display = 'none';
-}
-
-function saveNewDriverBankAccount() {
-  const driverIdInput = document.getElementById('id_driver');
-  if (!driverIdInput || !driverIdInput.value) {
-    alert('لطفاً ابتدا راننده را انتخاب کنید.');
-    return;
-  }
-  
-  const bankName = document.getElementById('new-driver-bank-name').value.trim();
-  const accountNumber = document.getElementById('new-driver-account-number').value.trim();
-  const shebaNumber = document.getElementById('new-driver-sheba-number').value.trim();
-  
-  const formData = new FormData();
-  formData.append('driver_id', driverIdInput.value);
-  if (bankName) formData.append('bank_name', bankName);
-  if (accountNumber) formData.append('account_number', accountNumber);
-  if (shebaNumber) formData.append('shaba_number', shebaNumber);
-  
-  fetch('{% url "supply:create_driver_bank_account_api" %}', {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // اضافه کردن حساب جدید به dropdown
-      const accountSelect = document.getElementById('driver-bank-account-select');
-      const option = document.createElement('option');
-      option.value = data.account.id;
-      option.textContent = data.account.display;
-      option.dataset.accountNumber = data.account.account_number || '';
-      option.dataset.shebaNumber = data.account.shaba_number || '';
-      accountSelect.appendChild(option);
-      accountSelect.value = data.account.id;
-      
-      // به‌روزرسانی hidden field
-      const bankAccountInput = document.getElementById('id_driver_bank_account');
-      if (bankAccountInput) bankAccountInput.value = data.account.id;
-      
+    if (event.target == driverBankModal) {
       closeAddDriverBankAccountModal();
-      alert('حساب بانکی با موفقیت اضافه شد.');
-    } else {
-      alert('خطا: ' + (data.error || 'خطا در ایجاد حساب بانکی'));
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('خطا در ارتباط با سرور');
-  });
-}
-
-// Modal functions for adding supplier bank account
-function openAddSupplierBankAccountModal() {
-  const orderId = getOrderId();
-  if (!orderId) {
-    alert('لطفاً ابتدا سفارش خرید را انتخاب کنید.');
-    return;
-  }
-  
-  document.getElementById('addSupplierBankAccountModal').style.display = 'block';
-  document.getElementById('new-supplier-bank-name').value = '';
-  document.getElementById('new-supplier-account-number').value = '';
-  document.getElementById('new-supplier-sheba-number').value = '';
-}
-
-function closeAddSupplierBankAccountModal() {
-  document.getElementById('addSupplierBankAccountModal').style.display = 'none';
-}
-
-function saveNewSupplierBankAccount() {
-  const orderId = getOrderId();
-  if (!orderId) {
-    alert('لطفاً ابتدا سفارش خرید را انتخاب کنید.');
-    return;
-  }
-  
-  const bankName = document.getElementById('new-supplier-bank-name').value.trim();
-  const accountNumber = document.getElementById('new-supplier-account-number').value.trim();
-  const shebaNumber = document.getElementById('new-supplier-sheba-number').value.trim();
-  
-  const formData = new FormData();
-  formData.append('order_id', orderId);
-  if (bankName) formData.append('bank_name', bankName);
-  if (accountNumber) formData.append('account_number', accountNumber);
-  if (shebaNumber) formData.append('shaba_number', shebaNumber);
-  
-  fetch('{% url "supply:create_supplier_bank_account_api" %}', {
-    method: 'POST',
-    body: formData,
-    headers: {
-      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      // اضافه کردن حساب جدید به dropdown
-      const accountSelect = document.getElementById('supplier-bank-account-select');
-      const option = document.createElement('option');
-      option.value = data.account.id;
-      option.textContent = data.account.display;
-      option.dataset.accountNumber = data.account.account_number || '';
-      option.dataset.shebaNumber = data.account.shaba_number || '';
-      accountSelect.appendChild(option);
-      accountSelect.value = data.account.id;
-      
-      // به‌روزرسانی hidden field
-      const bankAccountInput = document.getElementById('id_supplier_bank_account');
-      if (bankAccountInput) bankAccountInput.value = data.account.id;
-      
+    if (event.target == supplierBankModal) {
       closeAddSupplierBankAccountModal();
-      alert('حساب بانکی با موفقیت اضافه شد.');
-    } else {
-      alert('خطا: ' + (data.error || 'خطا در ایجاد حساب بانکی'));
     }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('خطا در ارتباط با سرور');
-  });
-}
+  }
 
-// تابع برای بارگذاری حساب‌های بانکی تامین‌کننده
-function loadSupplierBankAccounts() {
-  const orderId = getOrderId();
-  if (!orderId) {
-    return;
+  // تابع برای بارگذاری حساب‌های بانکی راننده
+  function loadDriverBankAccounts(driverId) {
+    if (!driverId) {
+      return;
+    }
+
+    const accountSelect = document.getElementById('driver-bank-account-select');
+    if (!accountSelect) {
+      return;
+    }
+
+    // پاک کردن گزینه‌های قبلی
+    accountSelect.innerHTML = '<option value="">-- انتخاب حساب بانکی --</option>';
+
+    fetch(`{% url "supply:get_driver_bank_accounts_api" 0 %}`.replace('0', driverId))
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.accounts) {
+          data.accounts.forEach(function (account) {
+            const option = document.createElement('option');
+            option.value = account.id;
+            option.textContent = account.display;
+            option.dataset.accountNumber = account.account_number || '';
+            option.dataset.shebaNumber = account.shaba_number || '';
+            accountSelect.appendChild(option);
+          });
+        }
+      })
+      .catch(error => {
+        console.error('خطا در دریافت حساب‌های بانکی:', error);
+      });
   }
-  const accountSelect = document.getElementById('supplier-bank-account-select');
-  if (!accountSelect) {
-    return;
+
+  // مدیریت تغییر حساب بانکی
+  document.addEventListener('DOMContentLoaded', function () {
+    const accountSelect = document.getElementById('driver-bank-account-select');
+    if (accountSelect) {
+      accountSelect.addEventListener('change', function () {
+        const selectedOption = this.options[this.selectedIndex];
+        const bankAccountInput = document.getElementById('id_driver_bank_account');
+
+        if (selectedOption.value && bankAccountInput) {
+          bankAccountInput.value = selectedOption.value;
+        } else {
+          if (bankAccountInput) bankAccountInput.value = '';
+        }
+      });
+    }
+
+    // اگر راننده از قبل انتخاب شده، حساب‌های بانکی را لود کن
+    const driverIdInput = document.getElementById('id_driver');
+    if (driverIdInput && driverIdInput.value) {
+      loadDriverBankAccounts(driverIdInput.value);
+    }
+  });
+
+  // Modal functions for adding driver bank account
+  function openAddDriverBankAccountModal() {
+    const driverIdInput = document.getElementById('id_driver');
+    if (!driverIdInput || !driverIdInput.value) {
+      alert('لطفاً ابتدا راننده را انتخاب کنید.');
+      return;
+    }
+
+    document.getElementById('addDriverBankAccountModal').style.display = 'block';
+    document.getElementById('new-driver-bank-name').value = '';
+    document.getElementById('new-driver-account-number').value = '';
+    document.getElementById('new-driver-sheba-number').value = '';
   }
-  
-  // پاک کردن گزینه‌های قبلی
-  accountSelect.innerHTML = '<option value="">-- انتخاب حساب بانکی --</option>';
-  
-  fetch(`{% url "supply:get_supplier_bank_accounts_api" 0 %}`.replace('0', orderId))
-    .then(response => response.json())
-    .then(data => {
-      if (data.success && data.accounts) {
-        data.accounts.forEach(function(account) {
-          const option = document.createElement('option');
-          option.value = account.id;
-          option.textContent = account.display;
-          option.dataset.accountNumber = account.account_number || '';
-          option.dataset.shebaNumber = account.shaba_number || '';
-          accountSelect.appendChild(option);
-        });
+
+  function closeAddDriverBankAccountModal() {
+    document.getElementById('addDriverBankAccountModal').style.display = 'none';
+  }
+
+  function saveNewDriverBankAccount() {
+    const driverIdInput = document.getElementById('id_driver');
+    if (!driverIdInput || !driverIdInput.value) {
+      alert('لطفاً ابتدا راننده را انتخاب کنید.');
+      return;
+    }
+
+    const bankName = document.getElementById('new-driver-bank-name').value.trim();
+    const accountNumber = document.getElementById('new-driver-account-number').value.trim();
+    const shebaNumber = document.getElementById('new-driver-sheba-number').value.trim();
+
+    const formData = new FormData();
+    formData.append('driver_id', driverIdInput.value);
+    if (bankName) formData.append('bank_name', bankName);
+    if (accountNumber) formData.append('account_number', accountNumber);
+    if (shebaNumber) formData.append('shaba_number', shebaNumber);
+
+    fetch('{% url "supply:create_driver_bank_account_api" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
       }
     })
-    .catch(error => {
-      console.error('خطا در دریافت حساب‌های بانکی:', error);
-    });
-}
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // اضافه کردن حساب جدید به dropdown
+          const accountSelect = document.getElementById('driver-bank-account-select');
+          const option = document.createElement('option');
+          option.value = data.account.id;
+          option.textContent = data.account.display;
+          option.dataset.accountNumber = data.account.account_number || '';
+          option.dataset.shebaNumber = data.account.shaba_number || '';
+          accountSelect.appendChild(option);
+          accountSelect.value = data.account.id;
 
-// مدیریت تغییر حساب بانکی تامین‌کننده
-document.addEventListener('DOMContentLoaded', function() {
-  const supplierAccountSelect = document.getElementById('supplier-bank-account-select');
-  if (supplierAccountSelect) {
-    supplierAccountSelect.addEventListener('change', function() {
-      const selectedOption = this.options[this.selectedIndex];
-      const bankAccountInput = document.getElementById('id_supplier_bank_account');
-      
-      if (selectedOption.value && bankAccountInput) {
-        bankAccountInput.value = selectedOption.value;
-      } else {
-        if (bankAccountInput) bankAccountInput.value = '';
-      }
-    });
+          // به‌روزرسانی hidden field
+          const bankAccountInput = document.getElementById('id_driver_bank_account');
+          if (bankAccountInput) bankAccountInput.value = data.account.id;
+
+          closeAddDriverBankAccountModal();
+          alert('حساب بانکی با موفقیت اضافه شد.');
+        } else {
+          alert('خطا: ' + (data.error || 'خطا در ایجاد حساب بانکی'));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('خطا در ارتباط با سرور');
+      });
   }
-  
-  // بارگذاری حساب‌های بانکی تامین‌کننده وقتی سفارش تغییر می‌کند
-  const purchaseOrderSelect = document.getElementById('id_purchase_order');
-  const purchaseOrderHidden = document.querySelector('input[name="purchase_order"][type="hidden"]');
-  
-  // اگر select وجود داشت، event listener اضافه کن
-  if (purchaseOrderSelect) {
-    purchaseOrderSelect.addEventListener('change', function() {
+
+  // Modal functions for adding supplier bank account
+  function openAddSupplierBankAccountModal() {
+    const orderId = getOrderId();
+    if (!orderId) {
+      alert('لطفاً ابتدا سفارش خرید را انتخاب کنید.');
+      return;
+    }
+
+    document.getElementById('addSupplierBankAccountModal').style.display = 'block';
+    document.getElementById('new-supplier-bank-name').value = '';
+    document.getElementById('new-supplier-account-number').value = '';
+    document.getElementById('new-supplier-sheba-number').value = '';
+  }
+
+  function closeAddSupplierBankAccountModal() {
+    document.getElementById('addSupplierBankAccountModal').style.display = 'none';
+  }
+
+  function saveNewSupplierBankAccount() {
+    const orderId = getOrderId();
+    if (!orderId) {
+      alert('لطفاً ابتدا سفارش خرید را انتخاب کنید.');
+      return;
+    }
+
+    const bankName = document.getElementById('new-supplier-bank-name').value.trim();
+    const accountNumber = document.getElementById('new-supplier-account-number').value.trim();
+    const shebaNumber = document.getElementById('new-supplier-sheba-number').value.trim();
+
+    const formData = new FormData();
+    formData.append('order_id', orderId);
+    if (bankName) formData.append('bank_name', bankName);
+    if (accountNumber) formData.append('account_number', accountNumber);
+    if (shebaNumber) formData.append('shaba_number', shebaNumber);
+
+    fetch('{% url "supply:create_supplier_bank_account_api" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // اضافه کردن حساب جدید به dropdown
+          const accountSelect = document.getElementById('supplier-bank-account-select');
+          const option = document.createElement('option');
+          option.value = data.account.id;
+          option.textContent = data.account.display;
+          option.dataset.accountNumber = data.account.account_number || '';
+          option.dataset.shebaNumber = data.account.shaba_number || '';
+          accountSelect.appendChild(option);
+          accountSelect.value = data.account.id;
+
+          // به‌روزرسانی hidden field
+          const bankAccountInput = document.getElementById('id_supplier_bank_account');
+          if (bankAccountInput) bankAccountInput.value = data.account.id;
+
+          closeAddSupplierBankAccountModal();
+          alert('حساب بانکی با موفقیت اضافه شد.');
+        } else {
+          alert('خطا: ' + (data.error || 'خطا در ایجاد حساب بانکی'));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('خطا در ارتباط با سرور');
+      });
+  }
+
+  // تابع برای بارگذاری حساب‌های بانکی تامین‌کننده
+  function loadSupplierBankAccounts() {
+    const orderId = getOrderId();
+    if (!orderId) {
+      return;
+    }
+    const accountSelect = document.getElementById('supplier-bank-account-select');
+    if (!accountSelect) {
+      return;
+    }
+
+    // پاک کردن گزینه‌های قبلی
+    accountSelect.innerHTML = '<option value="">-- انتخاب حساب بانکی --</option>';
+
+    fetch(`{% url "supply:get_supplier_bank_accounts_api" 0 %}`.replace('0', orderId))
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.accounts) {
+          data.accounts.forEach(function (account) {
+            const option = document.createElement('option');
+            option.value = account.id;
+            option.textContent = account.display;
+            option.dataset.accountNumber = account.account_number || '';
+            option.dataset.shebaNumber = account.shaba_number || '';
+            accountSelect.appendChild(option);
+          });
+        }
+      })
+      .catch(error => {
+        console.error('خطا در دریافت حساب‌های بانکی:', error);
+      });
+  }
+
+  // مدیریت تغییر حساب بانکی تامین‌کننده
+  document.addEventListener('DOMContentLoaded', function () {
+    const supplierAccountSelect = document.getElementById('supplier-bank-account-select');
+    if (supplierAccountSelect) {
+      supplierAccountSelect.addEventListener('change', function () {
+        const selectedOption = this.options[this.selectedIndex];
+        const bankAccountInput = document.getElementById('id_supplier_bank_account');
+
+        if (selectedOption.value && bankAccountInput) {
+          bankAccountInput.value = selectedOption.value;
+        } else {
+          if (bankAccountInput) bankAccountInput.value = '';
+        }
+      });
+    }
+
+    // بارگذاری حساب‌های بانکی تامین‌کننده وقتی سفارش تغییر می‌کند
+    const purchaseOrderSelect = document.getElementById('id_purchase_order');
+    const purchaseOrderHidden = document.querySelector('input[name="purchase_order"][type="hidden"]');
+
+    // اگر select وجود داشت، event listener اضافه کن
+    if (purchaseOrderSelect) {
+      purchaseOrderSelect.addEventListener('change', function () {
+        const freightPaymentType = document.getElementById('id_freight_payment_type');
+        if (freightPaymentType && freightPaymentType.value === 'pay_to_supplier') {
+          loadSupplierBankAccounts();
+        }
+      });
+    }
+
+    // اگر hidden input وجود داشت (initial_order)، حساب‌های بانکی را لود کن
+    if (purchaseOrderHidden && purchaseOrderHidden.value) {
       const freightPaymentType = document.getElementById('id_freight_payment_type');
       if (freightPaymentType && freightPaymentType.value === 'pay_to_supplier') {
         loadSupplierBankAccounts();
       }
-    });
-  }
-  
-  // اگر hidden input وجود داشت (initial_order)، حساب‌های بانکی را لود کن
-  if (purchaseOrderHidden && purchaseOrderHidden.value) {
-    const freightPaymentType = document.getElementById('id_freight_payment_type');
-    if (freightPaymentType && freightPaymentType.value === 'pay_to_supplier') {
-      loadSupplierBankAccounts();
     }
-  }
-});
+  });
 
-// مدیریت submit فرم - فقط فرم‌های انتخاب شده را ارسال کن
-document.addEventListener('DOMContentLoaded', function() {
-  const form = document.querySelector('form[method="post"]');
-  if (form) {
-    form.addEventListener('submit', function(e) {
-      // بررسی اینکه حداقل یک ماده اولیه انتخاب شده باشد
-      const selectedMaterials = document.querySelectorAll('.material-item.selected');
-      if (selectedMaterials.length === 0) {
-        e.preventDefault();
-        alert('لطفاً حداقل یک ماده اولیه را انتخاب کنید.');
-        return false;
-      }
-      
-      // بررسی validation برای هر ماده اولیه انتخاب شده
-      let hasError = false;
-      let errorMessage = '';
-      
-      selectedMaterials.forEach(function(item) {
-        const quantityInput = item.querySelector('.material-quantity-input');
-        if (quantityInput) {
-          // استفاده از مقدار string برای حفظ دقت
-          const valueStr = quantityInput.value.trim();
-          const value = parseFloat(valueStr);
-          const max = parseFloat(quantityInput.getAttribute('data-max'));
-          const materialName = item.querySelector('.material-name').textContent.trim().replace(' (تمام شده)', '');
-          
-          if (!valueStr || isNaN(value) || value <= 0) {
-            hasError = true;
-            quantityInput.style.borderColor = '#dc3545';
-            if (!errorMessage) {
-              errorMessage = 'لطفاً مقدار تخصیص را برای همه مواد اولیه انتخاب شده وارد کنید.';
-            }
-          } else if (value > max) {
-            hasError = true;
-            quantityInput.style.borderColor = '#dc3545';
-            if (!errorMessage) {
-              errorMessage = `مقدار تخصیص برای "${materialName}" نمی‌تواند بیشتر از ${formatDecimal(max)} باشد.`;
-            }
-          } else {
-            quantityInput.style.borderColor = '';
-            // اطمینان از اینکه مقدار به درستی فرمت شده است (برای ارسال به سرور)
-            // مقدار string را حفظ می‌کنیم تا دقت از دست نرود
-          }
+  // مدیریت submit فرم - فقط فرم‌های انتخاب شده را ارسال کن
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form[method="post"]');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        // بررسی اینکه حداقل یک ماده اولیه انتخاب شده باشد
+        const selectedMaterials = document.querySelectorAll('.material-item.selected');
+        if (selectedMaterials.length === 0) {
+          e.preventDefault();
+          alert('لطفاً حداقل یک ماده اولیه را انتخاب کنید.');
+          return false;
         }
-      });
-      
-      if (hasError) {
-        e.preventDefault();
-        if (errorMessage) {
-          alert(errorMessage);
-        }
-        return false;
-      }
-      
-      // به‌روزرسانی تعداد فرم‌ها و حذف فرم‌های انتخاب نشده
-      updateFormsetCount();
-      
-      // حذف فرم‌های انتخاب نشده از DOM
-      const unselectedMaterials = document.querySelectorAll('.material-item:not(.selected)');
-      unselectedMaterials.forEach(function(item) {
-        const inputs = item.querySelectorAll('input[name^="materials-"], select[name^="materials-"], textarea[name^="materials-"]');
-        inputs.forEach(function(input) {
-          if (input.type !== 'checkbox') {
-            input.remove();
+
+        // بررسی validation برای هر ماده اولیه انتخاب شده
+        let hasError = false;
+        let errorMessage = '';
+
+        selectedMaterials.forEach(function (item) {
+          const quantityInput = item.querySelector('.material-quantity-input');
+          if (quantityInput) {
+            // استفاده از مقدار string برای حفظ دقت
+            const valueStr = quantityInput.value.trim();
+            const value = parseFloat(valueStr);
+            const max = parseFloat(quantityInput.getAttribute('data-max'));
+            const materialName = item.querySelector('.material-name').textContent.trim().replace(' (تمام شده)', '');
+
+            if (!valueStr || isNaN(value) || value <= 0) {
+              hasError = true;
+              quantityInput.style.borderColor = '#dc3545';
+              if (!errorMessage) {
+                errorMessage = 'لطفاً مقدار تخصیص را برای همه مواد اولیه انتخاب شده وارد کنید.';
+              }
+            } else if (value > max) {
+              hasError = true;
+              quantityInput.style.borderColor = '#dc3545';
+              if (!errorMessage) {
+                errorMessage = `مقدار تخصیص برای "${materialName}" نمی‌تواند بیشتر از ${formatDecimal(max)} باشد.`;
+              }
+            } else {
+              quantityInput.style.borderColor = '';
+              // اطمینان از اینکه مقدار به درستی فرمت شده است (برای ارسال به سرور)
+              // مقدار string را حفظ می‌کنیم تا دقت از دست نرود
+            }
           }
         });
+
+        if (hasError) {
+          e.preventDefault();
+          if (errorMessage) {
+            alert(errorMessage);
+          }
+          return false;
+        }
+
+        // به‌روزرسانی تعداد فرم‌ها و حذف فرم‌های انتخاب نشده
+        updateFormsetCount();
+
+        // حذف فرم‌های انتخاب نشده از DOM
+        const unselectedMaterials = document.querySelectorAll('.material-item:not(.selected)');
+        unselectedMaterials.forEach(function (item) {
+          const inputs = item.querySelectorAll('input[name^="materials-"], select[name^="materials-"], textarea[name^="materials-"]');
+          inputs.forEach(function (input) {
+            if (input.type !== 'checkbox') {
+              input.remove();
+            }
+          });
+        });
       });
-    });
-  }
-});
+    }
+  });
 </script>
 {% endblock %}

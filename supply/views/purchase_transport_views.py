@@ -921,15 +921,22 @@ def driver_search_api(request):
         except (ValueError, TypeError):
             return JsonResponse({'results': []})
     
-    if len(query) < 2:
+    if len(query) < 2 and not (len(query) == 0):
+        # اگر کوئری خیلی کوتاه است (ولی خالی نیست)، نتیجه نده
         return JsonResponse({'results': []})
     
     try:
-        drivers = Person.objects.filter(
-            type='driver'
-        ).filter(
-            Q(name__icontains=query) | Q(phone_number__icontains=query) | Q(national_id__icontains=query)
-        ).order_by('name')[:10]
+        if not query:
+             # اگر کوئری خالی است، 20 راننده اخیر را برگردان
+            drivers = Person.objects.filter(
+                type='driver'
+            ).order_by('name')[:20]
+        else:
+            drivers = Person.objects.filter(
+                type='driver'
+            ).filter(
+                Q(name__icontains=query) | Q(phone_number__icontains=query) | Q(national_id__icontains=query)
+            ).order_by('name')[:20]
         
         results = []
         for driver in drivers:
@@ -961,8 +968,19 @@ def create_driver_api(request):
         phone = request.POST.get('phone', '').strip()
         national_id = request.POST.get('national_id', '').strip()
         
-        if not name or not phone:
-            return JsonResponse({'error': 'نام و شماره تلفن اجباری است'}, status=400)
+        if not name or not phone or not national_id:
+            error_fields = []
+            if not name:
+                error_fields.append('نام راننده')
+            if not phone:
+                error_fields.append('شماره تلفن')
+            if not national_id:
+                error_fields.append('کد ملی')
+            return JsonResponse({'error': f'فیلدهای اجباری زیر را پر کنید: {", ".join(error_fields)}'}, status=400)
+        
+        # بررسی صحت کد ملی (باید 10 رقم باشد)
+        if len(national_id) != 10 or not national_id.isdigit():
+            return JsonResponse({'error': 'کد ملی باید دقیقاً 10 رقم باشد'}, status=400)
         
         # بررسی تکراری نبودن
         existing = Person.objects.filter(
@@ -984,7 +1002,7 @@ def create_driver_api(request):
             driver = Person.objects.create(
                 name=name,
                 phone_number=phone,
-                national_id=national_id if national_id else None,
+                national_id=national_id,
                 type='driver'
             )
             

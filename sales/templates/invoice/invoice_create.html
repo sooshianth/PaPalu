@@ -12,20 +12,20 @@
         padding: 30px;
         margin-bottom: 30px;
     }
-    
+
     .page-header {
         margin-bottom: 30px;
         padding-bottom: 20px;
         border-bottom: 3px solid var(--primary-green);
     }
-    
+
     .page-header h2 {
         color: var(--gray-800);
         font-size: 1.8rem;
         font-weight: 600;
         margin: 0;
     }
-    
+
     .form-section {
         background: var(--gray-100);
         padding: 25px;
@@ -33,7 +33,7 @@
         margin-bottom: 25px;
         border-right: 4px solid var(--primary-green);
     }
-    
+
     .form-section h5 {
         color: var(--primary-green);
         font-size: 1.2rem;
@@ -42,20 +42,20 @@
         padding-bottom: 10px;
         border-bottom: 2px solid var(--light-green);
     }
-    
+
     .form-label {
         color: var(--gray-800);
         font-weight: 500;
         margin-bottom: 8px;
         display: block;
     }
-    
+
     .required-field::after {
         content: '*';
         color: #dc3545;
         margin-right: 5px;
     }
-    
+
     .form-control,
     .form-select {
         border: 1px solid var(--gray-300);
@@ -66,27 +66,27 @@
         width: 100%;
         font-family: inherit;
     }
-    
+
     .form-control:focus,
     .form-select:focus {
         border-color: var(--primary-green);
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
         outline: none;
     }
-    
+
     .form-control[readonly],
     .form-control[disabled] {
         background-color: var(--gray-200);
         cursor: not-allowed;
     }
-    
+
     .text-danger {
         color: #dc3545;
         font-size: 0.875rem;
         margin-top: 5px;
         display: block;
     }
-    
+
     .form-actions {
         display: flex;
         justify-content: center;
@@ -95,37 +95,53 @@
         padding-top: 30px;
         border-top: 1px solid var(--gray-300);
     }
-    
-    .mb-3 { margin-bottom: 1rem; }
-    
+
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+
     .row {
         display: flex;
         flex-wrap: wrap;
         margin-right: -15px;
         margin-left: -15px;
     }
+
     .col-12 {
         flex: 0 0 100%;
         max-width: 100%;
         padding-right: 15px;
         padding-left: 15px;
     }
+
     .col-md-6 {
         flex: 0 0 50%;
         max-width: 50%;
         padding-right: 15px;
         padding-left: 15px;
     }
-    
+
     @media (max-width: 768px) {
         .col-md-6 {
             flex: 0 0 100%;
             max-width: 100%;
         }
-        .form-card { padding: 20px; }
-        .form-section { padding: 15px; }
-        .form-actions { flex-direction: column; }
-        .btn { width: 100%; }
+
+        .form-card {
+            padding: 20px;
+        }
+
+        .form-section {
+            padding: 15px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
@@ -137,11 +153,11 @@
 
 <div class="form-card">
     {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" role="alert">
-                {{ message }}
-            </div>
-        {% endfor %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
     {% endif %}
 
     <form method="post" enctype="multipart/form-data">
@@ -157,7 +173,7 @@
                     {{ form.order }}
                     {{ form.order_id }}
                     {% if form.order.errors %}
-                        <div class="text-danger">{{ form.order.errors.0 }}</div>
+                    <div class="text-danger">{{ form.order.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -167,7 +183,7 @@
                     <label class="form-label required-field">{{ form.tax_invoice_number.label }}</label>
                     {{ form.tax_invoice_number }}
                     {% if form.tax_invoice_number.errors %}
-                        <div class="text-danger">{{ form.tax_invoice_number.errors.0 }}</div>
+                    <div class="text-danger">{{ form.tax_invoice_number.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -177,7 +193,7 @@
                     <label class="form-label required-field">{{ form.customer_tax_type.label }}</label>
                     {{ form.customer_tax_type }}
                     {% if form.customer_tax_type.errors %}
-                        <div class="text-danger">{{ form.customer_tax_type.errors.0 }}</div>
+                    <div class="text-danger">{{ form.customer_tax_type.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -187,7 +203,7 @@
                     <label class="form-label required-field">{{ form.issue_date.label }}</label>
                     {{ form.issue_date }}
                     {% if form.issue_date.errors %}
-                        <div class="text-danger">{{ form.issue_date.errors.0 }}</div>
+                    <div class="text-danger">{{ form.issue_date.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -198,7 +214,7 @@
                     {{ form.customer }}
                     {{ form.customer_id }}
                     {% if form.customer.errors %}
-                        <div class="text-danger">{{ form.customer.errors.0 }}</div>
+                    <div class="text-danger">{{ form.customer.errors.0 }}</div>
                     {% endif %}
                     <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">
                         بعد از انتخاب سفارش، مشتری به صورت خودکار پر می‌شود
@@ -210,9 +226,11 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.company.label }}</label>
                     {{ form.company }}
-                    <input type="text" class="form-control" value="{{ form.company_display.name|default:'تامین نهاده سیمرغ' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    <input type="text" class="form-control"
+                        value="{{ form.company_display.name|default:'تامین نهاده سیمرغ' }}" readonly
+                        style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% if form.company.errors %}
-                        <div class="text-danger">{{ form.company.errors.0 }}</div>
+                    <div class="text-danger">{{ form.company.errors.0 }}</div>
                     {% endif %}
                     <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">
                         شرکت به صورت خودکار انتخاب شده است
@@ -231,7 +249,7 @@
                     <label class="form-label">{{ form.invoice_file.label }}</label>
                     {{ form.invoice_file }}
                     {% if form.invoice_file.errors %}
-                        <div class="text-danger">{{ form.invoice_file.errors.0 }}</div>
+                    <div class="text-danger">{{ form.invoice_file.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -241,7 +259,7 @@
                     <label class="form-label">{{ form.description.label }}</label>
                     {{ form.description }}
                     {% if form.description.errors %}
-                        <div class="text-danger">{{ form.description.errors.0 }}</div>
+                    <div class="text-danger">{{ form.description.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -266,251 +284,272 @@
 <script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 <script>
-// مدیریت autocomplete برای انتخاب سفارش خرید
-document.addEventListener('DOMContentLoaded', function() {
-    // لود کردن ملاحظات فاکتور از CompanyInfo
-    const descriptionTextarea = document.querySelector('textarea[name="description"]');
-    if (descriptionTextarea) {
-        fetch('{% url "sales:get_company_notes_api" note_type="invoice" %}')
-            .then(response => response.json())
-            .then(data => {
-                if (data.notes && !descriptionTextarea.value.trim()) {
-                    // فقط اگر فیلد خالی است، ملاحظات را پر کن
-                    descriptionTextarea.value = data.notes;
-                }
-            })
-            .catch(error => {
-                console.error('خطا در دریافت ملاحظات فاکتور:', error);
-            });
-    }
-    
-    const orderInput = document.querySelector('input[name="order"]');
-    const orderIdInput = document.querySelector('input[name="order_id"]');
-    const customerInput = document.querySelector('input[name="customer"]');
-    const customerIdInput = document.querySelector('input[name="customer_id"]');
-    let orderSuggestions = [];
-    let selectedOrderId = null;
-    
-    console.log('Order input found:', !!orderInput);
-    console.log('Order ID input found:', !!orderIdInput);
-    console.log('Customer input found:', !!customerInput);
-    console.log('Customer ID input found:', !!customerIdInput);
-    
-    if (orderInput) {
-        // ایجاد container برای پیشنهادات
-        const suggestionsContainer = document.createElement('div');
-        suggestionsContainer.className = 'order-suggestions';
-        suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
-        orderInput.parentElement.style.position = 'relative';
-        orderInput.parentElement.appendChild(suggestionsContainer);
-        
-        let searchTimeout;
-        
-        orderInput.addEventListener('input', function() {
-            const query = this.value.trim();
-            
-            clearTimeout(searchTimeout);
-            
-            if (query.length < 1) {
-                suggestionsContainer.style.display = 'none';
-                orderSuggestions = [];
-                selectedOrderId = null;
-                if (orderIdInput) orderIdInput.value = '';
-                if (customerInput) customerInput.value = '';
-                if (customerIdInput) customerIdInput.value = '';
-                return;
-            }
-    
-            searchTimeout = setTimeout(function() {
-                const apiUrl = '{% url "sales:purchase_order_search_api" %}?q=' + encodeURIComponent(query);
-                console.log('Searching orders with URL:', apiUrl);
-                
-                fetch(apiUrl)
-                    .then(response => {
-                        console.log('Response status:', response.status);
-                        if (!response.ok) {
-                            throw new Error('Network response was not ok');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        console.log('Received data:', data);
-                        orderSuggestions = data.results || [];
-                        displaySuggestions();
-                    })
-                    .catch(error => {
-                        console.error('خطا در جستجوی سفارش:', error);
-                        suggestionsContainer.innerHTML = '<div style="padding: 10px; color: red;">خطا در جستجو. لطفاً دوباره تلاش کنید.</div>';
-                        suggestionsContainer.style.display = 'block';
-                    });
-            }, 300);
-        });
-        
-        function displaySuggestions() {
-            suggestionsContainer.innerHTML = '';
-            
-            if (orderSuggestions.length === 0) {
-                suggestionsContainer.style.display = 'none';
-                return;
-            }
-            
-            orderSuggestions.forEach(function(item) {
-                const suggestionItem = document.createElement('div');
-                suggestionItem.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;';
-                suggestionItem.textContent = item.text;
-                suggestionItem.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = '#f0f0f0';
-                });
-                suggestionItem.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = 'white';
-                });
-                suggestionItem.addEventListener('click', function() {
-                    orderInput.value = item.text;
-                    selectedOrderId = item.id;
-                    if (orderIdInput) {
-                        orderIdInput.value = item.id;
-                        console.log('Order ID set to:', item.id);
+    // مدیریت autocomplete برای انتخاب سفارش خرید
+    document.addEventListener('DOMContentLoaded', function () {
+        // لود کردن ملاحظات فاکتور از CompanyInfo
+        const descriptionTextarea = document.querySelector('textarea[name="description"]');
+        if (descriptionTextarea) {
+            fetch('{% url "sales:get_company_notes_api" note_type="invoice" %}')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.notes && !descriptionTextarea.value.trim()) {
+                        // فقط اگر فیلد خالی است، ملاحظات را پر کن
+                        descriptionTextarea.value = data.notes;
                     }
-                    
-                    // انتخاب خودکار مشتری
-                    if (item.customer_id && customerInput && customerIdInput) {
-                        customerInput.value = item.customer_name || '';
-                        customerIdInput.value = item.customer_id;
-                        console.log('Customer automatically set:', item.customer_name);
-                    }
-                    
-                    suggestionsContainer.style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('خطا در دریافت ملاحظات فاکتور:', error);
                 });
-                suggestionsContainer.appendChild(suggestionItem);
-            });
-            
-            suggestionsContainer.style.display = 'block';
         }
-        
-        // بستن پیشنهادات با کلیک خارج
-        document.addEventListener('click', function(e) {
-            if (!orderInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                suggestionsContainer.style.display = 'none';
-            }
-        });
-        
-        // مدیریت کلیدهای کیبورد
-        orderInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                suggestionsContainer.style.display = 'none';
-            }
-        });
-    }
-});
 
-$(document).ready(function() {
-    // تبدیل فیلد تاریخ صدور به تقویم شمسی
-    var issueDateInput = $('#id_issue_date');
-    
-    if (issueDateInput.length) {
-        // تبدیل type='date' به text برای استفاده از تقویم شمسی
-        issueDateInput.attr('type', 'text');
-        issueDateInput.attr('readonly', 'readonly');
-        issueDateInput.css('cursor', 'pointer');
-        
-        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
-        var initialValue = issueDateInput.val();
-        var persianDateValue = '';
-        
-        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
-        if (initialValue) {
-            var parts = initialValue.split('-');
-            if (parts.length === 3) {
-                var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                var pDate = persianDate.fromGregorian(gregorianDate);
-                persianDateValue = pDate.format('YYYY/MM/DD');
-                issueDateInput.val(persianDateValue);
-            }
-        }
-        
-        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
-        var hiddenInput = $('<input>', {
-            type: 'hidden',
-            id: 'id_issue_date_hidden',
-            name: 'issue_date'
-        });
-        if (initialValue) {
-            hiddenInput.val(initialValue);
-        }
-        issueDateInput.after(hiddenInput);
-        
-        // راه‌اندازی تقویم شمسی
-        issueDateInput.pDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            altField: '#id_issue_date_hidden',
-            altFormat: 'YYYY-MM-DD',
-            calendarType: 'persian',
-            initialValue: persianDateValue || false,
-            timePicker: {
-                enabled: false
-            },
-            onSelect: function() {
-                // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
-                var selectedDate = issueDateInput.val();
-                if (selectedDate) {
-                    try {
-                        var persianDateParts = selectedDate.split('/');
-                        if (persianDateParts.length === 3) {
-                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
-                            var gregorianDate = persianDateObj.toCalendar('gregorian');
-                            var formattedDate = gregorianDate.year + '-' + 
-                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
-                                               String(gregorianDate.day).padStart(2, '0');
-                            
-                            hiddenInput.val(formattedDate);
-                        }
-                    } catch (e) {
-                        console.error('خطا در تبدیل تاریخ:', e);
-                    }
+        const orderInput = document.querySelector('input[name="order"]');
+        const orderIdInput = document.querySelector('input[name="order_id"]');
+        const customerInput = document.querySelector('input[name="customer"]');
+        const customerIdInput = document.querySelector('input[name="customer_id"]');
+        let orderSuggestions = [];
+        let selectedOrderId = null;
+
+        console.log('Order input found:', !!orderInput);
+        console.log('Order ID input found:', !!orderIdInput);
+        console.log('Customer input found:', !!customerInput);
+        console.log('Customer ID input found:', !!customerIdInput);
+
+        if (orderInput) {
+            // ایجاد container برای پیشنهادات
+            const suggestionsContainer = document.createElement('div');
+            suggestionsContainer.className = 'order-suggestions';
+            suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
+            orderInput.parentElement.style.position = 'relative';
+            orderInput.parentElement.appendChild(suggestionsContainer);
+
+            let searchTimeout;
+
+            const MIN_SEARCH_LENGTH = 0; // اجازه جستجو با کوئری خالی
+
+            // تابع انجام جستجو
+            function performSearch(query) {
+                clearTimeout(searchTimeout);
+
+                // نمایش لودینگ یا وضعیت خالی
+                if (query.length === 0) {
+                    // اگر کوئری خالی است، مستقیماً جستجو کن (برای نمایش پیش‌فرض‌ها)
+                } else if (query.length < MIN_SEARCH_LENGTH) {
+                    suggestionsContainer.style.display = 'none';
+                    orderSuggestions = [];
+                    selectedOrderId = null;
+                    if (orderIdInput) orderIdInput.value = '';
+                    if (customerInput) customerInput.value = '';
+                    if (customerIdInput) customerIdInput.value = '';
+                    return;
                 }
+
+                searchTimeout = setTimeout(function () {
+                    const apiUrl = '{% url "sales:purchase_order_search_api" %}?q=' + encodeURIComponent(query);
+                    console.log('Searching orders with URL:', apiUrl);
+
+                    fetch(apiUrl)
+                        .then(response => {
+                            console.log('Response status:', response.status);
+                            if (!response.ok) {
+                                throw new Error('Network response was not ok');
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Received data:', data);
+                            orderSuggestions = data.results || [];
+                            displaySuggestions();
+                        })
+                        .catch(error => {
+                            console.error('خطا در جستجوی سفارش:', error);
+                            suggestionsContainer.innerHTML = '<div style="padding: 10px; color: red;">خطا در جستجو. لطفاً دوباره تلاش کنید.</div>';
+                            suggestionsContainer.style.display = 'block';
+                        });
+                }, 300);
             }
-        });
-        
-        // اضافه کردن آیکون تقویم
-        if (!issueDateInput.parent().find('.p-datepicker-trigger').length) {
-            var iconSpan = $('<span>', {
-                class: 'p-datepicker-trigger',
-                html: '📅',
-                css: {
-                    'position': 'absolute',
-                    'right': '10px',
-                    'top': '50%',
-                    'transform': 'translateY(-50%)',
-                    'cursor': 'pointer',
-                    'font-size': '1.2rem',
-                    'z-index': '10',
-                    'pointer-events': 'none'
+
+            // جستجو هنگام تایپ
+            orderInput.addEventListener('input', function () {
+                const query = this.value.trim();
+                performSearch(query);
+            });
+
+            // جستجو هنگام فوکوس (برای نمایش پیشنهادات اولیه)
+            orderInput.addEventListener('focus', function () {
+                const query = this.value.trim();
+                // اگر فیلد خالی است، جستجو را انجام بده تا پیشنهادات پیش‌فرض نمایش داده شوند
+                if (query.length === 0) {
+                    performSearch('');
+                } else {
+                    // اگر متنی دارد، همان را جستجو کن
+                    performSearch(query);
                 }
             });
-            issueDateInput.parent().css('position', 'relative');
-            issueDateInput.parent().append(iconSpan);
+
+            function displaySuggestions() {
+                suggestionsContainer.innerHTML = '';
+
+                if (orderSuggestions.length === 0) {
+                    suggestionsContainer.style.display = 'none';
+                    return;
+                }
+
+                orderSuggestions.forEach(function (item) {
+                    const suggestionItem = document.createElement('div');
+                    suggestionItem.style.cssText = 'padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;';
+                    suggestionItem.textContent = item.text;
+                    suggestionItem.addEventListener('mouseenter', function () {
+                        this.style.backgroundColor = '#f0f0f0';
+                    });
+                    suggestionItem.addEventListener('mouseleave', function () {
+                        this.style.backgroundColor = 'white';
+                    });
+                    suggestionItem.addEventListener('click', function () {
+                        orderInput.value = item.text;
+                        selectedOrderId = item.id;
+                        if (orderIdInput) {
+                            orderIdInput.value = item.id;
+                            console.log('Order ID set to:', item.id);
+                        }
+
+                        // انتخاب خودکار مشتری
+                        if (item.customer_id && customerInput && customerIdInput) {
+                            customerInput.value = item.customer_name || '';
+                            customerIdInput.value = item.customer_id;
+                            console.log('Customer automatically set:', item.customer_name);
+                        }
+
+                        suggestionsContainer.style.display = 'none';
+                    });
+                    suggestionsContainer.appendChild(suggestionItem);
+                });
+
+                suggestionsContainer.style.display = 'block';
+            }
+
+            // بستن پیشنهادات با کلیک خارج
+            document.addEventListener('click', function (e) {
+                if (!orderInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
+
+            // مدیریت کلیدهای کیبورد
+            orderInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    suggestionsContainer.style.display = 'none';
+                }
+            });
         }
-    }
-});
+    });
+
+    $(document).ready(function () {
+        // تبدیل فیلد تاریخ صدور به تقویم شمسی
+        var issueDateInput = $('#id_issue_date');
+
+        if (issueDateInput.length) {
+            // تبدیل type='date' به text برای استفاده از تقویم شمسی
+            issueDateInput.attr('type', 'text');
+            issueDateInput.attr('readonly', 'readonly');
+            issueDateInput.css('cursor', 'pointer');
+
+            // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
+            var initialValue = issueDateInput.val();
+            var persianDateValue = '';
+
+            // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
+            if (initialValue) {
+                var parts = initialValue.split('-');
+                if (parts.length === 3) {
+                    var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                    var pDate = persianDate.fromGregorian(gregorianDate);
+                    persianDateValue = pDate.format('YYYY/MM/DD');
+                    issueDateInput.val(persianDateValue);
+                }
+            }
+
+            // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
+            var hiddenInput = $('<input>', {
+                type: 'hidden',
+                id: 'id_issue_date_hidden',
+                name: 'issue_date'
+            });
+            if (initialValue) {
+                hiddenInput.val(initialValue);
+            }
+            issueDateInput.after(hiddenInput);
+
+            // راه‌اندازی تقویم شمسی
+            issueDateInput.pDatepicker({
+                observer: true,
+                format: 'YYYY/MM/DD',
+                altField: '#id_issue_date_hidden',
+                altFormat: 'YYYY-MM-DD',
+                calendarType: 'persian',
+                initialValue: persianDateValue || false,
+                timePicker: {
+                    enabled: false
+                },
+                onSelect: function () {
+                    // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
+                    var selectedDate = issueDateInput.val();
+                    if (selectedDate) {
+                        try {
+                            var persianDateParts = selectedDate.split('/');
+                            if (persianDateParts.length === 3) {
+                                var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                                var gregorianDate = persianDateObj.toCalendar('gregorian');
+                                var formattedDate = gregorianDate.year + '-' +
+                                    String(gregorianDate.month).padStart(2, '0') + '-' +
+                                    String(gregorianDate.day).padStart(2, '0');
+
+                                hiddenInput.val(formattedDate);
+                            }
+                        } catch (e) {
+                            console.error('خطا در تبدیل تاریخ:', e);
+                        }
+                    }
+                }
+            });
+
+            // اضافه کردن آیکون تقویم
+            if (!issueDateInput.parent().find('.p-datepicker-trigger').length) {
+                var iconSpan = $('<span>', {
+                    class: 'p-datepicker-trigger',
+                    html: '📅',
+                    css: {
+                        'position': 'absolute',
+                        'right': '10px',
+                        'top': '50%',
+                        'transform': 'translateY(-50%)',
+                        'cursor': 'pointer',
+                        'font-size': '1.2rem',
+                        'z-index': '10',
+                        'pointer-events': 'none'
+                    }
+                });
+                issueDateInput.parent().css('position', 'relative');
+                issueDateInput.parent().append(iconSpan);
+            }
+        }
+    });
 </script>
 
 <style>
-#id_issue_date {
-    position: relative;
-    padding-left: 40px;
-}
+    #id_issue_date {
+        position: relative;
+        padding-left: 40px;
+    }
 
-.p-datepicker-trigger {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 1.2rem;
-    z-index: 10;
-    pointer-events: none;
-}
+    .p-datepicker-trigger {
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 1.2rem;
+        z-index: 10;
+        pointer-events: none;
+    }
 </style>
 {% endblock %}
-

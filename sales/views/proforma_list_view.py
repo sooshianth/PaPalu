@@ -367,34 +367,35 @@ def order_search_api(request):
     """
     query = request.GET.get('q', '').strip()
     
-    if not query:
-        return JsonResponse({'results': []})
-    
     # ساخت query base برای سفارش‌های فروش
     base_filter = Q(order_type='sale')
     if not request.user.is_superuser:
         base_filter &= Q(registered_by=request.user)
-    
-    # جستجو بر اساس شماره سفارش
-    orders_by_number = Order.objects.filter(
-        base_filter & Q(order_number__icontains=query)
-    ).select_related('customer')
-    
-    # جستجو بر اساس نام مشتری - اگر مشتری‌ای پیدا شد، همه سفارش‌هایش را برگردان
-    orders_by_customer = Order.objects.none()
-    matching_customers = Person.objects.filter(
-        name__icontains=query
-    ).distinct()
-    
-    if matching_customers.exists():
-        # برای هر مشتری که نامش با query مطابقت دارد، همه سفارش‌هایش را بگیر
-        customer_filter = base_filter & Q(customer__in=matching_customers)
-        orders_by_customer = Order.objects.filter(
-            customer_filter
+
+    if not query:
+        # اگر کوئری خالی است، 20 سفارش اخیر را برگردان
+        all_orders = Order.objects.filter(base_filter).select_related('customer').order_by('-created_at')[:20]
+    else:
+        # جستجو بر اساس شماره سفارش
+        orders_by_number = Order.objects.filter(
+            base_filter & Q(order_number__icontains=query)
         ).select_related('customer')
-    
-    # ترکیب نتایج و حذف تکراری‌ها
-    all_orders = (orders_by_number | orders_by_customer).distinct().order_by('-created_at')[:20]
+        
+        # جستجو بر اساس نام مشتری - اگر مشتری‌ای پیدا شد، همه سفارش‌هایش را برگردان
+        orders_by_customer = Order.objects.none()
+        matching_customers = Person.objects.filter(
+            name__icontains=query
+        ).distinct()
+        
+        if matching_customers.exists():
+            # برای هر مشتری که نامش با query مطابقت دارد، همه سفارش‌هایش را بگیر
+            customer_filter = base_filter & Q(customer__in=matching_customers)
+            orders_by_customer = Order.objects.filter(
+                customer_filter
+            ).select_related('customer')
+        
+        # ترکیب نتایج و حذف تکراری‌ها
+        all_orders = (orders_by_number | orders_by_customer).distinct().order_by('-created_at')[:20]
     
     results = []
     seen_order_numbers = set()
