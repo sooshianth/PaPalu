@@ -940,8 +940,7 @@
           {% endif %}
 
           <!-- حساب بانکی تامین‌کننده - فقط برای pay_to_supplier -->
-          {% if accessible_transport_fields.supplier_account_number or accessible_transport_fields.supplier_sheba_number
-          %}
+          {% if accessible_transport_fields.supplier_account_number or accessible_transport_fields.supplier_sheba_number %}
           <div class="col-md-6 mb-3 supplier-bank-account-container" style="display: none;">
             <label class="form-label">حساب بانکی تامین‌کننده</label>
             <select id="supplier-bank-account-select" class="form-control">
