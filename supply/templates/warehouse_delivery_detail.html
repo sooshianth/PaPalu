@@ -341,18 +341,8 @@
                 </svg>
             </div>
             <div class="form-section-body weight-fields">
-                {% if accessible_transport_fields.gross_weight %}
-                <div class="form-group">
-                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label }}</label>
-                    {{ form.gross_weight }}
-                    {% if form.gross_weight.errors %}
-                        <div class="alert alert-error">
-                            {{ form.gross_weight.errors }}
-                        </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-                
+
+                                
                 {% if accessible_transport_fields.tare_weight %}
                 <div class="form-group">
                     <label for="{{ form.tare_weight.id_for_label }}" class="required">{{ form.tare_weight.label }}</label>
@@ -365,6 +355,18 @@
                 </div>
                 {% endif %}
                 
+                {% if accessible_transport_fields.gross_weight %}
+                <div class="form-group">
+                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label }}</label>
+                    {{ form.gross_weight }}
+                    {% if form.gross_weight.errors %}
+                        <div class="alert alert-error">
+                            {{ form.gross_weight.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
                 <div class="form-group">
                     <label>وزن خالص (محاسبه خودکار)</label>
                     <input type="text" id="calculated_net_weight" class="form-control" readonly value="—">
@@ -398,7 +400,7 @@
         <!-- بخش: اطلاعات کرایه -->
         <div class="form-section collapsed freight-fields-group" id="freight-section">
             <div class="form-section-header">
-                <h5 class="form-section-title">اطلاعات کرایه</h5>
+                <h5 class="form-section-title">اطلاعات کرایه (به ریال)</h5>
                 <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
