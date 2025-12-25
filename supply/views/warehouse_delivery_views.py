@@ -27,7 +27,7 @@ from core.StockEntryFolder.SourceStockModel import SourceStock
 from core.StockEntryFolder.TargetStockModel import TargetStock
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
-from supply.tables import TransportTable
+from supply.tables import TransportTable, WarehouseDeliveryTable
 import django_tables2 as tables
 from django.utils.html import format_html
 
@@ -257,109 +257,6 @@ class WarehouseDeliveryForm(forms.Form):
         return cleaned_data
 
 
-class WarehouseDeliveryTable(TransportTable):
-    """جدول حمل‌های در انتظار تخلیه"""
-    
-    raw_materials = tables.Column(
-        verbose_name='نام ماده اولیه',
-        empty_values=(),
-        orderable=False,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    quantity = tables.Column(
-        verbose_name='مقدار',
-        empty_values=(),
-        orderable=False,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    unit = tables.Column(
-        verbose_name='واحد',
-        empty_values=(),
-        orderable=False,
-        visible=False,
-        attrs={
-            'td': {'class': 'text-center'},
-            'th': {'class': 'text-center'}
-        }
-    )
-    
-    def __init__(self, *args, accessible_fields=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        
-        # ستون‌های مورد نیاز برای انباردار: شماره سفارش، نوع ماده اولیه، مقدار، واحد، پلاک، نوع ماشین
-        # این ستون‌ها باید همیشه نمایش داده شوند
-        required_columns = ['purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions']
-        
-        # همیشه ستون‌های مورد نیاز را نمایش بده
-        for col_name in required_columns:
-            if col_name in ['raw_materials', 'quantity', 'unit']:
-                # ستون‌های custom که در base_columns تعریف شده‌اند
-                if col_name in self.base_columns:
-                    self.base_columns[col_name].visible = True
-            elif col_name in self.columns:
-                # ستون‌های عادی
-                self.columns[col_name].column.visible = True
-    
-    def render_raw_materials(self, record):
-        """نمایش لیست مواد اولیه از سفارش خرید"""
-        if not record.purchase_order:
-            return '—'
-        # استفاده از order_items به جای materials
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
-        if materials:
-            names = [m.raw_material.name for m in materials if m.raw_material]
-            return format_html('<br>'.join(names)) if names else '—'
-        return '—'
-    
-    def render_quantity(self, record):
-        """نمایش مقدار سفارش"""
-        if not record.purchase_order:
-            return '—'
-        # استفاده از order_items به جای materials
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
-        if materials:
-            quantities = [str(m.quantity) for m in materials if m.quantity]
-            return format_html('<br>'.join(quantities)) if quantities else '—'
-        return '—'
-    
-    def render_unit(self, record):
-        """نمایش واحد سفارش"""
-        if not record.purchase_order:
-            return '—'
-        # استفاده از order_items به جای materials
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
-        if materials:
-            units = [m.get_weight_unit_display() or '—' for m in materials]
-            return format_html('<br>'.join(units)) if units else '—'
-        return '—'
-    
-    def render_actions(self, record):
-        """نمایش دکمه جزئیات حمل"""
-        # استفاده از transport_number یا pk در صورت None بودن
-        transport_id = record.transport_number
-        if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
-            transport_id = str(record.pk)
-        detail_url = reverse('supply:warehouse_delivery_detail', args=[str(transport_id)])
-        return format_html(
-            '<a href="{}" class="btn btn-primary btn-sm">جزئیات حمل</a>',
-            detail_url
-        )
-    
-    class Meta(TransportTable.Meta):
-        sequence = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
-        fields = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
-
-
 @login_required
 def warehouse_delivery_list_view(request):
     """صفحه لیست حمل‌های در انتظار تخلیه - مخصوص انباردار"""
@@ -486,8 +383,8 @@ def warehouse_delivery_detail_view(request, transport_number):
         # Read-only mode for awaiting_wh_reconciliation
         bug_logger.debug(f"Loading read-only form for transport {transport_number} - status: {pt.status}")
         initial = {
-            'gross_weight': pt.gross_weight,
             'tare_weight': pt.tare_weight,
+            'gross_weight': pt.gross_weight,
             'freight_payment_type': pt.freight_payment_type,
             'initial_freight': pt.initial_freight,
             'total_freight': pt.total_freight,
@@ -641,7 +538,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # تغییر وضعیت سفارش از "در انتظار تحویل بار" به "در انتظار تطبیق اطلاعات انبار"
                     po = pt.allocation.order if pt.allocation else None
                     if po and po.status == Order.STATUS_AWAITING_DELIVERY:
-                        po.transition(Order.STATUS_AWAITING_WH_RECONCILIATION, user=request.user, note=f"تخلیه برای حمل {transport_number} تکمیل شد و در انتظار تطبیق اطلاعات انبار است.")
+                        po.transition(Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION, user=request.user, note=f"تخلیه برای حمل {transport_number} تکمیل شد و در انتظار تطبیق اطلاعات انبار است.")
                         bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تطبیق اطلاعات انبار' تغییر یافت")
                     
                     # ثبت در Audit Trail
@@ -740,13 +637,12 @@ def guard_vehicle_exit_view(request, transport_number):
                 pt.delivery_date = jdatetime.date.today()
                 pt.save()
                 
-                # تغییر وضعیت سفارش از "در انتظار تطبیق اطلاعات انبار" به "در انتظار تطبیق اطلاعات تحویل انبار"
+                # تغییر وضعیت سفارش از "در انتظار تطبیق اطلاعات انبار" به "در انتظار تسویه نهایی"
                 po = pt.allocation.order if pt.allocation else None
-                if po and po.status == Order.STATUS_AWAITING_WH_RECONCILIATION:
-                    # در مستندات گفته شده که وضعیت به "در انتظار تطبیق اطلاعات تحویل انبار" تغییر می‌یابد
-                    # اما این وضعیت در Order model وجود ندارد، پس از همان STATUS_AWAITING_WH_RECONCILIATION استفاده می‌کنیم
-                    # یا می‌توانیم یک وضعیت جدید اضافه کنیم
-                    bug_logger.info(f"وضعیت سفارش {po.order_number} در حالت 'در انتظار تطبیق اطلاعات انبار' باقی می‌ماند")
+                if po and po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                    # بعد از تایید خروج خودرو توسط نگهبان، سفارش به مرحله تسویه نهایی می‌رود
+                    po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"خروج خودرو برای حمل {transport_number} تایید شد و سفارش به مرحله تسویه نهایی منتقل شد.")
+                    bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
                 
                 audit_logger.info(
                     f"خروج خودرو تایید شد - "

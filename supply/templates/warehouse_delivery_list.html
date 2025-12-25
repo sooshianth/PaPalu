@@ -47,69 +47,84 @@
     
     .table-container {
         overflow-x: auto;
+        margin-bottom: 30px;
     }
     
     /* استایل جدول django-tables2 */
-    .data-table {
+    .table-container .table {
         width: 100%;
         border-collapse: collapse;
         background: white;
+        margin-bottom: 0;
     }
     
-    .data-table thead {
+    .table-container .table thead {
         background: var(--gray-100);
     }
     
-    .data-table thead th {
+    .table-container .table thead th {
         padding: 15px;
-        text-align: right;
+        text-align: center;
         font-weight: 600;
         color: var(--gray-800);
         border-bottom: 2px solid var(--primary-green);
+        vertical-align: middle;
     }
     
-    .data-table tbody tr {
+    /* Bold کردن محتوای header */
+    .table-container .table thead th {
+        font-weight: 600;
+    }
+    
+    .table-container .table tbody tr {
         border-bottom: 1px solid var(--gray-200);
         transition: background-color 0.2s;
     }
     
-    .data-table tbody tr:hover {
+    .table-container .table tbody tr:hover {
         background-color: var(--light-green);
     }
     
-    .data-table tbody td {
+    .table-container .table tbody td {
         padding: 15px;
         color: var(--gray-600);
+        text-align: center;
+        vertical-align: middle;
+        font-weight: 500;
+    }
+    
+    /* Bold کردن محتوای سلول‌ها - استثنا برای دکمه‌ها و badgeها */
+    .table-container .table tbody td strong {
+        font-weight: 600;
+    }
+    
+    .table-container .table a:not(.btn) {
+        color: inherit;
+        text-decoration: none;
     }
     
     /* استایل سلول actions */
-    .data-table tbody td.actions,
-    .data-table tbody td:has(.btn-group) {
+    .table-container .table tbody td.actions,
+    .table-container .table tbody td:has(.btn-group) {
         white-space: nowrap;
         text-align: center;
     }
     
     /* اطمینان از نمایش افقی دکمه‌ها در RTL */
-    .data-table .btn-group a,
+    .table-container .table .btn-group a,
     .table-container .btn-group a {
         display: inline-block !important;
         vertical-align: middle;
         margin: 0;
     }
     
-    .data-table .btn-group {
+    .table-container .table .btn-group {
         direction: ltr;
         text-align: left;
     }
     
-    /* استایل‌های django-tables2 - لینک‌های عادی */
-    .data-table a:not(.btn-outline-warning):not(.btn-outline-info):not(.btn-primary):not(.btn-success):not(.btn-sm) {
-        color: inherit;
-        text-decoration: none;
-    }
-    
     /* استایل دکمه‌ها */
-    .data-table .btn-primary,
+    .table-container .table .btn-primary,
     .table-container .btn-primary {
         padding: 5px 10px;
         border-radius: 6px;
@@ -125,14 +140,14 @@
         white-space: nowrap;
     }
     
-    .data-table .btn-primary:hover,
+    .table-container .table .btn-primary:hover,
     .table-container .btn-primary:hover {
         background-color: var(--dark-green) !important;
         color: white !important;
         border-color: var(--dark-green) !important;
     }
     
-    .data-table .btn-success,
+    .table-container .table .btn-success,
     .table-container .btn-success {
         padding: 5px 10px;
         border-radius: 6px;
@@ -148,14 +163,14 @@
         white-space: nowrap;
     }
     
-    .data-table .btn-success:hover,
+    .table-container .table .btn-success:hover,
     .table-container .btn-success:hover {
         background-color: var(--dark-green) !important;
         color: white !important;
         border-color: var(--dark-green) !important;
     }
     
-    .data-table .btn-sm,
+    .table-container .table .btn-sm,
     .table-container .btn-sm {
         padding: 5px 10px;
         border-radius: 6px;
@@ -171,7 +186,7 @@
         white-space: nowrap;
     }
     
-    .data-table .btn-sm:hover,
+    .table-container .table .btn-sm:hover,
     .table-container .btn-sm:hover {
         background-color: var(--dark-green) !important;
         color: white !important;
@@ -188,13 +203,53 @@
         justify-content: flex-start;
     }
     
-    .data-table .btn-group,
+    .table-container .table .btn-group,
     .table-container .btn-group {
         display: flex !important;
         flex-direction: row !important;
         gap: 5px;
         align-items: center;
         flex-wrap: nowrap;
+    }
+    
+    /* استایل badgeها */
+    .table-container .table .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .table-container .table .plate-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    /* استایل دکمه outline */
+    .table-container .table .btn-outline-info {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #17a2b8;
+        transition: all 0.3s;
+        color: #17a2b8 !important;
+        border-color: #17a2b8 !important;
+        background-color: white !important;
+        display: inline-block;
+        cursor: pointer;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+    
+    .table-container .table .btn-outline-info:hover {
+        background-color: #17a2b8 !important;
+        color: white !important;
+        border-color: #17a2b8 !important;
     }
     
     /* استایل صفحه‌بندی django-tables2 */
@@ -409,12 +464,12 @@
             padding: 20px;
         }
         
-        .data-table {
+        .table-container .table {
             font-size: 0.9rem;
         }
         
-        .data-table thead th,
-        .data-table tbody td {
+        .table-container .table thead th,
+        .table-container .table tbody td {
             padding: 10px;
         }
     }
