@@ -495,8 +495,11 @@
   function parsePlateNumber(plateNumber) {
     if (!plateNumber) return null;
     
-    // فرمت: 11|345ب12
-    const match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
+    // تبدیل به رشته و حذف فضاهای اضافی
+    plateNumber = String(plateNumber).trim();
+    
+    // فرمت: 11|345ب12 (بدون جداکننده بین حرف و اعداد آخر)
+    let match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
     if (match) {
       return {
         iran: match[1],
@@ -506,17 +509,40 @@
       };
     }
     
-    // فرمت قدیمی: 11-345-ب-12 یا 11|345-ب-12
-    const oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
-    if (oldMatch) {
+    // فرمت: 11-345-ب-12 یا 11|345-ب-12
+    match = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
+    if (match) {
       return {
-        iran: oldMatch[1],
-        middle: oldMatch[2],
-        letter: oldMatch[3],
-        last: oldMatch[4]
+        iran: match[1],
+        middle: match[2],
+        letter: match[3],
+        last: match[4]
       };
     }
     
+    // فرمت: 11345ب12 (بدون جداکننده)
+    match = plateNumber.match(/^(\d{2})(\d{3})([آ-یA-Za-z])(\d{2})$/);
+    if (match) {
+      return {
+        iran: match[1],
+        middle: match[2],
+        letter: match[3],
+        last: match[4]
+      };
+    }
+    
+    // فرمت: 11 345 ب 12 (با فاصله)
+    match = plateNumber.match(/^(\d{2})\s+(\d{3})\s+([آ-یA-Za-z])\s+(\d{2})$/);
+    if (match) {
+      return {
+        iran: match[1],
+        middle: match[2],
+        letter: match[3],
+        last: match[4]
+      };
+    }
+    
+    console.warn('فرمت پلاک قابل تشخیص نیست:', plateNumber);
     return null;
   }
   
@@ -565,19 +591,31 @@
     
     // اگر پلاک از قبل وجود دارد، آن را parse و نمایش بده
     const hiddenPlate = document.getElementById('id_plate_number');
-    if (hiddenPlate && hiddenPlate.value) {
-      const parsed = parsePlateNumber(hiddenPlate.value);
-      if (parsed) {
-        const plateIran = document.getElementById('plate-iran');
-        const plateMiddle = document.getElementById('plate-middle');
-        const plateLetter = document.getElementById('plate-letter');
-        const plateLast = document.getElementById('plate-last');
-        
-        if (plateIran) plateIran.value = parsed.iran;
-        if (plateMiddle) plateMiddle.value = parsed.middle;
-        if (plateLetter) plateLetter.value = parsed.letter;
-        if (plateLast) plateLast.value = parsed.last;
+    if (hiddenPlate) {
+      console.log('مقدار پلاک از دیتابیس:', hiddenPlate.value);
+      if (hiddenPlate.value) {
+        const parsed = parsePlateNumber(hiddenPlate.value);
+        console.log('پلاک parse شده:', parsed);
+        if (parsed) {
+          const plateIran = document.getElementById('plate-iran');
+          const plateMiddle = document.getElementById('plate-middle');
+          const plateLetter = document.getElementById('plate-letter');
+          const plateLast = document.getElementById('plate-last');
+          
+          if (plateIran) plateIran.value = parsed.iran;
+          if (plateMiddle) plateMiddle.value = parsed.middle;
+          if (plateLetter) plateLetter.value = parsed.letter;
+          if (plateLast) plateLast.value = parsed.last;
+          
+          console.log('پلاک در فیلدها نمایش داده شد');
+        } else {
+          console.warn('نتوانست پلاک را parse کند. مقدار:', hiddenPlate.value);
+        }
+      } else {
+        console.log('پلاک در دیتابیس خالی است');
       }
+    } else {
+      console.error('فیلد hidden پلاک پیدا نشد!');
     }
     
     // مدیریت input برای فیلدهای پلاک

@@ -614,11 +614,17 @@ def register_driver_for_transport_view(request, transport_number):
     else:
         # prefill if driver exists
         initial = {}
+        # همیشه پلاک را از حمل بخوان (حتی اگر راننده وجود نداشته باشد)
+        if pt.plate_number:
+            initial['plate_number'] = pt.plate_number
+        
         if pt.driver:
             initial['phone'] = pt.driver.phone_number
             initial['name'] = pt.driver.name
             initial['national_id'] = getattr(pt.driver, 'national_id', '')
-            initial['plate_number'] = pt.plate_number
+            # اگر پلاک در حمل وجود نداشت ولی در راننده وجود دارد، از آن استفاده کن
+            if not pt.plate_number:
+                initial['plate_number'] = pt.plate_number
             # اگر حساب بانکی در حمل وجود دارد، از آن استفاده کن
             if pt.driver_bank_account:
                 initial['account'] = pt.driver_bank_account.account_number or ''
