@@ -145,6 +145,19 @@ class RawMaterialPriceInquiryForm(ModelForm):
 			self.fields['raw_material'].required = False
 			self.fields['raw_material'].widget = forms.HiddenInput()
 
+	def clean_inquiry_date(self):
+		"""اعتبارسنجی تاریخ استعلام: تاریخ نباید از فردا به بعد باشد"""
+		inquiry_date = self.cleaned_data.get('inquiry_date')
+		if inquiry_date:
+			today = jdate.today()
+			# بررسی اینکه تاریخ از فردا به بعد نباشد
+			if inquiry_date > today:
+				raise forms.ValidationError(
+					'تاریخ استعلام نمی‌تواند از فردا به بعد باشد. '
+					'فقط می‌توانید استعلام‌های امروز و قبل از آن را ثبت کنید.'
+				)
+		return inquiry_date
+
 
 # =====================================
 # فرم‌های تامین‌کننده (Supplier Forms)
