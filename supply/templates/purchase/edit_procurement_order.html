@@ -473,29 +473,22 @@ document.addEventListener('DOMContentLoaded', function() {
         supplierInput.parentElement.style.position = 'relative';
         supplierInput.parentElement.appendChild(suggestionsContainer);
         
-        supplierInput.addEventListener('input', function() {
-            const query = this.value.trim();
-            clearTimeout(searchTimeout);
+        // تابع برای fetch کردن داده‌ها
+        function fetchSupplierSuggestions(query) {
+            const url = query ? 
+                '{% url "supply:supplier_search_api" %}?q=' + encodeURIComponent(query) : 
+                '{% url "supply:supplier_search_api" %}';
             
-            if (query.length < 2) {
-                suggestionsContainer.style.display = 'none';
-                supplierSuggestions = [];
-                if (supplierIdInput) supplierIdInput.value = '';
-                return;
-            }
-            
-            searchTimeout = setTimeout(function() {
-                fetch('{% url "supply:supplier_search_api" %}?q=' + encodeURIComponent(query))
-                    .then(response => response.json())
-                    .then(data => {
-                        supplierSuggestions = data.results || [];
-                        displaySupplierSuggestions();
-                    })
-                    .catch(error => {
-                        console.error('خطا در جستجوی تأمین‌کننده:', error);
-                    });
-            }, 300);
-        });
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    supplierSuggestions = data.results || [];
+                    displaySupplierSuggestions();
+                })
+                .catch(error => {
+                    console.error('خطا در جستجوی تأمین‌کننده:', error);
+                });
+        }
         
         function displaySupplierSuggestions() {
             suggestionsContainer.innerHTML = '';
@@ -519,6 +512,27 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             suggestionsContainer.style.display = 'block';
         }
+        
+        // لود کردن 20 مورد اولیه در ابتدا
+        fetchSupplierSuggestions('');
+        
+        // نمایش پیشنهادات هنگام focus
+        supplierInput.addEventListener('focus', function() {
+            if (supplierSuggestions.length > 0) {
+                displaySupplierSuggestions();
+            } else if (!this.value.trim()) {
+                fetchSupplierSuggestions('');
+            }
+        });
+        
+        supplierInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            clearTimeout(searchTimeout);
+            
+            searchTimeout = setTimeout(function() {
+                fetchSupplierSuggestions(query);
+            }, 300);
+        });
         
         document.addEventListener('click', function(e) {
             if (!supplierInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
@@ -591,28 +605,41 @@ document.addEventListener('DOMContentLoaded', function() {
         let rawMaterialSuggestions = [];
         let searchTimeout;
         
+        // تابع برای fetch کردن داده‌ها
+        function fetchRawMaterialSuggestions(query) {
+            const url = query ? 
+                '{% url "supply:raw_material_search_api" %}?q=' + encodeURIComponent(query) : 
+                '{% url "supply:raw_material_search_api" %}';
+            
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    rawMaterialSuggestions = data.results || [];
+                    displayRawMaterialSuggestions();
+                })
+                .catch(error => {
+                    console.error('خطا در جستجوی ماده اولیه:', error);
+                });
+        }
+        
+        // لود کردن 20 مورد اولیه در ابتدا
+        fetchRawMaterialSuggestions('');
+        
+        // نمایش پیشنهادات هنگام focus
+        rawMaterialInputFinal.addEventListener('focus', function() {
+            if (rawMaterialSuggestions.length > 0) {
+                displayRawMaterialSuggestions();
+            } else if (!this.value.trim()) {
+                fetchRawMaterialSuggestions('');
+            }
+        });
+        
         rawMaterialInputFinal.addEventListener('input', function() {
             const query = this.value.trim();
             clearTimeout(searchTimeout);
             
-            if (query.length < 2) {
-                if (suggestionsDiv) suggestionsDiv.style.display = 'none';
-                rawMaterialSuggestions = [];
-                if (rawMaterialIdInput) rawMaterialIdInput.value = '';
-                if (unitSelect) unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
-                return;
-            }
-            
             searchTimeout = setTimeout(function() {
-                fetch('{% url "supply:raw_material_search_api" %}?q=' + encodeURIComponent(query))
-                    .then(response => response.json())
-                    .then(data => {
-                        rawMaterialSuggestions = data.results || [];
-                        displayRawMaterialSuggestions();
-                    })
-                    .catch(error => {
-                        console.error('خطا در جستجوی ماده اولیه:', error);
-                    });
+                fetchRawMaterialSuggestions(query);
             }, 300);
         });
         

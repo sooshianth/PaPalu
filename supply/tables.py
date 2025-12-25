@@ -1570,7 +1570,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     raw_material_id = tables.Column(
         verbose_name='شناسه ماده اولیه',
         accessor='raw_material.raw_material_id',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1580,7 +1580,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     raw_material_name = tables.Column(
         verbose_name='نام ماده اولیه',
         accessor='raw_material.name',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1609,7 +1609,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     
     quantity = tables.Column(
         verbose_name='مقدار',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1628,7 +1628,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     
     unit_price = tables.Column(
         verbose_name='قیمت واحد',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1637,7 +1637,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     
     vat_percent = tables.Column(
         verbose_name='مالیات بر ارزش افزوده (%)',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1646,7 +1646,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     
     freight_cost = tables.Column(
         verbose_name='بهای تمام شده کرایه',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1655,7 +1655,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     
     total_purchase_cost = tables.Column(
         verbose_name='بهای تمام شده خرید',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1664,7 +1664,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     
     external_allocation_id = tables.Column(
         verbose_name='شناسه تخصیص',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1723,7 +1723,7 @@ class PurchaseOrderTransportTable(tables.Table):
     vehicle_type = tables.Column(
         verbose_name='نوع ماشین',
         accessor='get_vehicle_type_display',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1733,7 +1733,7 @@ class PurchaseOrderTransportTable(tables.Table):
     status = tables.Column(
         verbose_name='وضعیت حمل',
         accessor='get_status_display',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1743,7 +1743,7 @@ class PurchaseOrderTransportTable(tables.Table):
     created_at = tables.DateTimeColumn(
         verbose_name='تاریخ ثبت',
         format='Y/m/d',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}
@@ -1752,7 +1752,7 @@ class PurchaseOrderTransportTable(tables.Table):
     
     total_freight = tables.Column(
         verbose_name='کرایه',
-        orderable=True,
+        orderable=False,
         attrs={
             'td': {'class': 'text-center'},
             'th': {'class': 'text-center'}

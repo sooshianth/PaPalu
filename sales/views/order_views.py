@@ -316,20 +316,29 @@ def customer_search_api(request):
     query = request.GET.get('q', '').strip()
     
     if not query:
-        return JsonResponse({'results': []})
-    
-    # فیلتر کردن مشتری‌ها
-    if request.user.is_superuser:
-        customers = Person.objects.filter(
-            type='customer',
-            name__icontains=query
-        ).order_by('name')[:20]
+        # اگر کوئری خالی است، 20 مشتری اخیر را برگردان
+        if request.user.is_superuser:
+            customers = Person.objects.filter(
+                type='customer'
+            ).order_by('name')[:20]
+        else:
+            customers = Person.objects.filter(
+                type='customer',
+                sales_expert=request.user
+            ).order_by('name')[:20]
     else:
-        customers = Person.objects.filter(
-            type='customer',
-            sales_expert=request.user,
-            name__icontains=query
-        ).order_by('name')[:20]
+        # فیلتر کردن مشتری‌ها
+        if request.user.is_superuser:
+            customers = Person.objects.filter(
+                type='customer',
+                name__icontains=query
+            ).order_by('name')[:20]
+        else:
+            customers = Person.objects.filter(
+                type='customer',
+                sales_expert=request.user,
+                name__icontains=query
+            ).order_by('name')[:20]
     
     results = []
     for customer in customers:
