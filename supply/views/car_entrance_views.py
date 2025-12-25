@@ -836,11 +836,11 @@ def car_exit_list_view(request):
             'accessible_raw_material_fields': accessible_raw_material_fields,
             'accessible_person_fields': accessible_person_fields,
         }
-        return render(request, 'supply_carexit_list.html', context)
+        return render(request, 'car_exit_list.html', context)
     except Exception as e:
         bug_logger.error(f"Car exit list error: {e}", exc_info=True)
         messages.error(request, 'خطا در بارگذاری لیست خودروهای در انتظار تخلیه.')
-        return render(request, 'supply_carexit_list.html', {
+        return render(request, 'car_exit_list.html', {
             'table': CarExitTable([], prefix='exit-'),
             'accessible_transport_fields': accessible_transport_fields,
             'accessible_po_fields': accessible_po_fields,

@@ -663,4 +663,4 @@ def guard_vehicle_exit_view(request, transport_number):
         'accessible_transport_fields': accessible_transport_fields,
         'accessible_po_fields': accessible_po_fields,
     }
-    return render(request, 'supply_guard_vehicle_exit.html', context)
+    return render(request, 'car_exit_custodian_confirmation.html', context)

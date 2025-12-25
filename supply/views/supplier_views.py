@@ -397,7 +397,7 @@ def supplier_edit_view(request, national_id):
 			'sn_formset': sn_fs,
 			'att_formset': att_fs,
 		}
-		return render(request, 'supply_supplier_edit.html', context)
+		return render(request, 'supplier/supplier_edit.html', context)
 	except Person.DoesNotExist:
 		bug_logger.warning(f"Supplier not found for edit: {national_id}")
 		messages.error(request, 'تأمین‌کننده مورد نظر یافت نشد.')

@@ -211,7 +211,7 @@ def logistic_confirmation_list_view(request):
             'accessible_person_fields': accessible_person_fields,
         }
         
-        return render(request, 'supply_logistic_confirmation_list.html', context)
+        return render(request, 'logistic_confirmation_list.html', context)
         
     except Exception as e:
         bug_logger.error(f"خطا در نمایش لیست تایید لجستیک: {str(e)}", exc_info=True)
@@ -395,8 +395,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                 'accessible_person_fields': accessible_person_fields,
             }
             
-            bug_logger.info(f"رندر کردن template - supply_logistic_confirmation_detail.html")
-            return render(request, 'supply_logistic_confirmation_detail.html', context)
+            bug_logger.info(f"رندر کردن template - logistic_confirmation_detail.html")
+            return render(request, 'logistic_confirmation_detail.html', context)
         except Exception as context_err:
             bug_logger.error(f"خطا در آماده‌سازی context - حمل {transport_number}: {str(context_err)}", exc_info=True)
             messages.error(request, f'خطا در آماده‌سازی داده‌ها: {str(context_err)}')
