@@ -243,6 +243,10 @@
     }
     .form-group {
         position: relative;
+        overflow: visible;
+    }
+    .form-section-content {
+        overflow: visible !important;
     }
 </style>
 {% endblock %}
@@ -312,8 +316,9 @@ document.addEventListener('DOMContentLoaded', function() {
             suggestionsContainer.style.display = 'block';
         }
         
-        // لود کردن 20 مورد اولیه در ابتدا
+        // لود کردن 20 مورد اولیه در پس‌زمینه (بدون نمایش)
         fetchSupplierSuggestions('');
+        suggestionsContainer.style.display = 'none'; // از اول مخفی کن
         
         // نمایش پیشنهادات هنگام focus
         supplierInput.addEventListener('focus', function() {
@@ -429,8 +434,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }
         
-        // لود کردن 20 مورد اولیه در ابتدا
+        // لود کردن 20 مورد اولیه در پس‌زمینه (بدون نمایش)
         fetchRawMaterialSuggestions('');
+        if (suggestionsDiv) suggestionsDiv.style.display = 'none'; // از اول مخفی کن
         
         // نمایش پیشنهادات هنگام focus
         rawMaterialInputFinal.addEventListener('focus', function() {

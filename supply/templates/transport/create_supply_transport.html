@@ -290,6 +290,10 @@
     background: #fff;
   }
 
+  .form-group {
+    position: relative;
+    overflow: visible !important;
+  }
   .suggestions-container {
     position: absolute;
     top: 100%;
@@ -1190,9 +1194,10 @@
         }
       });
 
-      // لود کردن 20 مورد اولیه در ابتدا (اگر فیلد خالی است)
+      // لود کردن 20 مورد اولیه در پس‌زمینه (بدون نمایش)
       {% if not form.driver.value %}
       performDriverSearch('');
+      driverSuggestions.style.display = 'none'; // از اول مخفی کن
       {% endif %}
 
       // اگر راننده قبلاً انتخاب شده، نمایش بده
