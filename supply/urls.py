@@ -57,6 +57,7 @@ from .views import (
     logistic_confirmation_list_view,
     logistic_confirmation_detail_view,
     rejected_transports_list_view,
+    rejected_transport_detail_view,
 
 )
 
@@ -114,5 +115,6 @@ urlpatterns = [
     path('logistic-confirmation/', logistic_confirmation_list_view, name='logistic_confirmation_list'),
     path('logistic-confirmation/<str:transport_number>/', logistic_confirmation_detail_view, name='logistic_confirmation_detail'),
     path('rejected-transports/', rejected_transports_list_view, name='rejected_transports_list'),
+    path('rejected-transports/<str:transport_number>/', rejected_transport_detail_view, name='rejected_transport_detail'),
 
 ]

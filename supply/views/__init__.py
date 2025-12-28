@@ -75,6 +75,7 @@ from .logistic_confirmation_views import (
     logistic_confirmation_list_view,
     logistic_confirmation_detail_view,
     rejected_transports_list_view,
+    rejected_transport_detail_view,
 )
 
 
@@ -130,6 +131,8 @@ __all__ = [
     # Logistic Confirmation Views
     'logistic_confirmation_list_view',
     'logistic_confirmation_detail_view',
+    'rejected_transports_list_view',
+    'rejected_transport_detail_view',
 
 ]
 
