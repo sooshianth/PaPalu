@@ -21,6 +21,7 @@ from core.PersonFolder.BankAccountModel import BankAccount
 from core.PersonFolder.PaymentPreferenceModel import PaymentPreference
 from core.PersonFolder.SocialNetworkModel import SocialNetwork
 from core.PersonFolder.AttachmentModel import Attachment
+from core.WarehouseFolder.WarehouseModel import Warehouse
 
 from supply.views.forms import (
 	SupplierPersonForm, FinancialBankingForm,
@@ -71,6 +72,23 @@ def create_supplier_view(request):
 					for f, v in fb_form.cleaned_data.items():
 						setattr(financial, f, v)
 					financial.save()
+
+					# ایجاد انبار برای تامین‌کننده (اگر وجود نداشته باشد)
+					if not person.warehouse:
+						warehouse_name = f"انبار {person.name or person.national_id}"
+						warehouse_id = f"WH-SUP-{person.national_id}"
+						warehouse, created = Warehouse.objects.get_or_create(
+							warehouse_id=warehouse_id,
+							defaults={
+								'name': warehouse_name,
+								'warehouse_type': 'supplier',
+							}
+						)
+						if created:
+							bug_logger.info(f"انبار جدید برای تامین‌کننده {person.national_id} ایجاد شد: {warehouse_id}")
+							audit_logger.info(f"انبار {warehouse_id} برای تامین‌کننده {person.national_id} ایجاد شد")
+						person.warehouse = warehouse
+						person.save()
 
 					# اتصال و ذخیره formset ها
 					rep_fs = RepresentativeFormSet(request.POST, request.FILES, instance=person, prefix='rep')
@@ -191,6 +209,23 @@ def supplier_list_view(request):
 					for f, v in fb_form.cleaned_data.items():
 						setattr(financial, f, v)
 					financial.save()
+
+					# ایجاد انبار برای تامین‌کننده (اگر وجود نداشته باشد)
+					if not person.warehouse:
+						warehouse_name = f"انبار {person.name or person.national_id}"
+						warehouse_id = f"WH-SUP-{person.national_id}"
+						warehouse, created = Warehouse.objects.get_or_create(
+							warehouse_id=warehouse_id,
+							defaults={
+								'name': warehouse_name,
+								'warehouse_type': 'supplier',
+							}
+						)
+						if created:
+							bug_logger.info(f"انبار جدید برای تامین‌کننده {person.national_id} ایجاد شد: {warehouse_id}")
+							audit_logger.info(f"انبار {warehouse_id} برای تامین‌کننده {person.national_id} ایجاد شد")
+						person.warehouse = warehouse
+						person.save()
 
 					# اتصال و ذخیره formset ها
 					rep_fs.instance = person

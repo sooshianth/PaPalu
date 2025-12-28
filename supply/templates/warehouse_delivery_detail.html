@@ -303,10 +303,22 @@
             <span class="readonly-info-value">{{ pt.get_vehicle_type_display }}</span>
         </div>
         {% endif %}
-        {% if pt.driver and accessible_transport_fields.driver %}
+        {% if pt.driver %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">راننده:</span>
-            <span class="readonly-info-value">{{ pt.driver.name|default:"—" }}</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.name|default:"—" }}{% else %}—{% endif %}</span>
+        </div>
+        {% endif %}
+        {% if pt.driver and pt.driver.phone_number %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">شماره تلفن راننده:</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.phone_number|default:"—" }}{% else %}—{% endif %}</span>
+        </div>
+        {% endif %}
+        {% if pt.waybill_weight %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">وزن بارنامه:</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.waybill_weight %}{{ pt.waybill_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</span>
         </div>
         {% endif %}
         {% if pt.gross_weight %}

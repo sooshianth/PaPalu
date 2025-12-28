@@ -230,6 +230,16 @@ class Transport(models.Model):
         blank=True,
         help_text='همان empty_weight برای سازگاری'
     )
+
+    waybill_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن بارنامه',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن بارنامه'
+    )
     
     # فیلدهای مالی
     FREIGHT_PAYMENT_CHOICES = [

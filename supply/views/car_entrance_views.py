@@ -60,7 +60,9 @@ def get_accessible_purchase_transport_fields(user):
             'gross_weight': True,
             'tare_weight': True,
             'net_weight': True,
+            'waybill_weight': True,
             'waybill_number': True,
+            'bill_of_lading_file': True,
             'notes': True,
             'created_at': True,
         }
@@ -88,7 +90,9 @@ def get_accessible_purchase_transport_fields(user):
         'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'view'),
         'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'view'),
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
+        'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'view'),
         'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'view'),
+        'bill_of_lading_file': user_can_access_field(user, Transport, 'bill_of_lading_file', 'view'),
         'notes': user_can_access_field(user, Transport, 'notes', 'view'),
         'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
     }
@@ -120,7 +124,9 @@ def get_accessible_purchase_transport_fields_edit(user):
         'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'edit'),
         'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'edit'),
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'edit'),
+        'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'edit'),
         'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'edit'),
+        'bill_of_lading_file': user_can_access_field(user, Transport, 'bill_of_lading_file', 'edit'),
         'notes': user_can_access_field(user, Transport, 'notes', 'edit'),
     }
 
@@ -194,6 +200,8 @@ class CarEntranceDriverForm(forms.Form):
     - شماره تلفن راننده
     - پلاک
     - کد ملی راننده
+    - وزن بارنامه
+    - تصویر بارنامه
     - شماره حساب راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
     - شماره شبا راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
     """
@@ -216,6 +224,26 @@ class CarEntranceDriverForm(forms.Form):
         label='پلاک',
         required=True,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12الف34567'})
+    )
+    waybill_weight = forms.DecimalField(
+        label='وزن بارنامه (کیلوگرم)',
+        required=True,
+        max_digits=15,
+        decimal_places=3,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0.000',
+            'step': '0.001',
+            'min': '0'
+        })
+    )
+    bill_of_lading_file = forms.FileField(
+        label='تصویر بارنامه',
+        required=True,
+        widget=forms.FileInput(attrs={
+            'class': 'form-control',
+            'accept': 'image/*,.pdf'
+        })
     )
     account = forms.CharField(
         label='شماره حساب راننده',
@@ -491,7 +519,7 @@ def register_driver_for_transport_view(request, transport_number):
         if phone:
             driver = Person.objects.filter(phone_number=phone, type='driver').first()
         
-        form = CarEntranceDriverForm(request.POST, freight_payment_type=pt.freight_payment_type, driver=driver)
+        form = CarEntranceDriverForm(request.POST, request.FILES, freight_payment_type=pt.freight_payment_type, driver=driver)
         if form.is_valid():
             data = form.cleaned_data
             phone = data.get('phone')
@@ -522,6 +550,15 @@ def register_driver_for_transport_view(request, transport_number):
                     # به‌روزرسانی فیلدهای حمل
                     pt.driver = driver
                     pt.plate_number = data.get('plate_number')
+                    
+                    # ثبت وزن بارنامه
+                    if data.get('waybill_weight'):
+                        pt.waybill_weight = data.get('waybill_weight')
+                    
+                    # ثبت تصویر بارنامه
+                    if 'bill_of_lading_file' in request.FILES:
+                        pt.bill_of_lading_file = request.FILES['bill_of_lading_file']
+                    
                     # فقط اگر نوع کرایه "پرداخت به راننده" باشد، حساب بانکی را ثبت می‌کنیم
                     if pt.freight_payment_type == 'pay_to_driver':
                         account_number = data.get('account', '').strip()
@@ -617,6 +654,10 @@ def register_driver_for_transport_view(request, transport_number):
         # همیشه پلاک را از حمل بخوان (حتی اگر راننده وجود نداشته باشد)
         if pt.plate_number:
             initial['plate_number'] = pt.plate_number
+        
+        # پیش‌پر کردن وزن بارنامه
+        if pt.waybill_weight:
+            initial['waybill_weight'] = pt.waybill_weight
         
         if pt.driver:
             initial['phone'] = pt.driver.phone_number

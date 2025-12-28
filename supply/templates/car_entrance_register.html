@@ -320,7 +320,7 @@
         </p>
     </div>
     
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
         
         <!-- بخش اطلاعات نمایشی -->
@@ -416,6 +416,47 @@
                         {% if form.plate_number.errors %}
                             <div class="text-danger">{{ form.plate_number.errors.0 }}</div>
                         {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- بخش اطلاعات بارنامه -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>اطلاعات بارنامه</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                    {% if accessible_transport_fields.waybill_weight %}
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">{{ form.waybill_weight.label }}</label>
+                        {{ form.waybill_weight }}
+                        {% if form.waybill_weight.errors %}
+                            <div class="text-danger">{{ form.waybill_weight.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">وزن بارنامه به کیلوگرم</small>
+                    </div>
+                    {% endif %}
+                    
+                    {% if accessible_transport_fields.bill_of_lading_file %}
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">{{ form.bill_of_lading_file.label }}</label>
+                        {{ form.bill_of_lading_file }}
+                        {% if form.bill_of_lading_file.errors %}
+                            <div class="text-danger">{{ form.bill_of_lading_file.errors.0 }}</div>
+                        {% endif %}
+                        {% if pt.bill_of_lading_file %}
+                        <div class="mt-2">
+                            <small class="text-muted">فایل فعلی: </small>
+                            <a href="{{ pt.bill_of_lading_file.url }}" target="_blank" class="text-primary">مشاهده فایل</a>
+                        </div>
+                        {% endif %}
+                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">فرمت‌های مجاز: تصویر (JPG, PNG) یا PDF</small>
                     </div>
                     {% endif %}
                 </div>

@@ -48,6 +48,7 @@ def get_accessible_purchase_transport_fields(user):
         'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'view'),
         'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'view'),
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
+        'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'view'),
         'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'view'),
         'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'view'),
         'total_freight': user_can_access_field(user, Transport, 'total_freight', 'view'),
@@ -362,10 +363,16 @@ def warehouse_delivery_detail_view(request, transport_number):
     try:
         if transport_number and str(transport_number).isdigit():
             bug_logger.debug(f"Fetching transport by pk: {transport_number}")
-            pt = get_object_or_404(Transport, pk=int(transport_number))
+            pt = get_object_or_404(
+                Transport.objects.select_related('driver', 'allocation', 'allocation__order'),
+                pk=int(transport_number)
+            )
         else:
             bug_logger.debug(f"Fetching transport by transport_number: {transport_number}")
-            pt = get_object_or_404(Transport, transport_number=transport_number)
+            pt = get_object_or_404(
+                Transport.objects.select_related('driver', 'allocation', 'allocation__order'),
+                transport_number=transport_number
+            )
         bug_logger.debug(f"Transport found - ID: {pt.pk}, Status: {pt.status}, Order: {pt.allocation.order.order_number if pt.allocation and pt.allocation.order else 'N/A'}")
     except Exception as e:
         bug_logger.error(f"Warehouse delivery detail fetch error for identifier={transport_number}: {e}")
@@ -583,7 +590,7 @@ def warehouse_delivery_detail_view(request, transport_number):
         'pt': pt,
         'read_only': False,
         'awaiting_guard': False,
-        'accessible_transport_fields': accessible_transport_fields,
+        'accessible_transport_fields': accessible_transport_fields_view,
         'accessible_po_fields': accessible_po_fields,
         'accessible_raw_material_fields': accessible_raw_material_fields,
         'accessible_po_material_fields': accessible_po_material_fields,
