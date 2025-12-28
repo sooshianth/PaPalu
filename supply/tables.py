@@ -1212,7 +1212,7 @@ class LogisticConfirmationTable(tables.Table):
     
     transport_number = tables.Column(
         verbose_name='شماره حمل',
-        linkify=lambda record: ('supply:logistic_confirmation_detail', {'transport_number': record.transport_number}) if record.transport_number else None,
+        linkify=lambda record: ('supply:rejected_transport_detail' if record.status == 'rejected' else 'supply:logistic_confirmation_detail', {'transport_number': record.transport_number}) if record.transport_number else None,
         orderable=True,
         visible=False,
         attrs={
@@ -1453,7 +1453,13 @@ class LogisticConfirmationTable(tables.Table):
         transport_id = record.transport_number
         if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
             transport_id = str(record.pk)
-        detail_url = reverse('supply:logistic_confirmation_detail', kwargs={'transport_number': str(transport_id)})
+        
+        # اگر وضعیت rejected باشد، به view جداگانه لینک بده
+        if record.status == 'rejected':
+            detail_url = reverse('supply:rejected_transport_detail', kwargs={'transport_number': str(transport_id)})
+        else:
+            detail_url = reverse('supply:logistic_confirmation_detail', kwargs={'transport_number': str(transport_id)})
+        
         return format_html(
             '<a href="{}" class="btn btn-sm btn-primary">جزئیات</a>',
             detail_url
