@@ -152,6 +152,116 @@ def calculate_formset_total_quantity(formset):
     return total_quantity
 
 
+def calculate_order_product_quantities(order):
+    """
+    محاسبه مقدار هر محصول در سفارش (کیلوگرم)
+    خروجی: دیکشنری {product_id: quantity}
+    """
+    product_quantities = {}
+    for item in order.order_items.all():
+        if not item.product_id:
+            continue
+            
+        quantity = 0
+        if item.weight_unit == 'kg':
+            quantity = float(item.quantity or 0)
+        elif item.weight_unit == 'ton':
+            quantity = float(item.quantity or 0) * 1000
+        elif item.weight_unit == 'bag' and item.bag_weight:
+            quantity = float(item.quantity or 0) * float(item.bag_weight)
+        elif item.weight_unit == 'piece':
+            quantity = float(item.quantity or 0)
+            
+        product_id = item.product_id
+        if product_id in product_quantities:
+            product_quantities[product_id] += quantity
+        else:
+            product_quantities[product_id] = quantity
+            
+    return product_quantities
+
+
+def calculate_existing_allocation_product_quantities(order, exclude_allocation_id=None):
+    """
+    محاسبه مقدار تخصیص یافته فعلی هر محصول (کیلوگرم)
+    خروجی: دیکشنری {product_id: quantity}
+    """
+    product_quantities = {}
+    allocations = Allocation.objects.filter(order=order)
+    
+    if exclude_allocation_id:
+        allocations = allocations.exclude(pk=exclude_allocation_id)
+        
+    for allocation in allocations:
+        for product_info in allocation.product_infos.all():
+            if not product_info.product_id:
+                continue
+                
+            quantity = float(product_info.quantity or 0)
+            unit = product_info.unit
+            
+            # تبدیل به کیلوگرم
+            kg_quantity = 0
+            if unit == 'kg':
+                kg_quantity = quantity
+            elif unit == 'ton':
+                kg_quantity = quantity * 1000
+            elif unit == 'gr':
+                kg_quantity = quantity / 1000
+            else:
+                kg_quantity = quantity
+                
+            product_id = product_info.product_id
+            if product_id in product_quantities:
+                product_quantities[product_id] += kg_quantity
+            else:
+                product_quantities[product_id] = kg_quantity
+                
+    return product_quantities
+
+
+def calculate_formset_product_quantities(formset):
+    """
+    محاسبه مقدار هر محصول از formset (کیلوگرم)
+    خروجی: دیکشنری {product_id: quantity}
+    """
+    product_quantities = {}
+    
+    for form in formset.forms:
+        # بررسی اینکه فرم حذف نشده باشد و cleaned_data داشته باشد
+        if hasattr(form, 'cleaned_data') and form.cleaned_data and not form.cleaned_data.get('DELETE', False):
+            product = form.cleaned_data.get('product')
+            quantity = form.cleaned_data.get('quantity', 0) or 0
+            unit = form.cleaned_data.get('unit', '')
+            
+            if product and quantity and unit:
+                try:
+                    quantity = float(quantity)
+                    
+                    # تبدیل به کیلوگرم
+                    kg_quantity = 0
+                    if unit == 'kg':
+                        kg_quantity = quantity
+                    elif unit == 'ton':
+                        kg_quantity = quantity * 1000
+                    elif unit == 'gr':
+                        kg_quantity = quantity / 1000
+                    # برای سایر واحدها (m3, ltr, cc)، همان مقدار را اضافه می‌کنیم
+                    else:
+                        kg_quantity = quantity
+                        
+                    product_id = product.id
+                    if product_id in product_quantities:
+                        product_quantities[product_id] += kg_quantity
+                    else:
+                        product_quantities[product_id] = kg_quantity
+                except (ValueError, TypeError):
+                    pass
+                    
+    return product_quantities
+
+
+
 @login_required
 def allocation_list_view(request):
     """
@@ -278,23 +388,32 @@ def allocation_create_view(request, order_number):
             # محاسبه مقدار تخصیص جدید از formset
             new_allocation_quantity = calculate_formset_total_quantity(formset)
             
-            # محاسبه مجموع تخصیص‌های موجود
-            existing_allocation_total = calculate_allocation_total_quantity(order)
+            # اعتبارسنجی وزنی به تفکیک محصول
+            ordered_products = calculate_order_product_quantities(order)
+            existing_allocated_products = calculate_existing_allocation_product_quantities(order)
+            new_allocated_products = calculate_formset_product_quantities(formset)
             
-            # بررسی اینکه مجموع تخصیص‌ها از مقدار کل سفارش بیشتر نشود
-            total_after_allocation = existing_allocation_total + new_allocation_quantity
+            validation_error = None
             
-            if total_after_allocation > order_total + 0.001:  # مقایسه با خطای کوچک
-                excess = total_after_allocation - order_total
-                bug_logger.warning(f"تلاش برای ایجاد تخصیص بیشتر از مقدار کل سفارش {order_number}. مقدار اضافی: {excess:.2f} کیلوگرم")
-                messages.error(
-                    request, 
-                    f'مجموع تخصیص‌ها نمی‌تواند بیشتر از مقدار کل سفارش باشد. '
-                    f'مقدار کل سفارش: {order_total:.2f} کیلوگرم، '
-                    f'تخصیص‌های موجود: {existing_allocation_total:.2f} کیلوگرم، '
-                    f'تخصیص جدید: {new_allocation_quantity:.2f} کیلوگرم. '
-                    f'مقدار اضافی: {excess:.2f} کیلوگرم'
-                )
+            for product_id, new_quantity in new_allocated_products.items():
+                ordered_quantity = ordered_products.get(product_id, 0)
+                existing_quantity = existing_allocated_products.get(product_id, 0)
+                
+                total_product_allocation = existing_quantity + new_quantity
+                
+                if total_product_allocation > ordered_quantity + 0.001:  # مقایسه با خطای کوچک
+                    product_name = Product.objects.get(pk=product_id).name
+                    excess = total_product_allocation - ordered_quantity
+                    validation_error = (
+                        f"مقدار تخصیص محصول '{product_name}' ({total_product_allocation:.2f} کیلوگرم) "
+                        f"بیشتر از مقدار سفارش ({ordered_quantity:.2f} کیلوگرم) است. "
+                        f"مقدار اضافی: {excess:.2f} کیلوگرم"
+                    )
+                    break
+            
+            if validation_error:
+                bug_logger.warning(f"خطای اعتبارسنجی وزنی در ایجاد تخصیص سفارش {order_number}: {validation_error}")
+                messages.error(request, validation_error)
             else:
                 try:
                     with transaction.atomic():
@@ -331,6 +450,44 @@ def allocation_create_view(request, order_number):
     else:
         form = CreateAllocationForm(order=order)
         formset = AllocationProductInfoFormSet(instance=None, order=order)
+
+    # محاسبه وضعیت هر محصول برای نمایش در جدول
+    product_status_list = []
+    ordered_products = calculate_order_product_quantities(order)
+    existing_allocated_products = calculate_existing_allocation_product_quantities(order)
+    
+    for item in order.order_items.all():
+        if not item.product_id:
+            continue
+            
+        product_id = item.product_id
+        ordered_qty = ordered_products.get(product_id, 0)
+        allocated_qty = existing_allocated_products.get(product_id, 0)
+        remaining_qty = ordered_qty - allocated_qty
+        
+        # جلوگیری از تکرار محصول (چون ممکنه چند آیتم با یک محصول داشته باشیم اما گروه‌بندی کردیم)
+        # در اینجا فرض بر این است که calculate_order_product_quantities تجمیع کرده است
+        # اما ما می‌خواهیم لیست محصولات را بسازیم. بهتر است از دیکشنری استفاده کنیم
+        pass
+
+    # ساخت لیست نهایی از دیکشنری‌ها
+    unique_product_ids = set(ordered_products.keys()) | set(existing_allocated_products.keys())
+    for p_id in unique_product_ids:
+        try:
+            product = Product.objects.get(pk=p_id)
+            ordered_qty = ordered_products.get(p_id, 0)
+            allocated_qty = existing_allocated_products.get(p_id, 0)
+            remaining_qty = ordered_qty - allocated_qty
+            
+            product_status_list.append({
+                'product_name': product.name,
+                'ordered_quantity': ordered_qty,
+                'allocated_quantity': allocated_qty,
+                'remaining_quantity': remaining_qty,
+                'unit': 'kg'  # همه محاسبات به کیلوگرم تبدیل شده‌اند
+            })
+        except Product.DoesNotExist:
+            continue
 
     # دریافت اطلاعات آدرس تحویل در صورت وجود
     delivery_info = None
@@ -372,6 +529,7 @@ def allocation_create_view(request, order_number):
         'order_total': order_total,
         'allocation_total': allocation_total,
         'remaining': remaining,
+        'product_status_list': product_status_list,  # لیست وضعیت محصولات
         'delivery_info': delivery_info,
         'delivery_addresses': delivery_addresses,
         'product_unit_mapping': product_unit_mapping_json,
@@ -424,23 +582,33 @@ def allocation_edit_view(request, order_number, allocation_number):
             # محاسبه مقدار تخصیص ویرایش شده از formset
             edited_allocation_quantity = calculate_formset_total_quantity(formset)
             
-            # محاسبه مجموع تخصیص‌های دیگر (غیر از تخصیص فعلی)
-            # other_allocations_total قبلاً محاسبه شده است
+            # اعتبارسنجی وزنی به تفکیک محصول
+            ordered_products = calculate_order_product_quantities(order)
+            # محاسبه تخصیص‌های دیگر (به جز تخصیص فعلی)
+            other_allocated_products = calculate_existing_allocation_product_quantities(order, exclude_allocation_id=allocation.pk)
+            new_allocated_products = calculate_formset_product_quantities(formset)
             
-            # بررسی اینکه مجموع تخصیص‌ها از مقدار کل سفارش بیشتر نشود
-            total_after_edit = other_allocations_total + edited_allocation_quantity
+            validation_error = None
             
-            if total_after_edit > order_total + 0.001:  # مقایسه با خطای کوچک
-                excess = total_after_edit - order_total
-                bug_logger.warning(f"تلاش برای ویرایش تخصیص {allocation_number} که باعث می‌شود مجموع تخصیص‌ها بیشتر از مقدار کل سفارش {order_number} شود. مقدار اضافی: {excess:.2f} کیلوگرم")
-                messages.error(
-                    request, 
-                    f'مجموع تخصیص‌ها نمی‌تواند بیشتر از مقدار کل سفارش باشد. '
-                    f'مقدار کل سفارش: {order_total:.2f} کیلوگرم، '
-                    f'سایر تخصیص‌ها: {other_allocations_total:.2f} کیلوگرم، '
-                    f'تخصیص ویرایش شده: {edited_allocation_quantity:.2f} کیلوگرم. '
-                    f'مقدار اضافی: {excess:.2f} کیلوگرم'
-                )
+            for product_id, new_quantity in new_allocated_products.items():
+                ordered_quantity = ordered_products.get(product_id, 0)
+                other_quantity = other_allocated_products.get(product_id, 0)
+                
+                total_product_allocation = other_quantity + new_quantity
+                
+                if total_product_allocation > ordered_quantity + 0.001:  # مقایسه با خطای کوچک
+                    product_name = Product.objects.get(pk=product_id).name
+                    excess = total_product_allocation - ordered_quantity
+                    validation_error = (
+                        f"مقدار تخصیص محصول '{product_name}' ({total_product_allocation:.2f} کیلوگرم) "
+                        f"بیشتر از مقدار سفارش ({ordered_quantity:.2f} کیلوگرم) است. "
+                        f"مقدار اضافی: {excess:.2f} کیلوگرم"
+                    )
+                    break
+            
+            if validation_error:
+                bug_logger.warning(f"خطای اعتبارسنجی وزنی در ویرایش تخصیص {allocation_number} سفارش {order_number}: {validation_error}")
+                messages.error(request, validation_error)
             else:
                 try:
                     with transaction.atomic():
@@ -492,6 +660,30 @@ def allocation_edit_view(request, order_number, allocation_number):
         elif unit == 'gr':
             current_allocation_total += quantity / 1000
 
+    # محاسبه وضعیت هر محصول برای نمایش در جدول
+    product_status_list = []
+    ordered_products = calculate_order_product_quantities(order)
+    existing_allocated_products = calculate_existing_allocation_product_quantities(order)
+    
+    # ساخت لیست نهایی از دیکشنری‌ها
+    unique_product_ids = set(ordered_products.keys()) | set(existing_allocated_products.keys())
+    for p_id in unique_product_ids:
+        try:
+            product = Product.objects.get(pk=p_id)
+            ordered_qty = ordered_products.get(p_id, 0)
+            allocated_qty = existing_allocated_products.get(p_id, 0)
+            remaining_qty = ordered_qty - allocated_qty
+            
+            product_status_list.append({
+                'product_name': product.name,
+                'ordered_quantity': ordered_qty,
+                'allocated_quantity': allocated_qty,
+                'remaining_quantity': remaining_qty,
+                'unit': 'kg'
+            })
+        except Product.DoesNotExist:
+            continue
+
     # دریافت اطلاعات آدرس تحویل
     delivery_info = None
     if allocation.delivery_postal_code:
@@ -534,6 +726,7 @@ def allocation_edit_view(request, order_number, allocation_number):
         'other_allocations_total': other_allocations_total,
         'current_allocation_total': current_allocation_total,
         'remaining': order_total - other_allocations_total - current_allocation_total,
+        'product_status_list': product_status_list,  # لیست وضعیت محصولات
         'delivery_info': delivery_info,
         'delivery_addresses': delivery_addresses,
         'product_unit_mapping': product_unit_mapping_json,
