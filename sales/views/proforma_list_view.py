@@ -141,6 +141,7 @@ def get_accessible_proforma_fields_for_view(user):
 def proforma_list_view(request):
     """
     لیست سفارش‌های در انتظار صدور پیش فاکتور با استفاده از django-tables2
+    و لیست پیش فاکتورهای صادر شده
     """
     audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار صدور پیش فاکتور")
     
@@ -168,8 +169,30 @@ def proforma_list_view(request):
     
     RequestConfig(request, paginate={'per_page': 20}).configure(table)
 
+    # دریافت پیش فاکتورهای صادر شده (پیش فاکتورهایی که order دارند و order.status دیگر 'pending_proforma_issue' نیست)
+    proformas_qs = Proforma.objects.filter(
+        order__isnull=False,
+        order__order_type='sale'
+    ).exclude(
+        order__status='pending_proforma_issue'
+    ).select_related('order', 'customer', 'order__customer').order_by('-created_at')
+    
+    # فیلتر بر اساس کاربر (اگر superuser نیست)
+    if not request.user.is_superuser:
+        proformas_qs = proformas_qs.filter(order__registered_by=request.user)
+
+    bug_logger.debug(f"تعداد {proformas_qs.count()} پیش فاکتور صادر شده لود شد")
+
+    # ایجاد جدول پیش فاکتورهای صادر شده
+    from sales.tables.tables_proforma import ProformaTable
+    accessible_fields = get_accessible_proforma_fields_for_view(request.user)
+    proformas_table = ProformaTable(proformas_qs, user=request.user, accessible_fields=accessible_fields)
+    
+    RequestConfig(request, paginate={'per_page': 20}).configure(proformas_table)
+
     context = {
         'table': table,
+        'proformas_table': proformas_table,
         'page_title': 'سفارش‌های در انتظار صدور پیش فاکتور',
     }
     return render(request, 'proforma/proforma_list.html', context)
