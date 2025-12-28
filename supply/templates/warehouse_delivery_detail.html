@@ -11,21 +11,21 @@
         padding-bottom: 20px;
         border-bottom: 3px solid var(--primary-green);
     }
-    
+
     .page-header h2 {
         color: var(--gray-800);
         font-size: 1.8rem;
         font-weight: 600;
         margin: 0;
     }
-    
+
     .form-card {
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         padding: 30px;
     }
-    
+
     .form-section {
         background: var(--gray-100);
         padding: 0;
@@ -34,7 +34,7 @@
         border-right: 4px solid var(--primary-green);
         overflow: hidden;
     }
-    
+
     .form-section-header {
         display: flex;
         justify-content: space-between;
@@ -45,11 +45,11 @@
         background: var(--gray-100);
         transition: background-color 0.3s ease;
     }
-    
+
     .form-section-header:hover {
         background: var(--gray-200);
     }
-    
+
     .form-section-title {
         color: var(--primary-green);
         font-size: 1.2rem;
@@ -58,7 +58,7 @@
         padding: 0;
         border: none;
     }
-    
+
     .form-section-toggle-icon {
         width: 20px;
         height: 20px;
@@ -66,65 +66,65 @@
         color: var(--primary-green);
         flex-shrink: 0;
     }
-    
+
     .form-section.collapsed .form-section-toggle-icon {
         transform: rotate(-90deg);
     }
-    
+
     .form-section-body {
         padding: 0 25px 25px 25px;
         max-height: 5000px;
         overflow: hidden;
         transition: max-height 0.4s ease, padding 0.3s ease;
     }
-    
+
     .form-section.collapsed .form-section-body {
         max-height: 0;
         padding: 0 25px;
     }
-    
+
     .form-section-body.weight-fields {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 16px;
     }
-    
+
     .form-section-body.freight-fields {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
         gap: 16px;
     }
-    
+
     .form-section-body.warehouse-fields {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 16px;
     }
-    
+
     .form-group {
         margin-bottom: 16px;
     }
-    
+
     .form-group:last-child {
         margin-bottom: 0;
     }
-    
+
     .form-group.full-width {
         grid-column: 1 / -1;
     }
-    
+
     .form-group label {
         display: block;
         margin-bottom: 8px;
         font-weight: 500;
         color: var(--gray-800);
     }
-    
+
     .form-group label.required::after {
         content: ' *';
         color: #dc3545;
     }
-    
+
     .form-control,
     .form-select {
         border: 1px solid var(--gray-300);
@@ -135,19 +135,19 @@
         width: 100%;
         font-family: inherit;
     }
-    
+
     .form-control:focus,
     .form-select:focus {
         border-color: var(--primary-green);
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
         outline: none;
     }
-    
+
     .form-control[readonly] {
         background-color: var(--gray-100);
         cursor: not-allowed;
     }
-    
+
     .form-actions {
         display: flex;
         justify-content: center;
@@ -156,7 +156,7 @@
         padding-top: 30px;
         border-top: 1px solid var(--gray-300);
     }
-    
+
     .readonly-info {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         padding: 16px 20px;
@@ -168,26 +168,26 @@
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 10px 16px;
     }
-    
+
     .readonly-info-item {
         font-size: 0.875rem;
         display: flex;
         align-items: center;
         gap: 8px;
     }
-    
+
     .readonly-info-label {
         font-weight: 600;
         color: var(--gray-800);
         white-space: nowrap;
         flex-shrink: 0;
     }
-    
+
     .readonly-info-value {
         color: var(--gray-600);
         word-break: break-word;
     }
-    
+
     .btn-success {
         padding: 8px 16px;
         border-radius: 6px;
@@ -199,11 +199,11 @@
         font-size: 0.9rem;
         font-weight: 500;
     }
-    
+
     .btn-success:hover {
         background: var(--dark-green);
     }
-    
+
     .btn-secondary {
         padding: 8px 16px;
         border-radius: 6px;
@@ -216,47 +216,47 @@
         text-decoration: none;
         display: inline-block;
     }
-    
+
     .btn-secondary:hover {
         background: var(--gray-50);
         border-color: var(--gray-400);
     }
-    
+
     .alert {
         border-radius: 8px;
         padding: 15px 20px;
         margin-bottom: 20px;
         border: none;
     }
-    
+
     .alert-success {
         background-color: var(--light-green);
         color: var(--dark-green);
     }
-    
+
     .alert-error {
         background-color: #f8d7da;
         color: #721c24;
     }
-    
+
     .alert-info {
         background-color: #d1ecf1;
         color: #0c5460;
     }
-    
+
     .alert-warning {
         background-color: #fff3e0;
         color: #e65100;
     }
-    
+
     .freight-fields-group {
         display: none;
     }
-    
+
     .freight-fields-group.show {
         display: block;
     }
-    
+
     .calculated-field {
         background-color: #e8f5e9 !important;
         color: #2e7d32 !important;
@@ -272,13 +272,13 @@
 
 <div class="form-card">
     {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" role="alert">
-                {{ message }}
-            </div>
-        {% endfor %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
     {% endif %}
-    
+
     <!-- اطلاعات فقط خواندنی -->
     <div class="readonly-info">
         <div class="readonly-info-item">
@@ -306,19 +306,22 @@
         {% if pt.driver %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">راننده:</span>
-            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.name|default:"—" }}{% else %}—{% endif %}</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.name|default:"—"
+                }}{% else %}—{% endif %}</span>
         </div>
         {% endif %}
         {% if pt.driver and pt.driver.phone_number %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">شماره تلفن راننده:</span>
-            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.phone_number|default:"—" }}{% else %}—{% endif %}</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{
+                pt.driver.phone_number|default:"—" }}{% else %}—{% endif %}</span>
         </div>
         {% endif %}
         {% if pt.waybill_weight %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">وزن بارنامه:</span>
-            <span class="readonly-info-value">{% if accessible_transport_fields.waybill_weight %}{{ pt.waybill_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.waybill_weight %}{{
+                pt.waybill_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</span>
         </div>
         {% endif %}
         {% if pt.gross_weight %}
@@ -340,40 +343,44 @@
         </div>
         {% endif %}
     </div>
-    
+
     <form method="post" id="warehouseDeliveryForm">
         {% csrf_token %}
-        
+
         <!-- بخش: اطلاعات وزن -->
         <div class="form-section">
             <div class="form-section-header">
                 <h5 class="form-section-title">اطلاعات وزن (اجباری)</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
                 </svg>
             </div>
             <div class="form-section-body weight-fields">
 
                 {% if accessible_transport_fields.gross_weight %}
                 <div class="form-group">
-                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label }}</label>
+                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label
+                        }}</label>
                     {{ form.gross_weight }}
                     {% if form.gross_weight.errors %}
-                        <div class="alert alert-error">
-                            {{ form.gross_weight.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.gross_weight.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
-                                
+
                 {% if accessible_transport_fields.tare_weight %}
                 <div class="form-group">
-                    <label for="{{ form.tare_weight.id_for_label }}" class="required">{{ form.tare_weight.label }}</label>
+                    <label for="{{ form.tare_weight.id_for_label }}" class="required">{{ form.tare_weight.label
+                        }}</label>
                     {{ form.tare_weight }}
                     {% if form.tare_weight.errors %}
-                        <div class="alert alert-error">
-                            {{ form.tare_weight.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.tare_weight.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -384,36 +391,100 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- بخش: تفکیک مواد اولیه -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5 class="form-section-title">تفکیک مواد اولیه (اجباری)</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </div>
+            <div class="form-section-body">
+                {% if order_items %}
+                <div class="alert alert-info">
+                    لطفاً وزن دریافتی برای هر ماده اولیه را وارد کنید. مجموع وزن‌ها باید برابر با وزن خالص باشد.
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>ماده اولیه</th>
+                                <th>واحد</th>
+                                <th>وزن دریافتی (کیلوگرم)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item_data in order_items %}
+                            <tr>
+                                <td>{{ item_data.raw_material.name }}</td>
+                                <td>{{ item_data.item.get_weight_unit_display }}</td>
+                                <td>
+                                    <input type="number" name="item_weight_{{ item_data.item.id }}"
+                                        class="form-control item-weight-input" step="0.001"
+                                        value="{{ item_data.allocated_quantity|default_if_none:'' }}" {% if read_only
+                                        %}readonly{% endif %} required>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="text-end fw-bold">مجموع وزن مواد:</td>
+                                <td class="fw-bold" id="total_items_weight">0</td>
+                            </tr>
+                            <tr>
+                                <td colspan="2" class="text-end fw-bold">وضعیت تراز:</td>
+                                <td class="fw-bold" id="weight_balance_status">—</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    ماده اولیه‌ای برای این سفارش یافت نشد.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
         <!-- بخش: نوع کرایه -->
         <div class="form-section">
             <div class="form-section-header">
                 <h5 class="form-section-title">نوع کرایه (اجباری)</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
                 </svg>
             </div>
             <div class="form-section-body">
                 {% if accessible_transport_fields.freight_payment_type %}
                 <div class="form-group">
-                    <label for="{{ form.freight_payment_type.id_for_label }}" class="required">{{ form.freight_payment_type.label }}</label>
+                    <label for="{{ form.freight_payment_type.id_for_label }}" class="required">{{
+                        form.freight_payment_type.label }}</label>
                     {{ form.freight_payment_type }}
                     {% if form.freight_payment_type.errors %}
-                        <div class="alert alert-error">
-                            {{ form.freight_payment_type.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.freight_payment_type.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- بخش: اطلاعات کرایه -->
         <div class="form-section collapsed freight-fields-group" id="freight-section">
             <div class="form-section-header">
                 <h5 class="form-section-title">اطلاعات کرایه (به ریال)</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
                 </svg>
             </div>
             <div class="form-section-body freight-fields">
@@ -422,112 +493,120 @@
                     <label for="{{ form.initial_freight.id_for_label }}">{{ form.initial_freight.label }}</label>
                     {{ form.initial_freight }}
                     {% if form.initial_freight.errors %}
-                        <div class="alert alert-error">
-                            {{ form.initial_freight.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.initial_freight.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
-                
+
                 {% if accessible_transport_fields.discount %}
                 <div class="form-group" id="discount-group">
                     <label for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
                     {{ form.discount }}
                     {% if form.discount.errors %}
-                        <div class="alert alert-error">
-                            {{ form.discount.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.discount.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
-                
+
                 {% if accessible_transport_fields.surplus %}
                 <div class="form-group" id="surplus-group">
                     <label for="{{ form.surplus.id_for_label }}">{{ form.surplus.label }}</label>
                     {{ form.surplus }}
                     {% if form.surplus.errors %}
-                        <div class="alert alert-error">
-                            {{ form.surplus.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.surplus.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
-                
+
                 {% if accessible_transport_fields.total_freight %}
                 <div class="form-group" id="total-freight-group">
-                    <label for="{{ form.total_freight.id_for_label }}">{{ form.total_freight.label }} (محاسبه خودکار)</label>
+                    <label for="{{ form.total_freight.id_for_label }}">{{ form.total_freight.label }} (محاسبه
+                        خودکار)</label>
                     {{ form.total_freight }}
                     {% if form.total_freight.errors %}
-                        <div class="alert alert-error">
-                            {{ form.total_freight.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.total_freight.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
-                
+
                 {% if accessible_transport_fields.freight_payment %}
                 <div class="form-group" id="freight-payment-group">
-                    <label for="{{ form.freight_payment.id_for_label }}">{{ form.freight_payment.label }} (محاسبه خودکار)</label>
+                    <label for="{{ form.freight_payment.id_for_label }}">{{ form.freight_payment.label }} (محاسبه
+                        خودکار)</label>
                     {{ form.freight_payment }}
                     {% if form.freight_payment.errors %}
-                        <div class="alert alert-error">
-                            {{ form.freight_payment.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.freight_payment.errors }}
+                    </div>
                     {% endif %}
                 </div>
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- بخش: انتخاب انبار -->
         <div class="form-section">
             <div class="form-section-header">
                 <h5 class="form-section-title">انتخاب انبار (اجباری)</h5>
-                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" />
                 </svg>
             </div>
             <div class="form-section-body warehouse-fields">
                 <div class="form-group">
-                    <label for="{{ form.source_warehouse.id_for_label }}" class="required">{{ form.source_warehouse.label }}</label>
+                    <label for="{{ form.source_warehouse.id_for_label }}" class="required">{{
+                        form.source_warehouse.label }}</label>
                     {% if form.source_warehouse.help_text %}
-                        <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{ form.source_warehouse.help_text }}</small>
+                    <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{
+                        form.source_warehouse.help_text }}</small>
                     {% endif %}
                     {{ form.source_warehouse }}
                     {% if form.source_warehouse.errors %}
-                        <div class="alert alert-error">
-                            {{ form.source_warehouse.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.source_warehouse.errors }}
+                    </div>
                     {% endif %}
                 </div>
-                
+
                 <div class="form-group">
-                    <label for="{{ form.destination_warehouse.id_for_label }}" class="required">{{ form.destination_warehouse.label }}</label>
+                    <label for="{{ form.destination_warehouse.id_for_label }}" class="required">{{
+                        form.destination_warehouse.label }}</label>
                     {% if form.destination_warehouse.help_text %}
-                        <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{ form.destination_warehouse.help_text }}</small>
+                    <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{
+                        form.destination_warehouse.help_text }}</small>
                     {% endif %}
                     {{ form.destination_warehouse }}
                     {% if form.destination_warehouse.errors %}
-                        <div class="alert alert-error">
-                            {{ form.destination_warehouse.errors }}
-                        </div>
+                    <div class="alert alert-error">
+                        {{ form.destination_warehouse.errors }}
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-        
+
         {% if form.non_field_errors %}
         <div class="alert alert-error">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
-        
+
         {% if awaiting_guard %}
         <div class="alert alert-warning">
             ℹ️ اطلاعات تخلیه ثبت شده است. این حمل در انتظار تایید خروج توسط نگهبان می‌باشد.
         </div>
         {% endif %}
-        
+
         <div class="form-actions">
             <a href="{% url 'supply:warehouse_delivery' %}" class="btn-secondary">
                 بازگشت
@@ -543,24 +622,24 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function(){
+    document.addEventListener('DOMContentLoaded', function () {
         // مدیریت باز و بسته شدن بخش‌های فرم
-        document.querySelectorAll('.form-section-header').forEach(function(header) {
-            header.addEventListener('click', function() {
+        document.querySelectorAll('.form-section-header').forEach(function (header) {
+            header.addEventListener('click', function () {
                 const section = this.closest('.form-section');
                 section.classList.toggle('collapsed');
             });
         });
-        
+
         // محاسبه خودکار وزن خالص
         const grossInput = document.getElementById('id_gross_weight');
         const tareInput = document.getElementById('id_tare_weight');
         const netDisplay = document.getElementById('calculated_net_weight');
-        
+
         function calculateNet() {
             const gross = parseFloat(grossInput.value) || 0;
             const tare = parseFloat(tareInput.value) || 0;
-            
+
             if (gross > 0 && tare > 0) {
                 const net = gross - tare;
                 if (net > 0) {
@@ -579,13 +658,13 @@
                 netDisplay.classList.remove('calculated-field');
             }
         }
-        
+
         if (grossInput && tareInput && netDisplay) {
             grossInput.addEventListener('input', calculateNet);
             tareInput.addEventListener('input', calculateNet);
             calculateNet();
         }
-        
+
         // مدیریت نمایش/مخفی کردن فیلدهای کرایه بر اساس نوع کرایه
         const freightPaymentTypeSelect = document.getElementById('id_freight_payment_type');
         const freightSection = document.getElementById('freight-section');
@@ -596,10 +675,10 @@
             document.getElementById('total-freight-group'),
             document.getElementById('freight-payment-group')
         ].filter(Boolean);
-        
+
         function toggleFreightFields() {
             const selectedType = freightPaymentTypeSelect ? freightPaymentTypeSelect.value : '';
-            
+
             // اگر نوع کرایه "محاسبه شده در فی" باشد، فیلدهای کرایه را مخفی کن
             if (selectedType === 'calculated_in_invoice') {
                 if (freightSection) {
@@ -618,45 +697,101 @@
                 }
             }
         }
-        
+
         if (freightPaymentTypeSelect) {
             freightPaymentTypeSelect.addEventListener('change', toggleFreightFields);
             toggleFreightFields(); // اجرای اولیه
         }
-        
+
         // محاسبه خودکار کرایه کل و کرایه پرداختی
         const initialFreightInput = document.getElementById('id_initial_freight');
         const discountInput = document.getElementById('id_discount');
         const surplusInput = document.getElementById('id_surplus');
         const totalFreightInput = document.getElementById('id_total_freight');
         const freightPaymentInput = document.getElementById('id_freight_payment');
-        
+
         function calculateFreight() {
             const initial = parseFloat(initialFreightInput.value) || 0;
             const discount = parseFloat(discountInput.value) || 0;
             const surplus = parseFloat(surplusInput.value) || 0;
-            
+
             // محاسبه: کرایه کل = کرایه اولیه - تخفیف + مازاد
             const total = initial - discount + surplus;
-            
+
             if (totalFreightInput) {
                 totalFreightInput.value = total.toFixed(2);
                 totalFreightInput.classList.add('calculated-field');
             }
-            
+
             if (freightPaymentInput) {
                 // کرایه پرداختی = کرایه کل
                 freightPaymentInput.value = total.toFixed(2);
                 freightPaymentInput.classList.add('calculated-field');
             }
         }
-        
+
         if (initialFreightInput && discountInput && surplusInput) {
             initialFreightInput.addEventListener('input', calculateFreight);
             discountInput.addEventListener('input', calculateFreight);
             surplusInput.addEventListener('input', calculateFreight);
             calculateFreight(); // محاسبه اولیه
         }
+
+        // Material Weight Breakdown Validation
+        const itemWeightInputs = document.querySelectorAll('.item-weight-input');
+        // netDisplay is already defined above
+        const totalItemsDisplay = document.getElementById('total_items_weight');
+        const balanceStatusDisplay = document.getElementById('weight_balance_status');
+        const submitBtn = document.getElementById('submitBtn');
+
+        function validateMaterialWeights() {
+            let totalItemWeight = 0;
+            itemWeightInputs.forEach(input => {
+                totalItemWeight += parseFloat(input.value) || 0;
+            });
+
+            totalItemsDisplay.textContent = totalItemWeight.toFixed(3) + ' کیلوگرم';
+
+            // Get current calculated net weight
+            let currentNet = 0;
+            const gross = parseFloat(document.getElementById('id_gross_weight').value) || 0;
+            const tare = parseFloat(document.getElementById('id_tare_weight').value) || 0;
+            if (gross > tare) {
+                currentNet = gross - tare;
+            }
+
+            const diff = Math.abs(totalItemWeight - currentNet);
+            const isBalanced = diff < 0.5; // Allow small tolerance
+
+            if (currentNet > 0) {
+                if (isBalanced) {
+                    balanceStatusDisplay.textContent = '✅ تراز شده';
+                    balanceStatusDisplay.style.color = 'green';
+                    if (submitBtn) submitBtn.disabled = false;
+                } else {
+                    balanceStatusDisplay.textContent = `❌ عدم تراز (اختلاف: ${(totalItemWeight - currentNet).toFixed(3)})`;
+                    balanceStatusDisplay.style.color = 'red';
+                    // Optional: disable submit button if not balanced?
+                    // if(submitBtn) submitBtn.disabled = true;
+                }
+            } else {
+                balanceStatusDisplay.textContent = '—';
+                balanceStatusDisplay.style.color = '';
+            }
+        }
+
+        itemWeightInputs.forEach(input => {
+            input.addEventListener('input', validateMaterialWeights);
+        });
+
+        // Also trigger on gross/tare change
+        // grossInput and tareInput are already defined above
+        if (grossInput) grossInput.addEventListener('input', validateMaterialWeights);
+        if (tareInput) tareInput.addEventListener('input', validateMaterialWeights);
+
+        // Initial check
+        validateMaterialWeights();
+
     });
 </script>
 {% endblock %}

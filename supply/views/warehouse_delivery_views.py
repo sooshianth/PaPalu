@@ -25,6 +25,8 @@ from core.WarehouseFolder.WarehouseModel import Warehouse
 from core.StockEntryFolder.StockEntryModel import StockEntry
 from core.StockEntryFolder.SourceStockModel import SourceStock
 from core.StockEntryFolder.TargetStockModel import TargetStock
+from core.StockEntryFolder.TargetStockModel import TargetStock
+from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from supply.tables import TransportTable, WarehouseDeliveryTable
@@ -385,29 +387,28 @@ def warehouse_delivery_detail_view(request, transport_number):
         messages.error(request, 'این حمل در وضعیت قابل مشاهده نیست.')
         return redirect(reverse('supply:warehouse_delivery'))
     
-    # Only allow editing if status is awaiting_unloading
-    if pt.status != Transport.STATUS_AWAITING_UNLOADING:
-        # Read-only mode for awaiting_wh_reconciliation
-        bug_logger.debug(f"Loading read-only form for transport {transport_number} - status: {pt.status}")
-        initial = {
-            'tare_weight': pt.tare_weight,
-            'gross_weight': pt.gross_weight,
-            'freight_payment_type': pt.freight_payment_type,
-            'initial_freight': pt.initial_freight,
-            'total_freight': pt.total_freight,
-            'discount': pt.discount,
-            'surplus': pt.surplus,
-            'freight_payment': pt.freight_payment,
-            'source_warehouse': getattr(pt, 'source_warehouse', None),
-            'destination_warehouse': getattr(pt, 'destination_warehouse', None),
-        }
-        form = WarehouseDeliveryForm(initial=initial)
-        for field in form.fields:
-            form.fields[field].disabled = True
+        # Get order items for mixed material support
+        order_items = []
+        if pt.allocation and pt.allocation.order:
+            po = pt.allocation.order
+            # Get all raw material items
+            items_qs = po.order_items.filter(raw_material__isnull=False).select_related('raw_material')
+            
+            # Check for existing RawMaterialInfo records (if previously saved)
+            existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material')
+            existing_map = {info.order_item_id: info.allocated_quantity for info in existing_infos}
+            
+            for item in items_qs:
+                order_items.append({
+                    'item': item,
+                    'raw_material': item.raw_material,
+                    'allocated_quantity': existing_map.get(item.id, 0)
+                })
         
         context = {
             'form': form,
             'pt': pt,
+            'order_items': order_items,
             'read_only': True,
             'awaiting_guard': True,
             'accessible_transport_fields': accessible_transport_fields_view,
@@ -432,8 +433,50 @@ def warehouse_delivery_detail_view(request, transport_number):
                     source_warehouse = data.get('source_warehouse')
                     destination_warehouse = data.get('destination_warehouse')
                     
+                    # Validate net weight
+                    if not net_weight or net_weight <= 0:
+                        messages.error(request, 'وزن خالص نامعتبر است.')
+                        return redirect(request.path)
+                    
                     bug_logger.debug(f"Saving unloading data - Transport: {transport_number}, Gross: {gross}, Tare: {tare}, Net: {net_weight}, Source: {source_warehouse}, Destination: {destination_warehouse}")
                     
+                    # Process Per-Item Weights (Raw Material Breakdown)
+                    po = pt.allocation.order if pt.allocation else None
+                    items_qs = po.order_items.filter(raw_material__isnull=False).select_related('raw_material') if po else []
+                    
+                    item_weights = {}
+                    if items_qs:
+                        total_item_weight = 0
+                        # Determine if we need to look for item inputs
+                        # If there's only one item, we can auto-assign the full net weight if not provided
+                        is_single_item = items_qs.count() == 1
+                        
+                        for item in items_qs:
+                            input_name = f'item_weight_{item.id}'
+                            val = request.POST.get(input_name)
+                            if val:
+                                try:
+                                    w = float(val)
+                                    if w > 0:
+                                        item_weights[item.id] = w
+                                        total_item_weight += w
+                                except ValueError:
+                                    pass
+                        
+                        # Validation: Sum of item weights must match Net Weight
+                        # Allow small tolerance for floating point
+                        if abs(total_item_weight - float(net_weight)) > 0.5:
+                            # If single item and no specific weight entered, assign all to it
+                            if is_single_item and total_item_weight == 0:
+                                item_weights[items_qs.first().id] = float(net_weight)
+                            else:
+                                messages.error(request, f'مجموع وزن مواد اولیه ({total_item_weight}) با وزن خالص ({net_weight}) همخوانی ندارد.')
+                                # Re-render form with errors is better, but redirecting for now to keep it simple as per existing pattern
+                                # ideally we should re-render.
+                                # For now, let's assume the frontend validation handles most of this, 
+                                # but server side needs to be robust.
+                                raise ValueError(f"Weight mismatch: items sum {total_item_weight} != net {net_weight}")
+
                     # به‌روزرسانی فیلدهای حمل
                     pt.gross_weight = gross
                     pt.tare_weight = tare
@@ -467,71 +510,83 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # ذخیره اولیه برای ثبت وزن‌ها
                     pt.save()
                     
+                    # Save RawMaterialInfo records
+                    valid_raw_material_infos = [] # To be used for StockEntry
+                    if items_qs:
+                        # Clear old ones to avoid duplicates if re-submitting
+                        RawMaterialInfo.objects.filter(transport=pt).delete()
+                        
+                        for item in items_qs:
+                            w = item_weights.get(item.id, 0)
+                            if w > 0:
+                                rmi = RawMaterialInfo.objects.create(
+                                    transport=pt,
+                                    order_item=item,
+                                    raw_material=item.raw_material,
+                                    allocated_quantity=w,
+                                    weight_unit='kg' # Unloading is usually in KG
+                                )
+                                valid_raw_material_infos.append(rmi)
+
                     bug_logger.info(f"اطلاعات تخلیه برای حمل {transport_number} ثبت شد - وزن خالص: {net_weight}")
                     
                     # ایجاد لاگ موجودیت: از انبار مبدأ (تامین‌کننده) به انبار مقصد (کارخانه)
                     if source_warehouse and destination_warehouse and net_weight and net_weight > 0:
                         try:
-                            # گرفتن ماده اولیه از سفارش
-                            po = pt.allocation.order if pt.allocation else None
-                            if po:
-                                # گرفتن اولین ماده اولیه از سفارش
-                                order_item = po.order_items.filter(raw_material__isnull=False).select_related('raw_material').first()
-                                if order_item and order_item.raw_material:
-                                    raw_material = order_item.raw_material
-                                    
-                                    # ایجاد StockEntry
-                                    stock_entry = StockEntry.objects.create(
-                                        transaction_date=jdatetime_datetime.now(),
-                                        entry_type=StockEntry.StockEntryType.PURCHASE,
-                                        notes=f"تخلیه حمل {transport_number} - انتقال از انبار {source_warehouse.warehouse_id} به انبار {destination_warehouse.warehouse_id}",
-                                        is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
-                                    )
+                            if valid_raw_material_infos:
+                                # ایجاد StockEntry
+                                stock_entry = StockEntry.objects.create(
+                                    transaction_date=jdatetime_datetime.now(),
+                                    entry_type=StockEntry.StockEntryType.PURCHASE,
+                                    notes=f"تخلیه حمل {transport_number} - انتقال از انبار {source_warehouse.warehouse_id} به انبار {destination_warehouse.warehouse_id}",
+                                    is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
+                                )
+                                
+                                raw_material_content_type = ContentType.objects.get_for_model(RawMaterial)
+                                
+                                for rmi in valid_raw_material_infos:
+                                    # برای هر ماده اولیه یک Source و یک Target ایجاد می‌کنیم
                                     
                                     # ایجاد SourceStock (از انبار تامین‌کننده)
-                                    raw_material_content_type = ContentType.objects.get_for_model(RawMaterial)
-                                    source_stock = SourceStock.objects.create(
+                                    SourceStock.objects.create(
                                         stock_entry=stock_entry,
                                         from_content_type=raw_material_content_type,
-                                        from_object_id=raw_material.pk,
+                                        from_object_id=rmi.raw_material.pk,
                                         from_warehouse=source_warehouse,
-                                        quantity=net_weight
+                                        quantity=rmi.allocated_quantity
                                     )
                                     
                                     # ایجاد TargetStock (به انبار کارخانه)
-                                    target_stock = TargetStock.objects.create(
+                                    TargetStock.objects.create(
                                         stock_entry=stock_entry,
                                         to_content_type=raw_material_content_type,
-                                        to_object_id=raw_material.pk,
+                                        to_object_id=rmi.raw_material.pk,
                                         to_warehouse=destination_warehouse,
-                                        quantity=net_weight
+                                        quantity=rmi.allocated_quantity
                                     )
-                                    
-                                    # Commit کردن StockEntry برای به‌روزرسانی موجودیت‌ها
-                                    stock_entry.commit()
-                                    
-                                    bug_logger.info(
-                                        f"لاگ موجودیت ایجاد شد - "
-                                        f"StockEntry ID: {stock_entry.pk}, "
-                                        f"از انبار: {source_warehouse.warehouse_id}, "
-                                        f"به انبار: {destination_warehouse.warehouse_id}, "
-                                        f"مقدار: {net_weight} کیلوگرم, "
-                                        f"ماده اولیه: {raw_material.name}"
-                                    )
-                                    
-                                    audit_logger.info(
-                                        f"لاگ موجودیت برای تخلیه - "
-                                        f"حمل: {transport_number}, "
-                                        f"از انبار: {source_warehouse.warehouse_id}, "
-                                        f"به انبار: {destination_warehouse.warehouse_id}, "
-                                        f"مقدار: {net_weight} کیلوگرم, "
-                                        f"ماده اولیه: {raw_material.name}, "
-                                        f"کاربر: {request.user.username}"
-                                    )
-                                else:
-                                    bug_logger.warning(f"ماده اولیه برای سفارش {po.order_number} پیدا نشد")
+                                
+                                # Commit کردن StockEntry برای به‌روزرسانی موجودیت‌ها
+                                stock_entry.commit()
+                                
+                                bug_logger.info(
+                                    f"لاگ موجودیت ایجاد شد - "
+                                    f"StockEntry ID: {stock_entry.pk}, "
+                                    f"از انبار: {source_warehouse.warehouse_id}, "
+                                    f"به انبار: {destination_warehouse.warehouse_id}, "
+                                    f"مقدار کل: {net_weight} کیلوگرم"
+                                )
+                                
+                                audit_logger.info(
+                                    f"لاگ موجودیت برای تخلیه - "
+                                    f"حمل: {transport_number}, "
+                                    f"از انبار: {source_warehouse.warehouse_id}, "
+                                    f"به انبار: {destination_warehouse.warehouse_id}, "
+                                    f"مقدار کل: {net_weight} کیلوگرم, "
+                                    f"کاربر: {request.user.username}"
+                                )
                             else:
-                                bug_logger.warning(f"سفارش برای حمل {transport_number} پیدا نشد")
+                                bug_logger.warning(f"ماده اولیه‌ای برای ثبت موجودیت یافت نشد (Transport: {transport_number})")
+
                         except Exception as inv_err:
                             bug_logger.error(f"خطا در ایجاد لاگ موجودیت برای حمل {transport_number}: {inv_err}", exc_info=True)
                             # خطا را لاگ می‌کنیم اما فرآیند را متوقف نمی‌کنیم
@@ -571,23 +626,38 @@ def warehouse_delivery_detail_view(request, transport_number):
             bug_logger.warning(f"فرم ثبت تخلیه نامعتبر برای حمل {transport_number}: {form.errors}")
             audit_logger.activity(f"فرم نامعتبر برای ثبت تخلیه حمل {transport_number}")
     else:
-        # پیش‌پر کردن فرم با داده‌های موجود
-        bug_logger.debug(f"Initializing edit form for transport {transport_number} with existing data")
+        # مقداردهی اولیه فرم
         initial = {
             'gross_weight': pt.gross_weight,
             'tare_weight': pt.tare_weight,
             'freight_payment_type': pt.freight_payment_type,
             'initial_freight': pt.initial_freight,
             'total_freight': pt.total_freight,
-            'discount': pt.discount or 0,
-            'surplus': pt.surplus or 0,
+            'discount': pt.discount,
+            'surplus': pt.surplus,
             'freight_payment': pt.freight_payment,
         }
         form = WarehouseDeliveryForm(initial=initial)
+        
+    # Prepare order items for context (for both new POST with errors and GET)
+    order_items = []
+    if pt.allocation and pt.allocation.order:
+        po = pt.allocation.order
+        items_qs = po.order_items.filter(raw_material__isnull=False).select_related('raw_material')
+        existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material')
+        existing_map = {info.order_item_id: info.allocated_quantity for info in existing_infos}
+        
+        for item in items_qs:
+            order_items.append({
+                'item': item,
+                'raw_material': item.raw_material,
+                'allocated_quantity': existing_map.get(item.id, 0)
+            })
     
     context = {
         'form': form,
         'pt': pt,
+        'order_items': order_items,
         'read_only': False,
         'awaiting_guard': False,
         'accessible_transport_fields': accessible_transport_fields_view,
