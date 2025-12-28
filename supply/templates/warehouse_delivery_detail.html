@@ -354,6 +354,17 @@
             </div>
             <div class="form-section-body weight-fields">
 
+                {% if accessible_transport_fields.gross_weight %}
+                <div class="form-group">
+                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label }}</label>
+                    {{ form.gross_weight }}
+                    {% if form.gross_weight.errors %}
+                        <div class="alert alert-error">
+                            {{ form.gross_weight.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
                                 
                 {% if accessible_transport_fields.tare_weight %}
                 <div class="form-group">
@@ -362,18 +373,6 @@
                     {% if form.tare_weight.errors %}
                         <div class="alert alert-error">
                             {{ form.tare_weight.errors }}
-                        </div>
-                    {% endif %}
-                </div>
-                {% endif %}
-                
-                {% if accessible_transport_fields.gross_weight %}
-                <div class="form-group">
-                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label }}</label>
-                    {{ form.gross_weight }}
-                    {% if form.gross_weight.errors %}
-                        <div class="alert alert-error">
-                            {{ form.gross_weight.errors }}
                         </div>
                     {% endif %}
                 </div>

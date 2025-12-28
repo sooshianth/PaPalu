@@ -37,10 +37,11 @@ def get_accessible_purchase_transport_fields_logistic(user):
             'vehicle_type': True,
             'plate_number': True,
             'driver': True,
-            'gross_weight': True,
-            'tare_weight': True,
-            'net_weight': True,
-            'freight_payment_type': True,
+        'gross_weight': True,
+        'tare_weight': True,
+        'net_weight': True,
+        'waybill_weight': True,
+        'freight_payment_type': True,
             'initial_freight': True,
             'total_freight': True,
             'discount': True,
@@ -60,6 +61,7 @@ def get_accessible_purchase_transport_fields_logistic(user):
         'gross_weight': user_can_access_field(user, Transport, 'gross_weight', 'view'),
         'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'view'),
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
+        'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'view'),
         'freight_payment_type': user_can_access_field(user, Transport, 'freight_payment_type', 'view'),
         'initial_freight': user_can_access_field(user, Transport, 'initial_freight', 'view'),
         'total_freight': user_can_access_field(user, Transport, 'total_freight', 'view'),
@@ -284,6 +286,33 @@ def logistic_confirmation_detail_view(request, transport_number):
             return redirect('supply:logistic_confirmation_list')
         
         if request.method == 'POST':
+            action = request.POST.get('action')
+            
+            # اگر action = 'reject' باشد، حمل را رد می‌کنیم
+            if action == 'reject':
+                try:
+                    from django.db import transaction
+                    with transaction.atomic():
+                        # تغییر وضعیت به rejected
+                        transport.status = Transport.STATUS_REJECTED
+                        transport.save()
+                        
+                        # Log rejection
+                        audit_logger.info(
+                            f"ارجاع حمل به مدیریت توسط لجستیک - حمل {transport_number} | "
+                            f"کاربر: {request.user.username} | "
+                            f"زمان: {timezone.now()}"
+                        )
+                        
+                        bug_logger.info(f"حمل {transport_number} به مدیریت ارجاع داده شد توسط کاربر {request.user.username}")
+                        
+                    messages.warning(request, 'حمل به مدیریت ارجاع داده شد.')
+                    return redirect('supply:logistic_confirmation_list')
+                except Exception as e:
+                    bug_logger.error(f"خطا در رد حمل - حمل {transport_number}: {str(e)}", exc_info=True)
+                    messages.error(request, 'خطا در رد حمل')
+                    return redirect('supply:logistic_confirmation_list')
+            
             # تأیید نهایی بدون نیاز به فرم - همه فیلدها فقط خواندنی هستند
             try:
                 from django.db import transaction
@@ -386,6 +415,19 @@ def logistic_confirmation_detail_view(request, transport_number):
                     except Exception as fallback_err:
                         bug_logger.error(f"خطا در fallback method: {fallback_err}", exc_info=True)
             
+            # محاسبه اختلاف وزن بارنامه و وزن پر
+            weight_discrepancy = None
+            weight_discrepancy_percent = None
+            has_weight_discrepancy = False
+            
+            if transport.waybill_weight and transport.gross_weight:
+                weight_discrepancy = abs(transport.gross_weight - transport.waybill_weight)
+                if transport.waybill_weight > 0:
+                    weight_discrepancy_percent = (weight_discrepancy / transport.waybill_weight) * 100
+                    # اگر اختلاف بیشتر از 5% باشد
+                    if weight_discrepancy_percent > 5:
+                        has_weight_discrepancy = True
+            
             context = {
                 'transport': transport,
                 'purchase_order': po,
@@ -393,6 +435,9 @@ def logistic_confirmation_detail_view(request, transport_number):
                 'accessible_transport_fields': accessible_transport_fields_view,
                 'accessible_po_fields': accessible_po_fields,
                 'accessible_person_fields': accessible_person_fields,
+                'weight_discrepancy': weight_discrepancy,
+                'weight_discrepancy_percent': weight_discrepancy_percent,
+                'has_weight_discrepancy': has_weight_discrepancy,
             }
             
             bug_logger.info(f"رندر کردن template - logistic_confirmation_detail.html")
@@ -411,4 +456,52 @@ def logistic_confirmation_detail_view(request, transport_number):
         bug_logger.error(f"خطا در نمایش جزئیات تایید لجستیک - حمل {transport_number}: {str(e)}", exc_info=True)
         audit_logger.error(f"خطا در نمایش جزئیات تایید لجستیک - حمل {transport_number}: {str(e)}")
         messages.error(request, f'خطا در بارگذاری جزئیات حمل: {str(e)}')
+        return redirect('supply:logistic_confirmation_list')
+
+
+@login_required
+def rejected_transports_list_view(request):
+    """صفحه لیست حمل‌های ارجاع به مدیریت"""
+    audit_logger.info(f"دسترسی به لیست حمل‌های ارجاع به مدیریت")
+    
+    # Check permission
+    if not user_has_task(request.user, TaskChoices.SUPPLY_VIEW_REJECTED_TRANSPORTS.value):
+        audit_logger.activity(f"تلاش برای دسترسی به لیست حمل‌های ارجاع به مدیریت بدون مجوز")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # Get field access permissions
+    accessible_transport_fields = get_accessible_purchase_transport_fields_logistic(request.user)
+    accessible_po_fields = get_accessible_procurement_purchase_order_fields_logistic(request.user)
+    accessible_person_fields = get_accessible_person_fields_logistic(request.user)
+    
+    try:
+        # Get rejected transports
+        transports = Transport.objects.filter(
+            status=Transport.STATUS_REJECTED
+        ).select_related(
+            'allocation__order',
+            'allocation__order__customer',
+            'driver'
+        ).order_by('-created_at')
+        
+        bug_logger.debug(f"تعداد حمل‌های ارجاع به مدیریت: {transports.count()}")
+        
+        # Create table
+        table = LogisticConfirmationTable(transports, accessible_fields=accessible_transport_fields)
+        RequestConfig(request, paginate={'per_page': 15}).configure(table)
+        
+        context = {
+            'table': table,
+            'total_count': transports.count(),
+            'accessible_transport_fields': accessible_transport_fields,
+            'accessible_po_fields': accessible_po_fields,
+            'accessible_person_fields': accessible_person_fields,
+        }
+        
+        return render(request, 'rejected_transports_list.html', context)
+        
+    except Exception as e:
+        bug_logger.error(f"خطا در نمایش لیست حمل‌های ارجاع به مدیریت: {str(e)}", exc_info=True)
+        messages.error(request, 'خطا در بارگذاری لیست حمل‌ها')
         return redirect('supply:logistic_confirmation_list')

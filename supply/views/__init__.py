@@ -74,6 +74,7 @@ from .warehouse_delivery_views import (
 from .logistic_confirmation_views import (
     logistic_confirmation_list_view,
     logistic_confirmation_detail_view,
+    rejected_transports_list_view,
 )
 
 

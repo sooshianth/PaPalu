@@ -233,13 +233,44 @@
 {% block content %}
 <div class="page-header">
     <h2>تایید لجستیک - {{ transport.transport_number }}</h2>
-    <a href="{% url 'supply:logistic_confirmation_list' %}" class="back-link">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
-            <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        بازگشت به لیست
-    </a>
+    <div style="display: flex; gap: 15px; align-items: center;">
+        <a href="{% url 'supply:rejected_transports_list' %}" class="back-link" style="background: #dc3545; color: white; padding: 8px 16px; border-radius: 6px; text-decoration: none;">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 18px; height: 18px;">
+                <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            مشاهده حمل‌های ارجاع به مدیریت
+        </a>
+        <a href="{% url 'supply:logistic_confirmation_list' %}" class="back-link">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            بازگشت به لیست
+        </a>
+    </div>
 </div>
+
+{% if has_weight_discrepancy %}
+<div class="detail-card" style="background: #ffebee; border-right: 5px solid #c62828; margin-bottom: 30px;">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 48px; height: 48px; color: #c62828; flex-shrink: 0;">
+            <path d="M12 9V13M12 17H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div style="flex: 1;">
+            <h3 style="color: #c62828; margin: 0 0 10px 0; font-size: 1.3rem;">⚠️ هشدار: اختلاف وزن بیش از حد مجاز!</h3>
+            <p style="color: #721c24; margin: 0; font-size: 1rem; line-height: 1.6;">
+                <strong>اختلاف وزن بارنامه و وزن پر:</strong> {{ weight_discrepancy|persian_number:3|default:"—" }} کیلوگرم 
+                (<strong style="color: #c62828;">{{ weight_discrepancy_percent|persian_number:2|default:"—" }}%</strong>)
+                <br>
+                <strong>وزن بارنامه:</strong> {{ transport.waybill_weight|persian_number:3|default:"—" }} کیلوگرم
+                <br>
+                <strong>وزن پر:</strong> {{ transport.gross_weight|persian_number:3|default:"—" }} کیلوگرم
+                <br>
+                <span style="font-weight: 600;">اختلاف بیش از 5% است. لطفاً قبل از تایید، این مورد را بررسی کنید.</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="detail-card">
     <div class="section-title">
@@ -454,6 +485,14 @@
     <form method="post" style="margin-top: 30px;">
         {% csrf_token %}
         <div class="form-actions">
+            {% if has_weight_discrepancy %}
+            <button type="submit" name="action" value="reject" class="btn" style="background: #dc3545; color: white; box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);" onclick="return confirm('آیا از ارجاع این حمل به مدیریت اطمینان دارید؟')">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 5H7C5.89543 5 5 5.89543 5 7V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V7C19 5.89543 18.1046 5 17 5H15M9 5C9 6.10457 9.89543 7 11 7H13C14.1046 7 15 6.10457 15 5M9 5C9 3.89543 9.89543 3 11 3H13C14.1046 3 15 3.89543 15 5M12 12H15M12 16H15M9 12H9.01M9 16H9.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                ارجاع به مدیریت
+            </button>
+            {% endif %}
             <button type="submit" class="btn btn-primary" onclick="return confirm('آیا از تأیید نهایی لجستیک و تغییر وضعیت به «در انتظار بارگذاری اسناد پرداخت کرایه» اطمینان دارید؟')">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>

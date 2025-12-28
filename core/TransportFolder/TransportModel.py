@@ -26,6 +26,7 @@ class Transport(models.Model):
     STATUS_COMPLETED = 'completed'
     STATUS_AWAITING_PAYMENT_DOC = 'awaiting_payment_doc'
     STATUS_PAYMENT_DOC_UPLOADED = 'payment_doc_uploaded'
+    STATUS_REJECTED = 'rejected'
     
     STATUS_CHOICES = [
         ('pending_vehicle_entry', 'در انتظار ورود خودرو به کارخانه'),
@@ -38,6 +39,7 @@ class Transport(models.Model):
         ('completed', 'تکمیل شده'),
         ('awaiting_payment_doc', 'در انتظار بارگذاری اسناد پرداخت'),
         ('payment_doc_uploaded', 'سند پرداخت بارگذاری شده'),
+        ('rejected', 'ارجاع به مدیریت'),
     ]
     
     VEHICLE_TYPE_OFFICIAL_CHOICES = [
@@ -507,7 +509,8 @@ class Transport(models.Model):
                 'pending_settlement',
                 'completed',
                 'awaiting_payment_doc',
-                'payment_doc_uploaded'
+                'payment_doc_uploaded',
+                'rejected'  # ارجاع به مدیریت - برای هر دو جهت مجاز است
             ]
         elif self.direction == 'outbound':
             allowed_statuses = [
@@ -517,10 +520,11 @@ class Transport(models.Model):
                 'pending_exit',
                 'completed',
                 'awaiting_payment_doc',
-                'payment_doc_uploaded'
+                'payment_doc_uploaded',
+                'rejected'  # ارجاع به مدیریت - برای هر دو جهت مجاز است
             ]
         else:
-            allowed_statuses = []
+            allowed_statuses = ['rejected']  # اگر direction تنظیم نشده باشد، حداقل rejected مجاز است
 
         if self.status and self.status not in allowed_statuses:
             raise ValueError("وضعیت انتخاب‌شده با جهت حمل سازگار نیست.")
