@@ -404,8 +404,18 @@
             </div>
             <div class="form-section-body">
                 {% if order_items %}
-                <div class="alert alert-info">
-                    لطفاً وزن دریافتی برای هر ماده اولیه را وارد کنید. مجموع وزن‌ها باید برابر با وزن خالص باشد.
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="alert alert-info mb-0 flex-grow-1">
+                        لطفاً وزن دریافتی برای هر ماده اولیه را وارد کنید. مجموع وزن‌ها باید برابر با وزن خالص باشد.
+                    </div>
+
+                    {% if order_items|length > 1 %}
+                    <div class="ms-3 form-check form-switch custom-toggle">
+                        <input class="form-check-input" type="checkbox" id="sequentialModeToggle">
+                        <label class="form-check-label fw-bold" for="sequentialModeToggle">حالت توزین مرحله‌ای (چند
+                            محصولی)</label>
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="table-responsive">
@@ -414,7 +424,9 @@
                             <tr>
                                 <th>ماده اولیه</th>
                                 <th>واحد</th>
-                                <th>وزن دریافتی (کیلوگرم)</th>
+                                <th class="stage-weight-col" style="display:none; background-color: #e3f2fd;">وزن پر
+                                    خودرو در این مرحله (کیلوگرم)</th>
+                                <th>وزن خالص دریافتی (کیلوگرم)</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -422,6 +434,11 @@
                             <tr>
                                 <td>{{ item_data.raw_material.name }}</td>
                                 <td>{{ item_data.item.get_weight_unit_display }}</td>
+                                <td class="stage-weight-col" style="display:none;">
+                                    <input type="number" class="form-control stage-weight-input" step="0.001"
+                                        placeholder="وزن کل ماشین پس از بارگیری این محصول"
+                                        data-item-id="{{ item_data.item.id }}">
+                                </td>
                                 <td>
                                     <input type="number" name="item_weight_{{ item_data.item.id }}"
                                         class="form-control item-weight-input" step="0.001"
@@ -737,12 +754,126 @@
             calculateFreight(); // محاسبه اولیه
         }
 
-        // Material Weight Breakdown Validation
+        // ==========================================
+        //         SEQUENTIAL WEIGHING LOGIC
+        // ==========================================
+
+        const sequentialModeCheckbox = document.getElementById('sequentialModeToggle');
         const itemWeightInputs = document.querySelectorAll('.item-weight-input');
-        // netDisplay is already defined above
+        const stageWeightInputs = document.querySelectorAll('.stage-weight-input');
+        const stageWeightHeaders = document.querySelectorAll('.stage-weight-col');
         const totalItemsDisplay = document.getElementById('total_items_weight');
         const balanceStatusDisplay = document.getElementById('weight_balance_status');
         const submitBtn = document.getElementById('submitBtn');
+
+        // Toggle visibility
+        if (sequentialModeCheckbox) {
+            sequentialModeCheckbox.addEventListener('change', function () {
+                const isSeq = this.checked;
+                stageWeightInputs.forEach(input => {
+                    input.closest('td').style.display = isSeq ? 'table-cell' : 'none';
+                });
+                stageWeightHeaders.forEach(th => {
+                    th.style.display = isSeq ? 'table-cell' : 'none';
+                });
+
+                // Toggle Readonly for item weights
+                itemWeightInputs.forEach(input => {
+                    if (isSeq) {
+                        input.setAttribute('readonly', 'readonly');
+                        input.classList.add('calculated-field');
+                    } else {
+                        input.removeAttribute('readonly');
+                        input.classList.remove('calculated-field');
+                    }
+                });
+
+                // Recalculate if switching
+                if (isSeq) calculateSequentialWeights();
+            });
+            // Init
+            // Check if we should default to sequence mode (e.g. if fields are empty)
+            // For now, let user decide.
+
+            // To properly hide initially if checkbox is unchecked:
+            const isSeq = sequentialModeCheckbox.checked;
+            stageWeightHeaders.forEach(th => th.style.display = isSeq ? 'table-cell' : 'none');
+            stageWeightInputs.forEach(input => input.closest('td').style.display = isSeq ? 'table-cell' : 'none');
+        }
+
+        function calculateSequentialWeights() {
+            if (!sequentialModeCheckbox || !sequentialModeCheckbox.checked) return;
+
+            const tare = parseFloat(tareInput.value) || 0;
+            if (tare <= 0) return; // Wait for tare
+
+            // Collect stage weights
+            let stages = [];
+            stageWeightInputs.forEach(input => {
+                const val = parseFloat(input.value);
+                if (!isNaN(val) && val > 0) {
+                    stages.push({
+                        element: input,
+                        val: val,
+                        rowId: input.dataset.itemId
+                    });
+                }
+            });
+
+            // Sort by weight
+            stages.sort((a, b) => a.val - b.val);
+
+            // Calculate diffs
+            let prevWeight = tare;
+
+            // Map to store calculated nets
+            let netMap = {}; // itemId -> net
+
+            stages.forEach(stage => {
+                let net = stage.val - prevWeight;
+                netMap[stage.rowId] = net;
+                prevWeight = stage.val;
+            });
+
+            // Update DOM
+            itemWeightInputs.forEach(input => {
+                const id = input.name.replace('item_weight_', '');
+                if (netMap[id] !== undefined) {
+                    // Update value
+                    input.value = netMap[id].toFixed(3);
+                } else {
+                    // If hidden, and we are in seq mode, we might want to clear it 
+                    // OR keep it if the user manually entered it before switching?
+                    // Safer to clear to ensure consistency with stages.
+                    input.value = '';
+                }
+            });
+
+            // Determine max stage weight for Gross
+            if (stages.length > 0) {
+                const maxWeight = stages[stages.length - 1].val;
+                if (grossInput) {
+                    grossInput.value = maxWeight;
+                    // Trigger gross change events
+                    grossInput.dispatchEvent(new Event('input'));
+                }
+            }
+
+            validateMaterialWeights();
+        }
+
+        // Attach listeners to stage inputs
+        stageWeightInputs.forEach(input => {
+            input.addEventListener('input', calculateSequentialWeights);
+        });
+
+        // Also recalc if tare changes
+        if (tareInput) tareInput.addEventListener('input', calculateSequentialWeights);
+
+
+        // ==========================================
+        //       STANDARD VALIDATION LOGIC
+        // ==========================================
 
         function validateMaterialWeights() {
             let totalItemWeight = 0;
@@ -750,12 +881,14 @@
                 totalItemWeight += parseFloat(input.value) || 0;
             });
 
-            totalItemsDisplay.textContent = totalItemWeight.toFixed(3) + ' کیلوگرم';
+            if (totalItemsDisplay) totalItemsDisplay.textContent = totalItemWeight.toFixed(3) + ' کیلوگرم';
 
             // Get current calculated net weight
             let currentNet = 0;
-            const gross = parseFloat(document.getElementById('id_gross_weight').value) || 0;
-            const tare = parseFloat(document.getElementById('id_tare_weight').value) || 0;
+            // grossInput and tareInput defined at top
+            const gross = parseFloat(grossInput ? grossInput.value : 0) || 0;
+            const tare = parseFloat(tareInput ? tareInput.value : 0) || 0;
+
             if (gross > tare) {
                 currentNet = gross - tare;
             }
@@ -785,7 +918,6 @@
         });
 
         // Also trigger on gross/tare change
-        // grossInput and tareInput are already defined above
         if (grossInput) grossInput.addEventListener('input', validateMaterialWeights);
         if (tareInput) tareInput.addEventListener('input', validateMaterialWeights);
 
