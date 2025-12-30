@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden, HttpResponse, JsonResponse
 from django.db import transaction
+from django.db.models import Q
 from django.db.models import Q, Sum
 from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
@@ -170,11 +171,14 @@ def proforma_list_view(request):
     RequestConfig(request, paginate={'per_page': 20}).configure(table)
 
     # دریافت پیش فاکتورهای صادر شده (پیش فاکتورهایی که order دارند و order.status دیگر 'pending_proforma_issue' نیست)
+    # یا پیش فاکتورهای نامعتبر شده (که باید نمایش داده شوند ولی با علامت منسوخ)
     proformas_qs = Proforma.objects.filter(
         order__isnull=False,
         order__order_type='sale'
-    ).exclude(
-        order__status='pending_proforma_issue'
+    ).filter(
+        # یا order.status دیگر 'pending_proforma_issue' نیست (پیش فاکتورهای معتبر)
+        # یا is_invalidated=True (پیش فاکتورهای نامعتبر که باید نمایش داده شوند)
+        ~Q(order__status='pending_proforma_issue') | Q(is_invalidated=True)
     ).select_related('order', 'customer', 'order__customer').order_by('-created_at')
     
     # فیلتر بر اساس کاربر (اگر superuser نیست)

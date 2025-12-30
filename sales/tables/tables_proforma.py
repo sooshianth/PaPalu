@@ -178,15 +178,26 @@ class ProformaTable(tables.Table):
     
     def render_proforma_number(self, value, record):
         """نمایش شماره پیش فاکتور"""
+        proforma_number = value if value else record.id
+        invalidated_icon = ''
+        if hasattr(record, 'is_invalidated') and record.is_invalidated:
+            invalidated_icon = format_html(
+                ' <span class="invalidated-icon" title="این پیش فاکتور به دلیل ویرایش سفارش منسوخ شده است">✕</span>'
+            )
         if value:
-            return format_html('<span class="badge badge-success">{}</span>', value)
-        return format_html('<span class="badge badge-success">{}</span>', record.id)
+            return format_html('<span class="badge badge-success">{}</span>{}', value, invalidated_icon)
+        return format_html('<span class="badge badge-success">{}</span>{}', record.id, invalidated_icon)
     
     def render_order(self, value, record):
         """نمایش شماره سفارش"""
+        invalidated_icon = ''
+        if hasattr(record, 'is_invalidated') and record.is_invalidated:
+            invalidated_icon = format_html(
+                ' <span class="invalidated-icon" title="این پیش فاکتور به دلیل ویرایش سفارش منسوخ شده است"> ✕</span>'
+            )
         if value:
-            return format_html('<span class="badge badge-success">{}</span>', value)
-        return '-'
+            return format_html('<span class="badge badge-success">{}</span>{}', value, invalidated_icon)
+        return format_html('-{}', invalidated_icon)
     
     def render_customer(self, value, record):
         """نمایش نام مشتری"""

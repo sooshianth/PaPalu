@@ -442,8 +442,7 @@
                                 <td>
                                     <input type="number" name="item_weight_{{ item_data.item.id }}"
                                         class="form-control item-weight-input" step="0.001"
-                                        value="{{ item_data.allocated_quantity|default_if_none:'' }}" {% if read_only
-                                        %}readonly{% endif %} required>
+                                        value="{{ item_data.allocated_quantity|default_if_none:'' }}" {% if read_only %}readonly{% endif %} required>
                                 </td>
                             </tr>
                             {% endfor %}

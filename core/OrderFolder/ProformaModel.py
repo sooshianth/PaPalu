@@ -65,6 +65,12 @@ class Proforma(models.Model):
         null=True,
         blank=True,
     )
+    
+    is_invalidated = models.BooleanField(
+        default=False,
+        verbose_name='نامعتبر شده',
+        help_text='اگر این پیش فاکتور به دلیل ویرایش سفارش نامعتبر شده باشد، این فیلد True می‌شود'
+    )
 
     class Meta:
         verbose_name = 'پیش فاکتور'

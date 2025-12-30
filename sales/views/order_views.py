@@ -35,25 +35,34 @@ from decimal import Decimal
 def can_edit_order(order):
     """
     بررسی اینکه آیا سفارش قابل ویرایش است یا نه
-    بعد از وضعیت 'pending_transaction_receipt_upload' دیگر قابل ویرایش نیست
+    فقط در دو وضعیت 'pending_proforma_issue' و 'pending_customer_proforma_upload' قابل ویرایش است
     """
     if not order or not order.status:
-        return True  # اگر وضعیت ندارد، قابل ویرایش است
+        return False  # اگر وضعیت ندارد، قابل ویرایش نیست
     
-    # وضعیت‌هایی که بعد از آن‌ها دیگر قابل ویرایش نیست
-    non_editable_statuses = [
-        'pending_accounting_approval',
-        'pending_allocation',
-        'pending_allocation_approval',
-        'pending_factory',
-        'pending_unloading_approval',
-        'pending_settlement',
-        'pending_settlement_approval',
-        'cancelled',
-        'archived',
+    # فقط برای سفارش‌های فروش این محدودیت اعمال می‌شود
+    if order.order_type != 'sale':
+        # برای سفارش‌های خرید، منطق قبلی را حفظ می‌کنیم
+        non_editable_statuses = [
+            'pending_accounting_approval',
+            'pending_allocation',
+            'pending_allocation_approval',
+            'pending_factory',
+            'pending_unloading_approval',
+            'pending_settlement',
+            'pending_settlement_approval',
+            'cancelled',
+            'archived',
+        ]
+        return order.status not in non_editable_statuses
+    
+    # برای سفارش‌های فروش: فقط در دو وضعیت قابل ویرایش
+    editable_statuses = [
+        'pending_proforma_issue',
+        'pending_customer_proforma_upload',
     ]
     
-    return order.status not in non_editable_statuses
+    return order.status in editable_statuses
 
 
 @login_required
@@ -687,6 +696,22 @@ def edit_order_view(request, order_number):
                             item = form.to_instance(order)
                             item.save()
                             items_saved += 1
+                    
+                    # برای سفارش‌های فروش: تغییر وضعیت به pending_proforma_issue و نامعتبر کردن پیش فاکتور قبلی
+                    if order.order_type == 'sale':
+                        old_status = order.status
+                        order.status = 'pending_proforma_issue'
+                        order.save()
+                        
+                        # نامعتبر کردن پیش فاکتورهای قبلی این سفارش
+                        from core.OrderFolder.ProformaModel import Proforma
+                        previous_proformas = Proforma.objects.filter(
+                            order=order,
+                            is_invalidated=False
+                        )
+                        if previous_proformas.exists():
+                            previous_proformas.update(is_invalidated=True)
+                            bug_logger.info(f"پیش فاکتورهای قبلی سفارش {order_number} نامعتبر شدند")
 
                 if items_saved == 0:
                     warning_msg = 'سفارش به‌روزرسانی شد اما هیچ قلمی ذخیره نشد!'
