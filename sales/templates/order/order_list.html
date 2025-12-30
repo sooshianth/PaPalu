@@ -101,6 +101,9 @@
         border-radius: 6px;
         font-size: 0.875rem;
         font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .badge-pending {
@@ -204,6 +207,25 @@
     }
     
     /* استایل‌های وضعیت سفارش - رنگ‌های کدر و تیره و متفاوت برای هر وضعیت */
+    .badge-status-1,
+    .badge-status-2,
+    .badge-status-3,
+    .badge-status-4,
+    .badge-status-5,
+    .badge-status-6,
+    .badge-status-7,
+    .badge-status-8,
+    .badge-status-9,
+    .badge-status-10,
+    .badge-status-11,
+    .badge-status-12 {
+        white-space: nowrap;
+        display: inline-block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
     .badge-status-1 {
         background-color: #e08a33; /* نارنجی کدر */
         color: white;
@@ -335,6 +357,30 @@
         background-color: #17a2b8 !important;
         color: white !important;
         border-color: #17a2b8 !important;
+    }
+    
+    /* استایل دکمه تاریخچه تغییرات - خاکستری */
+    .data-table .btn-outline-secondary,
+    .table-container .btn-outline-secondary {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #6c757d;
+        transition: all 0.3s;
+        color: #6c757d !important;
+        border-color: #6c757d !important;
+        background-color: transparent !important;
+        display: inline-block;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    
+    .data-table .btn-outline-secondary:hover,
+    .table-container .btn-outline-secondary:hover {
+        background-color: #6c757d !important;
+        color: white !important;
+        border-color: #6c757d !important;
     }
     
     /* استایل صفحه‌بندی django-tables2 */
@@ -945,6 +991,99 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 window.closeOrderDetailPopup();
+            }
+        });
+    })();
+    
+    // مدیریت popup تاریخچه تغییرات سفارش
+    (function() {
+        // ایجاد container برای popup اگر وجود نداشته باشد
+        function createHistoryPopupContainer() {
+            let container = document.getElementById('orderHistoryPopupContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'orderHistoryPopupContainer';
+                document.body.appendChild(container);
+            }
+            return container;
+        }
+        
+        // باز کردن popup
+        function openOrderHistoryPopup(orderNumber) {
+            const container = createHistoryPopupContainer();
+            
+            // نمایش loading
+            container.innerHTML = '<div style="text-align: center; padding: 50px;">در حال بارگذاری...</div>';
+            
+            // نمایش popup container
+            const popupWrapper = document.createElement('div');
+            popupWrapper.id = 'orderHistoryPopupWrapper';
+            popupWrapper.style.position = 'fixed';
+            popupWrapper.style.top = '0';
+            popupWrapper.style.left = '0';
+            popupWrapper.style.right = '0';
+            popupWrapper.style.bottom = '0';
+            popupWrapper.style.zIndex = '10000';
+            popupWrapper.style.display = 'flex';
+            popupWrapper.style.alignItems = 'center';
+            popupWrapper.style.justifyContent = 'center';
+            document.body.appendChild(popupWrapper);
+            popupWrapper.appendChild(container);
+            
+            // درخواست AJAX
+            fetch(`/sales/order/${orderNumber}/change-history/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('خطا در دریافت اطلاعات');
+                }
+                return response.text();
+            })
+            .then(html => {
+                container.innerHTML = html;
+                const popup = document.getElementById('orderHistoryPopup');
+                if (popup) {
+                    popup.classList.add('active');
+                    document.body.style.overflow = 'hidden';
+                }
+            })
+            .catch(error => {
+                console.error('خطا:', error);
+                container.innerHTML = '<div style="text-align: center; padding: 50px; color: red;">خطا در بارگذاری اطلاعات</div>';
+            });
+        }
+        
+        // بستن popup
+        window.closeOrderHistoryPopup = function() {
+            const popup = document.getElementById('orderHistoryPopup');
+            const wrapper = document.getElementById('orderHistoryPopupWrapper');
+            if (popup) {
+                popup.classList.remove('active');
+            }
+            if (wrapper) {
+                wrapper.remove();
+            }
+            document.body.style.overflow = '';
+        };
+        
+        // اضافه کردن event listener به لینک‌های تاریخچه تغییرات
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('order-history-link')) {
+                e.preventDefault();
+                const orderNumber = e.target.getAttribute('data-order-number');
+                if (orderNumber) {
+                    openOrderHistoryPopup(orderNumber);
+                }
+            }
+        });
+        
+        // بستن با کلید Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                window.closeOrderHistoryPopup();
             }
         });
     })();

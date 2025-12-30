@@ -266,6 +266,9 @@ def order_list_view(request):
     # منطق تبدیل واحد: kg = quantity, ton = quantity * 1000, bag = quantity * bag_weight, piece = quantity
     # استفاده از try-except برای handle کردن مقادیر Decimal نامعتبر
     try:
+        from core.OrderFolder.OrderModel import OrderChangeLog
+        from django.db.models import Exists, OuterRef
+        
         orders_qs = orders_qs.annotate(
             total_purchase_cost=Sum('order_items__total_purchase_cost'),
             total_order_weight=Sum(
@@ -277,6 +280,10 @@ def order_list_view(request):
                     default=Value(0),
                     output_field=DecimalField(max_digits=15, decimal_places=2)
                 )
+            ),
+            # بررسی وجود تاریخچه تغییرات
+            has_change_history=Exists(
+                OrderChangeLog.objects.filter(order=OuterRef('pk'))
             )
         )
         bug_logger.debug(f"تعداد {orders_qs.count()} سفارش برای نمایش لود شد")
@@ -614,12 +621,97 @@ def edit_order_view(request, order_number):
         if order_form.is_valid() and item_formset.is_valid():
             try:
                 with transaction.atomic():
+                    # دریافت نسخه قبلی سفارش برای مقایسه (قبل از هر تغییری)
+                    # استفاده از refresh_from_db برای اطمینان از دریافت آخرین نسخه
+                    order.refresh_from_db()
+                    old_order = Order.objects.select_related('customer').get(pk=order.pk)
+                    
                     # ذخیره سفارش
                     order = order_form.save(commit=False)
                     order.save()
+                    
+                    # ثبت تغییرات فیلدها
+                    from core.OrderFolder.OrderModel import OrderChangeLog
+                    
+                    # فیلدهای قابل ردیابی
+                    trackable_fields = {
+                        'customer': 'مشتری',
+                        'order_type': 'نوع سفارش',
+                        'registration_source': 'منبع ثبت',
+                        'status': 'وضعیت',
+                        'freight_payment_type': 'نوع پرداخت کرایه',
+                    }
+                    
+                    # بررسی تغییرات فیلدها
+                    for field_name, field_label in trackable_fields.items():
+                        old_val = getattr(old_order, field_name, None)
+                        new_val = getattr(order, field_name, None)
+                        
+                        # تبدیل مقادیر به رشته برای مقایسه
+                        # برای ForeignKey، از id استفاده می‌کنیم
+                        if field_name == 'customer':
+                            old_val_id = old_val.pk if old_val else None
+                            new_val_id = new_val.pk if new_val else None
+                            if old_val_id != new_val_id:
+                                old_val_str = old_val.name if old_val and hasattr(old_val, 'name') else (str(old_val) if old_val else '—')
+                                new_val_str = new_val.name if new_val and hasattr(new_val, 'name') else (str(new_val) if new_val else '—')
+                            else:
+                                continue
+                        else:
+                            # برای سایر فیلدها، مقایسه مستقیم
+                            old_val_str = str(old_val) if old_val is not None else ''
+                            new_val_str = str(new_val) if new_val is not None else ''
+                            
+                            # اگر مقدار تغییر نکرده، ادامه بده
+                            if old_val_str == new_val_str:
+                                continue
+                            
+                            # برای فیلدهای choice، نمایش فارسی را بگیر
+                            if hasattr(order, f'get_{field_name}_display'):
+                                if old_val:
+                                    try:
+                                        old_order_temp = Order()
+                                        old_order_temp.status = old_val if field_name == 'status' else None
+                                        old_order_temp.order_type = old_val if field_name == 'order_type' else None
+                                        old_order_temp.registration_source = old_val if field_name == 'registration_source' else None
+                                        old_order_temp.freight_payment_type = old_val if field_name == 'freight_payment_type' else None
+                                        old_val_str = getattr(old_order_temp, f'get_{field_name}_display')() if old_val else '—'
+                                    except:
+                                        old_val_str = str(old_val) if old_val else '—'
+                                else:
+                                    old_val_str = '—'
+                                    
+                                if new_val:
+                                    new_val_str = getattr(order, f'get_{field_name}_display')()
+                                else:
+                                    new_val_str = '—'
+                            
+                            # اگر مقدار تغییر نکرده (بعد از تبدیل به نمایش فارسی)، ادامه بده
+                            if old_val_str == new_val_str:
+                                continue
+                        
+                        # ثبت تغییر
+                        try:
+                            OrderChangeLog.objects.create(
+                                order=order,
+                                field_name=field_name,
+                                field_label=field_label,
+                                old_value=old_val_str,
+                                new_value=new_val_str,
+                                changed_by=request.user,
+                                note=f'ویرایش سفارش توسط {request.user.username}'
+                            )
+                            bug_logger.debug(f"تغییر فیلد {field_name} ثبت شد: {old_val_str} -> {new_val_str}")
+                        except Exception as e:
+                            bug_logger.error(f"خطا در ثبت تغییر فیلد {field_name}: {e}", exc_info=True)
 
+                    # دریافت اقلام قبلی برای مقایسه
+                    from core.OrderFolder.OrderItemModel import OrderItem
+                    old_items = {item.id: item for item in OrderItem.objects.filter(order=order).select_related('product')}
+                    
                     # حذف اقلامی که برای حذف علامت خورده‌اند
                     existing_item_ids = set()
+                    deleted_items = []
                     for form in item_formset:
                         if not getattr(form, 'cleaned_data', None):
                             continue
@@ -629,6 +721,7 @@ def edit_order_view(request, order_number):
                             if item_id:
                                 try:
                                     item = OrderItem.objects.get(id=item_id, order=order)
+                                    deleted_items.append(item)
                                     item.delete()
                                 except OrderItem.DoesNotExist:
                                     pass
@@ -638,9 +731,38 @@ def edit_order_view(request, order_number):
                         if item_id:
                             existing_item_ids.add(item_id)
                     
+                    # ثبت حذف اقلام در تاریخچه
+                    for deleted_item in deleted_items:
+                        try:
+                            OrderChangeLog.objects.create(
+                                order=order,
+                                field_name='order_item',
+                                field_label='قلم سفارش',
+                                old_value=f"محصول: {deleted_item.product.name if deleted_item.product else '—'}, مقدار: {deleted_item.quantity}, فی: {deleted_item.unit_price}",
+                                new_value='حذف شده',
+                                changed_by=request.user,
+                                note=f'حذف قلم سفارش توسط {request.user.username}'
+                            )
+                        except Exception as e:
+                            bug_logger.error(f"خطا در ثبت حذف قلم: {e}", exc_info=True)
+                    
                     # حذف اقلامی که در فرم نیستند (فقط اگر existing_item_ids خالی نباشد)
                     if existing_item_ids:
-                        OrderItem.objects.filter(order=order).exclude(id__in=existing_item_ids).delete()
+                        items_to_delete = OrderItem.objects.filter(order=order).exclude(id__in=existing_item_ids)
+                        for item in items_to_delete:
+                            try:
+                                OrderChangeLog.objects.create(
+                                    order=order,
+                                    field_name='order_item',
+                                    field_label='قلم سفارش',
+                                    old_value=f"محصول: {item.product.name if item.product else '—'}, مقدار: {item.quantity}, فی: {item.unit_price}",
+                                    new_value='حذف شده',
+                                    changed_by=request.user,
+                                    note=f'حذف قلم سفارش توسط {request.user.username}'
+                                )
+                            except Exception as e:
+                                bug_logger.error(f"خطا در ثبت حذف قلم: {e}", exc_info=True)
+                        items_to_delete.delete()
                     
                     # ذخیره یا به‌روزرسانی اقلام
                     items_saved = 0
@@ -658,6 +780,8 @@ def edit_order_view(request, order_number):
                         weight_unit = form.cleaned_data.get('weight_unit')
                         quantity = form.cleaned_data.get('quantity')
                         unit_price = form.cleaned_data.get('unit_price')
+                        discount = form.cleaned_data.get('discount') or Decimal('0')
+                        additional_charges = form.cleaned_data.get('additional_charges') or Decimal('0')
                         
                         # حداقل محصول، واحد، مقدار و قیمت باید وجود داشته باشد
                         if not (product and weight_unit and quantity is not None and unit_price is not None):
@@ -674,6 +798,73 @@ def edit_order_view(request, order_number):
                         if item_id:
                             try:
                                 item = OrderItem.objects.get(id=item_id, order=order)
+                                old_item = old_items.get(item_id)
+                                
+                                # ثبت تغییرات قلم
+                                changes_detected = False
+                                change_parts = []
+                                
+                                # بررسی تغییر محصول
+                                if old_item and old_item.product_id != product.id:
+                                    changes_detected = True
+                                    change_parts.append(f"محصول: {old_item.product.name if old_item.product else '—'} → {product.name}")
+                                
+                                # بررسی تغییر مقدار/وزن
+                                if old_item:
+                                    old_qty = old_item.quantity
+                                    # دریافت نمایش فارسی واحد وزن قبلی
+                                    old_unit_display_map = {
+                                        'kg': 'کیلوگرم',
+                                        'ton': 'تن',
+                                        'bag': 'کیسه',
+                                        'piece': 'عدد',
+                                    }
+                                    old_unit = old_unit_display_map.get(old_item.weight_unit, str(old_item.weight_unit))
+                                    
+                                    # دریافت نمایش فارسی واحد وزن جدید
+                                    new_unit_display_map = {
+                                        'kg': 'کیلوگرم',
+                                        'ton': 'تن',
+                                        'bag': 'کیسه',
+                                        'piece': 'عدد',
+                                    }
+                                    new_unit_display = new_unit_display_map.get(weight_unit, str(weight_unit))
+                                    
+                                    if old_qty != quantity or old_item.weight_unit != weight_unit:
+                                        changes_detected = True
+                                        change_parts.append(f"مقدار/وزن: {old_qty} {old_unit} → {quantity} {new_unit_display}")
+                                
+                                # بررسی تغییر فی (قیمت واحد)
+                                if old_item and old_item.unit_price != unit_price:
+                                    changes_detected = True
+                                    change_parts.append(f"فی: {old_item.unit_price:,.0f} → {unit_price:,.0f} ریال")
+                                
+                                # بررسی تغییر تخفیف
+                                if old_item and old_item.discount != discount:
+                                    changes_detected = True
+                                    change_parts.append(f"تخفیف: {old_item.discount:,.0f} → {discount:,.0f} ریال")
+                                
+                                # بررسی تغییر اضافات
+                                if old_item and old_item.additional_charges != additional_charges:
+                                    changes_detected = True
+                                    change_parts.append(f"اضافات: {old_item.additional_charges:,.0f} → {additional_charges:,.0f} ریال")
+                                
+                                # اگر تغییری رخ داده، ثبت کن
+                                if changes_detected and change_parts:
+                                    try:
+                                        OrderChangeLog.objects.create(
+                                            order=order,
+                                            field_name='order_item',
+                                            field_label=f'قلم سفارش (محصول: {product.name})',
+                                            old_value=' | '.join([part.split(' → ')[0] for part in change_parts]),
+                                            new_value=' | '.join([part.split(' → ')[1] if ' → ' in part else part for part in change_parts]),
+                                            changed_by=request.user,
+                                            note=f'ویرایش قلم سفارش توسط {request.user.username}'
+                                        )
+                                        bug_logger.debug(f"تغییرات قلم {item_id} ثبت شد: {change_parts}")
+                                    except Exception as e:
+                                        bug_logger.error(f"خطا در ثبت تغییرات قلم {item_id}: {e}", exc_info=True)
+                                
                                 # به‌روزرسانی قلم موجود
                                 item.product = product
                                 item.weight_unit = weight_unit
@@ -681,8 +872,8 @@ def edit_order_view(request, order_number):
                                 item.requested_unit = form.cleaned_data.get('requested_unit') or weight_unit
                                 item.quantity = quantity
                                 item.unit_price = unit_price
-                                item.discount = form.cleaned_data.get('discount') or Decimal('0')
-                                item.additional_charges = form.cleaned_data.get('additional_charges') or Decimal('0')
+                                item.discount = discount
+                                item.additional_charges = additional_charges
                                 item.vat_percent = form.cleaned_data.get('vat_percent') or Decimal('0')
                                 item.save()
                                 items_saved += 1
@@ -690,18 +881,60 @@ def edit_order_view(request, order_number):
                                 # اگر قلم پیدا نشد، یک قلم جدید ایجاد کن
                                 item = form.to_instance(order)
                                 item.save()
+                                # ثبت اضافه شدن قلم جدید
+                                try:
+                                    OrderChangeLog.objects.create(
+                                        order=order,
+                                        field_name='order_item',
+                                        field_label='قلم سفارش',
+                                        old_value='—',
+                                        new_value=f"محصول: {product.name}, مقدار: {quantity}, فی: {unit_price:,.0f} ریال",
+                                        changed_by=request.user,
+                                        note=f'افزودن قلم جدید به سفارش توسط {request.user.username}'
+                                    )
+                                except Exception as e:
+                                    bug_logger.error(f"خطا در ثبت قلم جدید: {e}", exc_info=True)
                                 items_saved += 1
                         else:
                             # ایجاد قلم جدید
                             item = form.to_instance(order)
                             item.save()
+                            # ثبت اضافه شدن قلم جدید
+                            try:
+                                OrderChangeLog.objects.create(
+                                    order=order,
+                                    field_name='order_item',
+                                    field_label='قلم سفارش',
+                                    old_value='—',
+                                    new_value=f"محصول: {product.name}, مقدار: {quantity}, فی: {unit_price:,.0f} ریال",
+                                    changed_by=request.user,
+                                    note=f'افزودن قلم جدید به سفارش توسط {request.user.username}'
+                                )
+                            except Exception as e:
+                                bug_logger.error(f"خطا در ثبت قلم جدید: {e}", exc_info=True)
                             items_saved += 1
                     
                     # برای سفارش‌های فروش: تغییر وضعیت به pending_proforma_issue و نامعتبر کردن پیش فاکتور قبلی
                     if order.order_type == 'sale':
-                        old_status = order.status
+                        old_status_before_change = order.status
                         order.status = 'pending_proforma_issue'
                         order.save()
+                        
+                        # ثبت تغییر وضعیت در تاریخچه (اگر تغییر کرده باشد)
+                        if old_status_before_change != 'pending_proforma_issue':
+                            try:
+                                OrderChangeLog.objects.create(
+                                    order=order,
+                                    field_name='status',
+                                    field_label='وضعیت',
+                                    old_value=old_order.get_status_display() if hasattr(old_order, 'get_status_display') else str(old_status_before_change),
+                                    new_value=order.get_status_display(),
+                                    changed_by=request.user,
+                                    note=f'تغییر وضعیت به دلیل ویرایش سفارش توسط {request.user.username}'
+                                )
+                                bug_logger.debug(f"تغییر وضعیت ثبت شد: {old_status_before_change} -> pending_proforma_issue")
+                            except Exception as e:
+                                bug_logger.error(f"خطا در ثبت تغییر وضعیت: {e}", exc_info=True)
                         
                         # نامعتبر کردن پیش فاکتورهای قبلی این سفارش
                         from core.OrderFolder.ProformaModel import Proforma
@@ -797,5 +1030,47 @@ def edit_order_view(request, order_number):
         'page_title': f'ویرایش سفارش {order_number}',
     }
     return render(request, 'order/order_edit.html', context)
+
+
+@login_required
+def order_change_history_view(request, order_number):
+    """
+    نمایش تاریخچه تغییرات سفارش
+    """
+    audit_logger.info(f"درخواست مشاهده تاریخچه تغییرات سفارش {order_number}")
+    
+    if not user_has_task(request.user, TaskChoices.SALES_VIEW_ORDER_DETAIL.value):
+        audit_logger.activity("تلاش برای مشاهده تاریخچه تغییرات سفارش بدون دسترسی")
+        messages.error(request, 'شما دسترسی به مشاهده تاریخچه تغییرات ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت سفارش
+    try:
+        if request.user.is_superuser:
+            order = Order.objects.get(order_number=order_number)
+        else:
+            order = Order.objects.get(
+                order_number=order_number,
+                registered_by=request.user
+            )
+    except Order.DoesNotExist:
+        messages.error(request, 'سفارش مورد نظر یافت نشد.')
+        return redirect('sales:order_list')
+    
+    # دریافت تاریخچه تغییرات
+    from core.OrderFolder.OrderModel import OrderChangeLog
+    change_logs = OrderChangeLog.objects.filter(order=order).select_related('changed_by').order_by('-changed_at')
+    
+    context = {
+        'order': order,
+        'change_logs': change_logs,
+        'page_title': f'تاریخچه تغییرات سفارش {order_number}',
+    }
+    
+    # اگر درخواست AJAX است، فقط محتوای تاریخچه را برگردان
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'order/order_change_history_popup.html', context)
+    
+    return render(request, 'order/order_change_history.html', context)
 
 

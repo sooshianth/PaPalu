@@ -451,3 +451,57 @@ class OrderStatusLog(models.Model):
 
     def __str__(self):
         return f"{self.order.order_number}: {self.old_status} -> {self.new_status}"
+
+
+class OrderChangeLog(models.Model):
+    """لاگ تغییرات فیلدهای سفارش"""
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='change_logs'
+    )
+    field_name = models.CharField(
+        max_length=100,
+        verbose_name='نام فیلد'
+    )
+    field_label = models.CharField(
+        max_length=200,
+        verbose_name='برچسب فیلد',
+        null=True,
+        blank=True
+    )
+    old_value = models.TextField(
+        verbose_name='مقدار قبلی',
+        null=True,
+        blank=True
+    )
+    new_value = models.TextField(
+        verbose_name='مقدار جدید',
+        null=True,
+        blank=True
+    )
+    changed_at = jmodels.jDateTimeField(
+        auto_now_add=True,
+        verbose_name='تاریخ تغییر'
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='order_field_changes',
+        verbose_name='تغییر دهنده'
+    )
+    note = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='یادداشت'
+    )
+
+    class Meta:
+        verbose_name = 'لاگ تغییرات سفارش'
+        verbose_name_plural = 'لاگ‌های تغییرات سفارش'
+        ordering = ['-changed_at']
+
+    def __str__(self):
+        return f"{self.order.order_number}: {self.field_name} - {self.changed_at}"

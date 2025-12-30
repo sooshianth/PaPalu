@@ -1,0 +1,348 @@
+{% load static %}
+<div class="order-history-popup" id="orderHistoryPopup">
+    <div class="popup-overlay" onclick="closeOrderHistoryPopup()"></div>
+    <div class="popup-content">
+        <div class="popup-header">
+            <h3>تاریخچه تغییرات سفارش {{ order.order_number }}</h3>
+            <button class="popup-close" onclick="closeOrderHistoryPopup()" aria-label="بستن">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="popup-body">
+            {% if change_logs %}
+                <div class="history-timeline">
+                    {% for log in change_logs %}
+                    <div class="history-item">
+                        <div class="history-item-header">
+                            <div class="history-item-title">
+                                <span class="history-field-label">{{ log.field_label|default:log.field_name }}</span>
+                                <span class="history-date">{{ log.changed_at|date:"Y/m/d H:i" }}</span>
+                            </div>
+                            <div class="history-item-user">
+                                <span class="history-user-label">تغییر دهنده:</span>
+                                <span class="history-user-name">{{ log.changed_by.username|default:"سیستم" }}</span>
+                            </div>
+                        </div>
+                        <div class="history-item-changes">
+                            <div class="change-row">
+                                <span class="change-label">مقدار قبلی:</span>
+                                <span class="change-value old-value">{{ log.old_value|default:"—" }}</span>
+                            </div>
+                            <div class="change-arrow">→</div>
+                            <div class="change-row">
+                                <span class="change-label">مقدار جدید:</span>
+                                <span class="change-value new-value">{{ log.new_value|default:"—" }}</span>
+                            </div>
+                        </div>
+                        {% if log.note %}
+                        <div class="history-item-note">
+                            <span class="note-label">یادداشت:</span>
+                            <span class="note-text">{{ log.note }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-history">
+                    <p>هیچ تغییری در این سفارش ثبت نشده است.</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="popup-footer">
+            <button class="btn btn-secondary" onclick="closeOrderHistoryPopup()">بستن</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .order-history-popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .order-history-popup.active {
+        display: flex;
+    }
+    
+    .popup-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(2px);
+    }
+    
+    .popup-content {
+        position: relative;
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 800px;
+        width: 90%;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        z-index: 10001;
+    }
+    
+    .popup-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .popup-header h3 {
+        margin: 0;
+        color: var(--primary-green);
+        font-size: 1.3rem;
+    }
+    
+    .popup-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+        color: var(--gray-600);
+        transition: color 0.3s;
+    }
+    
+    .popup-close:hover {
+        color: var(--gray-800);
+    }
+    
+    .popup-close svg {
+        width: 24px;
+        height: 24px;
+    }
+    
+    .popup-body {
+        padding: 25px;
+        overflow-y: auto;
+        flex: 1;
+    }
+    
+    .history-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .history-item {
+        background: var(--gray-50);
+        border-radius: 8px;
+        padding: 20px;
+        border-right: 4px solid var(--primary-green);
+        position: relative;
+    }
+    
+    .history-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .history-item-title {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .history-field-label {
+        font-weight: 600;
+        color: var(--primary-green);
+        font-size: 1.1rem;
+    }
+    
+    .history-date {
+        color: var(--gray-600);
+        font-size: 0.9rem;
+    }
+    
+    .history-item-user {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .history-user-label {
+        color: var(--gray-600);
+        font-size: 0.9rem;
+    }
+    
+    .history-user-name {
+        font-weight: 500;
+        color: var(--gray-800);
+    }
+    
+    .history-item-changes {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin-bottom: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .change-row {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .change-label {
+        font-size: 0.85rem;
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+    
+    .change-value {
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        word-break: break-word;
+    }
+    
+    .old-value {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffc107;
+    }
+    
+    .new-value {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #28a745;
+    }
+    
+    .change-arrow {
+        font-size: 1.5rem;
+        color: var(--primary-green);
+        font-weight: bold;
+    }
+    
+    .history-item-note {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid var(--gray-200);
+        display: flex;
+        gap: 8px;
+    }
+    
+    .note-label {
+        font-weight: 500;
+        color: var(--gray-700);
+        font-size: 0.9rem;
+    }
+    
+    .note-text {
+        color: var(--gray-600);
+        font-size: 0.9rem;
+    }
+    
+    .empty-history {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .empty-history p {
+        font-size: 1.1rem;
+    }
+    
+    .popup-footer {
+        padding: 20px 25px;
+        border-top: 2px solid var(--gray-200);
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s;
+        cursor: pointer;
+        border: none;
+        font-size: 1rem;
+    }
+    
+    .btn-secondary {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-700);
+        color: white;
+    }
+    
+    @media (max-width: 768px) {
+        .popup-content {
+            width: 95%;
+            max-height: 95vh;
+        }
+        
+        .history-item-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .history-item-changes {
+            flex-direction: column;
+        }
+        
+        .change-arrow {
+            transform: rotate(90deg);
+        }
+        
+        .popup-header,
+        .popup-body,
+        .popup-footer {
+            padding: 15px;
+        }
+    }
+</style>
+
+<script>
+    function closeOrderHistoryPopup() {
+        const popup = document.getElementById('orderHistoryPopup');
+        const wrapper = document.getElementById('orderHistoryPopupWrapper');
+        if (popup) {
+            popup.classList.remove('active');
+        }
+        if (wrapper) {
+            wrapper.remove();
+        }
+        document.body.style.overflow = '';
+    }
+    
+    // بستن با کلید Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeOrderHistoryPopup();
+        }
+    });
+</script>
+

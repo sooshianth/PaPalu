@@ -614,6 +614,27 @@ class OrderTable(tables.Table):
             )
         )
         
+        # دکمه تاریخچه تغییرات (فقط برای superuser و فقط اگر تاریخچه وجود داشته باشد)
+        if hasattr(self, 'user') and self.user and self.user.is_superuser:
+            from core.OrderFolder.OrderModel import OrderChangeLog
+            # بررسی وجود تاریخچه - استفاده از annotation اگر موجود باشد
+            has_history = False
+            if hasattr(record, 'has_change_history'):
+                has_history = record.has_change_history
+            else:
+                # fallback: query مستقیم
+                has_history = OrderChangeLog.objects.filter(order=record).exists()
+            
+            if has_history:
+                history_url = reverse('sales:order_change_history', args=[record.order_number])
+                buttons.append(
+                    format_html(
+                        '<a href="{}" class="btn-outline-secondary order-history-link" data-order-number="{}" title="تاریخچه تغییرات" style="margin-right: 5px;">تاریخچه تغییرات</a>',
+                        history_url,
+                        record.order_number
+                    )
+                )
+        
         # دکمه ویرایش (فقط اگر کاربر دسترسی داشته باشد و سفارش قابل ویرایش باشد)
         if hasattr(self, 'user') and self.user:
             has_permission = user_has_task(self.user, TaskChoices.SALES_EDIT_ORDER.value)
