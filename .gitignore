@@ -9,3 +9,4 @@ logs/
 media/
 .vscode/
 db.json
+venv2
