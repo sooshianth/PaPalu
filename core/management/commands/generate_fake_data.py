@@ -63,103 +63,92 @@ class Command(BaseCommand):
                 return
 
         try:
-            with transaction.atomic():
-                # 1. ایجاد ActivityField ها
-                self.stdout.write('ایجاد حیطه‌های فعالیت...')
-                activity_fields = self.create_activity_fields()
+            # 1. ایجاد ActivityField ها
+            self._run_step('ایجاد حیطه‌های فعالیت', self.create_activity_fields)
 
-                # 2. ایجاد انبارها
-                self.stdout.write('ایجاد انبارها...')
-                warehouses = self.create_warehouses(count)
+            # 2. ایجاد انبارها
+            warehouses = self._run_step('ایجاد انبارها', lambda: self.create_warehouses(count))
+            
+            # 3. ایجاد کاربران (اگر وجود ندارند)
+            users = self._run_step('ایجاد کاربران', lambda: self.create_users(count))
 
-                # 3. ایجاد کاربران (اگر وجود ندارند)
-                self.stdout.write('ایجاد کاربران...')
-                users = self.create_users(count)
+            # 4. ایجاد اشخاص (مشتریان، تامین‌کنندگان، رانندگان)
+            def create_all_persons():
+                c = self.create_persons('customer', count, warehouses, users, [])
+                s = self.create_persons('supplier', count, warehouses, users, [])
+                d = self.create_persons('driver', count, warehouses, users, [])
+                return c, s, d
+            
+            persons_result = self._run_step('ایجاد اشخاص', create_all_persons)
+            if persons_result:
+                customers, suppliers, drivers = persons_result
+            else:
+                customers, suppliers, drivers = [], [], []
 
-                # 4. ایجاد اشخاص (مشتریان، تامین‌کنندگان، رانندگان)
-                self.stdout.write('ایجاد اشخاص...')
-                customers = self.create_persons('customer', count, warehouses, users, activity_fields)
-                suppliers = self.create_persons('supplier', count, warehouses, users, activity_fields)
-                drivers = self.create_persons('driver', count, warehouses, users, activity_fields)
-                
-                # 4.1. ایجاد اطلاعات تکمیلی اشخاص
-                self.stdout.write('ایجاد اطلاعات تکمیلی اشخاص (تلفن، آدرس، حساب بانکی)...')
-                self.create_person_details(customers + suppliers)
+            # 5. ایجاد محصولات
+            products = self._run_step('ایجاد محصولات', lambda: self.create_products(count, warehouses))
 
-                # 5. ایجاد محصولات
-                self.stdout.write('ایجاد محصولات...')
-                products = self.create_products(count, warehouses)
+            # 6. ایجاد مواد اولیه
+            raw_materials = self._run_step('ایجاد مواد اولیه', lambda: self.create_raw_materials(count, suppliers))
 
-                # 6. ایجاد مواد اولیه
-                self.stdout.write('ایجاد مواد اولیه...')
-                raw_materials = self.create_raw_materials(count, suppliers)
+            # 7. ایجاد سفارش‌های فروش
+            orders = self._run_step('ایجاد سفارش‌های فروش', lambda: self.create_orders('sale', count, customers, users, products))
 
-                # 7. ایجاد سفارش‌های فروش
-                self.stdout.write('ایجاد سفارش‌های فروش...')
-                orders = self.create_orders('sale', count, customers, users, products)
+            # 8. ایجاد سفارش‌های خرید
+            purchase_orders = self._run_step('ایجاد سفارش‌های خرید', lambda: self.create_orders('purchase', count, suppliers, users, products))
 
-                # 8. ایجاد سفارش‌های خرید
-                self.stdout.write('ایجاد سفارش‌های خرید...')
-                purchase_orders = self.create_orders('purchase', count, suppliers, users, products)
+            # 15. ایجاد سفارش‌های خرید تامین
+            procurement_orders = self._run_step('ایجاد سفارش‌های خرید تامین', lambda: self.create_procurement_orders(count, suppliers, raw_materials, users)) or []
 
-                # 9. ایجاد پیش فاکتورها
-                self.stdout.write('ایجاد پیش فاکتورها...')
-                proformas = self.create_proformas(count, orders)
-
-                # 10. ایجاد فاکتورها
-                self.stdout.write('ایجاد فاکتورها...')
-                invoices = self.create_invoices(count, orders)
-
-                # 11. ایجاد برنامه‌های تولید
-                self.stdout.write('ایجاد برنامه‌های تولید...')
-                production_programs = self.create_production_programs(count, products)
-
-                # 12. ایجاد تخصیص‌ها
-                self.stdout.write('ایجاد تخصیص‌ها...')
-                allocations = self.create_allocations(count, orders, products)
-
-                # 13. ایجاد حمل‌ها (قبل از خودروها، چون TruckInfo به Transport نیاز دارد)
-                self.stdout.write('ایجاد حمل‌ها...')
-                transports = self.create_transports(count, allocations)
-
-                # 14. ایجاد خودروها (بعد از transports)
-                self.stdout.write('ایجاد خودروها...')
-                trucks = self.create_trucks(count, transports)
-
-                # 15. ایجاد سفارش‌های خرید تامین
-                self.stdout.write('ایجاد سفارش‌های خرید تامین...')
-                procurement_orders = self.create_procurement_orders(count, suppliers, raw_materials, users)
-
-                # 16. ایجاد ورودی‌های انبار
-                self.stdout.write('ایجاد ورودی‌های انبار...')
-                stock_entries = self.create_stock_entries(count, warehouses, products, raw_materials)
-
-                self.stdout.write(self.style.SUCCESS(f'\n✅ تولید داده‌های فیک با موفقیت انجام شد!'))
-                self.stdout.write(f'📊 خلاصه:')
-                self.stdout.write(f'   👥 اشخاص: {Person.objects.count()} (مشتری: {Person.objects.filter(type="customer").count()}, تامین: {Person.objects.filter(type="supplier").count()}, راننده: {Person.objects.filter(type="driver").count()})')
-                self.stdout.write(f'   📞 شماره تلفن‌ها: {PhoneNumber.objects.count()}')
-                self.stdout.write(f'   📍 آدرس‌های تحویل: {DeliveryAddress.objects.count()}')
-                self.stdout.write(f'   💰 اطلاعات مالی: {FinancialBanking.objects.count()}')
-                self.stdout.write(f'   🏦 حساب‌های بانکی: {BankAccount.objects.count()}')
-                self.stdout.write(f'   📦 انبارها: {Warehouse.objects.count()}')
-                self.stdout.write(f'   🛍️ محصولات: {Product.objects.count()}')
-                self.stdout.write(f'   🌾 مواد اولیه: {RawMaterial.objects.count()}')
-                self.stdout.write(f'   📋 سفارش‌ها: {Order.objects.count()} (فروش: {Order.objects.filter(order_type="sale").count()}, خرید: {Order.objects.filter(order_type="purchase").count()})')
-                self.stdout.write(f'   📄 اقلام سفارش: {OrderItem.objects.count()}')
-                self.stdout.write(f'   📝 پیش فاکتورها: {Proforma.objects.count()}')
-                self.stdout.write(f'   🧾 فاکتورها: {Invoice.objects.count()}')
-                self.stdout.write(f'   🏭 برنامه‌های تولید: {ProductionProgram.objects.count()}')
-                self.stdout.write(f'   🚚 تخصیص‌ها: {Allocation.objects.count()}')
-                self.stdout.write(f'   🚛 حمل‌ها: {Transport.objects.count()}')
-                self.stdout.write(f'   🚗 خودروها: {TruckInfo.objects.count()}')
-                self.stdout.write(f'   📦 سفارش‌های خرید تامین: {Order.objects.filter(order_type="purchase").count()}')
-                self.stdout.write(f'   📥 ورودی‌های انبار: {StockEntry.objects.count()}')
+            self.stdout.write(self.style.SUCCESS(f'\n✅ تولید داده‌های فیک به پایان رسید!'))
+            self.stdout.write(f'📊 خلاصه:')
+            self.stdout.write(f'   👥 اشخاص: {Person.objects.count()} (مشتری: {Person.objects.filter(type="customer").count()}, تامین: {Person.objects.filter(type="supplier").count()}, راننده: {Person.objects.filter(type="driver").count()})')
+            self.stdout.write(f'   📞 شماره تلفن‌ها: {PhoneNumber.objects.count()}')
+            self.stdout.write(f'   📍 آدرس‌های تحویل: {DeliveryAddress.objects.count()}')
+            self.stdout.write(f'   💰 اطلاعات مالی: {FinancialBanking.objects.count()}')
+            self.stdout.write(f'   🏦 حساب‌های بانکی: {BankAccount.objects.count()}')
+            self.stdout.write(f'   📦 انبارها: {Warehouse.objects.count()}')
+            self.stdout.write(f'   🛍️ محصولات: {Product.objects.count()}')
+            self.stdout.write(f'   🌾 مواد اولیه: {RawMaterial.objects.count()}')
+            self.stdout.write(f'   📋 سفارش‌ها: {Order.objects.count()} (فروش: {Order.objects.filter(order_type="sale").count()}, خرید: {Order.objects.filter(order_type="purchase").count()})')
+            self.stdout.write(f'   📄 اقلام سفارش: {OrderItem.objects.count()}')
+            self.stdout.write(f'   📝 پیش فاکتورها: {Proforma.objects.count()}')
+            self.stdout.write(f'   🧾 فاکتورها: {Invoice.objects.count()}')
+            self.stdout.write(f'   🏭 برنامه‌های تولید: {ProductionProgram.objects.count()}')
+            self.stdout.write(f'   🚚 تخصیص‌ها: {Allocation.objects.count()}')
+            self.stdout.write(f'   🚛 حمل‌ها: {Transport.objects.count()}')
+            self.stdout.write(f'   🚗 خودروها: {TruckInfo.objects.count()}')
+            self.stdout.write(f'   📦 سفارش‌های خرید تامین: {len(procurement_orders)}')
+            self.stdout.write(f'   📥 ورودی‌های انبار: {StockEntry.objects.count()}')
 
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'❌ خطا در تولید داده: {str(e)}'))
             import traceback
+            import sys
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            traceback.print_exception(exc_type, exc_value, exc_traceback)
+            
+            # بررسی مشکلات احتمالی Foreign Key
+            from django.db import connection
+            if hasattr(connection, 'queries'):
+                self.stdout.write(self.style.WARNING('\n📋 آخرین کوئری‌های اجرا شده:'))
+                for query in connection.queries[-5:]:
+                    self.stdout.write(f"   {query.get('sql', '')[:200]}")
+            
+        except KeyboardInterrupt:
+            self.stdout.write(self.style.WARNING('\n⚠️ عملیات توسط کاربر متوقف شد.'))
+
+    def _run_step(self, title, func):
+        self.stdout.write(f'{title}...')
+        try:
+            with transaction.atomic():
+                return func()
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'❌ خطا در {title}: {str(e)}'))
+            import traceback
             traceback.print_exc()
-            raise
+            # return None explicitly
+            return None
 
     def create_activity_fields(self):
         """ایجاد حیطه‌های فعالیت"""
@@ -264,9 +253,9 @@ class Command(BaseCommand):
             )
             
             # اضافه کردن حیطه فعالیت
-            if activity_fields:
-                selected_fields = random.sample(activity_fields, k=min(3, len(activity_fields)))
-                person.activity_fields.set(selected_fields)
+            #if activity_fields:
+            #    selected_fields = random.sample(activity_fields, k=min(3, len(activity_fields)))
+            #    person.activity_fields.set(selected_fields)
             
             persons.append(person)
         
@@ -630,9 +619,16 @@ class Command(BaseCommand):
         selected_allocations = random.sample(allocations, k=min(count, len(allocations))) if allocations else []
         drivers = list(Person.objects.filter(type='driver')[:count])
         
+        # ایجاد شماره‌های بارنامه یکتا
+        used_waybill_nums = set()
         for i in range(count):
-            allocation = random.choice(selected_allocations) if selected_allocations else None
+            # ایجاد شماره بارنامه یکتا
             waybill_num = f'TRANS-{random.randint(10000, 99999)}'
+            while waybill_num in used_waybill_nums:
+                waybill_num = f'TRANS-{random.randint(10000, 99999)}'
+            used_waybill_nums.add(waybill_num)
+            
+            allocation = random.choice(selected_allocations) if selected_allocations else None
             direction = random.choice(directions)
             
             # انتخاب status مناسب بر اساس direction
@@ -710,8 +706,9 @@ class Command(BaseCommand):
             transaction_datetime = timezone.now() - timedelta(days=random.randint(0, 30))
             entry = StockEntry.objects.create(
                 transaction_date=transaction_datetime,
+                entry_type=random.choice(['PURCHASE', 'PRODUCTION', 'TRANSFER', 'ADJUSTMENT']),
                 notes=f'یادداشت ورودی انبار {i+1}',
-                is_committed=random.choice([True, True, False]),  # 66% committed
+                is_committed=False,  # فقط False چون TargetStock ایجاد نمی‌شود
             )
             entries.append(entry)
         
