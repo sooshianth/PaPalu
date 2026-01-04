@@ -383,14 +383,10 @@
                     {% for item in product_status_list %}
                     <tr>
                         <td style="text-align: right; font-weight: 500;">{{ item.product_name }}</td>
-                        <td>{{ item.ordered_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit
-                                }}</span></td>
-                        <td>{{ item.allocated_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit
-                                }}</span></td>
-                        <td
-                            style="color: {% if item.remaining_quantity < 0 %}#dc3545{% elif item.remaining_quantity == 0 %}#28a745{% else %}#007bff{% endif %}; font-weight: 600;">
-                            {{ item.remaining_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit
-                                }}</span>
+                        <td>{{ item.ordered_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
+                        <td>{{ item.allocated_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
+                        <td style="color: {% if item.remaining_quantity < 0 %}#dc3545{% elif item.remaining_quantity == 0 %}#28a745{% else %}#007bff{% endif %}; font-weight: 600;">
+                            {{ item.remaining_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span>
                         </td>
                         <td>
                             {% if item.remaining_quantity <= 0.001 %} <span class="status-badge status-completed">تکمیل
@@ -789,10 +785,10 @@
             let postalCodeSuggestions = [];
             let searchTimeout;
             let lastPostalCode = ''; // برای ذخیره آخرین کد پستی که اطلاعاتش نمایش داده شده
+            let isFocusing = false; // برای جلوگیری از بسته شدن فوری suggestionsContainer
 
-            postalCodeInput.addEventListener('input', function () {
-                const query = this.value.trim();
-
+            // تابع برای انجام جستجو
+            function performPostalCodeSearch(query, immediate = false) {
                 clearTimeout(searchTimeout);
                 errorMessage.style.display = 'none';
                 postalCodeInput.style.borderColor = '';
@@ -829,12 +825,8 @@
                         });
                 }
 
-                if (query.length < 2) {
-                    suggestionsContainer.style.display = 'none';
-                    postalCodeSuggestions = [];
-                    return;
-                }
-
+                // همیشه جستجو انجام بده (بدون نیاز به حداقل کاراکتر)
+                const delay = immediate ? 0 : 300;
                 searchTimeout = setTimeout(function () {
                     fetch(postalCodeSearchUrl + '?q=' + encodeURIComponent(query))
                         .then(response => response.json())
@@ -852,7 +844,28 @@
                             postalCodeSuggestions = [];
                             displayPostalCodeSuggestions();
                         });
-                }, 300);
+                }, delay);
+            }
+
+            postalCodeInput.addEventListener('input', function () {
+                const query = this.value.trim();
+                performPostalCodeSearch(query, false);
+            });
+
+            // جستجو هنگام focus (کلیک روی فیلد) - بلافاصله بدون timeout
+            postalCodeInput.addEventListener('focus', function (e) {
+                isFocusing = true;
+                const query = this.value.trim();
+                performPostalCodeSearch(query, true);
+                // بعد از یک لحظه، flag را reset کن
+                setTimeout(function() {
+                    isFocusing = false;
+                }, 500);
+            });
+            
+            // جلوگیری از بسته شدن suggestionsContainer هنگام کلیک روی input
+            postalCodeInput.addEventListener('mousedown', function (e) {
+                e.stopPropagation();
             });
 
             function displayPostalCodeSuggestions() {
@@ -892,11 +905,23 @@
                 suggestionsContainer.style.display = 'block';
             }
 
-            // بستن پیشنهادات با کلیک خارج
-            document.addEventListener('click', function (e) {
-                if (!postalCodeInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
-                    suggestionsContainer.style.display = 'none';
+            // بستن پیشنهادات با کلیک خارج (استفاده از mousedown برای جلوگیری از تداخل با focus)
+            document.addEventListener('mousedown', function (e) {
+                // اگر کلیک روی input یا suggestionsContainer بود، نبند
+                if (postalCodeInput.contains(e.target) || suggestionsContainer.contains(e.target)) {
+                    return;
                 }
+                // اگر در حال focus کردن هستیم، suggestionsContainer را نبند
+                if (isFocusing) {
+                    return;
+                }
+                // در غیر این صورت، ببند
+                suggestionsContainer.style.display = 'none';
+            });
+            
+            // جلوگیری از بسته شدن suggestionsContainer هنگام کلیک روی suggestionsContainer
+            suggestionsContainer.addEventListener('mousedown', function (e) {
+                e.stopPropagation();
             });
 
             // مدیریت کلیدهای کیبورد
