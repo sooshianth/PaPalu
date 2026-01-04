@@ -1013,25 +1013,53 @@
       }
       
       var currentTotal = parseInt(totalFormsInput.value);
-      var lastForm = container.querySelector('.formset-form[data-index="' + (currentTotal - 1) + '"]');
       
-      if (!lastForm) {
-        console.error('Last form not found for cloning');
+      // Find any form to clone - prefer visible forms, but use any if needed
+      var allForms = container.querySelectorAll('.formset-form');
+      var formToClone = null;
+      
+      // First try to find a visible form
+      for (var i = allForms.length - 1; i >= 0; i--) {
+        var form = allForms[i];
+        if (form.style.display !== 'none' && window.getComputedStyle(form).display !== 'none') {
+          formToClone = form;
+          break;
+        }
+      }
+      
+      // If no visible form found, use the last form (even if hidden)
+      if (!formToClone && allForms.length > 0) {
+        formToClone = allForms[allForms.length - 1];
+      }
+      
+      // If still no form found, try to find by index
+      if (!formToClone) {
+        formToClone = container.querySelector('.formset-form[data-index="' + (currentTotal - 1) + '"]');
+      }
+      
+      if (!formToClone) {
+        console.error('No form found for cloning');
         return;
       }
       
-      // Clone the last form
-      var newForm = lastForm.cloneNode(true);
+      // Get the index of the form we're cloning
+      var cloneIndex = parseInt(formToClone.getAttribute('data-index')) || (currentTotal - 1);
+      
+      // Clone the form
+      var newForm = formToClone.cloneNode(true);
       newForm.setAttribute('data-index', currentTotal);
+      
+      // Make sure the new form is visible
+      newForm.style.display = '';
       
       // Update form index in all input names and IDs
       var inputs = newForm.querySelectorAll('input, select, textarea');
       inputs.forEach(function(input) {
         if (input.name) {
-          input.name = input.name.replace('-' + (currentTotal - 1) + '-', '-' + currentTotal + '-');
+          input.name = input.name.replace(new RegExp(prefix + '-' + cloneIndex + '-'), prefix + '-' + currentTotal + '-');
         }
         if (input.id) {
-          input.id = input.id.replace('-' + (currentTotal - 1) + '-', '-' + currentTotal + '-');
+          input.id = input.id.replace(new RegExp(prefix + '-' + cloneIndex + '-'), prefix + '-' + currentTotal + '-');
         }
         // Clear the value for new form
         if (input.type === 'checkbox' || input.type === 'radio') {
@@ -1039,13 +1067,17 @@
         } else if (input.type !== 'hidden' || !input.name.endsWith('-id')) {
           input.value = '';
         }
+        // Remove DELETE checkbox if present
+        if (input.name && input.name.endsWith('-DELETE')) {
+          input.checked = false;
+        }
       });
       
       // Update labels' for attributes
       var labels = newForm.querySelectorAll('label');
       labels.forEach(function(label) {
         if (label.htmlFor) {
-          label.htmlFor = label.htmlFor.replace('-' + (currentTotal - 1) + '-', '-' + currentTotal + '-');
+          label.htmlFor = label.htmlFor.replace(new RegExp(prefix + '-' + cloneIndex + '-'), prefix + '-' + currentTotal + '-');
         }
       });
       
@@ -1088,13 +1120,25 @@
       }
 
       // Otherwise, this is a newly added (unsaved) row: remove from DOM and reindex
+      
+      // Remove the preceding divider if present (the divider that comes before this form)
+      var prevSibling = formEl.previousElementSibling;
+      if (prevSibling && prevSibling.getAttribute('style') && prevSibling.getAttribute('style').includes('border-top')) {
+        prevSibling.remove();
+      }
+      
+      // Remove the form
       formEl.remove();
 
-      // Remove the preceding divider if present
-      var dividers = container.querySelectorAll('div[style*="border-top"]');
-      if (dividers.length) {
-        // Clean up extra dividers: optional simplification
-      }
+      // Clean up any orphaned dividers (dividers that are not followed by a form)
+      var allDividers = container.querySelectorAll('div[style*="border-top"]');
+      allDividers.forEach(function(divider) {
+        var nextSibling = divider.nextElementSibling;
+        // If the next sibling is not a form, remove this divider
+        if (!nextSibling || !nextSibling.classList.contains('formset-form')) {
+          divider.remove();
+        }
+      });
 
       // Reindex remaining forms to keep names/ids contiguous and update TOTAL_FORMS
       var forms = container.querySelectorAll('.formset-form');
