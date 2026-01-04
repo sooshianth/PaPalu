@@ -44,14 +44,13 @@
     
     .table-container {
         overflow-x: auto;
-        margin-bottom: 30px;
     }
     
+    /* استایل جدول django-tables2 */
     .table-container .table {
         width: 100%;
         border-collapse: collapse;
         background: white;
-        margin-bottom: 0;
     }
     
     .table-container .table thead {
@@ -59,15 +58,15 @@
     }
     
     .table-container .table thead th {
-        padding: 12px 15px;
+        padding: 15px;
         text-align: center;
         font-weight: 600;
         color: var(--gray-800);
-        border: 1px solid var(--gray-300);
-        vertical-align: middle;
+        border-bottom: 2px solid #dc3545;
     }
     
     .table-container .table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
         transition: background-color 0.2s;
     }
     
@@ -76,23 +75,56 @@
     }
     
     .table-container .table tbody td {
-        padding: 12px 15px;
+        padding: 15px;
         color: var(--gray-600);
-        border: 1px solid var(--gray-300);
+    }
+    
+    /* استایل سلول actions */
+    .table-container .table tbody td.actions,
+    .table-container .table tbody td:has(.btn-group) {
+        white-space: nowrap;
         text-align: center;
+    }
+    
+    /* اطمینان از نمایش افقی دکمه‌ها در RTL */
+    .table-container .table .btn-group a,
+    .table-container .btn-group a {
+        display: inline-block !important;
         vertical-align: middle;
+        margin: 0;
     }
     
-    .table-container .table a:not(.btn) {
-        color: var(--primary-green);
+    .table-container .table .btn-group {
+        direction: ltr;
+        text-align: left;
+    }
+    
+    /* استایل‌های django-tables2 - لینک‌های عادی */
+    .table-container .table a:not(.btn-outline-warning):not(.btn-outline-info):not(.btn) {
+        color: inherit;
         text-decoration: none;
-        font-weight: 600;
     }
     
-    .table-container .table a:not(.btn):hover {
-        text-decoration: underline;
+    /* استایل گروه دکمه‌ها */
+    .btn-group {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px;
+        align-items: center;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
     }
     
+    .table-container .table .btn-group,
+    .table-container .btn-group {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    
+    /* استایل صفحه‌بندی django-tables2 */
     .pagination {
         margin-top: 30px;
         margin-bottom: 20px;
@@ -103,22 +135,14 @@
         flex-wrap: wrap;
         list-style: none;
         padding: 0;
-        direction: ltr;
+        direction: ltr !important;
+        flex-direction: row !important;
     }
     
     .pagination li {
         margin: 0;
         padding: 0;
         list-style: none;
-        order: 0;
-    }
-    
-    .pagination li:last-child {
-        order: -1;
-    }
-    
-    .pagination li:first-child {
-        order: 999;
     }
     
     .pagination a,
@@ -138,6 +162,16 @@
         margin: 0 2px;
     }
     
+    /* دکمه‌های قبلی و بعدی هم اندازه با اعداد */
+    .pagination li:first-child a,
+    .pagination li:first-child span,
+    .pagination li:last-child a,
+    .pagination li:last-child span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
     .pagination a:hover {
         background-color: #dc3545;
         color: white !important;
@@ -154,23 +188,126 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     
+    .pagination .disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+    
+    .pagination .disabled a,
+    .pagination .disabled span {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+    }
+    
+    /* Override برای استایل‌های bootstrap */
+    .pagination > li > a,
+    .pagination > li > span {
+        border: 1px solid var(--gray-300) !important;
+        border-radius: 8px !important;
+        color: var(--gray-700) !important;
+        background-color: white !important;
+        padding: 10px 16px !important;
+        margin: 0 2px !important;
+        min-width: 40px !important;
+    }
+    
+    .pagination > li > a:hover,
+    .pagination > li > a:focus {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border-color: #dc3545 !important;
+    }
+    
+    .pagination .ellipsis {
+        padding: 10px 8px;
+        color: var(--gray-600);
+        border: none !important;
+        background: transparent !important;
+    }
+    
+    /* Override برای استایل‌های bootstrap که ممکن است اعمال شده باشند */
+    .pagination > li > a,
+    .pagination > li > span {
+        border: 1px solid var(--gray-300) !important;
+        border-radius: 8px !important;
+        color: var(--gray-700) !important;
+        background-color: white !important;
+        padding: 10px 16px !important;
+        margin: 0 2px !important;
+        min-width: 40px !important;
+    }
+    
+    .table-container + .pagination,
+    .table-container .pagination,
+    div.pagination {
+        direction: ltr !important;
+        text-align: left !important;
+        justify-content: flex-start !important;
+    }
+    
+    .pagination > li:first-child > a,
+    .pagination > li:first-child > span,
+    .pagination > li:last-child > a,
+    .pagination > li:last-child > span {
+        padding: 10px 16px !important;
+        min-width: 40px !important;
+        font-size: 0.9rem !important;
+    }
+    
+    .pagination > li > a:hover,
+    .pagination > li > a:focus {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border-color: #dc3545 !important;
+    }
+    
+    .pagination > .active > a,
+    .pagination > .active > span,
+    .pagination > .active > a:hover,
+    .pagination > .active > span:hover,
+    .pagination > .active > a:focus,
+    .pagination > .active > span:focus {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border-color: #dc3545 !important;
+        font-weight: 600;
+    }
+    
+    .pagination > .disabled > a,
+    .pagination > .disabled > span,
+    .pagination > .disabled > a:hover,
+    .pagination > .disabled > span:hover,
+    .pagination > .disabled > a:focus,
+    .pagination > .disabled > span:focus {
+        background-color: var(--gray-100) !important;
+        color: var(--gray-500) !important;
+        border-color: var(--gray-300) !important;
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    /* استایل دکمه‌ها */
     .table-container .btn {
         padding: 5px 12px;
         border-radius: 6px;
         text-decoration: none;
-        font-size: 0.8rem;
+        font-size: 0.875rem;
         transition: all 0.3s;
         display: inline-block;
         border: 1px solid;
     }
     
-    .table-container .btn-primary {
+    .table-container .btn-primary,
+    .table-container .btn-sm.btn-primary {
         color: white !important;
         border-color: var(--primary-green) !important;
         background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%) !important;
     }
     
-    .table-container .btn-primary:hover {
+    .table-container .btn-primary:hover,
+    .table-container .btn-sm.btn-primary:hover {
         transform: translateY(-1px);
         box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
     }
@@ -214,6 +351,28 @@
         gap: 12px;
     }
     
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
     @media (max-width: 768px) {
         .page-header {
             flex-direction: column;
@@ -225,7 +384,12 @@
         }
         
         .table-container {
-            font-size: 0.85rem;
+            font-size: 0.9rem;
+        }
+        
+        .table-container .table thead th,
+        .table-container .table tbody td {
+            padding: 10px;
         }
     }
 </style>
@@ -251,7 +415,15 @@
 </div>
 
 <div class="list-card">
-    {% if total_count > 0 %}
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    
+    {% if table %}
         <div class="table-container">
             {% render_table table %}
         </div>
