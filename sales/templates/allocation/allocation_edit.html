@@ -387,14 +387,10 @@
                     {% for item in product_status_list %}
                     <tr>
                         <td style="text-align: right; font-weight: 500;">{{ item.product_name }}</td>
-                        <td>{{ item.ordered_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit
-                                }}</span></td>
-                        <td>{{ item.allocated_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit
-                                }}</span></td>
-                        <td
-                            style="color: {% if item.remaining_quantity < 0 %}#dc3545{% elif item.remaining_quantity == 0 %}#28a745{% else %}#007bff{% endif %}; font-weight: 600;">
-                            {{ item.remaining_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit
-                                }}</span>
+                        <td>{{ item.ordered_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
+                        <td>{{ item.allocated_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
+                        <td style="color: {% if item.remaining_quantity < 0 %}#dc3545{% elif item.remaining_quantity == 0 %}#28a745{% else %}#007bff{% endif %}; font-weight: 600;">
+                            {{ item.remaining_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span>
                         </td>
                         <td>
                             {% if item.remaining_quantity <= 0.001 %} <span class="status-badge status-completed">تکمیل
