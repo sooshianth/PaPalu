@@ -224,7 +224,11 @@
         {% endfor %}
     {% endif %}
 
-    {% if not is_complete %}
+    {% if is_done %}
+    <div class="alert alert-info" role="alert">
+        <strong>اطلاعیه:</strong> این پیش فاکتور تکمیل شده و قابل ویرایش نیست.
+    </div>
+    {% elif not is_complete %}
     <div class="alert alert-warning" role="alert">
         <strong>هشدار:</strong> تمام اطلاعات پیش فاکتور باید پر شده باشد تا بتوانید به مرحله تأیید بروید.
     </div>
@@ -413,7 +417,7 @@
     {% endif %}
 
     <!-- فرم ویرایش پیش فاکتور -->
-    <form method="post" enctype="multipart/form-data">
+    <form method="post" enctype="multipart/form-data"{% if is_done %} onsubmit="return false;"{% endif %}>
         {% csrf_token %}
 
         <div class="form-section">
@@ -422,7 +426,16 @@
                 {% if accessible_fields.order %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.order.label }}</label>
-                    {{ form.order }}
+                    {% if is_done %}
+                        {% if order %}
+                            <input type="text" class="form-control" value="{{ order.order_number }}{% if order.customer %} - {{ order.customer.name }}{% else %} - بدون مشتری{% endif %}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                        {% else %}
+                            <input type="text" class="form-control" value="" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                        {% endif %}
+                    {% else %}
+                        {{ form.order }}
+                        {{ form.order_id }}
+                    {% endif %}
                     {% if form.order.errors %}
                         <div class="text-danger">{{ form.order.errors.0 }}</div>
                     {% endif %}
@@ -432,7 +445,11 @@
                 {% if accessible_fields.proforma_number %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.proforma_number.label }}</label>
-                    {{ form.proforma_number }}
+                    {% if is_done %}
+                        <input type="text" class="form-control" value="{{ proforma.proforma_number|default:'' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    {% else %}
+                        {{ form.proforma_number }}
+                    {% endif %}
                     {% if form.proforma_number.errors %}
                         <div class="text-danger">{{ form.proforma_number.errors.0 }}</div>
                     {% endif %}
@@ -442,7 +459,11 @@
                 {% if accessible_fields.validity_date %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.validity_date.label }}</label>
-                    {{ form.validity_date }}
+                    {% if is_done %}
+                        <input type="text" class="form-control" value="{% if proforma.validity_date %}{{ proforma.validity_date|date:'Y-m-d' }}{% endif %}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    {% else %}
+                        {{ form.validity_date }}
+                    {% endif %}
                     {% if form.validity_date.errors %}
                         <div class="text-danger">{{ form.validity_date.errors.0 }}</div>
                     {% endif %}
@@ -452,7 +473,16 @@
                 {% if accessible_fields.customer %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.customer.label }}</label>
-                    {{ form.customer }}
+                    {% if is_done %}
+                        {% if proforma.customer %}
+                            <input type="text" class="form-control" value="{{ proforma.customer.name }} ({{ proforma.customer.national_id }})" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                        {% else %}
+                            <input type="text" class="form-control" value="" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                        {% endif %}
+                    {% else %}
+                        {{ form.customer }}
+                        {{ form.customer_id }}
+                    {% endif %}
                     {% if form.customer.errors %}
                         <div class="text-danger">{{ form.customer.errors.0 }}</div>
                     {% endif %}
@@ -462,7 +492,11 @@
                 {% if accessible_fields.company %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.company.label }}</label>
-                    {{ form.company }}
+                    {% if is_done %}
+                        {{ form.company }}
+                    {% else %}
+                        {{ form.company }}
+                    {% endif %}
                     <input type="text" class="form-control" value="{{ form.company_display.name|default:proforma.company.name|default:'تامین نهاده سیمرغ' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% if form.company.errors %}
                         <div class="text-danger">{{ form.company.errors.0 }}</div>
@@ -473,7 +507,11 @@
                 {% if accessible_fields.description %}
                 <div class="col-12 mb-3">
                     <label class="form-label">{{ form.description.label }}</label>
-                    {{ form.description }}
+                    {% if is_done %}
+                        <textarea class="form-control" rows="4" readonly style="background-color: var(--gray-200); cursor: not-allowed;">{{ form.description.value|default:proforma.description|default:'' }}</textarea>
+                    {% else %}
+                        {{ form.description }}
+                    {% endif %}
                     {% if form.description.errors %}
                         <div class="text-danger">{{ form.description.errors.0 }}</div>
                     {% endif %}
@@ -484,13 +522,12 @@
 
         <!-- دکمه‌ها -->
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
             {% if is_complete %}
             <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success">دانلود PDF پیش فاکتور</a>
             {% else %}
             <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success" style="opacity: 0.5; cursor: not-allowed;" onclick="event.preventDefault(); alert('لطفاً ابتدا تمام اطلاعات پیش فاکتور را تکمیل کنید.');">دانلود PDF پیش فاکتور</a>
             {% endif %}
-            <a href="{% url 'sales:proforma_list' %}" class="btn btn-secondary">انصراف</a>
+            <a href="{% url 'sales:proforma_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
         </div>
     </form>
 </div>

@@ -317,6 +317,17 @@ def proforma_detail_view(request, proforma_id):
             messages.error(request, 'شما دسترسی به این پیش فاکتور ندارید.')
             return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # بررسی اینکه آیا پیش فاکتور تکمیل شده است (سفارش به مرحله بعد رفته)
+    is_done = False
+    if proforma.order and proforma.order.status != 'pending_proforma_issue':
+        is_done = True
+    
+    # اگر پیش فاکتور تکمیل شده است، اجازه ویرایش نده
+    if request.method == 'POST' and is_done:
+        audit_logger.activity(f"تلاش برای ویرایش پیش فاکتور {proforma_id} که تکمیل شده است")
+        messages.error(request, 'پیش فاکتور تکمیل شده و قابل ویرایش نیست.')
+        return redirect('sales:proforma_detail', proforma_id=proforma_id)
+
     if request.method == 'POST':
         temp_form = CreateProformaForm(instance=proforma)
         access_map = get_accessible_proforma_fields(request.user, temp_form)
@@ -343,6 +354,15 @@ def proforma_detail_view(request, proforma_id):
         company_info = get_company_info()
         if company_info:
             form.company_display = company_info
+        
+        # تنظیم مقادیر اولیه برای فیلدهای order و customer از instance
+        if proforma.order:
+            form.initial['order'] = f"{proforma.order.order_number} - {proforma.order.customer.name if proforma.order.customer else 'بدون مشتری'}"
+            form.initial['order_id'] = proforma.order.order_number
+        
+        if proforma.customer:
+            form.initial['customer'] = f"{proforma.customer.name} ({proforma.customer.national_id})"
+            form.initial['customer_id'] = proforma.customer.national_id
 
     # دریافت اطلاعات سفارش
     order = proforma.order
@@ -379,6 +399,7 @@ def proforma_detail_view(request, proforma_id):
         'order': order,
         'order_items': order_items,
         'is_complete': is_complete and items_complete,
+        'is_done': is_done,
         'customer_info': customer_info,
         'company_info': company_info,
         'page_title': f'جزئیات پیش فاکتور {proforma.proforma_number or proforma.id}',
