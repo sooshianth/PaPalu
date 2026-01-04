@@ -1371,16 +1371,6 @@
                             </a>
                             {% endif %}
                         </li>
-                        <li class="submenu-item">
-                            {% if user|has_task:'supply.upload_freight_payment_docs' %}
-                            <a href="{% url 'accounting:uploaded_fare_payment_docs_list' %}" class="nav-link submenu-link" title="اسناد پرداخت کرایه بارگذاری شده">
-                                <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                </svg>
-                                <span class="nav-text">اسناد بارگذاری شده</span>
-                            </a>
-                            {% endif %}
-                        </li>
                     </ul>
                 </li>
                 {% if user.is_authenticated and user.is_superuser %}
