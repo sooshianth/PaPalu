@@ -155,32 +155,34 @@ class CreateProformaForm(forms.ModelForm):
     
     def _generate_proforma_number(self, order_number=None):
         """
-        تولید خودکار شماره پیش فاکتور
-        فرمت: PF + 4 رقم آخر سفارش + 2 رقم رندوم
-        مثال: سفارش 1000123 → PF012373
+        تولید خودکار شماره پیش فاکتور به صورت افزایشی
+        فرمت: PF + 6 رقم متوالی
+        مثال: PF000001, PF000002, PF000003
         """
-        import random
+        # یافتن آخرین شماره پیش فاکتور
+        last_proforma = Proforma.objects.filter(
+            proforma_number__isnull=False,
+            proforma_number__startswith='PF'
+        ).exclude(
+            proforma_number=''
+        ).order_by('-proforma_number').first()
         
-        if order_number:
-            # تبدیل به رشته
-            order_str = str(order_number)
-            
-            # استخراج 4 رقم آخر از شماره سفارش
-            if len(order_str) >= 4:
-                last_four = order_str[-4:]
-            else:
-                last_four = order_str.zfill(4)
+        if last_proforma and last_proforma.proforma_number:
+            try:
+                # استخراج عدد از آخرین شماره (PF را حذف می‌کنیم)
+                last_number_str = last_proforma.proforma_number.replace('PF', '').strip()
+                last_number = int(last_number_str)
+                # افزایش شماره
+                next_number = last_number + 1
+            except (ValueError, AttributeError):
+                # اگر شماره قبلی معتبر نبود، از 1 شروع می‌کنیم
+                next_number = 1
         else:
-            # اگر شماره سفارش نداریم، از تاریخ استفاده می‌کنیم
-            import jdatetime
-            now = jdatetime.datetime.now()
-            last_four = now.strftime('%m%d')
+            # اگر پیش فاکتوری وجود نداشت، از 1 شروع می‌کنیم
+            next_number = 1
         
-        # تولید 2 رقم رندوم (10 تا 99)
-        random_two = random.randint(10, 99)
-        
-        # فرمت نهایی: PF + 4 رقم آخر + 2 رقم رندوم
-        return f"PF{last_four}{random_two}"
+        # فرمت نهایی: PF + 6 رقم (با صفرهای پیش‌رو)
+        return f"PF{next_number:06d}"
     
     def clean_validity_date(self):
         """اعتبارسنجی تاریخ اعتبار"""

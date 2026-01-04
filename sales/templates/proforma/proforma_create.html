@@ -488,34 +488,24 @@
                 suggestionsContainer.style.display = 'block';
             }
 
-            // تولید خودکار شماره پیش فاکتور
+            // تولید خودکار شماره پیش فاکتور (افزایشی از سرور)
             function generateProformaNumber(orderNumber) {
-                // تبدیل به رشته
-                const orderStr = orderNumber.toString();
-
-                // استخراج 4 رقم آخر از شماره سفارش
-                // اگر طول کمتر از 4 است، با صفر پر می‌کنیم
-                let lastFour;
-                if (orderStr.length >= 4) {
-                    lastFour = orderStr.slice(-4);
-                } else {
-                    lastFour = orderStr.padStart(4, '0');
-                }
-
-                // تولید 2 رقم رندوم (10 تا 99)
-                const randomTwo = Math.floor(Math.random() * 90) + 10;
-
-                // فرمت: PF + 4 رقم آخر سفارش + 2 رقم رندوم
-                // مثال: سفارش 1000123 → PF012373
-                const proformaNumber = `PF${lastFour}${randomTwo}`;
-
-                if (proformaNumberInput) {
-                    proformaNumberInput.value = proformaNumber;
-                    console.log('Order number:', orderNumber);
-                    console.log('Last 4 digits:', lastFour);
-                    console.log('Random 2 digits:', randomTwo);
-                    console.log('Proforma number generated:', proformaNumber);
-                }
+                // درخواست شماره افزایشی از سرور
+                fetch('{% url "sales:get_next_proforma_number_api" %}')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.proforma_number) {
+                            if (proformaNumberInput) {
+                                proformaNumberInput.value = data.proforma_number;
+                                console.log('Proforma number generated (incremental):', data.proforma_number);
+                            }
+                        } else {
+                            console.error('خطا در دریافت شماره پیش فاکتور:', data.error || 'خطای نامشخص');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا در درخواست شماره پیش فاکتور:', error);
+                    });
             }
 
             // بستن پیشنهادات با کلیک خارج

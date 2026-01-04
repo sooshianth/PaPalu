@@ -73,8 +73,8 @@ class Proforma(models.Model):
     )
 
     class Meta:
-        verbose_name = 'پیش فاکتور'
-        verbose_name_plural = 'پیش فاکتورها'
+        verbose_name = 'فروش | پیش فاکتور'
+        verbose_name_plural = 'فروش | پیش فاکتورها'
         ordering = ['-created_at']
 
     def __str__(self):
