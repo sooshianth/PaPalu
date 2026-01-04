@@ -182,7 +182,7 @@ def calculate_order_product_quantities(order):
     return product_quantities
 
 
-def calculate_existing_allocation_product_quantities(order, exclude_allocation_id=None):
+def calculate_existing_allocation_product_quantities(order, exclude_allocation_id=None, exclude_allocation_number=None):
     """
     محاسبه مقدار تخصیص یافته فعلی هر محصول (کیلوگرم)
     خروجی: دیکشنری {product_id: quantity}
@@ -192,6 +192,8 @@ def calculate_existing_allocation_product_quantities(order, exclude_allocation_i
     
     if exclude_allocation_id:
         allocations = allocations.exclude(pk=exclude_allocation_id)
+    elif exclude_allocation_number:
+        allocations = allocations.exclude(allocation_number=exclude_allocation_number)
         
     for allocation in allocations:
         for product_info in allocation.product_infos.all():
@@ -433,10 +435,13 @@ def allocation_create_view(request, order_number):
                         # بررسی برابری مقادیر
                         new_allocation_total = calculate_allocation_total_quantity(order)
                         if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
+                            # تغییر status همه allocation های این order به 'pending_approval'
+                            Allocation.objects.filter(order=order).update(allocation_status='pending_approval')
+                            
                             order.status = 'pending_allocation_approval'
                             order.save(update_fields=['status'])
-                            bug_logger.info(f"تخصیص {allocation.allocation_number} ایجاد شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد")
-                            messages.success(request, 'تخصیص با موفقیت ایجاد شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد.')
+                            bug_logger.info(f"تخصیص {allocation.allocation_number} ایجاد شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد. همه تخصیص‌ها به 'در انتظار تأیید' تغییر کردند.")
+                            messages.success(request, 'تخصیص با موفقیت ایجاد شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد. همه تخصیص‌ها به "در انتظار تأیید" تغییر کردند.')
                         else:
                             bug_logger.info(f"تخصیص {allocation.allocation_number} برای سفارش {order_number} ایجاد شد (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
                             messages.success(request, 'تخصیص با موفقیت ایجاد شد.')
@@ -553,17 +558,31 @@ def allocation_edit_view(request, order_number, allocation_number):
 
     order = get_object_or_404(Order, order_number=order_number)
     allocation = get_object_or_404(Allocation, allocation_number=allocation_number, order=order)
+    
+    # ذخیره allocation_number فعلی برای استفاده در محاسبات
+    original_allocation_number = allocation.allocation_number
 
     if not request.user.is_superuser and order.registered_by != request.user:
         audit_logger.activity(f"تلاش برای دسترسی به سفارش {order_number} متعلق به کاربر دیگر")
         messages.error(request, 'شما دسترسی به این سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # بررسی وضعیت allocation - فقط superadmin می‌تواند allocation هایی با status غیر از 'planned' یا رد شده را ویرایش کند
+    if not request.user.is_superuser:
+        if allocation.is_rejected:
+            audit_logger.activity(f"تلاش برای ویرایش تخصیص {allocation_number} رد شده")
+            messages.error(request, 'این تخصیص رد شده است و قابل ویرایش نیست.')
+            return HttpResponseForbidden('این تخصیص قابل ویرایش نیست.')
+        if allocation.allocation_status != 'planned':
+            audit_logger.activity(f"تلاش برای ویرایش تخصیص {allocation_number} با وضعیت {allocation.allocation_status}")
+            messages.error(request, 'این تخصیص قابل ویرایش نیست. فقط تخصیص‌های در وضعیت "برنامه‌ریزی شده" قابل ویرایش هستند.')
+            return HttpResponseForbidden('این تخصیص قابل ویرایش نیست.')
 
     # محاسبه مقادیر
     order_total = calculate_order_total_quantity(order)
-    # محاسبه بدون تخصیص فعلی
+    # محاسبه بدون تخصیص فعلی (با استفاده از allocation_number)
     other_allocations_total = 0
-    other_allocations = Allocation.objects.filter(order=order).exclude(pk=allocation.pk)
+    other_allocations = Allocation.objects.filter(order=order).exclude(allocation_number=original_allocation_number)
     for other_allocation in other_allocations:
         for product_info in other_allocation.product_infos.all():
             quantity = float(product_info.quantity or 0)
@@ -585,8 +604,8 @@ def allocation_edit_view(request, order_number, allocation_number):
             
             # اعتبارسنجی وزنی به تفکیک محصول
             ordered_products = calculate_order_product_quantities(order)
-            # محاسبه تخصیص‌های دیگر (به جز تخصیص فعلی)
-            other_allocated_products = calculate_existing_allocation_product_quantities(order, exclude_allocation_id=allocation.pk)
+            # محاسبه تخصیص‌های دیگر (به جز تخصیص فعلی - با استفاده از allocation_number)
+            other_allocated_products = calculate_existing_allocation_product_quantities(order, exclude_allocation_number=original_allocation_number)
             new_allocated_products = calculate_formset_product_quantities(formset)
             
             validation_error = None
@@ -619,14 +638,17 @@ def allocation_edit_view(request, order_number, allocation_number):
                         # بررسی برابری مقادیر
                         new_allocation_total = calculate_allocation_total_quantity(order)
                         if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
+                            # تغییر status همه allocation های این order به 'pending_approval'
+                            Allocation.objects.filter(order=order).update(allocation_status='pending_approval')
+                            
                             if order.status == 'pending_allocation':
                                 order.status = 'pending_allocation_approval'
                                 order.save(update_fields=['status'])
-                                bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد")
-                                messages.success(request, 'تخصیص با موفقیت ویرایش شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد.')
+                                bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد. همه تخصیص‌ها به 'در انتظار تأیید' تغییر کردند.")
+                                messages.success(request, 'تخصیص با موفقیت ویرایش شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد. همه تخصیص‌ها به "در انتظار تأیید" تغییر کردند.')
                             else:
-                                bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد")
-                                messages.success(request, 'تخصیص با موفقیت ویرایش شد.')
+                                bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد. همه تخصیص‌ها به 'در انتظار تأیید' تغییر کردند.")
+                                messages.success(request, 'تخصیص با موفقیت ویرایش شد. همه تخصیص‌ها به "در انتظار تأیید" تغییر کردند.')
                         else:
                             # اگر قبلاً در pending_allocation_approval بود و حالا برابر نیست، برگردان به pending_allocation
                             if order.status == 'pending_allocation_approval':

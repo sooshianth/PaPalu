@@ -305,12 +305,34 @@
         background-color: #f8d7da;
         color: #721c24;
     }
+    
+    .btn-warning {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        border: none;
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    
+    .btn-warning:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 193, 7, 0.3);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
+<div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
     <h2>{{ page_title }}</h2>
+    {% if user.is_superuser %}
+    <a href="{% url 'sales:manage_allocations_list' %}" class="btn-warning">مدیریت تخصیص‌های رد شده</a>
+    {% endif %}
 </div>
 
 <div class="list-card">

@@ -95,6 +95,12 @@ urlpatterns = [
     path('approve-allocation/list/', allocation_approve_view.approve_allocation_list_view, name='approve_allocation_list'),
     path('approve-allocation/<str:order_number>/', allocation_approve_view.approve_allocation_detail_view, name='approve_allocation_detail'),
     path('approve-allocation/<str:order_number>/<str:allocation_number>/inquiry/', allocation_approve_view.approve_allocation_inquiry_view, name='approve_allocation_inquiry'),
+    path('approve-allocation/<str:order_number>/reject/', allocation_approve_view.reject_allocations_view, name='reject_allocations'),
+    
+    # مسیرهای مدیریت تخصیص‌های رد شده
+    path('manage-allocations/list/', allocation_approve_view.manage_allocations_list_view, name='manage_allocations_list'),
+    path('manage-allocations/<str:order_number>/', allocation_approve_view.manage_allocations_detail_view, name='manage_allocations_detail'),
+    path('manage-allocations/<str:order_number>/approve-all/', allocation_approve_view.approve_all_rejected_allocations_view, name='approve_all_rejected_allocations'),
     
     # مسیرهای تایید تخلیه
     path('unload-approval/list/', unload_approval_view.unload_approval_list_view, name='unload_approval_list'),

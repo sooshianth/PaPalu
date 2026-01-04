@@ -74,6 +74,19 @@ class Allocation(models.Model):
         null=True
     )
     
+    # Rejection fields
+    is_rejected = models.BooleanField(
+        default=False,
+        verbose_name="رد شده",
+        help_text="آیا این تخصیص رد شده است؟"
+    )
+    rejection_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name="دلیل رد",
+        help_text="دلیل رد این تخصیص"
+    )
+    
     # Timestamps
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,

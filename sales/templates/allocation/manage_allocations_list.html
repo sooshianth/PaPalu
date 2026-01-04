@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #ffc107;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .list-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+    }
+    
+    .order-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+        border-right: 4px solid #ffc107;
+        transition: all 0.3s;
+    }
+    
+    .order-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .order-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .order-title {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+    }
+    
+    .order-info {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+    }
+    
+    .info-item {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: var(--gray-700);
+    }
+    
+    .info-value {
+        color: var(--gray-600);
+    }
+    
+    .rejected-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        background-color: #f8d7da;
+        color: #721c24;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .btn-primary {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        border: none;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        transition: all 0.3s;
+        display: inline-block;
+        cursor: pointer;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-secondary {
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.9rem;
+        border: 1px solid var(--gray-600);
+        color: var(--gray-600);
+        transition: all 0.3s;
+        display: inline-block;
+    }
+    
+    .btn-secondary:hover {
+        background-color: var(--gray-600);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: var(--gray-600);
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+</div>
+
+<div class="list-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if orders %}
+        {% for order in orders %}
+        <div class="order-card">
+            <div class="order-header">
+                <div>
+                    <div class="order-title">سفارش {{ order.order_number }}</div>
+                    <div style="margin-top: 5px; color: var(--gray-600); font-size: 0.9rem;">
+                        {% if order.customer %}
+                            مشتری: {{ order.customer.name }}
+                        {% else %}
+                            بدون مشتری
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <span class="rejected-badge">{{ order.rejected_allocations_count }} تخصیص رد شده</span>
+                </div>
+            </div>
+            <div class="order-info">
+                <div class="info-item">
+                    <span class="info-label">مقدار کل سفارش:</span>
+                    <span class="info-value">{{ order.order_total_quantity_kg|default:0|floatformat:2 }} کیلوگرم</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">تاریخ ایجاد:</span>
+                    <span class="info-value">{{ order.created_at|date:"Y/m/d H:i" }}</span>
+                </div>
+            </div>
+            <div style="margin-top: 15px; text-align: left;">
+                <a href="{% url 'sales:manage_allocations_detail' order.order_number %}" class="btn-primary">مشاهده و مدیریت</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state">
+            <p>هیچ سفارشی با تخصیص رد شده وجود ندارد.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

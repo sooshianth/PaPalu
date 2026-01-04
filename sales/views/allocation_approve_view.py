@@ -40,6 +40,9 @@ def approve_allocation_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     orders_qs = Order.objects.filter(status='pending_allocation_approval').select_related('customer', 'registered_by')
+    
+    # فیلتر کردن سفارش‌هایی که تخصیص رد شده دارند
+    orders_qs = orders_qs.exclude(allocations__is_rejected=True).distinct()
 
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
@@ -167,8 +170,12 @@ def approve_allocation_detail_view(request, order_number):
     is_balanced = abs(order_total - allocation_total) < 0.001
     difference = order_total - allocation_total
 
-    # دریافت تخصیص‌ها
-    allocations = Allocation.objects.filter(order=order).select_related('order').prefetch_related('product_infos__product')
+    # دریافت تخصیص‌ها (فقط تخصیص‌های رد نشده و با status 'pending_approval')
+    # superadmin می‌تواند همه را ببیند
+    if request.user.is_superuser:
+        allocations = Allocation.objects.filter(order=order, is_rejected=False).select_related('order').prefetch_related('product_infos__product')
+    else:
+        allocations = Allocation.objects.filter(order=order, is_rejected=False, allocation_status='pending_approval').select_related('order').prefetch_related('product_infos__product')
     
     # آماده‌سازی اطلاعات تخصیص‌ها
     allocations_with_info = []
@@ -234,7 +241,11 @@ def approve_allocation_inquiry_view(request, order_number, allocation_number):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     order = get_object_or_404(Order, order_number=order_number)
-    allocation = get_object_or_404(Allocation, allocation_number=allocation_number, order=order)
+    # superadmin می‌تواند همه را ببیند، بقیه فقط pending_approval و رد نشده
+    if request.user.is_superuser:
+        allocation = get_object_or_404(Allocation, allocation_number=allocation_number, order=order, is_rejected=False)
+    else:
+        allocation = get_object_or_404(Allocation, allocation_number=allocation_number, order=order, is_rejected=False, allocation_status='pending_approval')
 
     if not request.user.is_superuser and order.registered_by != request.user:
         audit_logger.activity(f"تلاش برای دسترسی به سفارش {order_number} متعلق به کاربر دیگر")
@@ -275,8 +286,8 @@ def approve_allocation_inquiry_view(request, order_number, allocation_number):
             allocation.allocation_status = 'pending_shipping'
             allocation.save(update_fields=['allocation_status'])
             
-            # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند
-            allocations = Allocation.objects.filter(order=order)
+            # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند (فقط تخصیص‌های رد نشده)
+            allocations = Allocation.objects.filter(order=order, is_rejected=False)
             all_inquired = all(alloc.allocation_status == 'pending_shipping' for alloc in allocations)
             
             bug_logger.info(f"استعلام تخصیص {allocation_number} برای سفارش {order_number} تأیید شد و وضعیت به pending_shipping تغییر کرد")
@@ -301,4 +312,280 @@ def approve_allocation_inquiry_view(request, order_number, allocation_number):
         bug_logger.error(f"خطا در تأیید استعلام تخصیص {allocation_number} برای سفارش {order_number}: {str(e)}")
         messages.error(request, f'خطا در تأیید استعلام: {str(e)}')
         return redirect('sales:approve_allocation_detail', order_number=order_number)
+
+
+@login_required
+def reject_allocations_view(request, order_number):
+    """
+    رد تخصیص‌ها و ارجاع به مدیر
+    - دریافت لیست تخصیص‌های مشکل‌دار و دلیل رد
+    - علامت‌گذاری تخصیص‌ها به عنوان رد شده
+    - حذف سفارش از لیست تأیید تخصیص
+    """
+    audit_logger.info(f"درخواست رد تخصیص‌های سفارش {order_number}")
+    
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):
+        audit_logger.activity(f"تلاش برای رد تخصیص‌های سفارش {order_number} بدون دسترسی")
+        messages.error(request, 'شما دسترسی به رد تخصیص را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
+    order = get_object_or_404(Order, order_number=order_number)
+
+    if not request.user.is_superuser and order.registered_by != request.user:
+        audit_logger.activity(f"تلاش برای رد تخصیص‌های سفارش {order_number} متعلق به کاربر دیگر")
+        messages.error(request, 'شما دسترسی به این سفارش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
+    if order.status != 'pending_allocation_approval':
+        bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_allocation_approval می‌رود")
+        messages.error(request, 'این سفارش در وضعیت مناسب برای رد تخصیص نیست.')
+        return redirect('sales:approve_allocation_list')
+
+    if request.method != 'POST':
+        messages.error(request, 'درخواست نامعتبر.')
+        return redirect('sales:approve_allocation_detail', order_number=order_number)
+    
+    try:
+        with transaction.atomic():
+            # دریافت داده‌های POST
+            rejected_allocations = request.POST.getlist('rejected_allocations[]')
+            rejection_reasons = {}
+            
+            for allocation_number in rejected_allocations:
+                reason_key = f'rejection_reason_{allocation_number}'
+                reason = request.POST.get(reason_key, '').strip()
+                if reason:
+                    rejection_reasons[allocation_number] = reason
+            
+            if not rejected_allocations:
+                messages.error(request, 'لطفاً حداقل یک تخصیص را برای رد انتخاب کنید.')
+                return redirect('sales:approve_allocation_detail', order_number=order_number)
+            
+            # علامت‌گذاری تخصیص‌ها به عنوان رد شده
+            allocations_to_reject = Allocation.objects.filter(
+                order=order,
+                allocation_number__in=rejected_allocations
+            )
+            
+            for allocation in allocations_to_reject:
+                allocation.is_rejected = True
+                allocation.rejection_reason = rejection_reasons.get(allocation.allocation_number, '')
+                allocation.save(update_fields=['is_rejected', 'rejection_reason'])
+            
+            bug_logger.info(f"تخصیص‌های {rejected_allocations} برای سفارش {order_number} رد شدند")
+            messages.success(request, f'{len(rejected_allocations)} تخصیص رد شد و به مدیر ارجاع داده شد.')
+            audit_logger.activity(f"تخصیص‌های سفارش {order_number} رد شدند و به مدیر ارجاع داده شدند")
+            
+            return redirect('sales:approve_allocation_list')
+            
+    except Exception as e:
+        bug_logger.error(f"خطا در رد تخصیص‌های سفارش {order_number}: {str(e)}", exc_info=True)
+        messages.error(request, f'خطا در رد تخصیص‌ها: {str(e)}')
+        return redirect('sales:approve_allocation_detail', order_number=order_number)
+
+
+@login_required
+def manage_allocations_list_view(request):
+    """
+    لیست سفارش‌هایی که تخصیص‌هایشان رد شده است
+    فقط superadmin می‌تواند ببیند
+    """
+    audit_logger.info("درخواست مشاهده لیست سفارش‌های با تخصیص رد شده")
+    
+    if not request.user.is_superuser:
+        audit_logger.activity("تلاش برای دسترسی به مدیریت تخصیص‌ها بدون دسترسی superadmin")
+        messages.error(request, 'شما دسترسی به این بخش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    # دریافت سفارش‌هایی که حداقل یک تخصیص رد شده دارند
+    from core.OrderFolder.OrderItemModel import OrderItem
+    
+    orders_qs = Order.objects.filter(
+        allocations__is_rejected=True
+    ).distinct().select_related('customer', 'registered_by')
+    
+    # محاسبه مقدار سفارش
+    order_total_subquery = OrderItem.objects.filter(
+        order=OuterRef('pk')
+    ).values('order').annotate(
+        total=Sum(
+            Case(
+                When(weight_unit='kg', then=F('quantity')),
+                When(weight_unit='ton', then=F('quantity') * 1000),
+                When(
+                    Q(weight_unit='bag') & Q(bag_weight__isnull=False),
+                    then=F('quantity') * F('bag_weight')
+                ),
+                When(weight_unit='piece', then=F('quantity')),
+                default=0,
+                output_field=DecimalField(max_digits=15, decimal_places=3)
+            )
+        )
+    ).values('total')[:1]
+    
+    orders_qs = orders_qs.annotate(
+        order_total_quantity_kg=Subquery(order_total_subquery, output_field=DecimalField(max_digits=15, decimal_places=3))
+    )
+    
+    # تعداد تخصیص‌های رد شده
+    orders_qs = orders_qs.annotate(
+        rejected_allocations_count=Count('allocations', filter=Q(allocations__is_rejected=True), distinct=True)
+    )
+    
+    orders_qs = orders_qs.order_by('-created_at')
+    
+    context = {
+        'orders': orders_qs,
+        'page_title': 'مدیریت تخصیص‌های رد شده',
+    }
+    return render(request, 'allocation/manage_allocations_list.html', context)
+
+
+@login_required
+def manage_allocations_detail_view(request, order_number):
+    """
+    صفحه جزئیات مدیریت تخصیص‌های رد شده
+    - نمایش همه تخصیص‌های سفارش
+    - نمایش تخصیص‌های رد شده با دلیل
+    - امکان ویرایش تخصیص‌ها
+    - دکمه تأیید همه
+    """
+    audit_logger.info(f"درخواست مشاهده جزئیات مدیریت تخصیص‌های سفارش {order_number}")
+    
+    if not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای دسترسی به مدیریت تخصیص‌های سفارش {order_number} بدون دسترسی superadmin")
+        messages.error(request, 'شما دسترسی به این بخش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    # دریافت همه تخصیص‌های سفارش
+    allocations = Allocation.objects.filter(order=order).select_related('order').prefetch_related('product_infos__product')
+    
+    # بررسی اینکه آیا تخصیص رد شده‌ای وجود دارد
+    has_rejected = allocations.filter(is_rejected=True).exists()
+    
+    if not has_rejected:
+        messages.warning(request, 'این سفارش تخصیص رد شده‌ای ندارد.')
+        return redirect('sales:manage_allocations_list')
+    
+    # محاسبه مقادیر
+    order_total = calculate_order_total_quantity(order)
+    allocation_total = calculate_allocation_total_quantity(order)
+    is_balanced = abs(order_total - allocation_total) < 0.001
+    difference = order_total - allocation_total
+    
+    # آماده‌سازی اطلاعات تخصیص‌ها
+    allocations_with_info = []
+    for allocation in allocations:
+        delivery_info = None
+        is_inquired = False
+        
+        if allocation.delivery_postal_code:
+            delivery_info = get_delivery_address_info(allocation.delivery_postal_code)
+            if allocation.allocation_status == 'pending_shipping':
+                is_inquired = True
+        
+        # محاسبه مقدار این تخصیص
+        allocation_quantity = 0
+        for product_info in allocation.product_infos.all():
+            quantity = float(product_info.quantity or 0)
+            unit = product_info.unit
+            if unit == 'kg':
+                allocation_quantity += quantity
+            elif unit == 'ton':
+                allocation_quantity += quantity * 1000
+            elif unit == 'gr':
+                allocation_quantity += quantity / 1000
+        
+        allocations_with_info.append({
+            'allocation': allocation,
+            'delivery_info': delivery_info,
+            'is_inquired': is_inquired,
+            'quantity': allocation_quantity,
+            'product_infos': allocation.product_infos.all(),
+        })
+    
+    # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند (فقط تخصیص‌های رد نشده)
+    non_rejected_allocations = [item for item in allocations_with_info if not item['allocation'].is_rejected]
+    all_inquired = all(item['is_inquired'] for item in non_rejected_allocations) if non_rejected_allocations else False
+    
+    context = {
+        'order': order,
+        'allocations_with_info': allocations_with_info,
+        'order_total': order_total,
+        'allocation_total': allocation_total,
+        'is_balanced': is_balanced,
+        'difference': difference,
+        'all_inquired': all_inquired,
+        'page_title': f'مدیریت تخصیص‌های رد شده - سفارش {order_number}',
+    }
+    return render(request, 'allocation/manage_allocations_detail.html', context)
+
+
+@login_required
+def approve_all_rejected_allocations_view(request, order_number):
+    """
+    تأیید همه تخصیص‌های رد شده بعد از ویرایش
+    - حذف علامت رد از تخصیص‌ها
+    - بررسی برابری مقادیر
+    - اگر همه تخصیص‌ها تأیید شدند، سفارش به "در انتظار کارخانه" می‌رود
+    """
+    audit_logger.info(f"درخواست تأیید همه تخصیص‌های رد شده سفارش {order_number}")
+    
+    if not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای تأیید تخصیص‌های رد شده سفارش {order_number} بدون دسترسی superadmin")
+        messages.error(request, 'شما دسترسی به این بخش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    try:
+        with transaction.atomic():
+            # دریافت همه تخصیص‌های رد شده
+            rejected_allocations = Allocation.objects.filter(order=order, is_rejected=True)
+            
+            if not rejected_allocations.exists():
+                messages.warning(request, 'این سفارش تخصیص رد شده‌ای ندارد.')
+                return redirect('sales:manage_allocations_detail', order_number=order_number)
+            
+            # حذف علامت رد
+            for allocation in rejected_allocations:
+                allocation.is_rejected = False
+                allocation.rejection_reason = ''
+                allocation.save(update_fields=['is_rejected', 'rejection_reason'])
+            
+            # بررسی برابری مقادیر
+            order_total = calculate_order_total_quantity(order)
+            allocation_total = calculate_allocation_total_quantity(order)
+            is_balanced = abs(order_total - allocation_total) < 0.001
+            
+            if not is_balanced:
+                bug_logger.warning(f"مقادیر سفارش {order_number} برابر نیست (سفارش: {order_total}, تخصیص: {allocation_total})")
+                messages.error(request, 'مقادیر تخصیص‌ها با سفارش برابر نیست. لطفاً ابتدا تخصیص‌ها را اصلاح کنید.')
+                return redirect('sales:manage_allocations_detail', order_number=order_number)
+            
+            # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند
+            all_allocations = Allocation.objects.filter(order=order)
+            all_inquired = all(alloc.allocation_status == 'pending_shipping' for alloc in all_allocations)
+            
+            if all_inquired:
+                # تغییر وضعیت سفارش به "در انتظار کارخانه"
+                order.status = 'pending_factory'
+                order.save(update_fields=['status'])
+                bug_logger.info(f"همه تخصیص‌های سفارش {order_number} تأیید شد و وضعیت به pending_factory تغییر کرد")
+                messages.success(request, 'همه تخصیص‌ها تأیید شدند و سفارش به "در انتظار کارخانه" ارسال شد.')
+            else:
+                # تغییر وضعیت سفارش به "در انتظار تأیید تخصیص" برای ادامه فرآیند
+                order.status = 'pending_allocation_approval'
+                order.save(update_fields=['status'])
+                messages.success(request, 'تخصیص‌ها تأیید شدند. لطفاً استعلام‌ها را نیز تأیید کنید.')
+            
+            audit_logger.activity(f"همه تخصیص‌های رد شده سفارش {order_number} تأیید شدند")
+            return redirect('sales:manage_allocations_list')
+            
+    except Exception as e:
+        bug_logger.error(f"خطا در تأیید تخصیص‌های رد شده سفارش {order_number}: {str(e)}", exc_info=True)
+        messages.error(request, f'خطا در تأیید تخصیص‌ها: {str(e)}')
+        return redirect('sales:manage_allocations_detail', order_number=order_number)
 
