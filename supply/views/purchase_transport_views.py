@@ -657,12 +657,33 @@ def create_purchase_transport_view(request):
                         
                         # تولید خودکار شماره حمل
                         if not pt.transport_number:
-                            import uuid
-                            from datetime import datetime
-                            # تولید شماره حمل به فرمت TRANSPORT-YYYYMMDD-XXXX
-                            date_str = datetime.now().strftime('%Y%m%d')
-                            unique_id = str(uuid.uuid4())[:4].upper()
-                            pt.transport_number = f"TRANSPORT-{date_str}-{unique_id}"
+                            if pt.allocation and pt.allocation.order:
+                                order_number = pt.allocation.order.order_number
+                                # حذف پیشوند PO- از شماره سفارش
+                                if order_number.startswith('PO-'):
+                                    order_num_without_prefix = order_number[3:]  # حذف 'PO-'
+                                else:
+                                    order_num_without_prefix = order_number
+                                
+                                # شمارش تعداد حمل‌های موجود برای این سفارش
+                                existing_transports_count = Transport.objects.filter(
+                                    allocation__order=pt.allocation.order
+                                ).exclude(pk=pt.pk).count()  # حمل فعلی را از شمارش حذف می‌کنیم
+                                
+                                # شماره ترتیب (چندمین حمل)
+                                sequence_number = existing_transports_count + 1
+                                
+                                # تولید شماره حمل به فرمت TR-{order_number}-{sequence_number}
+                                pt.transport_number = f"TR-{order_num_without_prefix}-{sequence_number}"
+                                bug_logger.info(f"شماره حمل تولید شد: {pt.transport_number} برای سفارش {order_number} (حمل {sequence_number}ام)")
+                            else:
+                                # Fallback: اگر allocation یا order موجود نباشد
+                                import uuid
+                                from datetime import datetime
+                                date_str = datetime.now().strftime('%Y%m%d')
+                                unique_id = str(uuid.uuid4())[:4].upper()
+                                pt.transport_number = f"TR-FALLBACK-{date_str}-{unique_id}"
+                                bug_logger.warning(f"شماره حمل با fallback تولید شد: {pt.transport_number} (allocation یا order موجود نبود)")
                         
                         pt.save()
                         

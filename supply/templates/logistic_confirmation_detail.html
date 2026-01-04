@@ -453,6 +453,32 @@
         </div>
         {% endif %}
     </div>
+    
+    {% if transport.freight_payment_document %}
+    <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px; border-right: 4px solid #4caf50;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px; color: #2e7d32;">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <strong style="color: #2e7d32; font-size: 1.1rem;">سند پرداخت کرایه بارگذاری شده</strong>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <a href="{{ transport.freight_payment_document.url }}" target="_blank" style="color: #1976d2; text-decoration: none; font-weight: 600; padding: 8px 16px; background: white; border-radius: 6px; border: 1px solid #4caf50;">
+                📄 مشاهده / دانلود سند پرداخت کرایه
+            </a>
+            {% if transport.freight_payment_document_uploaded_at %}
+            <span style="color: #555; font-size: 0.9rem;">
+                تاریخ بارگذاری: {{ transport.freight_payment_document_uploaded_at|date:"Y/m/d H:i" }}
+            </span>
+            {% endif %}
+            {% if transport.freight_payment_document_uploaded_by %}
+            <span style="color: #555; font-size: 0.9rem;">
+                بارگذار کننده: {{ transport.freight_payment_document_uploaded_by.get_full_name|default:transport.freight_payment_document_uploaded_by.username }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="detail-card">

@@ -11,7 +11,7 @@ import json
 from core.logging_levels import *
 import django_tables2 as tables
 from django_tables2 import RequestConfig
-
+from core.ProductFolder.ProductModel import Product
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
@@ -23,6 +23,7 @@ from django.contrib.contenttypes.models import ContentType
 from sales.forms.allocation_create_form import CreateAllocationForm, AllocationProductInfoFormSet
 from sales.forms.customer_create_form import DeliveryAddressForm
 from sales.tables.tables_allocation import AllocationTable
+from core.ProductFolder.ProductModel import Product
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -860,9 +861,6 @@ def postal_code_search_api(request, order_number):
     
     query = request.GET.get('q', '').strip()
     
-    if not query:
-        return JsonResponse({'results': []})
-    
     # دریافت سفارش
     try:
         order = Order.objects.get(order_number=order_number)
@@ -877,10 +875,17 @@ def postal_code_search_api(request, order_number):
     
     # فیلتر کردن کد پستی‌ها بر اساس مشتری سفارش
     if order.customer:
-        postal_codes = DeliveryAddress.objects.filter(
-            person=order.customer,
-            postal_code__icontains=query
-        ).order_by('postal_code')[:20]
+        if query:
+            # اگر query وجود دارد، جستجو کن
+            postal_codes = DeliveryAddress.objects.filter(
+                person=order.customer,
+                postal_code__icontains=query
+            ).order_by('postal_code')[:20]
+        else:
+            # اگر query خالی است، همه کدهای پستی را برگردان
+            postal_codes = DeliveryAddress.objects.filter(
+                person=order.customer
+            ).order_by('postal_code')[:20]
     else:
         postal_codes = DeliveryAddress.objects.none()
     

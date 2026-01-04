@@ -30,11 +30,15 @@ def upload_fare_payment_docs_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     try:
-        # Get transports awaiting payment document upload
-        # Include both awaiting_payment_doc (new workflow) and completed (legacy/backward compatibility)
-        # that don't have payment documents uploaded yet
+        # Get transports that need payment document upload
+        # Include: awaiting_wh_reconciliation (آماده خروج), pending_settlement (در انتظار تایید لجستیک), awaiting_payment_doc (در انتظار بارگذاری اسناد)
+        # Only those that don't have payment documents uploaded yet
         transports = Transport.objects.filter(
-            status__in=[Transport.STATUS_AWAITING_PAYMENT_DOC, Transport.STATUS_COMPLETED]
+            status__in=[
+                Transport.STATUS_AWAITING_WH_RECONCILIATION,
+                Transport.STATUS_AWAITING_SETTLEMENT,
+                Transport.STATUS_AWAITING_PAYMENT_DOC
+            ]
         ).filter(
             Q(freight_payment_document__isnull=True) | Q(freight_payment_document='')  # NULL or empty string
         ).select_related(
@@ -87,9 +91,13 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
             transport_number=transport_number
         )
         
-        # Check if transport is in valid status (awaiting_payment_doc or completed for legacy)
+        # Check if transport is in valid status (awaiting_wh_reconciliation, pending_settlement, or awaiting_payment_doc)
         # and doesn't already have a document
-        if transport.status not in [Transport.STATUS_AWAITING_PAYMENT_DOC, Transport.STATUS_COMPLETED]:
+        if transport.status not in [
+            Transport.STATUS_AWAITING_WH_RECONCILIATION,
+            Transport.STATUS_AWAITING_SETTLEMENT,
+            Transport.STATUS_AWAITING_PAYMENT_DOC
+        ]:
             audit_logger.warning(
                 f"تلاش برای بارگذاری سند در وضعیت نامناسب - حمل {transport_number} - "
                 f"وضعیت: {transport.get_status_display()}"
@@ -112,19 +120,30 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
                     transport = form.save(commit=False)
                     transport.freight_payment_document_uploaded_at = timezone.now()
                     transport.freight_payment_document_uploaded_by = request.user
-                    transport.save()
                     
-                    # Transition to payment_doc_uploaded status
-                    transport.status = Transport.STATUS_PAYMENT_DOC_UPLOADED
+                    # If transport is in awaiting_wh_reconciliation status, keep it in the same status
+                    # Otherwise, transition to payment_doc_uploaded status
+                    original_status = transport.status
+                    if transport.status != Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                        transport.status = Transport.STATUS_PAYMENT_DOC_UPLOADED
+                    
                     transport.save()
                     
                     # Log successful upload
+                    status_message = 'سند پرداخت با موفقیت بارگذاری شد.'
+                    if original_status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                        status_message += ' وضعیت حمل در حالت آماده خروج باقی ماند.'
+                    else:
+                        status_message += ' وضعیت به "سند پرداخت بارگذاری شده" تغییر یافت.'
+                    
                     audit_logger.info(
                         f"بارگذاری موفق سند پرداخت - حمل {transport_number} | "
+                        f"وضعیت قبلی: {original_status} | "
+                        f"وضعیت جدید: {transport.status} | "
                         f"فایل: {transport.freight_payment_document.name if transport.freight_payment_document else 'N/A'}"
                     )
                     
-                    messages.success(request, 'سند پرداخت با موفقیت بارگذاری شد و وضعیت تکمیل گردید.')
+                    messages.success(request, status_message)
                     return redirect('accounting:upload_fare_payment_docs_list')
                     
                 except ValueError as ve:
@@ -155,4 +174,50 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
         bug_logger.error(f"خطا در نمایش جزئیات بارگذاری سند - حمل {transport_number}: {str(e)}", exc_info=True)
         messages.error(request, 'خطا در بارگذاری جزئیات حمل')
         return redirect('accounting:upload_fare_payment_docs_list')
+
+
+@login_required
+def uploaded_fare_payment_docs_list_view(request):
+    """صفحه لیست حمل‌های با اسناد پرداخت بارگذاری شده"""
+    audit_logger.info("دسترسی به لیست حمل‌های با اسناد پرداخت بارگذاری شده")
+    
+    # Check permission
+    if not user_has_task(request.user, TaskChoices.SUPPLY_UPLOAD_FREIGHT_PAYMENT_DOCS.value):
+        audit_logger.activity("تلاش برای دسترسی به لیست حمل‌های با اسناد بارگذاری شده بدون مجوز")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    try:
+        # Get transports with uploaded payment documents
+        # Include all transports that have payment documents uploaded (regardless of status)
+        transports = Transport.objects.filter(
+            freight_payment_document__isnull=False
+        ).exclude(
+            freight_payment_document=''  # Exclude empty string
+        ).select_related(
+            'allocation__order',
+            'allocation__order__customer',
+            'driver',
+            'freight_payment_document_uploaded_by'
+        ).prefetch_related(
+            'allocation__order__order_items__raw_material'
+        ).order_by('-freight_payment_document_uploaded_at', '-created_at')
+        
+        bug_logger.debug(f"تعداد حمل‌های با اسناد بارگذاری شده: {transports.count()}")
+        
+        # Create table
+        table = UploadFarePaymentDocsTable(transports)
+        RequestConfig(request, paginate={'per_page': 15}).configure(table)
+        
+        context = {
+            'table': table,
+            'total_count': transports.count(),
+        }
+        
+        return render(request, 'accounting_uploaded_fare_payment_docs_list.html', context)
+        
+    except Exception as e:
+        bug_logger.error(f"خطا در نمایش لیست حمل‌های با اسناد بارگذاری شده: {str(e)}", exc_info=True)
+        messages.error(request, 'خطا در بارگذاری لیست حمل‌ها')
+        return redirect('home')
 
