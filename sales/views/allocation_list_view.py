@@ -11,7 +11,7 @@ import json
 from core.logging_levels import *
 import django_tables2 as tables
 from django_tables2 import RequestConfig
-
+from core.ProductFolder.ProductModel import Product
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
