@@ -249,7 +249,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                 transport = Transport.objects.select_related(
                     'allocation__order',
                     'allocation__order__customer',
-                    'driver'
+                    'driver',
+                    'freight_payment_document_uploaded_by'
                 ).get(pk=int(transport_number))
                 bug_logger.info(f"حمل با pk={transport_number} پیدا شد - transport_number: {transport.transport_number}, status: {transport.status}")
             except Transport.DoesNotExist:
@@ -262,7 +263,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                 transport = Transport.objects.select_related(
                     'allocation__order',
                     'allocation__order__customer',
-                    'driver'
+                    'driver',
+                    'freight_payment_document_uploaded_by'
                 ).get(transport_number=transport_number)
                 bug_logger.info(f"حمل با transport_number={transport_number} پیدا شد - pk: {transport.pk}, status: {transport.status}")
             except Transport.DoesNotExist:
@@ -534,7 +536,8 @@ def rejected_transport_detail_view(request, transport_number):
                 transport = Transport.objects.select_related(
                     'allocation__order',
                     'allocation__order__customer',
-                    'driver'
+                    'driver',
+                    'freight_payment_document_uploaded_by'
                 ).get(pk=int(transport_number))
                 bug_logger.info(f"حمل با pk={transport_number} پیدا شد - transport_number: {transport.transport_number}, status: {transport.status}")
             except Transport.DoesNotExist:
