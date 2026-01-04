@@ -1,5 +1,5 @@
 from django.contrib import admin
-from . import Order, OrderItem, OrderDocument, DocumentRelation, ApprovalInfo
+from . import Order, OrderItem, OrderDocument, DocumentRelation, ApprovalInfo, Proforma
 
 
 @admin.register(Order)
@@ -64,3 +64,26 @@ class DocumentRelationAdmin(admin.ModelAdmin):
 class ApprovalInfoAdmin(admin.ModelAdmin):
     list_display = ['id', 'order']
     search_fields = ['order__order_number']
+
+
+@admin.register(Proforma)
+class ProformaAdmin(admin.ModelAdmin):
+    list_display = ['id', 'proforma_number', 'order', 'customer', 'company', 'validity_date', 'is_invalidated', 'created_at']
+    list_filter = ['is_invalidated', 'created_at', 'validity_date']
+    search_fields = ['proforma_number', 'order__order_number', 'customer__name', 'customer__national_id']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('اطلاعات اصلی', {
+            'fields': ('proforma_number', 'order', 'customer', 'company', 'validity_date')
+        }),
+        ('وضعیت', {
+            'fields': ('is_invalidated',)
+        }),
+        ('توضیحات', {
+            'fields': ('description',)
+        }),
+        ('تاریخ‌ها', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )

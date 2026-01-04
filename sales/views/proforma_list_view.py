@@ -784,3 +784,47 @@ def proforma_download_pdf(request, proforma_id):
         messages.error(request, f"خطا در تولید PDF: {str(e)}")
         return redirect('sales:proforma_detail', proforma_id=proforma_id)
 
+
+@login_required
+@require_http_methods(["GET"])
+def get_next_proforma_number_api(request):
+    """
+    API endpoint برای دریافت شماره پیش فاکتور بعدی (افزایشی)
+    """
+    try:
+        # یافتن آخرین شماره پیش فاکتور
+        last_proforma = Proforma.objects.filter(
+            proforma_number__isnull=False,
+            proforma_number__startswith='PF'
+        ).exclude(
+            proforma_number=''
+        ).order_by('-proforma_number').first()
+        
+        if last_proforma and last_proforma.proforma_number:
+            try:
+                # استخراج عدد از آخرین شماره (PF را حذف می‌کنیم)
+                last_number_str = last_proforma.proforma_number.replace('PF', '').strip()
+                last_number = int(last_number_str)
+                # افزایش شماره
+                next_number = last_number + 1
+            except (ValueError, AttributeError):
+                # اگر شماره قبلی معتبر نبود، از 1 شروع می‌کنیم
+                next_number = 1
+        else:
+            # اگر پیش فاکتوری وجود نداشت، از 1 شروع می‌کنیم
+            next_number = 1
+        
+        # فرمت نهایی: PF + 6 رقم (با صفرهای پیش‌رو)
+        proforma_number = f"PF{next_number:06d}"
+        
+        return JsonResponse({
+            'success': True,
+            'proforma_number': proforma_number
+        })
+    except Exception as e:
+        bug_logger.error(f"خطا در تولید شماره پیش فاکتور: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': 'خطا در تولید شماره پیش فاکتور'
+        }, status=500)
+

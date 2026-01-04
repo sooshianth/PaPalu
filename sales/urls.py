@@ -61,6 +61,8 @@ urlpatterns = [
     # API برای جستجوی سفارش‌ها
     path('api/orders/search/', proforma_list_view.order_search_api, name='order_search_api'),
     path('api/purchase-orders/search/', invoice_list_view.order_search_api, name='purchase_order_search_api'),
+    # API برای دریافت شماره پیش فاکتور بعدی
+    path('api/proforma/next-number/', proforma_list_view.get_next_proforma_number_api, name='get_next_proforma_number_api'),
     
     # API برای جستجوی محصولات
     path('api/products/search/', product_price_view.product_search_api, name='product_search_api'),
