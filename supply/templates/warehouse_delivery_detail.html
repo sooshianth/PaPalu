@@ -306,22 +306,19 @@
         {% if pt.driver %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">راننده:</span>
-            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.name|default:"—"
-                }}{% else %}—{% endif %}</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.name|default:"—" }}{% else %}—{% endif %}</span>
         </div>
         {% endif %}
         {% if pt.driver and pt.driver.phone_number %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">شماره تلفن راننده:</span>
-            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{
-                pt.driver.phone_number|default:"—" }}{% else %}—{% endif %}</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.driver %}{{ pt.driver.phone_number|default:"—" }}{% else %}—{% endif %}</span>
         </div>
         {% endif %}
         {% if pt.waybill_weight %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">وزن بارنامه:</span>
-            <span class="readonly-info-value">{% if accessible_transport_fields.waybill_weight %}{{
-                pt.waybill_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</span>
+            <span class="readonly-info-value">{% if accessible_transport_fields.waybill_weight %}{{ pt.waybill_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</span>
         </div>
         {% endif %}
         {% if pt.gross_weight %}
@@ -361,8 +358,7 @@
 
                 {% if accessible_transport_fields.gross_weight %}
                 <div class="form-group">
-                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label
-                        }}</label>
+                    <label for="{{ form.gross_weight.id_for_label }}" class="required">{{ form.gross_weight.label }}</label>
                     {{ form.gross_weight }}
                     {% if form.gross_weight.errors %}
                     <div class="alert alert-error">
@@ -374,8 +370,7 @@
 
                 {% if accessible_transport_fields.tare_weight %}
                 <div class="form-group">
-                    <label for="{{ form.tare_weight.id_for_label }}" class="required">{{ form.tare_weight.label
-                        }}</label>
+                    <label for="{{ form.tare_weight.id_for_label }}" class="required">{{ form.tare_weight.label }}</label>
                     {{ form.tare_weight }}
                     {% if form.tare_weight.errors %}
                     <div class="alert alert-error">
@@ -480,8 +475,7 @@
             <div class="form-section-body">
                 {% if accessible_transport_fields.freight_payment_type %}
                 <div class="form-group">
-                    <label for="{{ form.freight_payment_type.id_for_label }}" class="required">{{
-                        form.freight_payment_type.label }}</label>
+                    <label for="{{ form.freight_payment_type.id_for_label }}" class="required">{{ form.freight_payment_type.label }}</label>
                     {{ form.freight_payment_type }}
                     {% if form.freight_payment_type.errors %}
                     <div class="alert alert-error">
@@ -580,11 +574,9 @@
             </div>
             <div class="form-section-body warehouse-fields">
                 <div class="form-group">
-                    <label for="{{ form.source_warehouse.id_for_label }}" class="required">{{
-                        form.source_warehouse.label }}</label>
+                    <label for="{{ form.source_warehouse.id_for_label }}" class="required">{{ form.source_warehouse.label }}</label>
                     {% if form.source_warehouse.help_text %}
-                    <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{
-                        form.source_warehouse.help_text }}</small>
+                    <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{ form.source_warehouse.help_text }}</small>
                     {% endif %}
                     {{ form.source_warehouse }}
                     {% if form.source_warehouse.errors %}
@@ -595,11 +587,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="{{ form.destination_warehouse.id_for_label }}" class="required">{{
-                        form.destination_warehouse.label }}</label>
+                    <label for="{{ form.destination_warehouse.id_for_label }}" class="required">{{ form.destination_warehouse.label }}</label>
                     {% if form.destination_warehouse.help_text %}
-                    <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{
-                        form.destination_warehouse.help_text }}</small>
+                    <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{ form.destination_warehouse.help_text }}</small>
                     {% endif %}
                     {{ form.destination_warehouse }}
                     {% if form.destination_warehouse.errors %}
