@@ -1018,13 +1018,11 @@ class WarehouseDeliveryTable(TransportTable):
         return '—'
     
     def render_quantity(self, record):
-        """نمایش مقدار سفارش"""
-        if not record.purchase_order:
-            return '—'
-        # استفاده از order_items به جای materials
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
-        if materials:
-            quantities = [str(m.quantity) for m in materials if m.quantity]
+        """نمایش مقدار حمل (تخصیص یافته به این حمل)"""
+        # استفاده از raw_material_infos که مقدار تخصیص یافته به این حمل را نگه می‌دارد
+        raw_material_infos = record.raw_material_infos.select_related('raw_material', 'order_item').all()
+        if raw_material_infos:
+            quantities = [str(rmi.allocated_quantity) for rmi in raw_material_infos if rmi.allocated_quantity]
             return format_html('<br>'.join(quantities)) if quantities else '—'
         return '—'
     
