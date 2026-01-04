@@ -205,8 +205,8 @@ def uploaded_fare_payment_docs_list_view(request):
         
         bug_logger.debug(f"تعداد حمل‌های با اسناد بارگذاری شده: {transports.count()}")
         
-        # Create table
-        table = UploadFarePaymentDocsTable(transports)
+        # Create table with custom detail URL for uploaded docs
+        table = UploadFarePaymentDocsTable(transports, detail_url_name='accounting:uploaded_fare_payment_docs_detail')
         RequestConfig(request, paginate={'per_page': 15}).configure(table)
         
         context = {
@@ -220,4 +220,51 @@ def uploaded_fare_payment_docs_list_view(request):
         bug_logger.error(f"خطا در نمایش لیست حمل‌های با اسناد بارگذاری شده: {str(e)}", exc_info=True)
         messages.error(request, 'خطا در بارگذاری لیست حمل‌ها')
         return redirect('home')
+
+
+@login_required
+def uploaded_fare_payment_docs_detail_view(request, transport_number):
+    """صفحه جزئیات حمل با اسناد پرداخت بارگذاری شده (فقط خواندنی)"""
+    audit_logger.info(f"دسترسی به جزئیات حمل با اسناد بارگذاری شده - حمل {transport_number}")
+    
+    # Check permission
+    if not user_has_task(request.user, TaskChoices.SUPPLY_UPLOAD_FREIGHT_PAYMENT_DOCS.value):
+        audit_logger.activity(f"تلاش برای دسترسی به جزئیات حمل با اسناد بارگذاری شده بدون مجوز - حمل {transport_number}")
+        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    try:
+        transport = get_object_or_404(
+            Transport.objects.select_related(
+                'allocation__order',
+                'allocation__order__customer',
+                'driver',
+                'freight_payment_document_uploaded_by'
+            ).prefetch_related(
+                'allocation__order__order_items__raw_material'
+            ),
+            transport_number=transport_number
+        )
+        
+        # بررسی اینکه حمل دارای سند بارگذاری شده است
+        if not transport.freight_payment_document or not str(transport.freight_payment_document).strip():
+            audit_logger.warning(f"تلاش برای مشاهده جزئیات حمل بدون سند - حمل {transport_number}")
+            messages.warning(request, 'این حمل دارای سند بارگذاری شده نیست.')
+            return redirect('accounting:uploaded_fare_payment_docs_list')
+        
+        context = {
+            'transport': transport,
+            'purchase_order': transport.purchase_order,
+        }
+        
+        return render(request, 'accounting_uploaded_fare_payment_docs_detail.html', context)
+        
+    except Transport.DoesNotExist:
+        audit_logger.alert(f"تلاش برای دسترسی به حمل ناموجود - حمل {transport_number}")
+        messages.error(request, 'حمل مورد نظر یافت نشد.')
+        return redirect('accounting:uploaded_fare_payment_docs_list')
+    except Exception as e:
+        bug_logger.error(f"خطا در نمایش جزئیات حمل با اسناد بارگذاری شده - حمل {transport_number}: {str(e)}", exc_info=True)
+        messages.error(request, 'خطا در بارگذاری جزئیات حمل')
+        return redirect('accounting:uploaded_fare_payment_docs_list')
 
