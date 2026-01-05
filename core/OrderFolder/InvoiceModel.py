@@ -98,8 +98,8 @@ class Invoice(models.Model):
     )
     
     class Meta:
-        verbose_name = 'فاکتور'
-        verbose_name_plural = 'فاکتورها'
+        verbose_name = 'سفارش | فاکتور'
+        verbose_name_plural = 'سفارش | فاکتورها'
         ordering = ['-created_at']
     
     def __str__(self):
