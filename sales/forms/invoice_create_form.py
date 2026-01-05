@@ -242,6 +242,13 @@ class CreateInvoiceForm(forms.ModelForm):
             self.add_error('customer', 'مشتری یافت نشد.')
             return cleaned_data
         
+        # تنظیم company - اگر در cleaned_data نباشد، از _get_or_create_company استفاده می‌کنیم
+        if 'company' not in cleaned_data or not cleaned_data.get('company'):
+            company = self._get_or_create_company()
+            if company:
+                cleaned_data['company'] = company
+                self._company = company
+        
         return cleaned_data
     
     def save(self, commit=True):
@@ -256,11 +263,18 @@ class CreateInvoiceForm(forms.ModelForm):
         if hasattr(self, '_customer'):
             instance.customer = self._customer
         
-        # اگر company در cleaned_data نباشد اما در initial باشد
-        if not instance.company and 'company' in self.initial:
-            company = self._get_or_create_company()
-            if company:
-                instance.company = company
+        # تنظیم company - اول از _company (که در clean تنظیم شده)، سپس از cleaned_data، در نهایت از _get_or_create_company
+        if not instance.company:
+            if hasattr(self, '_company'):
+                instance.company = self._company
+            else:
+                cleaned_data = getattr(self, 'cleaned_data', {})
+                if 'company' in cleaned_data and cleaned_data['company']:
+                    instance.company = cleaned_data['company']
+                else:
+                    company = self._get_or_create_company()
+                    if company:
+                        instance.company = company
         
         if commit:
             instance.save()

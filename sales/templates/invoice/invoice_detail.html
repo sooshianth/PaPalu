@@ -410,7 +410,7 @@
             <tbody>
                 {% for item in order_items %}
                 <tr>
-                    <td>{{ item.product.name|default:"-" }}</td>
+                    <td>{% if item.product %}{{ item.product.name }}{% else %}-{% endif %}</td>
                     <td>{{ item.quantity|default:"-" }}</td>
                     <td>{{ item.weight_unit|default:item.requested_unit|default:"-" }}</td>
                     <td>{{ item.unit_price|default:"-"|floatformat:0 }}</td>
@@ -492,7 +492,7 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.company.label }}</label>
                     {{ form.company }}
-                    <input type="text" class="form-control" value="{{ form.company_display.name|default:invoice.company.name|default:'تامین نهاده سیمرغ' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    <input type="text" class="form-control" value="{% if form.company_display %}{{ form.company_display.name }}{% elif invoice.company %}{{ invoice.company.name }}{% else %}تامین نهاده سیمرغ{% endif %}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% if form.company.errors %}
                         <div class="text-danger">{{ form.company.errors.0 }}</div>
                     {% endif %}

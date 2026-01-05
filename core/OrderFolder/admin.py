@@ -1,5 +1,5 @@
 from django.contrib import admin
-from . import Order, OrderItem, OrderDocument, DocumentRelation, ApprovalInfo, Proforma
+from . import Order, OrderItem, OrderDocument, DocumentRelation, ApprovalInfo, Proforma, Invoice
 
 
 @admin.register(Order)
@@ -81,6 +81,26 @@ class ProformaAdmin(admin.ModelAdmin):
         }),
         ('توضیحات', {
             'fields': ('description',)
+        }),
+        ('تاریخ‌ها', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ['id', 'tax_invoice_number', 'order', 'customer', 'company', 'issue_date', 'customer_tax_type', 'created_at']
+    list_filter = ['customer_tax_type', 'issue_date', 'created_at']
+    search_fields = ['tax_invoice_number', 'order__order_number', 'customer__name', 'customer__national_id']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('اطلاعات اصلی', {
+            'fields': ('order', 'tax_invoice_number', 'customer', 'company', 'customer_tax_type', 'issue_date')
+        }),
+        ('فایل و توضیحات', {
+            'fields': ('invoice_file', 'description')
         }),
         ('تاریخ‌ها', {
             'fields': ('created_at', 'updated_at'),
