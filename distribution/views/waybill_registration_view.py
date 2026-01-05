@@ -355,10 +355,14 @@ def register_waybill_view(request, waybill_number):
         if transport.waybill_serial:
             initial_data['waybill_serial'] = transport.waybill_serial
         if transport.waybill_date:
-            initial_data['waybill_date'] = transport.waybill_date
+            # تبدیل تاریخ جلالی به میلادی برای فرم
+            if isinstance(transport.waybill_date, jdatetime.date):
+                initial_data['waybill_date'] = transport.waybill_date.togregorian()
+            else:
+                initial_data['waybill_date'] = transport.waybill_date
         else:
-            # پیش‌فرض امروز (جلالی)
-            initial_data['waybill_date'] = jdatetime.date.today()
+            # پیش‌فرض امروز (میلادی)
+            initial_data['waybill_date'] = datetime_date.today()
         if transport.cardex_code:
             initial_data['cardex_code'] = transport.cardex_code
         if transport.contract_code:

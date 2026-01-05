@@ -547,6 +547,14 @@
             <!-- پلاک خودرو -->
             <div class="form-group">
                 <label class="required">پلاک خودرو</label>
+                <div id="previous_plates_container" style="display: none; margin-bottom: 15px; padding: 15px; background: #e7f3ff; border-radius: 6px; border: 1px solid #b3d9ff;">
+                    <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--gray-700); font-weight: 600;">
+                        پلاک‌های قبلی این راننده:
+                    </p>
+                    <div id="previous_plates_list" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        <!-- پلاک‌های قبلی اینجا نمایش داده می‌شوند -->
+                    </div>
+                </div>
                 <div class="plate-input-group" style="position: relative; margin-bottom: 25px;">
                     <div style="position: relative; flex: 1;">
                         <input type="text" 
@@ -776,6 +784,8 @@
         document.getElementById('national_card_preview').src = '';
         document.getElementById('driver_info_status').style.display = 'none';
         document.getElementById('previous_national_card_info').style.display = 'none';
+        document.getElementById('previous_plates_container').style.display = 'none';
+        document.getElementById('previous_plates_list').innerHTML = '';
         
         // حذف readonly از نام
         const driverNameInput = document.getElementById('driver_name');
@@ -819,6 +829,9 @@
             if (usePreviousCheckbox) {
                 usePreviousCheckbox.checked = false;
             }
+            // پاک کردن پلاک‌های قبلی
+            document.getElementById('previous_plates_container').style.display = 'none';
+            document.getElementById('previous_plates_list').innerHTML = '';
             // حذف readonly از نام
             driverNameInput.removeAttribute('readonly');
             driverNameInput.style.backgroundColor = '';
@@ -850,6 +863,9 @@
                 statusElement.textContent = 'راننده یافت نشد. می‌توانید اطلاعات را به صورت دستی وارد کنید.';
                 statusElement.style.color = 'var(--gray-600)';
                 statusElement.style.display = 'block';
+                // پاک کردن پلاک‌های قبلی
+                document.getElementById('previous_plates_container').style.display = 'none';
+                document.getElementById('previous_plates_list').innerHTML = '';
                 return;
             }
             
@@ -886,6 +902,50 @@
                 previousCardInfo.style.display = 'block';
             }
             
+            // نمایش پلاک‌های قبلی
+            const previousPlatesContainer = document.getElementById('previous_plates_container');
+            const previousPlatesList = document.getElementById('previous_plates_list');
+            if (data.previous_plates && data.previous_plates.length > 0) {
+                previousPlatesList.innerHTML = '';
+                data.previous_plates.forEach(function(plate) {
+                    const plateButton = document.createElement('button');
+                    plateButton.type = 'button';
+                    plateButton.className = 'btn-outline-primary';
+                    plateButton.style.cssText = 'padding: 8px 12px; font-size: 0.85rem; cursor: pointer;';
+                    plateButton.textContent = plate.display || plate.plate_number;
+                    plateButton.onclick = function() {
+                        // پر کردن فرم پلاک
+                        document.getElementById('plate_part1').value = plate.plate_part1 || '';
+                        document.getElementById('plate_part2').value = plate.plate_part2 || '';
+                        document.getElementById('plate_part3').value = plate.plate_part3 || '';
+                        document.getElementById('plate_part4').value = plate.plate_part4 || '';
+                        
+                        // پر کردن نوع ماشین و نوع بارگیر اگر وجود داشته باشد
+                        if (plate.vehicle_type) {
+                            const vehicleTypeSelect = document.getElementById('vehicle_type');
+                            vehicleTypeSelect.value = plate.vehicle_type;
+                        }
+                        if (plate.loading_type) {
+                            const loadingTypeSelect = document.getElementById('loading_type');
+                            loadingTypeSelect.value = plate.loading_type;
+                        }
+                        
+                        // نمایش پیام
+                        const plateStatus = document.createElement('div');
+                        plateStatus.style.cssText = 'margin-top: 10px; padding: 8px; background: #d4edda; border-radius: 4px; color: #155724; font-size: 0.85rem;';
+                        plateStatus.textContent = 'پلاک انتخاب شد: ' + (plate.display || plate.plate_number);
+                        previousPlatesList.appendChild(plateStatus);
+                        setTimeout(function() {
+                            plateStatus.remove();
+                        }, 3000);
+                    };
+                    previousPlatesList.appendChild(plateButton);
+                });
+                previousPlatesContainer.style.display = 'block';
+            } else {
+                previousPlatesContainer.style.display = 'none';
+            }
+            
             // نمایش پیام موفقیت
             statusElement.textContent = 'اطلاعات راننده با موفقیت بارگذاری شد. می‌توانید آنها را ویرایش کنید.';
             statusElement.style.color = 'var(--primary-green)';
@@ -904,6 +964,9 @@
             if (usePreviousCheckbox) {
                 usePreviousCheckbox.checked = false;
             }
+            // پاک کردن پلاک‌های قبلی
+            document.getElementById('previous_plates_container').style.display = 'none';
+            document.getElementById('previous_plates_list').innerHTML = '';
             // حذف readonly از نام
             driverNameInput.removeAttribute('readonly');
             driverNameInput.style.backgroundColor = '';

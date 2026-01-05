@@ -12,45 +12,8 @@ import re
 class LoadingExitForm(forms.Form):
     """فرم ثبت خروج کالا"""
     
-    # فیلدهای اجباری وزن
-    empty_weight = forms.DecimalField(
-        required=True,
-        label='وزن خالی (کیلوگرم)',
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'وزن خالی',
-            'step': '0.001',
-            'required': True
-        })
-    )
-    
-    gross_weight = forms.DecimalField(
-        required=True,
-        label='وزن پر (کیلوگرم)',
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'وزن پر',
-            'step': '0.001',
-            'required': True
-        })
-    )
-    
-    # وزن خالص (read-only، محاسبه خودکار)
-    net_weight = forms.DecimalField(
-        required=False,
-        label='وزن خالص (کیلوگرم)',
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'readonly': True,
-            'placeholder': 'محاسبه خودکار'
-        })
-    )
+    # وزن پر اولیه (برای توزین مرحله‌ای)
+    # این فیلد در template به صورت مستقیم اضافه می‌شود و در view از POST دریافت می‌شود
     
     # فیلدهای اجباری بسته‌بندی و انبار
     packaging_type = forms.ChoiceField(
@@ -225,16 +188,6 @@ class LoadingExitForm(forms.Form):
     
     def clean(self):
         cleaned_data = super().clean()
-        empty_weight = cleaned_data.get('empty_weight')
-        gross_weight = cleaned_data.get('gross_weight')
-        
-        # بررسی اینکه وزن پر >= وزن خالی باشد
-        if empty_weight and gross_weight:
-            if gross_weight < empty_weight:
-                raise forms.ValidationError('وزن پر باید بیشتر یا مساوی وزن خالی باشد.')
-            
-            # محاسبه خودکار وزن خالص
-            cleaned_data['net_weight'] = gross_weight - empty_weight
-        
+        # اعتبارسنجی وزن‌ها در view انجام می‌شود (بعد از پردازش مراحل تخلیه)
         return cleaned_data
 

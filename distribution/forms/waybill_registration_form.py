@@ -30,11 +30,14 @@ class WaybillRegistrationForm(forms.Form):
         })
     )
     
-    waybill_date = jforms.jDateField(
+    waybill_date = forms.DateField(
         required=True,
         label='تاریخ بارنامه',
-        widget=jforms.jDateInput(attrs={
+        widget=forms.DateInput(attrs={
             'class': 'form-control',
+            'type': 'text',
+            'placeholder': '1403/09/15',
+            'id': 'id_waybill_date',
             'required': True
         })
     )

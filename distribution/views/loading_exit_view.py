@@ -216,14 +216,97 @@ def register_loading_exit_view(request, waybill_number):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # دریافت داده‌های فرم
-                    empty_weight = form.cleaned_data['empty_weight']
-                    gross_weight = form.cleaned_data['gross_weight']
-                    net_weight = form.cleaned_data.get('net_weight', gross_weight - empty_weight)
+                    # دریافت وزن پر اولیه از فیلد جداگانه
+                    gross = request.POST.get('initial_gross_weight')
                     packaging_type = form.cleaned_data['packaging_type']
                     origin_warehouse_obj = form.cleaned_data['origin_warehouse']
                     destination_warehouse_obj = form.cleaned_data['destination_warehouse']
                     driver_account_number = form.cleaned_data.get('driver_account_number', '').strip()
+                    
+                    if not gross:
+                        messages.error(request, 'وزن پر اولیه وارد نشده است.')
+                        return redirect('distribution:loading_exit_list')
+                    
+                    try:
+                        gross = float(gross)
+                    except (ValueError, TypeError):
+                        messages.error(request, 'وزن پر اولیه نامعتبر است.')
+                        return redirect('distribution:loading_exit_list')
+                    
+                    if gross <= 0:
+                        messages.error(request, 'وزن پر اولیه باید بزرگتر از صفر باشد.')
+                        return redirect('distribution:loading_exit_list')
+                    
+                    # پردازش داده‌های مرحله‌ای تخلیه
+                    # فرمت: unloading_stages[0][product_info_id]=X&unloading_stages[0][weight]=Y
+                    product_infos_qs = transport.product_infos.all()
+                    
+                    # دریافت مراحل تخلیه از POST
+                    unloading_stages = []
+                    stage_index = 0
+                    while True:
+                        product_info_id_key = f'unloading_stages[{stage_index}][product_info_id]'
+                        weight_key = f'unloading_stages[{stage_index}][weight]'
+                        
+                        product_info_id = request.POST.get(product_info_id_key)
+                        weight = request.POST.get(weight_key)
+                        
+                        if not product_info_id or not weight:
+                            break
+                        
+                        try:
+                            product_info_id = int(product_info_id)
+                            weight = float(weight)
+                            if weight > 0:
+                                unloading_stages.append({
+                                    'product_info_id': product_info_id,
+                                    'weight': weight
+                                })
+                        except (ValueError, TypeError):
+                            pass
+                        
+                        stage_index += 1
+                    
+                    if not unloading_stages:
+                        messages.error(request, 'حداقل یک مرحله تخلیه باید ثبت شود.')
+                        return redirect('distribution:loading_exit_list')
+                    
+                    # محاسبه وزن‌های خالص هر محصول و وزن خالی نهایی
+                    product_info_weights = {}
+                    current_weight = float(gross)
+                    
+                    for stage in unloading_stages:
+                        product_info_id = stage['product_info_id']
+                        weight_after_unloading = stage['weight']
+                        
+                        # وزن خالص این محصول = وزن قبلی - وزن بعد از تخلیه
+                        net_item_weight = current_weight - weight_after_unloading
+                        
+                        if net_item_weight <= 0:
+                            messages.error(request, f'وزن خالص محصول نامعتبر است. وزن بعد از تخلیه باید کمتر از وزن قبلی باشد.')
+                            return redirect('distribution:loading_exit_list')
+                        
+                        # بررسی اینکه این محصول قبلاً تخلیه نشده باشد
+                        if product_info_id in product_info_weights:
+                            messages.error(request, 'هر محصول فقط یک بار می‌تواند تخلیه شود.')
+                            return redirect('distribution:loading_exit_list')
+                        
+                        product_info_weights[product_info_id] = net_item_weight
+                        current_weight = weight_after_unloading
+                    
+                    # وزن خالی نهایی = آخرین وزن ثبت شده
+                    empty_weight = current_weight
+                    net_weight = float(gross) - float(empty_weight)
+                    
+                    # بررسی اینکه همه محصولات تخلیه شده‌اند
+                    if product_infos_qs.exists():
+                        product_info_ids_in_stages = set(product_info_weights.keys())
+                        product_info_ids_in_transport = set(product_infos_qs.values_list('id', flat=True))
+                        
+                        if product_info_ids_in_stages != product_info_ids_in_transport:
+                            missing = product_info_ids_in_transport - product_info_ids_in_stages
+                            messages.error(request, f'همه محصولات باید تخلیه شوند. محصولات باقیمانده: {missing}')
+                            return redirect('distribution:loading_exit_list')
                     
                     # بررسی اینکه انبار مبدأ انتخاب شده است
                     if not origin_warehouse_obj:
@@ -334,14 +417,23 @@ def register_loading_exit_view(request, waybill_number):
                             )
                     
                     # به‌روزرسانی وزن‌های Transport
-                    transport.gross_weight = gross_weight
+                    transport.gross_weight = gross
                     transport.empty_weight = empty_weight
                     transport.net_weight = net_weight
                     transport.save(update_fields=['gross_weight', 'empty_weight', 'net_weight'])
                     
-                    # توجه: اطلاعات ProductInfo فقط برای نمایش هستند و در این فرم به‌روزرسانی نمی‌شوند
-                    # اگر ProductInfo وجود دارد، اطلاعات آن‌ها از قبل ثبت شده‌اند
-                    # packaging_type و warehouse ها فقط برای عملیات بعدی استفاده می‌شوند
+                    # به‌روزرسانی وزن هر ProductInfo
+                    for product_info in product_infos_qs:
+                        weight = product_info_weights.get(product_info.id, 0)
+                        if weight > 0:
+                            product_info.weight = weight
+                            product_info.packaging_type = packaging_type
+                            # تبدیل انبارها به نام (چون ProductInfo از CharField استفاده می‌کند)
+                            if origin_warehouse_obj:
+                                product_info.origin_warehouse = origin_warehouse_obj.name
+                            if destination_warehouse_obj:
+                                product_info.destination_warehouse = destination_warehouse_obj.name
+                            product_info.save()
                     
                     # ایجاد StockEntry برای commit موجودی انبار
                     # برای هر ProductInfo، از انبار مبدا کم می‌کنیم و به انبار مقصد اضافه می‌کنیم
@@ -564,6 +656,7 @@ def register_loading_exit_view(request, waybill_number):
                 if item_name:
                     packaging_type_display = product_info.get_packaging_type_display() if product_info.packaging_type else None
                     product_info_list.append({
+                        'id': product_info.id,
                         'name': item_name,
                         'weight': product_info.weight,
                         'packaging_type': packaging_type_display,
@@ -616,9 +709,6 @@ def register_loading_exit_view(request, waybill_number):
         # دریافت اطلاعات ProductInfo موجود
         product_info = transport.product_infos.first()
         if product_info:
-            initial_data['empty_weight'] = transport.empty_weight
-            initial_data['gross_weight'] = transport.gross_weight
-            initial_data['net_weight'] = transport.net_weight
             initial_data['packaging_type'] = product_info.packaging_type
             
             # تبدیل نام انبار به شیء
@@ -759,6 +849,7 @@ def register_loading_exit_view(request, waybill_number):
         if item_name:
             packaging_type_display = product_info.get_packaging_type_display() if product_info.packaging_type else None
             product_info_list.append({
+                'id': product_info.id,
                 'name': item_name,
                 'weight': product_info.weight,
                 'packaging_type': packaging_type_display,
