@@ -284,12 +284,28 @@ class OrderItem(models.Model):
     def get_remaining_quantity(self):
         """
         محاسبه مقدار باقیمانده برای تخصیص به حمل‌ها
+        مقدار باقیمانده در واحد سفارش برمی‌گردد
         """
+        from decimal import Decimal
+        
         if not self.quantity:
             return Decimal('0')
         total_quantity = Decimal(str(self.quantity))
-        allocated = self.get_allocated_quantity()
-        return total_quantity - allocated
+        allocated_in_kg = self.get_allocated_quantity()  # مقدار تخصیص یافته در کیلوگرم
+        
+        # تبدیل مقدار تخصیص یافته به واحد سفارش
+        if self.weight_unit == 'kg':
+            allocated_in_order_unit = allocated_in_kg
+        elif self.weight_unit == 'ton':
+            allocated_in_order_unit = allocated_in_kg / Decimal('1000')
+        elif self.weight_unit == 'bag' and self.bag_weight:
+            allocated_in_order_unit = allocated_in_kg / Decimal(str(self.bag_weight))
+        elif self.weight_unit == 'piece':
+            allocated_in_order_unit = allocated_in_kg
+        else:
+            allocated_in_order_unit = allocated_in_kg
+        
+        return total_quantity - allocated_in_order_unit
     
     def is_fully_allocated(self):
         """

@@ -1007,13 +1007,11 @@ class WarehouseDeliveryTable(TransportTable):
                 self.columns[col_name].column.visible = True
     
     def render_raw_materials(self, record):
-        """نمایش لیست مواد اولیه از سفارش خرید"""
-        if not record.purchase_order:
-            return '—'
-        # استفاده از order_items به جای materials
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
-        if materials:
-            names = [m.raw_material.name for m in materials if m.raw_material]
+        """نمایش لیست مواد اولیه تخصیص یافته به این حمل (نه کل مواد اولیه سفارش)"""
+        # استفاده از raw_material_infos که فقط مواد اولیه تخصیص یافته به این حمل را نگه می‌دارد
+        raw_material_infos = record.raw_material_infos.select_related('raw_material').all()
+        if raw_material_infos:
+            names = [rmi.raw_material.name for rmi in raw_material_infos if rmi.raw_material]
             return format_html('<br>'.join(names)) if names else '—'
         return '—'
     
@@ -1027,13 +1025,16 @@ class WarehouseDeliveryTable(TransportTable):
         return '—'
     
     def render_unit(self, record):
-        """نمایش واحد سفارش"""
-        if not record.purchase_order:
-            return '—'
-        # استفاده از order_items به جای materials
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
-        if materials:
-            units = [m.get_weight_unit_display() or '—' for m in materials]
+        """نمایش واحد مواد اولیه تخصیص یافته به این حمل"""
+        # استفاده از raw_material_infos که فقط مواد اولیه تخصیص یافته به این حمل را نگه می‌دارد
+        raw_material_infos = record.raw_material_infos.select_related('order_item').all()
+        if raw_material_infos:
+            units = []
+            for rmi in raw_material_infos:
+                # واحد از order_item گرفته می‌شود
+                if rmi.order_item:
+                    unit_display = rmi.order_item.get_weight_unit_display() or '—'
+                    units.append(unit_display)
             return format_html('<br>'.join(units)) if units else '—'
         return '—'
     

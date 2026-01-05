@@ -116,6 +116,7 @@ class RawMaterialInfo(models.Model):
     def clean(self):
         """اعتبارسنجی: مقدار تخصیص یافته نباید بیشتر از مقدار باقیمانده در سفارش باشد"""
         from django.core.exceptions import ValidationError
+        from decimal import Decimal
         
         if not self.order_item:
             raise ValidationError('باید یک ماده اولیه از سفارش انتخاب شود.')
@@ -124,17 +125,35 @@ class RawMaterialInfo(models.Model):
         if self.raw_material != self.order_item.raw_material:
             raise ValidationError('ماده اولیه انتخاب شده با ماده اولیه سفارش مطابقت ندارد.')
         
-        # محاسبه مقدار باقیمانده
-        remaining = self.order_item.get_remaining_quantity()
+        # محاسبه مقدار باقیمانده در واحد سفارش
+        remaining_in_order_unit = self.order_item.get_remaining_quantity()
+        
+        # تبدیل مقدار باقیمانده به کیلوگرم
+        # چون allocated_quantity همیشه در کیلوگرم است
+        order_item = self.order_item
+        if order_item.weight_unit == 'kg':
+            remaining_in_kg = remaining_in_order_unit
+        elif order_item.weight_unit == 'ton':
+            remaining_in_kg = remaining_in_order_unit * Decimal('1000')
+        elif order_item.weight_unit == 'bag' and order_item.bag_weight:
+            remaining_in_kg = remaining_in_order_unit * Decimal(str(order_item.bag_weight))
+        elif order_item.weight_unit == 'piece':
+            remaining_in_kg = remaining_in_order_unit
+        else:
+            remaining_in_kg = remaining_in_order_unit
         
         # اگر در حال ویرایش هستیم، مقدار فعلی را به باقیمانده اضافه کن
         if self.pk:
-            old_instance = RawMaterialInfo.objects.get(pk=self.pk)
-            remaining += old_instance.allocated_quantity
+            try:
+                old_instance = RawMaterialInfo.objects.get(pk=self.pk)
+                # مقدار قدیمی هم در کیلوگرم است
+                remaining_in_kg += old_instance.allocated_quantity
+            except RawMaterialInfo.DoesNotExist:
+                pass
         
-        if self.allocated_quantity > remaining:
+        if self.allocated_quantity > remaining_in_kg:
             raise ValidationError(
-                f'مقدار تخصیص یافته ({self.allocated_quantity}) نمی‌تواند بیشتر از مقدار باقیمانده ({remaining}) باشد.'
+                f'مقدار تخصیص یافته ({self.allocated_quantity} کیلوگرم) نمی‌تواند بیشتر از مقدار باقیمانده ({remaining_in_kg} کیلوگرم) باشد.'
             )
     
     def save(self, *args, **kwargs):

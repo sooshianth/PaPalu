@@ -356,22 +356,19 @@ def warehouse_delivery_detail_view(request, transport_number):
     # If awaiting guard reconciliation, show read-only
     if pt.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
         # Get order items for mixed material support
+        # فقط مواد اولیه‌ای که در این حمل تخصیص یافته‌اند را نمایش می‌دهیم
         order_items = []
         if pt.allocation and pt.allocation.order:
-            po = pt.allocation.order
-            # Get all raw material items
-            items_qs = po.order_items.filter(raw_material__isnull=False).select_related('raw_material')
-            
             # Check for existing RawMaterialInfo records (if previously saved)
-            existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material')
-            existing_map = {info.order_item_id: info.allocated_quantity for info in existing_infos}
+            existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material', 'order_item__raw_material')
             
-            for item in items_qs:
-                order_items.append({
-                    'item': item,
-                    'raw_material': item.raw_material,
-                    'allocated_quantity': existing_map.get(item.id, 0)
-                })
+            for info in existing_infos:
+                if info.order_item and info.order_item.raw_material:
+                    order_items.append({
+                        'item': info.order_item,
+                        'raw_material': info.raw_material,
+                        'allocated_quantity': info.allocated_quantity
+                    })
         
         # Initialize form for display
         initial = {
@@ -660,19 +657,18 @@ def warehouse_delivery_detail_view(request, transport_number):
         form = WarehouseDeliveryForm(initial=initial)
         
     # Prepare order items for context (for both new POST with errors and GET)
+    # فقط مواد اولیه‌ای که در این حمل تخصیص یافته‌اند را نمایش می‌دهیم
     order_items = []
     if pt.allocation and pt.allocation.order:
-        po = pt.allocation.order
-        items_qs = po.order_items.filter(raw_material__isnull=False).select_related('raw_material')
-        existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material')
-        existing_map = {info.order_item_id: info.allocated_quantity for info in existing_infos}
+        existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material', 'order_item__raw_material')
         
-        for item in items_qs:
-            order_items.append({
-                'item': item,
-                'raw_material': item.raw_material,
-                'allocated_quantity': existing_map.get(item.id, 0)
-            })
+        for info in existing_infos:
+            if info.order_item and info.order_item.raw_material:
+                order_items.append({
+                    'item': info.order_item,
+                    'raw_material': info.raw_material,
+                    'allocated_quantity': info.allocated_quantity
+                })
     
     context = {
         'form': form,
