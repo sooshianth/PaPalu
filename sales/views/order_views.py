@@ -795,7 +795,8 @@ def edit_order_view(request, order_number):
                         
                         # بررسی اینکه آیا قلم موجود است یا جدید
                         item_id = form.cleaned_data.get('id')
-                        if item_id:
+                        # اطمینان از اینکه item_id معتبر است (نه None و نه رشته خالی)
+                        if item_id and str(item_id).strip():
                             try:
                                 item = OrderItem.objects.get(id=item_id, order=order)
                                 old_item = old_items.get(item_id)

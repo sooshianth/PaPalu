@@ -503,38 +503,67 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // به‌روزرسانی تمام فیلدها با شماره جدید
             const formIndex = formCount;
+            // استفاده از regex دقیق‌تر برای جایگزینی
             const regex = new RegExp(`${prefix}-(\\d+)-`, 'g');
             
             // به‌روزرسانی name و id فیلدها
             newForm.querySelectorAll('input, select, textarea, label').forEach(function(element) {
                 if (element.name) {
-                    element.name = element.name.replace(regex, `${prefix}-${formIndex}-`);
+                    // جایگزینی دقیق‌تر: فقط اولین occurrence را جایگزین کن
+                    const match = element.name.match(new RegExp(`${prefix}-(\\d+)-`));
+                    if (match) {
+                        element.name = element.name.replace(`${prefix}-${match[1]}-`, `${prefix}-${formIndex}-`);
+                    }
                 }
                 if (element.id) {
-                    element.id = element.id.replace(regex, `${prefix}-${formIndex}-`);
+                    const match = element.id.match(new RegExp(`${prefix}-(\\d+)-`));
+                    if (match) {
+                        element.id = element.id.replace(`${prefix}-${match[1]}-`, `${prefix}-${formIndex}-`);
+                    }
                 }
                 if (element.getAttribute('for')) {
-                    element.setAttribute('for', element.getAttribute('for').replace(regex, `${prefix}-${formIndex}-`));
+                    const forAttr = element.getAttribute('for');
+                    const match = forAttr.match(new RegExp(`${prefix}-(\\d+)-`));
+                    if (match) {
+                        element.setAttribute('for', forAttr.replace(`${prefix}-${match[1]}-`, `${prefix}-${formIndex}-`));
+                    }
                 }
             });
             
-            // پاک کردن مقادیر فیلدها
-            newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+            // پاک کردن مقادیر فیلدها - ابتدا فیلد id را حتماً پاک کن
+            // این مهم‌ترین بخش است - فیلد id باید حتماً خالی باشد برای قلم جدید
+            const idInputs = newForm.querySelectorAll('input[name*="-id"]');
+            idInputs.forEach(function(idInput) {
+                idInput.value = '';
+                // اطمینان از اینکه attribute value هم پاک شده
+                idInput.removeAttribute('value');
+            });
+            
+            // پاک کردن تمام فیلدهای hidden
+            newForm.querySelectorAll('input[type="hidden"]').forEach(function(input) {
+                // فیلد id قبلاً پاک شده، بقیه را هم پاک کن
+                if (input.name && !input.name.includes('-id')) {
+                    // فقط فیلدهای management form را نگه دار
+                    if (!input.name.includes('-TOTAL_FORMS') && 
+                        !input.name.includes('-INITIAL_FORMS') && 
+                        !input.name.includes('-MIN_NUM_FORMS') && 
+                        !input.name.includes('-MAX_NUM_FORMS')) {
+                        input.value = '';
+                    }
+                }
+            });
+            
+            // پاک کردن مقادیر فیلدهای visible
+            newForm.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(function(input) {
                 if (input.type === 'checkbox') {
                     // برای checkbox حذف، مقدار را false کن
-                    if (input.name.includes('-DELETE')) {
+                    if (input.name && input.name.includes('-DELETE')) {
                         input.checked = false;
                     }
-                } else if (input.type !== 'hidden') {
+                } else {
                     input.value = '';
                 }
             });
-            
-            // پاک کردن فیلد id برای قلم جدید
-            const idInput = newForm.querySelector('input[name*="-id"]');
-            if (idInput) {
-                idInput.value = '';
-            }
             
             // پاک کردن پیام‌های خطا
             newForm.querySelectorAll('.text-danger').forEach(function(error) {

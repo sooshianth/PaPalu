@@ -570,6 +570,17 @@
                         input.classList.remove('filled');
                     }
                 });
+                
+                // اگر 6 رقم کامل شد، فرم را به صورت خودکار submit کن
+                if (code.length === 6) {
+                    const loginForm = document.getElementById('login-form');
+                    if (loginForm) {
+                        // یک تاخیر کوتاه برای اطمینان از اینکه همه چیز به درستی تنظیم شده است
+                        setTimeout(() => {
+                            loginForm.submit();
+                        }, 100);
+                    }
+                }
             }
 
             // Handle paste globally on the OTP container
@@ -608,11 +619,14 @@
                     
                     updateVerificationCode();
                     
-                    // Focus on the next empty input or the last filled one
-                    const nextEmptyIndex = numbers.length < 6 ? numbers.length : 5;
-                    if (otpInputs[nextEmptyIndex]) {
-                        otpInputs[nextEmptyIndex].focus();
+                    // اگر 6 رقم کامل نشد، focus را به input بعدی ببر
+                    if (numbers.length < 6) {
+                        const nextEmptyIndex = numbers.length;
+                        if (otpInputs[nextEmptyIndex]) {
+                            otpInputs[nextEmptyIndex].focus();
+                        }
                     }
+                    // اگر 6 رقم کامل شد، updateVerificationCode خودش فرم را submit می‌کند
                 });
             }
 
@@ -622,9 +636,12 @@
                     this.value = this.value.replace(/[^0-9]/g, '');
                     
                     if (this.value.length === 1) {
-                        const nextInput = this.nextElementSibling;
-                        if (nextInput && nextInput.classList.contains('otp-input')) {
-                            nextInput.focus();
+                        // اگر آخرین input نیست، focus را به input بعدی ببر
+                        if (index < otpInputs.length - 1) {
+                            const nextInput = this.nextElementSibling;
+                            if (nextInput && nextInput.classList.contains('otp-input')) {
+                                nextInput.focus();
+                            }
                         }
                     }
                     updateVerificationCode();
@@ -662,11 +679,14 @@
                     
                     updateVerificationCode();
                     
-                    // Focus on the next empty input or the last filled one
-                    const nextEmptyIndex = numbers.length < 6 ? numbers.length : 5;
-                    if (otpInputs[nextEmptyIndex]) {
-                        otpInputs[nextEmptyIndex].focus();
+                    // اگر 6 رقم کامل نشد، focus را به input بعدی ببر
+                    if (numbers.length < 6) {
+                        const nextEmptyIndex = numbers.length;
+                        if (otpInputs[nextEmptyIndex]) {
+                            otpInputs[nextEmptyIndex].focus();
+                        }
                     }
+                    // اگر 6 رقم کامل شد، updateVerificationCode خودش فرم را submit می‌کند
                 });
             });
 
