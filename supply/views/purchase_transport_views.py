@@ -439,6 +439,7 @@ def purchase_transport_list_view(request):
         from supply.tables import TransportTable
         
         # دریافت پارامترهای فیلتر و جست‌وجو
+        search_query = request.GET.get('search', '').strip()
         order_number_filter = request.GET.get('order_number', '').strip()
         vehicle_type_filter = request.GET.get('vehicle_type', '').strip()
         transport_type_filter = request.GET.get('transport_type', '').strip()
@@ -468,6 +469,21 @@ def purchase_transport_list_view(request):
         ).filter(
             Q(direction='inbound') | Q(transport_type='inbound')
         ).select_related('allocation', 'allocation__order', 'created_by')
+        
+        # اعمال جستجو
+        if search_query:
+            active_transports = active_transports.filter(
+                Q(transport_number__icontains=search_query) |
+                Q(allocation__order__order_number__icontains=search_query) |
+                Q(plate_number__icontains=search_query) |
+                Q(driver__name__icontains=search_query)
+            )
+            completed_transports = completed_transports.filter(
+                Q(transport_number__icontains=search_query) |
+                Q(allocation__order__order_number__icontains=search_query) |
+                Q(plate_number__icontains=search_query) |
+                Q(driver__name__icontains=search_query)
+            )
         
         # اعمال فیلترها بر روی حمل‌های فعال
         if order_number_filter:
@@ -548,6 +564,7 @@ def purchase_transport_list_view(request):
             'accessible_po_fields': accessible_po_fields,
             'accessible_person_fields': accessible_person_fields,
             'accessible_user_fields': accessible_user_fields,
+            'search_query': search_query,
             'filters': {
                 'order_number': order_number_filter,
                 'vehicle_type': vehicle_type_filter,

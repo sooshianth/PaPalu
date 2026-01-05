@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponseForbidden
 from django_tables2 import RequestConfig
 import logging
@@ -175,6 +176,10 @@ def supplier_list_view(request):
 	# Get accessible fields
 	accessible_person_fields = get_accessible_person_fields(request.user)
 	
+	# دریافت پارامترهای جستجو و فیلتر
+	search_query = request.GET.get('search', '')
+	nature_filter = request.GET.get('nature', '')
+	
 	try:
 		if request.method == 'POST':
 			audit_logger.info("تعریف تامین‌کننده جدید")
@@ -276,7 +281,24 @@ def supplier_list_view(request):
 			att_fs = AttachmentFormSet(prefix='att')
 		
 		from supply.tables import SupplierTable
-		suppliers = Person.objects.filter(type='supplier').order_by('-national_id')
+		from django.db.models import Q
+		
+		suppliers = Person.objects.filter(type='supplier')
+		
+		# اعمال جستجو
+		if search_query:
+			suppliers = suppliers.filter(
+				Q(name__icontains=search_query) |
+				Q(national_id__icontains=search_query) |
+				Q(registration_number__icontains=search_query) |
+				Q(phone_number__icontains=search_query)
+			).distinct()
+		
+		# اعمال فیلتر نوع شخص
+		if nature_filter:
+			suppliers = suppliers.filter(nature=nature_filter)
+		
+		suppliers = suppliers.order_by('-national_id')
 		table = SupplierTable(suppliers, accessible_fields=accessible_person_fields)
 		RequestConfig(request, paginate={'per_page': 25}).configure(table)
 		
@@ -310,6 +332,8 @@ def supplier_list_view(request):
 			'form_has_errors': form_has_errors,
 			'section_errors': section_errors,
 			'accessible_person_fields': accessible_person_fields,
+			'search_query': search_query,
+			'nature_filter': nature_filter,
 		}
 		return render(request, 'supplier/supplier_list.html', context)
 	except Exception as e:

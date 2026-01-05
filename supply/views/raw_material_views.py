@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.urls import reverse
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponseBadRequest, HttpResponseForbidden
 from django_tables2 import RequestConfig
 from django.contrib.auth.decorators import login_required
@@ -87,6 +88,11 @@ def raw_material_list_view(request):
 	accessible_purchase_info_fields = get_accessible_purchase_info_fields(request.user)
 	accessible_person_fields = get_accessible_person_fields(request.user)
 	
+	# دریافت پارامترهای جستجو و فیلتر
+	search_query = request.GET.get('search', '')
+	status_filter = request.GET.get('status', '')
+	physical_form_filter = request.GET.get('physical_form', '')
+	
 	try:
 		if request.method == 'POST':
 			rm_form = RawMaterialDefineForm(request.POST, request.FILES)
@@ -113,7 +119,28 @@ def raw_material_list_view(request):
 			pi_form = PurchaseInfoInlineForm()
 
 		from supply.tables import RawMaterialTable
-		materials = RawMaterial.objects.all().order_by('-created_at')
+		from django.db.models import Q
+		
+		materials = RawMaterial.objects.all()
+		
+		# اعمال جستجو
+		if search_query:
+			materials = materials.filter(
+				Q(raw_material_id__icontains=search_query) |
+				Q(name__icontains=search_query) |
+				Q(technical_description__icontains=search_query) |
+				Q(hs_code__icontains=search_query)
+			).distinct()
+		
+		# اعمال فیلتر وضعیت
+		if status_filter:
+			materials = materials.filter(status=status_filter)
+		
+		# اعمال فیلتر شکل فیزیکی
+		if physical_form_filter:
+			materials = materials.filter(physical_form=physical_form_filter)
+		
+		materials = materials.order_by('-created_at')
 		table = RawMaterialTable(materials, accessible_fields=accessible_raw_material_fields)
 		RequestConfig(request, paginate={'per_page': 25}).configure(table)
 		
@@ -128,6 +155,9 @@ def raw_material_list_view(request):
 			'accessible_raw_material_fields': accessible_raw_material_fields,
 			'accessible_purchase_info_fields': accessible_purchase_info_fields,
 			'accessible_person_fields': accessible_person_fields,
+			'search_query': search_query,
+			'status_filter': status_filter,
+			'physical_form_filter': physical_form_filter,
 		}
 		return render(request, 'raw_material/raw_material_list.html', context)
 	except Exception as e:

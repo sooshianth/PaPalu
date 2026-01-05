@@ -784,6 +784,47 @@
             </form>
         </div>
 
+        <!-- بخش جستجو و فیلتر -->
+        <div style="background: var(--gray-100); padding: 20px; border-radius: 10px; margin-bottom: 25px; border-right: 4px solid var(--primary-green);">
+            <h5 style="color: var(--primary-green); font-size: 1.1rem; font-weight: 600; margin-bottom: 15px;">جستجو و فیلتر</h5>
+            <form method="get" action="{% url 'supply:raw_material_list' %}" id="search-filter-form">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                    <div>
+                        <label for="search" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">جستجو</label>
+                        <input type="text" 
+                               id="search" 
+                               name="search" 
+                               value="{{ search_query }}"
+                               placeholder="شناسه، نام، توضیحات فنی، یا کد HS..."
+                               style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                    </div>
+                    <div>
+                        <label for="status" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">وضعیت</label>
+                        <select id="status" name="status" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                            <option value="">همه</option>
+                            <option value="active" {% if status_filter == 'active' %}selected{% endif %}>فعال</option>
+                            <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>غیرفعال</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="physical_form" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">شکل فیزیکی</label>
+                        <select id="physical_form" name="physical_form" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                            <option value="">همه</option>
+                            <option value="solid" {% if physical_form_filter == 'solid' %}selected{% endif %}>جامد</option>
+                            <option value="liquid" {% if physical_form_filter == 'liquid' %}selected{% endif %}>مایع</option>
+                            <option value="gas" {% if physical_form_filter == 'gas' %}selected{% endif %}>گاز</option>
+                            <option value="powder" {% if physical_form_filter == 'powder' %}selected{% endif %}>پودر</option>
+                            <option value="granular" {% if physical_form_filter == 'granular' %}selected{% endif %}>دانه‌ای</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button type="submit" style="flex: 1; padding: 8px 16px; font-size: 0.9rem; background-color: var(--primary-green); color: white; border: none; border-radius: 6px; cursor: pointer;">جستجو</button>
+                        <a href="{% url 'supply:raw_material_list' %}" style="flex: 1; padding: 8px 16px; font-size: 0.9rem; text-align: center; text-decoration: none; background-color: var(--gray-600); color: white; border-radius: 6px; display: inline-block;" onclick="sessionStorage.removeItem('searchInputFocus'); sessionStorage.removeItem('searchInputCursorPos'); sessionStorage.removeItem('searchInputValue');">پاک کردن</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
         <div class="table-container">
           {% render_table table %}
           <div class="table-notice">
@@ -796,6 +837,86 @@
         <div id="piModalHost"></div>
     </div>
 </div>
+    <script>
+      // جستجوی لایو با debounce و حفظ focus
+      (function() {
+          let searchTimeout;
+          const searchInput = document.getElementById('search');
+          const statusSelect = document.getElementById('status');
+          const physicalFormSelect = document.getElementById('physical_form');
+          const form = document.getElementById('search-filter-form');
+          
+          // تابع debounce برای جستجوی لایو
+          function debounce(func, wait) {
+              let timeout;
+              return function executedFunction(...args) {
+                  const later = () => {
+                      clearTimeout(timeout);
+                      func(...args);
+                  };
+                  clearTimeout(timeout);
+                  timeout = setTimeout(later, wait);
+              };
+          }
+          
+          // تابع ارسال فرم با حفظ موقعیت cursor
+          function submitForm() {
+              if (searchInput) {
+                  // ذخیره موقعیت cursor و مقدار فیلد
+                  const cursorPosition = searchInput.selectionStart;
+                  const inputValue = searchInput.value;
+                  
+                  // ذخیره در sessionStorage برای استفاده بعد از reload
+                  sessionStorage.setItem('searchInputFocus', 'true');
+                  sessionStorage.setItem('searchInputCursorPos', cursorPosition.toString());
+                  sessionStorage.setItem('searchInputValue', inputValue);
+              }
+              form.submit();
+          }
+          
+          // بازگرداندن focus بعد از reload
+          if (searchInput) {
+              // بررسی اینکه آیا باید focus را برگردانیم
+              if (sessionStorage.getItem('searchInputFocus') === 'true') {
+                  // حذف flag
+                  sessionStorage.removeItem('searchInputFocus');
+                  
+                  // کمی تاخیر برای اطمینان از اینکه صفحه کاملاً لود شده
+                  setTimeout(function() {
+                      searchInput.focus();
+                      
+                      // بازگرداندن موقعیت cursor
+                      const savedCursorPos = parseInt(sessionStorage.getItem('searchInputCursorPos') || '0');
+                      if (searchInput.setSelectionRange) {
+                          searchInput.setSelectionRange(savedCursorPos, savedCursorPos);
+                      }
+                      
+                      // پاک کردن sessionStorage
+                      sessionStorage.removeItem('searchInputCursorPos');
+                      sessionStorage.removeItem('searchInputValue');
+                  }, 100);
+              }
+              
+              // جستجوی لایو برای فیلد جستجو (با تاخیر 500 میلی‌ثانیه)
+              searchInput.addEventListener('input', debounce(function() {
+                  submitForm();
+              }, 500));
+          }
+          
+          // تغییر فوری برای فیلترهای dropdown
+          if (statusSelect) {
+              statusSelect.addEventListener('change', function() {
+                  form.submit();
+              });
+          }
+          
+          if (physicalFormSelect) {
+              physicalFormSelect.addEventListener('change', function() {
+                  form.submit();
+              });
+          }
+      })();
+    </script>
     <script>
       (function(){
         // Toggle form visibility

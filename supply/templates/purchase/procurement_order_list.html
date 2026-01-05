@@ -464,6 +464,52 @@
         {% endfor %}
     {% endif %}
     
+    <!-- بخش جستجو و فیلتر -->
+    <div style="background: var(--gray-100); padding: 20px; border-radius: 10px; margin-bottom: 25px; border-right: 4px solid var(--primary-green);">
+        <h5 style="color: var(--primary-green); font-size: 1.1rem; font-weight: 600; margin-bottom: 15px;">جستجو و فیلتر</h5>
+        <form method="get" action="{% url 'supply:purchase_order_management' %}" id="search-filter-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                <div>
+                    <label for="search" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">جستجو</label>
+                    <input type="text" 
+                           id="search" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="شماره سفارش، نام تامین‌کننده، یا نام کاربری..."
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                </div>
+                <div>
+                    <label for="status" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">وضعیت</label>
+                    <select id="status" name="status" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                        <option value="">همه</option>
+                        <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>پیش‌نویس</option>
+                        <option value="awaiting_transport_definition" {% if status_filter == 'awaiting_transport_definition' %}selected{% endif %}>در انتظار تعریف حمل</option>
+                        <option value="awaiting_vehicle_entry" {% if status_filter == 'awaiting_vehicle_entry' %}selected{% endif %}>در انتظار ورود خودرو</option>
+                        <option value="awaiting_delivery" {% if status_filter == 'awaiting_delivery' %}selected{% endif %}>در انتظار تحویل</option>
+                        <option value="awaiting_wh_reconciliation" {% if status_filter == 'awaiting_wh_reconciliation' %}selected{% endif %}>در انتظار تطبیق انبار</option>
+                        <option value="awaiting_final_settlement" {% if status_filter == 'awaiting_final_settlement' %}selected{% endif %}>در انتظار تسویه نهایی</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>تکمیل شده</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="supplier" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">تامین‌کننده</label>
+                    <select id="supplier" name="supplier" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                        <option value="">همه</option>
+                        {% for supplier in suppliers %}
+                            <option value="{{ supplier.national_id }}" {% if supplier_filter == supplier.national_id %}selected{% endif %}>
+                                {{ supplier.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" style="flex: 1; padding: 8px 16px; font-size: 0.9rem; background-color: var(--primary-green); color: white; border: none; border-radius: 6px; cursor: pointer;">جستجو</button>
+                    <a href="{% url 'supply:purchase_order_management' %}" style="flex: 1; padding: 8px 16px; font-size: 0.9rem; text-align: center; text-decoration: none; background-color: var(--gray-600); color: white; border-radius: 6px; display: inline-block;" onclick="sessionStorage.removeItem('searchInputFocus'); sessionStorage.removeItem('searchInputCursorPos'); sessionStorage.removeItem('searchInputValue');">پاک کردن</a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
     <div class="dual-table-section">
         <h3>سفارشات باز</h3>
         <div class="table-container">
@@ -579,4 +625,84 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    // جستجوی لایو با debounce و حفظ focus
+    (function() {
+        let searchTimeout;
+        const searchInput = document.getElementById('search');
+        const statusSelect = document.getElementById('status');
+        const supplierSelect = document.getElementById('supplier');
+        const form = document.getElementById('search-filter-form');
+        
+        // تابع debounce برای جستجوی لایو
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // تابع ارسال فرم با حفظ موقعیت cursor
+        function submitForm() {
+            if (searchInput) {
+                // ذخیره موقعیت cursor و مقدار فیلد
+                const cursorPosition = searchInput.selectionStart;
+                const inputValue = searchInput.value;
+                
+                // ذخیره در sessionStorage برای استفاده بعد از reload
+                sessionStorage.setItem('searchInputFocus', 'true');
+                sessionStorage.setItem('searchInputCursorPos', cursorPosition.toString());
+                sessionStorage.setItem('searchInputValue', inputValue);
+            }
+            form.submit();
+        }
+        
+        // بازگرداندن focus بعد از reload
+        if (searchInput) {
+            // بررسی اینکه آیا باید focus را برگردانیم
+            if (sessionStorage.getItem('searchInputFocus') === 'true') {
+                // حذف flag
+                sessionStorage.removeItem('searchInputFocus');
+                
+                // کمی تاخیر برای اطمینان از اینکه صفحه کاملاً لود شده
+                setTimeout(function() {
+                    searchInput.focus();
+                    
+                    // بازگرداندن موقعیت cursor
+                    const savedCursorPos = parseInt(sessionStorage.getItem('searchInputCursorPos') || '0');
+                    if (searchInput.setSelectionRange) {
+                        searchInput.setSelectionRange(savedCursorPos, savedCursorPos);
+                    }
+                    
+                    // پاک کردن sessionStorage
+                    sessionStorage.removeItem('searchInputCursorPos');
+                    sessionStorage.removeItem('searchInputValue');
+                }, 100);
+            }
+            
+            // جستجوی لایو برای فیلد جستجو (با تاخیر 500 میلی‌ثانیه)
+            searchInput.addEventListener('input', debounce(function() {
+                submitForm();
+            }, 500));
+        }
+        
+        // تغییر فوری برای فیلترهای dropdown
+        if (statusSelect) {
+            statusSelect.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+        
+        if (supplierSelect) {
+            supplierSelect.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+    })();
+</script>
 {% endblock %}

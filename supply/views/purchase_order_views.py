@@ -598,6 +598,11 @@ def purchase_order_management_view(request):
     accessible_person_fields = get_accessible_person_fields_for_po(request.user)
     accessible_user_fields = get_accessible_user_fields_for_po(request.user)
     
+    # دریافت پارامترهای جستجو و فیلتر
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    supplier_filter = request.GET.get('supplier', '')
+    
     try:
         from supply.tables import ProcurementPurchaseOrderTable
         open_orders = Order.objects.filter(
@@ -606,13 +611,40 @@ def purchase_order_management_view(request):
             status=Order.STATUS_COMPLETED
         ).select_related('customer', 'registered_by').prefetch_related(
             'order_items__raw_material'
-        ).order_by('-created_at')
+        )
+        
         completed_orders = Order.objects.filter(
             order_type='purchase',
             status=Order.STATUS_COMPLETED
         ).select_related('customer', 'registered_by').prefetch_related(
             'order_items__raw_material'
-        ).order_by('-created_at')
+        )
+        
+        # اعمال جستجو
+        if search_query:
+            open_orders = open_orders.filter(
+                Q(order_number__icontains=search_query) |
+                Q(customer__name__icontains=search_query) |
+                Q(registered_by__username__icontains=search_query)
+            )
+            completed_orders = completed_orders.filter(
+                Q(order_number__icontains=search_query) |
+                Q(customer__name__icontains=search_query) |
+                Q(registered_by__username__icontains=search_query)
+            )
+        
+        # اعمال فیلتر وضعیت
+        if status_filter:
+            open_orders = open_orders.filter(status=status_filter)
+            completed_orders = completed_orders.filter(status=status_filter)
+        
+        # اعمال فیلتر تامین‌کننده
+        if supplier_filter:
+            open_orders = open_orders.filter(customer__national_id=supplier_filter)
+            completed_orders = completed_orders.filter(customer__national_id=supplier_filter)
+        
+        open_orders = open_orders.order_by('-created_at')
+        completed_orders = completed_orders.order_by('-created_at')
         
         # Prepare table accessible fields dict
         # materials_list requires both OrderItem and raw material access
@@ -643,6 +675,10 @@ def purchase_order_management_view(request):
         RequestConfig(request, paginate={'per_page': 15}).configure(open_table)
         RequestConfig(request, paginate={'per_page': 15}).configure(completed_table)
         
+        # دریافت لیست تامین‌کنندگان برای dropdown
+        from core.PersonFolder.PersonModel import Person
+        suppliers = Person.objects.filter(type='supplier').order_by('name')
+        
         context = {
             'open_table': open_table,
             'completed_table': completed_table,
@@ -651,6 +687,10 @@ def purchase_order_management_view(request):
             'accessible_raw_material_fields': accessible_raw_material_fields,
             'accessible_person_fields': accessible_person_fields,
             'accessible_user_fields': accessible_user_fields,
+            'search_query': search_query,
+            'status_filter': status_filter,
+            'supplier_filter': supplier_filter,
+            'suppliers': suppliers,
         }
         return render(request, 'purchase/procurement_order_list.html', context)
     except Exception as e:

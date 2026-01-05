@@ -712,6 +712,36 @@
         </div>
     </div>
 
+    <!-- بخش جستجو و فیلتر -->
+    <div style="background: var(--gray-100); padding: 20px; border-radius: 10px; margin-bottom: 25px; border-right: 4px solid var(--primary-green);">
+        <h5 style="color: var(--primary-green); font-size: 1.1rem; font-weight: 600; margin-bottom: 15px;">جستجو و فیلتر</h5>
+        <form method="get" action="{% url 'supply:supplier_list' %}" id="search-filter-form">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; align-items: end;">
+                <div>
+                    <label for="search" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">جستجو</label>
+                    <input type="text" 
+                           id="search" 
+                           name="search" 
+                           value="{{ search_query }}"
+                           placeholder="نام، کد ملی، شماره ثبت، یا شماره تلفن..."
+                           style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                </div>
+                <div>
+                    <label for="nature" style="display: block; margin-bottom: 5px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700);">نوع شخص</label>
+                    <select id="nature" name="nature" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 0.9rem;">
+                        <option value="">همه</option>
+                        <option value="legal" {% if nature_filter == 'legal' %}selected{% endif %}>حقوقی</option>
+                        <option value="natural" {% if nature_filter == 'natural' %}selected{% endif %}>حقیقی</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" style="flex: 1; padding: 8px 16px; font-size: 0.9rem; background-color: var(--primary-green); color: white; border: none; border-radius: 6px; cursor: pointer;">جستجو</button>
+                    <a href="{% url 'supply:supplier_list' %}" style="flex: 1; padding: 8px 16px; font-size: 0.9rem; text-align: center; text-decoration: none; background-color: var(--gray-600); color: white; border-radius: 6px; display: inline-block;" onclick="sessionStorage.removeItem('searchInputFocus'); sessionStorage.removeItem('searchInputCursorPos'); sessionStorage.removeItem('searchInputValue');">پاک کردن</a>
+                </div>
+            </div>
+        </form>
+    </div>
+
     {% if table %}
         <div class="table-container">
             {% render_table table %}
@@ -819,6 +849,13 @@
                 <path d="M3 9H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <p>هیچ تأمین‌کننده‌ای ثبت نشده است.</p>
+            <p style="font-size: 0.9rem; margin-top: 10px;">
+                {% if search_query or nature_filter %}
+                نتیجه‌ای برای جستجوی شما پیدا نشد. لطفاً فیلترها را تغییر دهید.
+                {% else %}
+                برای ایجاد تأمین‌کننده جدید روی دکمه بالا کلیک کنید.
+                {% endif %}
+            </p>
         </div>
     {% endif %}
 </div>
@@ -829,6 +866,79 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script>
+    // جستجوی لایو با debounce و حفظ focus
+    (function() {
+        let searchTimeout;
+        const searchInput = document.getElementById('search');
+        const natureSelect = document.getElementById('nature');
+        const form = document.getElementById('search-filter-form');
+        
+        // تابع debounce برای جستجوی لایو
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+        
+        // تابع ارسال فرم با حفظ موقعیت cursor
+        function submitForm() {
+            if (searchInput) {
+                // ذخیره موقعیت cursor و مقدار فیلد
+                const cursorPosition = searchInput.selectionStart;
+                const inputValue = searchInput.value;
+                
+                // ذخیره در sessionStorage برای استفاده بعد از reload
+                sessionStorage.setItem('searchInputFocus', 'true');
+                sessionStorage.setItem('searchInputCursorPos', cursorPosition.toString());
+                sessionStorage.setItem('searchInputValue', inputValue);
+            }
+            form.submit();
+        }
+        
+        // بازگرداندن focus بعد از reload
+        if (searchInput) {
+            // بررسی اینکه آیا باید focus را برگردانیم
+            if (sessionStorage.getItem('searchInputFocus') === 'true') {
+                // حذف flag
+                sessionStorage.removeItem('searchInputFocus');
+                
+                // کمی تاخیر برای اطمینان از اینکه صفحه کاملاً لود شده
+                setTimeout(function() {
+                    searchInput.focus();
+                    
+                    // بازگرداندن موقعیت cursor
+                    const savedCursorPos = parseInt(sessionStorage.getItem('searchInputCursorPos') || '0');
+                    if (searchInput.setSelectionRange) {
+                        searchInput.setSelectionRange(savedCursorPos, savedCursorPos);
+                    }
+                    
+                    // پاک کردن sessionStorage
+                    sessionStorage.removeItem('searchInputCursorPos');
+                    sessionStorage.removeItem('searchInputValue');
+                }, 100);
+            }
+            
+            // جستجوی لایو برای فیلد جستجو (با تاخیر 500 میلی‌ثانیه)
+            searchInput.addEventListener('input', debounce(function() {
+                submitForm();
+            }, 500));
+        }
+        
+        // تغییر فوری برای فیلتر dropdown
+        if (natureSelect) {
+            natureSelect.addEventListener('change', function() {
+                form.submit();
+            });
+        }
+    })();
+</script>
 <script>
   (function() {
     const toggleFormBtn = document.getElementById('toggleFormBtn');
