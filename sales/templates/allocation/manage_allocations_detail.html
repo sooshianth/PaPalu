@@ -284,6 +284,13 @@
         </div>
     </div>
 
+    <!-- دکمه ایجاد تخصیص جدید -->
+    <div style="margin-bottom: 25px; text-align: left;">
+        <a href="{% url 'sales:allocation_create' order.order_number %}" class="btn-primary" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+            ➕ ایجاد تخصیص جدید
+        </a>
+    </div>
+
     <!-- لیست تخصیص‌ها -->
     {% for item in allocations_with_info %}
     <div class="allocation-card {% if item.allocation.is_rejected %}rejected{% endif %}">
@@ -376,19 +383,32 @@
         </div>
         {% endif %}
 
-        <!-- دکمه ویرایش -->
-        <div style="margin-top: 20px; text-align: left;">
+        <!-- دکمه‌های ویرایش و حذف -->
+        <div style="margin-top: 20px; text-align: left; display: flex; gap: 10px;">
             <a href="{% url 'sales:allocation_edit' order.order_number item.allocation.allocation_number %}" class="btn-primary">ویرایش تخصیص</a>
+            <form method="post" action="{% url 'sales:delete_allocation' order.order_number item.allocation.allocation_number %}" style="display: inline;" onsubmit="return confirm('آیا مطمئن هستید که می‌خواهید این تخصیص را حذف کنید؟ این عمل غیرقابل بازگشت است.');">
+                {% csrf_token %}
+                <button type="submit" class="btn-primary" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">حذف تخصیص</button>
+            </form>
         </div>
     </div>
     {% endfor %}
 
     <!-- دکمه‌های پایین صفحه -->
     <div style="margin-top: 30px; text-align: center; display: flex; gap: 15px; justify-content: center;">
+        {% if is_balanced %}
         <form method="post" action="{% url 'sales:approve_all_rejected_allocations' order.order_number %}" style="display: inline;">
             {% csrf_token %}
             <button type="submit" class="btn-success">تایید همه</button>
         </form>
+        {% else %}
+        <button type="button" class="btn-success" disabled style="opacity: 0.6; cursor: not-allowed;" title="مجموع تخصیص‌ها باید دقیقاً برابر با سفارش باشد (تفاوت: {{ difference|floatformat:2 }} کیلوگرم)">
+            تایید همه
+        </button>
+        <div style="margin-top: 10px; color: #dc3545; font-size: 0.9rem;">
+            ⚠️ برای تایید همه، مجموع تخصیص‌ها باید دقیقاً برابر با سفارش باشد (تفاوت: {{ difference|floatformat:2 }} کیلوگرم)
+        </div>
+        {% endif %}
         <a href="{% url 'sales:manage_allocations_list' %}" class="btn-secondary">بازگشت به لیست</a>
     </div>
 </div>

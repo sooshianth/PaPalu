@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Sum, Q, Count, Case, When, DecimalField, F, BooleanField, Exists, OuterRef, Subquery
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
+from django.views.decorators.http import require_http_methods
 import logging
 from core.logging_levels import *
 import django_tables2 as tables
@@ -542,6 +543,17 @@ def approve_all_rejected_allocations_view(request, order_number):
     
     try:
         with transaction.atomic():
+            # بررسی برابری مقادیر قبل از تأیید
+            order_total = calculate_order_total_quantity(order)
+            allocation_total = calculate_allocation_total_quantity(order)
+            is_balanced = abs(order_total - allocation_total) < 0.001
+            
+            if not is_balanced:
+                difference = order_total - allocation_total
+                bug_logger.warning(f"مقادیر سفارش {order_number} برابر نیست (سفارش: {order_total}, تخصیص: {allocation_total}, تفاوت: {difference})")
+                messages.error(request, f'مقادیر تخصیص‌ها با سفارش برابر نیست. تفاوت: {difference:.2f} کیلوگرم. لطفاً ابتدا تخصیص‌ها را اصلاح کنید.')
+                return redirect('sales:manage_allocations_detail', order_number=order_number)
+            
             # دریافت همه تخصیص‌های رد شده
             rejected_allocations = Allocation.objects.filter(order=order, is_rejected=True)
             
@@ -554,16 +566,6 @@ def approve_all_rejected_allocations_view(request, order_number):
                 allocation.is_rejected = False
                 allocation.rejection_reason = ''
                 allocation.save(update_fields=['is_rejected', 'rejection_reason'])
-            
-            # بررسی برابری مقادیر
-            order_total = calculate_order_total_quantity(order)
-            allocation_total = calculate_allocation_total_quantity(order)
-            is_balanced = abs(order_total - allocation_total) < 0.001
-            
-            if not is_balanced:
-                bug_logger.warning(f"مقادیر سفارش {order_number} برابر نیست (سفارش: {order_total}, تخصیص: {allocation_total})")
-                messages.error(request, 'مقادیر تخصیص‌ها با سفارش برابر نیست. لطفاً ابتدا تخصیص‌ها را اصلاح کنید.')
-                return redirect('sales:manage_allocations_detail', order_number=order_number)
             
             # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند
             all_allocations = Allocation.objects.filter(order=order)
@@ -587,5 +589,46 @@ def approve_all_rejected_allocations_view(request, order_number):
     except Exception as e:
         bug_logger.error(f"خطا در تأیید تخصیص‌های رد شده سفارش {order_number}: {str(e)}", exc_info=True)
         messages.error(request, f'خطا در تأیید تخصیص‌ها: {str(e)}')
+        return redirect('sales:manage_allocations_detail', order_number=order_number)
+
+
+@login_required
+@require_http_methods(["POST"])
+def delete_allocation_view(request, order_number, allocation_number):
+    """
+    حذف یک تخصیص
+    فقط superadmin می‌تواند تخصیص را حذف کند
+    """
+    audit_logger.info(f"درخواست حذف تخصیص {allocation_number} برای سفارش {order_number}")
+    
+    if not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای حذف تخصیص {allocation_number} بدون دسترسی superadmin")
+        messages.error(request, 'شما دسترسی به این بخش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    
+    order = get_object_or_404(Order, order_number=order_number)
+    allocation = get_object_or_404(Allocation, allocation_number=allocation_number, order=order)
+    
+    try:
+        with transaction.atomic():
+            # حذف تخصیص (product_infos به صورت خودکار حذف می‌شوند به دلیل CASCADE)
+            allocation_number_str = allocation.allocation_number
+            allocation.delete()
+            
+            # بررسی وضعیت سفارش
+            remaining_allocations = Allocation.objects.filter(order=order).count()
+            if remaining_allocations == 0:
+                # اگر هیچ تخصیصی باقی نماند، وضعیت سفارش را به pending_allocation برگردان
+                if order.status in ['pending_allocation_approval', 'pending_shipping']:
+                    order.status = 'pending_allocation'
+                    order.save(update_fields=['status'])
+            
+            audit_logger.activity(f"تخصیص {allocation_number_str} برای سفارش {order_number} حذف شد")
+            messages.success(request, f'تخصیص {allocation_number_str} با موفقیت حذف شد.')
+            return redirect('sales:manage_allocations_detail', order_number=order_number)
+            
+    except Exception as e:
+        bug_logger.error(f"خطا در حذف تخصیص {allocation_number} برای سفارش {order_number}: {str(e)}", exc_info=True)
+        messages.error(request, f'خطا در حذف تخصیص: {str(e)}')
         return redirect('sales:manage_allocations_detail', order_number=order_number)
 
