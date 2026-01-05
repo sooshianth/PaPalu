@@ -76,6 +76,7 @@ class TaskChoices(models.TextChoices):
     PRODUCTION_REJECT_SCHEDULE = 'production.reject_schedule', 'رد برنامه تولید'
     PRODUCTION_REVERT_SCHEDULE = 'production.revert_schedule', 'بازگشت از تولید'
     PRODUCTION_ARCHIVE = 'production.archive', 'آرشیو تولید'
+    PRODUCTION_VIEW_WAREHOUSE = 'production.view_warehouse', 'مشاهده انبار'
 
     # Distribution (توزیع)
     DISTRIBUTION_ALLOCATE_INVENTORY = 'distribution.allocate_inventory', 'اختصاص موجودی محصول به تخصیص'
