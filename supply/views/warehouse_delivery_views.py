@@ -128,22 +128,6 @@ def get_accessible_po_material_fields_for_warehouse(user):
 
 class WarehouseDeliveryForm(forms.Form):
     """فرم تحویل انبار - صفحه اطلاعات تخلیه"""
-    # وزن ها
-    gross_weight = forms.DecimalField(
-        label='وزن پر (کیلوگرم)',
-        required=True,
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
-    )
-    tare_weight = forms.DecimalField(
-        label='وزن خالی (کیلوگرم)',
-        required=True,
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
-    )
-    
     # نوع کرایه
     freight_payment_type = forms.ChoiceField(
         label='نوع کرایه',
@@ -220,27 +204,9 @@ class WarehouseDeliveryForm(forms.Form):
     def clean(self):
         """اعتبارسنجی کلی فرم"""
         cleaned_data = super().clean()
-        gross = cleaned_data.get('gross_weight')
-        tare = cleaned_data.get('tare_weight')
         freight_payment_type = cleaned_data.get('freight_payment_type')
         
-        bug_logger.debug(f"Form validation - gross_weight: {gross}, tare_weight: {tare}, freight_payment_type: {freight_payment_type}")
-        
-        # وزن پر باید بزرگتر از وزن خالی باشد
-        if gross and tare:
-            if gross <= tare:
-                bug_logger.warning(f"Invalid weights - gross ({gross}) <= tare ({tare})")
-                raise forms.ValidationError(
-                    'وزن پر باید همیشه بزرگ‌تر از وزن خالی باشد.'
-                )
-            
-            net_weight = gross - tare
-            bug_logger.debug(f"Calculated net_weight: {net_weight}")
-            if net_weight <= 0:
-                bug_logger.warning(f"Invalid net_weight: {net_weight}")
-                raise forms.ValidationError(
-                    'مقدار تحویلی (وزن پر − وزن خالی) نامعقول است.'
-                )
+        bug_logger.debug(f"Form validation - freight_payment_type: {freight_payment_type}")
         
         # اگر نوع کرایه "محاسبه شده در فی" نباشد، فیلدهای کرایه باید پر شوند
         if freight_payment_type and freight_payment_type != 'calculated_in_invoice':
@@ -387,6 +353,8 @@ def warehouse_delivery_detail_view(request, transport_number):
         messages.error(request, 'این حمل در وضعیت قابل مشاهده نیست.')
         return redirect(reverse('supply:warehouse_delivery'))
     
+    # If awaiting guard reconciliation, show read-only
+    if pt.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
         # Get order items for mixed material support
         order_items = []
         if pt.allocation and pt.allocation.order:
@@ -404,6 +372,17 @@ def warehouse_delivery_detail_view(request, transport_number):
                     'raw_material': item.raw_material,
                     'allocated_quantity': existing_map.get(item.id, 0)
                 })
+        
+        # Initialize form for display
+        initial = {
+            'freight_payment_type': pt.freight_payment_type,
+            'initial_freight': pt.initial_freight,
+            'total_freight': pt.total_freight,
+            'discount': pt.discount,
+            'surplus': pt.surplus,
+            'freight_payment': pt.freight_payment,
+        }
+        form = WarehouseDeliveryForm(initial=initial)
         
         context = {
             'form': form,
@@ -426,60 +405,102 @@ def warehouse_delivery_detail_view(request, transport_number):
             
             try:
                 with transaction.atomic():
-                    # محاسبه وزن خالص
-                    gross = data.get('gross_weight')
-                    tare = data.get('tare_weight')
-                    net_weight = gross - tare if gross and tare else None
+                    # دریافت وزن پر اولیه از فیلد جداگانه
+                    gross = request.POST.get('initial_gross_weight')
                     source_warehouse = data.get('source_warehouse')
                     destination_warehouse = data.get('destination_warehouse')
                     
-                    # Validate net weight
-                    if not net_weight or net_weight <= 0:
-                        messages.error(request, 'وزن خالص نامعتبر است.')
+                    if not gross:
+                        messages.error(request, 'وزن پر اولیه وارد نشده است.')
                         return redirect(request.path)
                     
-                    bug_logger.debug(f"Saving unloading data - Transport: {transport_number}, Gross: {gross}, Tare: {tare}, Net: {net_weight}, Source: {source_warehouse}, Destination: {destination_warehouse}")
+                    try:
+                        gross = float(gross)
+                    except (ValueError, TypeError):
+                        messages.error(request, 'وزن پر اولیه نامعتبر است.')
+                        return redirect(request.path)
                     
-                    # Process Per-Item Weights (Raw Material Breakdown)
+                    if gross <= 0:
+                        messages.error(request, 'وزن پر اولیه باید بزرگتر از صفر باشد.')
+                        return redirect(request.path)
+                    
+                    # پردازش داده‌های مرحله‌ای تخلیه
+                    # فرمت: unloading_stages[0][item_id]=X&unloading_stages[0][weight]=Y
                     po = pt.allocation.order if pt.allocation else None
                     items_qs = po.order_items.filter(raw_material__isnull=False).select_related('raw_material') if po else []
                     
+                    # دریافت مراحل تخلیه از POST
+                    unloading_stages = []
+                    stage_index = 0
+                    while True:
+                        item_id_key = f'unloading_stages[{stage_index}][item_id]'
+                        weight_key = f'unloading_stages[{stage_index}][weight]'
+                        
+                        item_id = request.POST.get(item_id_key)
+                        weight = request.POST.get(weight_key)
+                        
+                        if not item_id or not weight:
+                            break
+                        
+                        try:
+                            item_id = int(item_id)
+                            weight = float(weight)
+                            if weight > 0:
+                                unloading_stages.append({
+                                    'item_id': item_id,
+                                    'weight': weight
+                                })
+                        except (ValueError, TypeError):
+                            pass
+                        
+                        stage_index += 1
+                    
+                    if not unloading_stages:
+                        messages.error(request, 'حداقل یک مرحله تخلیه باید ثبت شود.')
+                        return redirect(request.path)
+                    
+                    # محاسبه وزن‌های خالص هر محصول و وزن خالی نهایی
                     item_weights = {}
+                    current_weight = float(gross)
+                    
+                    for stage in unloading_stages:
+                        item_id = stage['item_id']
+                        weight_after_unloading = stage['weight']
+                        
+                        # وزن خالص این محصول = وزن قبلی - وزن بعد از تخلیه
+                        net_item_weight = current_weight - weight_after_unloading
+                        
+                        if net_item_weight <= 0:
+                            messages.error(request, f'وزن خالص محصول نامعتبر است. وزن بعد از تخلیه باید کمتر از وزن قبلی باشد.')
+                            return redirect(request.path)
+                        
+                        # بررسی اینکه این محصول قبلاً تخلیه نشده باشد
+                        if item_id in item_weights:
+                            messages.error(request, 'هر محصول فقط یک بار می‌تواند تخلیه شود.')
+                            return redirect(request.path)
+                        
+                        item_weights[item_id] = net_item_weight
+                        current_weight = weight_after_unloading
+                    
+                    # وزن خالی نهایی = آخرین وزن ثبت شده
+                    tare = current_weight
+                    net_weight = float(gross) - float(tare)
+                    
+                    # بررسی اینکه همه محصولات تخلیه شده‌اند
                     if items_qs:
-                        total_item_weight = 0
-                        # Determine if we need to look for item inputs
-                        # If there's only one item, we can auto-assign the full net weight if not provided
-                        is_single_item = items_qs.count() == 1
+                        item_ids_in_stages = set(item_weights.keys())
+                        item_ids_in_order = set(items_qs.values_list('id', flat=True))
                         
-                        for item in items_qs:
-                            input_name = f'item_weight_{item.id}'
-                            val = request.POST.get(input_name)
-                            if val:
-                                try:
-                                    w = float(val)
-                                    if w > 0:
-                                        item_weights[item.id] = w
-                                        total_item_weight += w
-                                except ValueError:
-                                    pass
-                        
-                        # Validation: Sum of item weights must match Net Weight
-                        # Allow small tolerance for floating point
-                        if abs(total_item_weight - float(net_weight)) > 0.5:
-                            # If single item and no specific weight entered, assign all to it
-                            if is_single_item and total_item_weight == 0:
-                                item_weights[items_qs.first().id] = float(net_weight)
-                            else:
-                                messages.error(request, f'مجموع وزن مواد اولیه ({total_item_weight}) با وزن خالص ({net_weight}) همخوانی ندارد.')
-                                # Re-render form with errors is better, but redirecting for now to keep it simple as per existing pattern
-                                # ideally we should re-render.
-                                # For now, let's assume the frontend validation handles most of this, 
-                                # but server side needs to be robust.
-                                raise ValueError(f"Weight mismatch: items sum {total_item_weight} != net {net_weight}")
+                        if item_ids_in_stages != item_ids_in_order:
+                            missing = item_ids_in_order - item_ids_in_stages
+                            messages.error(request, f'همه محصولات باید تخلیه شوند. محصولات باقیمانده: {missing}')
+                            return redirect(request.path)
+                    
+                    bug_logger.debug(f"Saving sequential unloading data - Transport: {transport_number}, Gross: {gross}, Tare: {tare}, Net: {net_weight}, Stages: {len(unloading_stages)}, Source: {source_warehouse}, Destination: {destination_warehouse}")
 
                     # به‌روزرسانی فیلدهای حمل
                     pt.gross_weight = gross
-                    pt.tare_weight = tare
+                    pt.tare_weight = tare  # وزن خالی نهایی
                     pt.net_weight = net_weight
                     pt.freight_payment_type = data.get('freight_payment_type')
                     
@@ -628,8 +649,6 @@ def warehouse_delivery_detail_view(request, transport_number):
     else:
         # مقداردهی اولیه فرم
         initial = {
-            'gross_weight': pt.gross_weight,
-            'tare_weight': pt.tare_weight,
             'freight_payment_type': pt.freight_payment_type,
             'initial_freight': pt.initial_freight,
             'total_freight': pt.total_freight,
