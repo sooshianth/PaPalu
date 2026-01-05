@@ -531,17 +531,25 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # Save RawMaterialInfo records
                     valid_raw_material_infos = [] # To be used for StockEntry
                     if items_qs:
+                        # دریافت allocated_quantity از RawMaterialInfo قبلی (اگر وجود دارد)
+                        existing_infos = RawMaterialInfo.objects.filter(transport=pt)
+                        allocated_map = {info.order_item_id: info.allocated_quantity for info in existing_infos}
+                        
                         # Clear old ones to avoid duplicates if re-submitting
                         RawMaterialInfo.objects.filter(transport=pt).delete()
                         
                         for item in items_qs:
                             w = item_weights.get(item.id, 0)
                             if w > 0:
+                                # استفاده از allocated_quantity قبلی (اگر وجود دارد)
+                                # اگر وجود نداشت، از وزن خالص استفاده می‌کنیم (برای اولین بار)
+                                allocated_qty = allocated_map.get(item.id, w)
+                                
                                 rmi = RawMaterialInfo.objects.create(
                                     transport=pt,
                                     order_item=item,
                                     raw_material=item.raw_material,
-                                    allocated_quantity=w,
+                                    allocated_quantity=allocated_qty,  # وزن تخصیص یافته قبلی (یا وزن خالص برای اولین بار)
                                     net_weight=w,  # وزن خالص محاسبه شده از تخلیه
                                     weight_unit='kg' # Unloading is usually in KG
                                 )
