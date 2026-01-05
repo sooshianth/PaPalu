@@ -11,6 +11,7 @@ import logging
 from core.logging_levels import *
 
 from core.TransportFolder.TransportModel import Transport
+from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 
@@ -430,10 +431,69 @@ def logistic_confirmation_detail_view(request, transport_number):
                     if weight_discrepancy_percent > 5:
                         has_weight_discrepancy = True
             
+            # دریافت اطلاعات RawMaterialInfo برای این حمل
+            raw_material_infos = RawMaterialInfo.objects.filter(
+                transport=transport
+            ).select_related('order_item', 'raw_material', 'order_item__raw_material')
+            
+            # ساخت لیست مواد اولیه با اطلاعات وزن
+            material_weights = []
+            total_allocated = 0
+            total_net_weight = 0
+            materials_with_high_discrepancy = []  # لیست مواد اولیه با اختلاف بیشتر از 10%
+            has_material_weight_discrepancy = False  # آیا اختلاف وزن ماده اولیه وجود دارد؟
+            
+            for rmi in raw_material_infos:
+                # وزن تخصیص یافته برای این حمل
+                allocated = float(rmi.allocated_quantity) if rmi.allocated_quantity else 0
+                
+                # وزن خالص محاسبه شده از تخلیه
+                net_weight = float(rmi.net_weight) if rmi.net_weight else 0
+                diff = net_weight - allocated
+                
+                # محاسبه درصد اختلاف
+                diff_percent = 0
+                if allocated > 0:
+                    diff_percent = abs((diff / allocated) * 100)
+                
+                # بررسی اینکه آیا اختلاف بیشتر از 10% است
+                if diff_percent > 10:
+                    has_material_weight_discrepancy = True
+                    materials_with_high_discrepancy.append({
+                        'raw_material': rmi.raw_material,
+                        'allocated_quantity': allocated,
+                        'net_weight': net_weight,
+                        'difference': diff,
+                        'diff_percent': diff_percent,
+                    })
+                
+                material_weights.append({
+                    'raw_material': rmi.raw_material,
+                    'order_item': rmi.order_item,
+                    'allocated_quantity': allocated,  # وزن تخصیص یافته برای این حمل
+                    'net_weight': net_weight,  # وزن خالص از تخلیه
+                    'difference': diff,
+                    'diff_percent': diff_percent,  # درصد اختلاف
+                })
+                
+                total_allocated += allocated
+                total_net_weight += net_weight
+            
+            # محاسبه وزن خالص کل از RawMaterialInfo
+            calculated_total_net_weight = transport.get_total_net_weight_from_materials()
+            total_difference = total_net_weight - total_allocated
+            
             context = {
                 'transport': transport,
                 'purchase_order': po,
                 'order_items': valid_order_items,  # ارسال لیست فیلتر شده به template
+                'material_weights': material_weights,  # اطلاعات وزن مواد اولیه
+                'total_allocated': total_allocated,
+                'total_net_weight': total_net_weight,
+                'total_difference': total_difference,
+                'calculated_total_net_weight': float(calculated_total_net_weight),
+                'materials_with_high_discrepancy': materials_with_high_discrepancy,  # مواد اولیه با اختلاف بیشتر از 10%
+                'has_material_weight_discrepancy': has_material_weight_discrepancy,  # آیا اختلاف وزن ماده اولیه وجود دارد؟
                 'accessible_transport_fields': accessible_transport_fields_view,
                 'accessible_po_fields': accessible_po_fields,
                 'accessible_person_fields': accessible_person_fields,
