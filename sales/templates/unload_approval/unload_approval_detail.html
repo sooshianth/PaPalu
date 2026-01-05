@@ -299,19 +299,33 @@
                             <table class="modern-table">
                                 <thead>
                                     <tr>
-                                        <th>شماره بارنامه</th>
-                                        <th>راننده</th>
-                                        <th>وضعیت</th>
                                         <th>وزن خالص (کیلوگرم)</th>
+                                        <th>نام محصول</th>
+                                        <th>وضعیت</th>
+                                        <th>راننده</th>
+                                        <th>شماره بارنامه</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for transport in item.transports %}
                                         <tr>
-                                            <td><span class="code-badge">{{ transport.waybill_number }}</span></td>
-                                            <td>{{ transport.driver.name|default:"-" }}</td>
-                                            <td>{{ transport.get_status_display|default:"-" }}</td>
                                             <td>{{ transport.net_weight|floatformat:3|default:"-" }}</td>
+                                            <td>
+                                                {% if transport.product_infos.all %}
+                                                    {% for product_info in transport.product_infos.all %}
+                                                        {% if product_info.item_type == 'product' and product_info.product %}
+                                                            {{ product_info.product.name }}{% if not forloop.last %}، {% endif %}
+                                                        {% elif product_info.item_type == 'raw_material' and product_info.raw_material %}
+                                                            {{ product_info.raw_material.name }}{% if not forloop.last %}، {% endif %}
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ transport.get_status_display|default:"-" }}</td>
+                                            <td>{{ transport.driver.name|default:"-" }}</td>
+                                            <td><span class="code-badge">{{ transport.waybill_number }}</span></td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

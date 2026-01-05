@@ -62,6 +62,7 @@ def get_accessible_purchase_transport_fields(user):
             'net_weight': True,
             'waybill_weight': True,
             'waybill_number': True,
+            'waybill_date': True,
             'bill_of_lading_file': True,
             'notes': True,
             'created_at': True,
@@ -92,6 +93,7 @@ def get_accessible_purchase_transport_fields(user):
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
         'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'view'),
         'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'view'),
+        'waybill_date': user_can_access_field(user, Transport, 'waybill_date', 'view'),
         'bill_of_lading_file': user_can_access_field(user, Transport, 'bill_of_lading_file', 'view'),
         'notes': user_can_access_field(user, Transport, 'notes', 'view'),
         'created_at': user_can_access_field(user, Transport, 'created_at', 'view'),
@@ -126,6 +128,7 @@ def get_accessible_purchase_transport_fields_edit(user):
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'edit'),
         'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'edit'),
         'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'edit'),
+        'waybill_date': user_can_access_field(user, Transport, 'waybill_date', 'edit'),
         'bill_of_lading_file': user_can_access_field(user, Transport, 'bill_of_lading_file', 'edit'),
         'notes': user_can_access_field(user, Transport, 'notes', 'edit'),
     }
@@ -235,6 +238,16 @@ class CarEntranceDriverForm(forms.Form):
             'placeholder': '0.000',
             'step': '0.001',
             'min': '0'
+        })
+    )
+    waybill_date = forms.DateField(
+        label='تاریخ بارنامه',
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'text',
+            'placeholder': '1403/09/15',
+            'id': 'id_waybill_date'
         })
     )
     bill_of_lading_file = forms.FileField(
@@ -554,6 +567,10 @@ def register_driver_for_transport_view(request, transport_number):
                     # ثبت وزن بارنامه
                     if data.get('waybill_weight'):
                         pt.waybill_weight = data.get('waybill_weight')
+                    
+                    # ثبت تاریخ بارنامه
+                    if data.get('waybill_date'):
+                        pt.waybill_date = data.get('waybill_date')
                     
                     # ثبت تصویر بارنامه
                     if 'bill_of_lading_file' in request.FILES:
