@@ -539,6 +539,19 @@ class Transport(models.Model):
 
         super().save(*args, **kwargs)
     
+    def get_total_net_weight_from_materials(self):
+        """
+        محاسبه مجموع وزن خالص از RawMaterialInfo های مربوط به این حمل
+        """
+        from django.db.models import Sum
+        from decimal import Decimal
+        
+        total = self.raw_material_infos.aggregate(
+            total=Sum('net_weight')
+        )['total']
+        
+        return Decimal(str(total or 0))
+    
     def can_delete(self):
         """بررسی امکان حذف حمل - فقط در وضعیت پیش‌نویس مجاز است"""
         return self.status == self.STATUS_DRAFT

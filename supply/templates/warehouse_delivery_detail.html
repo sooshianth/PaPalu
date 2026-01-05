@@ -389,6 +389,66 @@
         border-right: 4px solid var(--primary-green);
         margin-bottom: 25px;
     }
+
+    /* استایل برای جدول مقایسه وزن‌ها */
+    .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .comparison-table thead {
+        background: var(--primary-green);
+        color: white;
+    }
+
+    .comparison-table th {
+        padding: 12px 15px;
+        text-align: right;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .comparison-table td {
+        padding: 12px 15px;
+        text-align: right;
+        border-bottom: 1px solid var(--gray-200);
+    }
+
+    .comparison-table tbody tr:hover {
+        background: var(--gray-50);
+    }
+
+    .comparison-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+
+    .comparison-table .diff-positive {
+        color: #28a745;
+        font-weight: 600;
+    }
+
+    .comparison-table .diff-negative {
+        color: #dc3545;
+        font-weight: 600;
+    }
+
+    .comparison-table .diff-zero {
+        color: var(--gray-600);
+    }
+
+    .comparison-table .total-row {
+        background: var(--gray-100);
+        font-weight: 600;
+    }
+
+    .comparison-section {
+        margin-top: 25px;
+    }
 </style>
 {% endblock %}
 
@@ -545,6 +605,41 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- بخش مقایسه وزن‌ها -->
+                {% if order_items %}
+                <div class="comparison-section">
+                    <h6 class="fw-bold mb-3" style="color: var(--primary-green);">مقایسه وزن‌ها:</h6>
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>ماده اولیه</th>
+                                <th>وزن تخصیص یافته در سفارش (کیلوگرم)</th>
+                                <th>وزن خالص محاسبه شده (کیلوگرم)</th>
+                                <th>اختلاف (کیلوگرم)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparison-table-body">
+                            {% for item_data in order_items %}
+                            <tr data-item-id="{{ item_data.item.id }}">
+                                <td>{{ item_data.raw_material.name }}</td>
+                                <td id="allocated-{{ item_data.item.id }}">
+                                    {{ item_data.allocated_quantity|persian_number:3|default:"—" }}
+                                </td>
+                                <td id="calculated-{{ item_data.item.id }}">—</td>
+                                <td id="diff-{{ item_data.item.id }}">—</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td><strong>جمع کل</strong></td>
+                                <td id="total-allocated"><strong>—</strong></td>
+                                <td id="total-calculated"><strong>—</strong></td>
+                                <td id="total-diff"><strong>—</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
 
                 {% else %}
                 <div class="alert alert-warning">
@@ -806,6 +901,94 @@
                 const hasValidWeights = grossWeight > 0 && tareWeight > 0 && totalNet > 0;
                 submitBtn.disabled = !(allItemsProcessed && hasValidWeights);
             }
+            
+            // Update comparison table
+            updateComparison();
+        }
+
+        function updateComparison() {
+            // Create a map of item_id to calculated weight
+            const calculatedWeights = {};
+            stages.forEach(stage => {
+                if (stage.itemId && stage.netWeight > 0) {
+                    calculatedWeights[stage.itemId] = (calculatedWeights[stage.itemId] || 0) + parseFloat(stage.netWeight);
+                }
+            });
+
+            let totalAllocated = 0;
+            let totalCalculated = 0;
+
+            // Update each row in comparison table
+            orderItemsData.forEach(item => {
+                const allocatedWeight = parseFloat(item.allocated) || 0;
+                const calculatedWeight = calculatedWeights[item.id] || 0;
+                const diff = calculatedWeight - allocatedWeight;
+
+                // Update allocated weight display
+                const allocatedCell = document.getElementById(`allocated-${item.id}`);
+                if (allocatedCell) {
+                    allocatedCell.textContent = allocatedWeight > 0 ? persianNumber(allocatedWeight.toFixed(3)) : '—';
+                }
+
+                // Update calculated weight display
+                const calculatedCell = document.getElementById(`calculated-${item.id}`);
+                if (calculatedCell) {
+                    calculatedCell.textContent = calculatedWeight > 0 ? persianNumber(calculatedWeight.toFixed(3)) : '—';
+                }
+
+                // Update difference display
+                const diffCell = document.getElementById(`diff-${item.id}`);
+                if (diffCell) {
+                    if (calculatedWeight > 0 || allocatedWeight > 0) {
+                        diffCell.textContent = persianNumber(diff.toFixed(3));
+                        // Color code the difference
+                        if (Math.abs(diff) < 0.01) {
+                            diffCell.className = 'diff-zero';
+                        } else if (diff > 0) {
+                            diffCell.className = 'diff-positive';
+                        } else {
+                            diffCell.className = 'diff-negative';
+                        }
+                    } else {
+                        diffCell.textContent = '—';
+                        diffCell.className = '';
+                    }
+                }
+
+                totalAllocated += allocatedWeight;
+                totalCalculated += calculatedWeight;
+            });
+
+            // Update total row
+            const totalAllocatedCell = document.getElementById('total-allocated');
+            const totalCalculatedCell = document.getElementById('total-calculated');
+            const totalDiffCell = document.getElementById('total-diff');
+
+            if (totalAllocatedCell) {
+                totalAllocatedCell.innerHTML = totalAllocated > 0 ? `<strong>${persianNumber(totalAllocated.toFixed(3))}</strong>` : '<strong>—</strong>';
+            }
+
+            if (totalCalculatedCell) {
+                totalCalculatedCell.innerHTML = totalCalculated > 0 ? `<strong>${persianNumber(totalCalculated.toFixed(3))}</strong>` : '<strong>—</strong>';
+            }
+
+            if (totalDiffCell) {
+                const totalDiff = totalCalculated - totalAllocated;
+                if (totalCalculated > 0 || totalAllocated > 0) {
+                    totalDiffCell.innerHTML = `<strong>${persianNumber(totalDiff.toFixed(3))}</strong>`;
+                    // Color code the total difference
+                    if (Math.abs(totalDiff) < 0.01) {
+                        totalDiffCell.className = 'diff-zero';
+                    } else if (totalDiff > 0) {
+                        totalDiffCell.className = 'diff-positive';
+                    } else {
+                        totalDiffCell.className = 'diff-negative';
+                    }
+                } else {
+                    totalDiffCell.innerHTML = '<strong>—</strong>';
+                    totalDiffCell.className = '';
+                }
+            }
         }
 
 
@@ -881,8 +1064,33 @@
             if (!readOnly) {
                 const weightInput = stageDiv.querySelector(`#stage-${stage.id}-after`);
                 if (weightInput) {
-                    weightInput.addEventListener('input', function() {
-                        updateStageWeight(stage.id, this.value);
+                    // Remove any existing listeners to avoid duplicates
+                    const newWeightInput = weightInput.cloneNode(true);
+                    weightInput.parentNode.replaceChild(newWeightInput, weightInput);
+                    
+                    newWeightInput.addEventListener('input', function() {
+                        const value = this.value.trim();
+                        if (value) {
+                            updateStageWeight(stage.id, value);
+                        } else {
+                            // If cleared, reset the stage
+                            const stageObj = stages.find(s => s.id === stage.id);
+                            if (stageObj) {
+                                stageObj.weightAfter = '';
+                                stageObj.netWeight = 0;
+                                updateSummary();
+                                updateComparison();
+                            }
+                        }
+                    });
+                    
+                    // Also listen to blur event to ensure value is saved
+                    newWeightInput.addEventListener('blur', function() {
+                        const value = this.value.trim();
+                        const stageObj = stages.find(s => s.id === stage.id);
+                        if (stageObj && value) {
+                            stageObj.weightAfter = value;
+                        }
                     });
                 }
             }
@@ -966,13 +1174,20 @@
             if (readOnly) return;
             stages = stages.filter(s => s.id !== stageId);
             renderAllStages();
+            updateComparison();
         };
 
         window.updateStageItem = function(stageId, itemId) {
             const stage = stages.find(s => s.id === stageId);
             if (stage) {
-                stage.itemId = parseInt(itemId) || null;
+                const parsedItemId = parseInt(itemId);
+                if (!isNaN(parsedItemId) && parsedItemId > 0) {
+                    stage.itemId = parsedItemId;
+                } else {
+                    stage.itemId = null;
+                }
                 renderAllStages();
+                updateComparison();
             }
         };
 
@@ -1007,7 +1222,8 @@
                 return;
             }
             
-            stage.weightAfter = weight;
+            // Store weightAfter as string to preserve the exact value entered
+            stage.weightAfter = String(weight).trim();
             const netWeight = weightBefore - weightAfter;
             stage.netWeight = netWeight > 0 ? netWeight : 0;
             
@@ -1056,6 +1272,7 @@
             }
             
             updateSummary();
+            updateComparison();
         };
 
         if (addStageBtn) {
@@ -1126,6 +1343,7 @@
         // Initialize - only if we have the required elements
         if (stagesList && initialGrossInput) {
             renderAllStages();
+            updateComparison(); // Initialize comparison table
         } else {
             console.error('Cannot initialize: required elements missing', {
                 stagesList: !!stagesList,
@@ -1141,14 +1359,58 @@
                 const oldFields = form.querySelectorAll('input[name^="unloading_stages"]');
                 oldFields.forEach(field => field.remove());
                 
-                // Add hidden fields for each stage
+                // Sync values from DOM to stages array before validation
+                stages.forEach((stage) => {
+                    // Get current values from DOM
+                    const itemSelect = document.getElementById(`stage-${stage.id}-item`);
+                    const weightInput = document.getElementById(`stage-${stage.id}-after`);
+                    
+                    if (itemSelect) {
+                        const itemId = itemSelect.value;
+                        if (itemId) {
+                            stage.itemId = parseInt(itemId);
+                        }
+                    }
+                    
+                    if (weightInput) {
+                        const weight = weightInput.value.trim();
+                        if (weight) {
+                            stage.weightAfter = weight;
+                        }
+                    }
+                });
+                
+                // Validate all stages before submission
+                let hasError = false;
+                let errorMessage = '';
+                
                 stages.forEach((stage, index) => {
-                    if (!stage.itemId || !stage.weightAfter) {
-                        e.preventDefault();
-                        alert(`مرحله ${index + 1}: لطفاً محصول و وزن بعد از تخلیه را وارد کنید.`);
+                    // Check if itemId is set and valid
+                    const itemId = parseInt(stage.itemId);
+                    if (!stage.itemId || isNaN(itemId) || itemId <= 0) {
+                        hasError = true;
+                        errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً محصول را انتخاب کنید.`;
                         return;
                     }
                     
+                    // Check if weightAfter is set and valid
+                    const weightAfterStr = String(stage.weightAfter || '').trim();
+                    const weightAfter = parseFloat(weightAfterStr);
+                    if (!weightAfterStr || weightAfterStr === '' || isNaN(weightAfter) || weightAfter <= 0) {
+                        hasError = true;
+                        errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً وزن بعد از تخلیه را وارد کنید.`;
+                        return;
+                    }
+                });
+                
+                if (hasError) {
+                    e.preventDefault();
+                    alert(errorMessage);
+                    return false;
+                }
+                
+                // Add hidden fields for each stage
+                stages.forEach((stage, index) => {
                     // Add item_id
                     const itemInput = document.createElement('input');
                     itemInput.type = 'hidden';

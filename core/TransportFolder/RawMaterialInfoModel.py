@@ -55,6 +55,16 @@ class RawMaterialInfo(models.Model):
         help_text='مقدار این ماده اولیه در این حمل'
     )
     
+    net_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن خالص (کیلوگرم)',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن خالص محاسبه شده این ماده اولیه در تخلیه'
+    )
+    
     weight_unit = models.CharField(
         max_length=10,
         choices=WEIGHT_UNIT_CHOICES,

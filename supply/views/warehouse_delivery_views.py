@@ -545,6 +545,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                                     order_item=item,
                                     raw_material=item.raw_material,
                                     allocated_quantity=w,
+                                    net_weight=w,  # وزن خالص محاسبه شده از تخلیه
                                     weight_unit='kg' # Unloading is usually in KG
                                 )
                                 valid_raw_material_infos.append(rmi)
