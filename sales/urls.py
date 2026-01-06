@@ -101,6 +101,7 @@ urlpatterns = [
     path('manage-allocations/list/', allocation_approve_view.manage_allocations_list_view, name='manage_allocations_list'),
     path('manage-allocations/<str:order_number>/', allocation_approve_view.manage_allocations_detail_view, name='manage_allocations_detail'),
     path('manage-allocations/<str:order_number>/approve-all/', allocation_approve_view.approve_all_rejected_allocations_view, name='approve_all_rejected_allocations'),
+    path('manage-allocations/<str:order_number>/<str:allocation_number>/delete/', allocation_approve_view.delete_allocation_view, name='delete_allocation'),
     
     # مسیرهای تایید تخلیه
     path('unload-approval/list/', unload_approval_view.unload_approval_list_view, name='unload_approval_list'),

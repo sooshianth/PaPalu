@@ -371,7 +371,8 @@ def allocation_create_view(request, order_number):
         messages.error(request, 'شما دسترسی به این سفارش ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    if order.status != 'pending_allocation':
+    # superadmin می‌تواند در هر وضعیتی تخصیص اضافه کند
+    if not request.user.is_superuser and order.status != 'pending_allocation':
         bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_allocation می‌رود")
         messages.error(request, 'این سفارش در وضعیت مناسب برای تخصیص نیست.')
         return redirect('sales:allocation_list')
@@ -636,9 +637,49 @@ def allocation_edit_view(request, order_number, allocation_number):
                         # بعد از save allocation، formset را با instance جدید تنظیم می‌کنیم
                         formset.instance = allocation
                         formset.save()
+                        # بررسی اینکه آیا allocation_number تغییر کرده است
+                        new_allocation_number = form.cleaned_data.get('allocation_number')
+                        allocation_number_changed = (new_allocation_number != original_allocation_number)
+                        
+                        if allocation_number_changed:
+                            # اگر allocation_number تغییر کرده، باید رکورد قدیمی را حذف و رکورد جدید ایجاد کنیم
+                            # ابتدا product_infos را از formset استخراج می‌کنیم
+                            product_infos_data = []
+                            for form_item in formset.forms:
+                                if hasattr(form_item, 'cleaned_data') and form_item.cleaned_data and not form_item.cleaned_data.get('DELETE', False):
+                                    product_infos_data.append({
+                                        'product': form_item.cleaned_data.get('product'),
+                                        'unit': form_item.cleaned_data.get('unit'),
+                                        'quantity': form_item.cleaned_data.get('quantity'),
+                                    })
+                            
+                            # حذف رکورد قدیمی (product_infos به صورت خودکار حذف می‌شوند به دلیل CASCADE)
+                            allocation.delete()
+                            
+                            # ایجاد رکورد جدید با allocation_number جدید
+                            allocation = form.save(commit=False)
+                            allocation.allocation_number = new_allocation_number
+                            allocation.save()
+                            
+                            # ایجاد product_infos جدید برای allocation جدید
+                            from core.AllocationFolder.AllocationProductInfoModel import AllocationProductInfo
+                            for product_info_data in product_infos_data:
+                                if product_info_data['product']:  # فقط اگر محصول انتخاب شده باشد
+                                    AllocationProductInfo.objects.create(
+                                        allocation=allocation,
+                                        product=product_info_data['product'],
+                                        unit=product_info_data['unit'],
+                                        quantity=product_info_data['quantity'],
+                                    )
+                        else:
+                            # اگر allocation_number تغییر نکرده، همانطور که قبلاً بود save می‌کنیم
+                            allocation = form.save()
+                            formset.save()
                         
                         # بررسی برابری مقادیر
                         new_allocation_total = calculate_allocation_total_quantity(order)
+                        # استفاده از allocation_number جدید (یا قدیمی اگر تغییر نکرده باشد)
+                        final_allocation_number = allocation.allocation_number
                         if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
                             # تغییر status همه allocation های این order به 'pending_approval'
                             Allocation.objects.filter(order=order).update(allocation_status='pending_approval')
@@ -646,26 +687,26 @@ def allocation_edit_view(request, order_number, allocation_number):
                             if order.status == 'pending_allocation':
                                 order.status = 'pending_allocation_approval'
                                 order.save(update_fields=['status'])
-                                bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد. همه تخصیص‌ها به 'در انتظار تأیید' تغییر کردند.")
+                                bug_logger.info(f"تخصیص {final_allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation_approval تغییر کرد. همه تخصیص‌ها به 'در انتظار تأیید' تغییر کردند.")
                                 messages.success(request, 'تخصیص با موفقیت ویرایش شد و وضعیت سفارش به "در انتظار تأیید تخصیص" تغییر کرد. همه تخصیص‌ها به "در انتظار تأیید" تغییر کردند.')
                             else:
-                                bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد. همه تخصیص‌ها به 'در انتظار تأیید' تغییر کردند.")
+                                bug_logger.info(f"تخصیص {final_allocation_number} برای سفارش {order_number} ویرایش شد. همه تخصیص‌ها به 'در انتظار تأیید' تغییر کردند.")
                                 messages.success(request, 'تخصیص با موفقیت ویرایش شد. همه تخصیص‌ها به "در انتظار تأیید" تغییر کردند.')
                         else:
                             # اگر قبلاً در pending_allocation_approval بود و حالا برابر نیست، برگردان به pending_allocation
                             if order.status == 'pending_allocation_approval':
                                 order.status = 'pending_allocation'
                                 order.save(update_fields=['status'])
-                                bug_logger.info(f"تخصیص {allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation برگشت (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
+                                bug_logger.info(f"تخصیص {final_allocation_number} ویرایش شد و وضعیت سفارش {order_number} به pending_allocation برگشت (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
                                 messages.success(request, 'تخصیص با موفقیت ویرایش شد. وضعیت سفارش به "در انتظار تخصیص" برگشت.')
                             else:
-                                bug_logger.info(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
+                                bug_logger.info(f"تخصیص {final_allocation_number} برای سفارش {order_number} ویرایش شد (مقدار باقیمانده: {order_total - new_allocation_total:.2f} کیلوگرم)")
                                 messages.success(request, 'تخصیص با موفقیت ویرایش شد.')
                         
-                        audit_logger.activity(f"تخصیص {allocation_number} برای سفارش {order_number} ویرایش شد")
+                        audit_logger.activity(f"تخصیص {final_allocation_number} برای سفارش {order_number} ویرایش شد")
                         return redirect('sales:allocation_list')
                 except Exception as e:
-                    bug_logger.error(f"خطا در ویرایش تخصیص {allocation_number} برای سفارش {order_number}: {str(e)}")
+                    bug_logger.error(f"خطا در ویرایش تخصیص {original_allocation_number} برای سفارش {order_number}: {str(e)}", exc_info=True)
                     messages.error(request, f'خطا در ویرایش تخصیص: {str(e)}')
         else:
             bug_logger.warning(f"فرم ویرایش تخصیص {allocation_number} برای سفارش {order_number} نامعتبر است")

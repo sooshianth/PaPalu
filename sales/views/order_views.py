@@ -381,11 +381,12 @@ def product_info_api(request, product_id):
     try:
         product = Product.objects.get(id=product_id)
         
-        # دریافت همه قیمت‌های معتبر (deadline >= today)
-        today = jdatetime.date.today()
+        # دریافت همه قیمت‌های معتبر (deadline >= now)
+        # استفاده از datetime.now() به جای date.today() چون deadline یک jDateTimeField است
+        now = jdatetime.datetime.now()
         valid_prices = ProductFinancialInfo.objects.filter(
             product=product,
-            deadline__gte=today
+            deadline__gte=now
         ).order_by('-created_at')
         
         # تبدیل main_unit و secondary_unit به weight_unit
