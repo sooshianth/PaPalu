@@ -633,6 +633,8 @@ def allocation_edit_view(request, order_number, allocation_number):
                 try:
                     with transaction.atomic():
                         allocation = form.save()
+                        # بعد از save allocation، formset را با instance جدید تنظیم می‌کنیم
+                        formset.instance = allocation
                         formset.save()
                         
                         # بررسی برابری مقادیر
