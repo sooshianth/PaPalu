@@ -423,8 +423,16 @@ def warehouse_delivery_detail_view(request, transport_number):
                     
                     # پردازش داده‌های مرحله‌ای تخلیه
                     # فرمت: unloading_stages[0][item_id]=X&unloading_stages[0][weight]=Y
+                    # فقط order_items مربوط به این حمل (که در RawMaterialInfo ثبت شده‌اند) را بررسی می‌کنیم
                     po = pt.allocation.order if pt.allocation else None
-                    items_qs = po.order_items.filter(raw_material__isnull=False).select_related('raw_material') if po else []
+                    existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material')
+                    
+                    # اگر RawMaterialInfo وجود دارد، از آن استفاده می‌کنیم، وگرنه از order_items سفارش
+                    if existing_infos.exists():
+                        items_qs = [info.order_item for info in existing_infos if info.order_item and info.order_item.raw_material]
+                    else:
+                        # اولین بار - از order_items سفارش استفاده می‌کنیم
+                        items_qs = list(po.order_items.filter(raw_material__isnull=False).select_related('raw_material')) if po else []
                     
                     # دریافت مراحل تخلیه از POST
                     unloading_stages = []
@@ -503,7 +511,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # بررسی اینکه همه محصولات تخلیه شده‌اند
                     if items_qs:
                         item_ids_in_stages = set(item_weights.keys())
-                        item_ids_in_order = set(items_qs.values_list('id', flat=True))
+                        item_ids_in_order = set([item.id for item in items_qs])
                         
                         if item_ids_in_stages != item_ids_in_order:
                             missing = item_ids_in_order - item_ids_in_stages
@@ -705,8 +713,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                     'allocated_quantity': info.allocated_quantity
                 })
     
-    # لیست انبارهای مقصد (غیر از تامین‌کننده) برای انتخاب در هر مرحله
-    destination_warehouses = Warehouse.objects.exclude(warehouse_type='supplier')
+    # لیست انبارهای مقصد (فقط انبارهای اولیه) برای انتخاب در هر مرحله
+    destination_warehouses = Warehouse.objects.filter(warehouse_type='primary')
     
     context = {
         'form': form,

@@ -775,13 +775,49 @@ class TransportTable(tables.Table):
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""
+        from core.TransportFolder.TransportModel import Transport
+        
         # اگر transport_number None است، از pk استفاده کن
         identifier = record.transport_number or str(record.pk)
         detail_url = reverse('supply:purchase_transport_detail', args=[identifier])
-        return format_html(
-            '<a href="{}" class="btn-outline-info">جزئیات</a>',
-            detail_url
+        
+        # وضعیت‌های بعد از pending_logistics_approval که ویرایش مجاز نیست
+        no_edit_statuses = [
+            'pending_logistics_approval',
+            Transport.STATUS_AWAITING_SETTLEMENT,
+            Transport.STATUS_COMPLETED,
+            Transport.STATUS_AWAITING_PAYMENT_DOC,
+            Transport.STATUS_PAYMENT_DOC_UPLOADED,
+            Transport.STATUS_REJECTED,
+        ]
+        
+        # بررسی اینکه آیا ویرایش مجاز است یا نه
+        can_edit = record.status not in no_edit_statuses
+        
+        buttons = []
+        # دکمه جزئیات (همیشه نمایش داده می‌شود)
+        buttons.append(
+            format_html(
+                '<a href="{}" class="btn-outline-info">جزئیات</a>',
+                detail_url
+            )
         )
+        
+        # دکمه ویرایش (فقط اگر مجاز باشد)
+        if can_edit:
+            edit_url = reverse('supply:edit_purchase_transport', args=[identifier])
+            buttons.append(
+                format_html(
+                    '<a href="{}" class="btn-outline-warning" style="margin-right: 5px;">ویرایش</a>',
+                    edit_url
+                )
+            )
+        
+        # استفاده از format_html_join برای اتصال دکمه‌ها
+        if buttons:
+            buttons_html = format_html_join('', '{}', [(btn,) for btn in buttons])
+            return format_html('<div class="btn-group">{}</div>', buttons_html)
+        return '—'
 
 
 class TransportStatusLogTable(tables.Table):
@@ -801,11 +837,19 @@ class TransportStatusLogTable(tables.Table):
             'style': 'font-size:.8rem'
         }
     
+    def _get_status_display(self, status_value):
+        """تبدیل مقدار وضعیت به نمایش فارسی"""
+        if not status_value:
+            return '—'
+        from core.TransportFolder.TransportModel import Transport
+        status_dict = dict(Transport.STATUS_CHOICES)
+        return status_dict.get(status_value, status_value)
+    
     def render_old_status(self, value):
-        return value or '—'
+        return self._get_status_display(value)
     
     def render_new_status(self, value):
-        return value or '—'
+        return self._get_status_display(value)
     
     def render_changed_by_name(self, record):
         if hasattr(record, 'changed_by') and record.changed_by:

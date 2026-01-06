@@ -322,9 +322,6 @@
     
     <div class="btn-actions">
       <a href="{% url 'supply:purchase_transport_list' %}" class="btn btn-secondary">بازگشت</a>
-      {% if pt.status != 'completed' %}
-      <a href="{% url 'supply:edit_purchase_transport' pt.transport_number %}" class="btn btn-primary">ویرایش</a>
-      {% endif %}
       {% if pt.can_delete %}<a href="{% url 'supply:delete_purchase_transport' pt.transport_number %}" class="btn btn-danger" onclick="return confirm('حذف حمل؟')">حذف (پیش‌نویس)</a>{% endif %}
     </div>
 </div>
