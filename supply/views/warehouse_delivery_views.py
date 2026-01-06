@@ -192,13 +192,13 @@ class WarehouseDeliveryForm(forms.Form):
         help_text='انبار مجازی تامین‌کننده که ماده اولیه از آنجا آمده است'
     )
     
-    # انبار مقصد (انبار کارخانه)
+    # انبار مقصد (انبار کارخانه) - اختیاری (چون هر مرحله انبار مقصد خودش را دارد)
     destination_warehouse = forms.ModelChoiceField(
-        label='انبار مقصد (کارخانه)',
+        label='انبار مقصد پیش‌فرض (کارخانه)',
         queryset=Warehouse.objects.exclude(warehouse_type='supplier'),
-        required=True,
+        required=False,
         widget=forms.Select(attrs={'class': 'form-control'}),
-        help_text='انبار کارخانه که ماده اولیه در آنجا تخلیه می‌شود'
+        help_text='انبار کارخانه پیش‌فرض (اختیاری - هر مرحله می‌تواند انبار مقصد جداگانه‌ای داشته باشد)'
     )
     
     def clean(self):
@@ -432,20 +432,24 @@ def warehouse_delivery_detail_view(request, transport_number):
                     while True:
                         item_id_key = f'unloading_stages[{stage_index}][item_id]'
                         weight_key = f'unloading_stages[{stage_index}][weight]'
+                        warehouse_id_key = f'unloading_stages[{stage_index}][warehouse_id]'
                         
                         item_id = request.POST.get(item_id_key)
                         weight = request.POST.get(weight_key)
+                        warehouse_id = request.POST.get(warehouse_id_key)
                         
-                        if not item_id or not weight:
+                        if not item_id or not weight or not warehouse_id:
                             break
                         
                         try:
                             item_id = int(item_id)
                             weight = float(weight)
+                            warehouse_id = int(warehouse_id)
                             if weight > 0:
                                 unloading_stages.append({
                                     'item_id': item_id,
-                                    'weight': weight
+                                    'weight': weight,
+                                    'warehouse_id': warehouse_id
                                 })
                         except (ValueError, TypeError):
                             pass
@@ -458,11 +462,13 @@ def warehouse_delivery_detail_view(request, transport_number):
                     
                     # محاسبه وزن‌های خالص هر محصول و وزن خالی نهایی
                     item_weights = {}
+                    item_warehouses = {}  # نگهداری انبار مقصد برای هر ماده اولیه
                     current_weight = float(gross)
                     
                     for stage in unloading_stages:
                         item_id = stage['item_id']
                         weight_after_unloading = stage['weight']
+                        warehouse_id = stage.get('warehouse_id')
                         
                         # وزن خالص این محصول = وزن قبلی - وزن بعد از تخلیه
                         net_item_weight = current_weight - weight_after_unloading
@@ -477,6 +483,17 @@ def warehouse_delivery_detail_view(request, transport_number):
                             return redirect(request.path)
                         
                         item_weights[item_id] = net_item_weight
+                        if warehouse_id:
+                            try:
+                                warehouse = Warehouse.objects.get(pk=warehouse_id)
+                                item_warehouses[item_id] = warehouse
+                            except Warehouse.DoesNotExist:
+                                messages.error(request, f'انبار مقصد برای محصول نامعتبر است.')
+                                return redirect(request.path)
+                        else:
+                            messages.error(request, f'انبار مقصد برای محصول انتخاب نشده است.')
+                            return redirect(request.path)
+                        
                         current_weight = weight_after_unloading
                     
                     # وزن خالی نهایی = آخرین وزن ثبت شده
@@ -558,21 +575,28 @@ def warehouse_delivery_detail_view(request, transport_number):
                     bug_logger.info(f"اطلاعات تخلیه برای حمل {transport_number} ثبت شد - وزن خالص: {net_weight}")
                     
                     # ایجاد لاگ موجودیت: از انبار مبدأ (تامین‌کننده) به انبار مقصد (کارخانه)
-                    if source_warehouse and destination_warehouse and net_weight and net_weight > 0:
+                    # برای هر ماده اولیه، انبار مقصد جداگانه است
+                    if source_warehouse and net_weight and net_weight > 0:
                         try:
                             if valid_raw_material_infos:
-                                # ایجاد StockEntry
-                                stock_entry = StockEntry.objects.create(
-                                    transaction_date=jdatetime_datetime.now(),
-                                    entry_type=StockEntry.StockEntryType.PURCHASE,
-                                    notes=f"تخلیه حمل {transport_number} - انتقال از انبار {source_warehouse.warehouse_id} به انبار {destination_warehouse.warehouse_id}",
-                                    is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
-                                )
-                                
                                 raw_material_content_type = ContentType.objects.get_for_model(RawMaterial)
                                 
+                                # برای هر ماده اولیه یک StockEntry جداگانه ایجاد می‌کنیم (چون انبار مقصد متفاوت است)
                                 for rmi in valid_raw_material_infos:
-                                    # برای هر ماده اولیه یک Source و یک Target ایجاد می‌کنیم
+                                    # دریافت انبار مقصد برای این ماده اولیه
+                                    destination_warehouse_for_item = item_warehouses.get(rmi.order_item.id)
+                                    
+                                    if not destination_warehouse_for_item:
+                                        bug_logger.warning(f"انبار مقصد برای ماده اولیه {rmi.raw_material.name} یافت نشد")
+                                        continue
+                                    
+                                    # ایجاد StockEntry برای این ماده اولیه
+                                    stock_entry = StockEntry.objects.create(
+                                        transaction_date=jdatetime_datetime.now(),
+                                        entry_type=StockEntry.StockEntryType.PURCHASE,
+                                        notes=f"تخلیه حمل {transport_number} - {rmi.raw_material.name} - انتقال از انبار {source_warehouse.warehouse_id} به انبار {destination_warehouse_for_item.warehouse_id}",
+                                        is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
+                                    )
                                     
                                     # ایجاد SourceStock (از انبار تامین‌کننده)
                                     SourceStock.objects.create(
@@ -583,31 +607,34 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         quantity=rmi.allocated_quantity
                                     )
                                     
-                                    # ایجاد TargetStock (به انبار کارخانه)
+                                    # ایجاد TargetStock (به انبار کارخانه - انبار مقصد مربوط به این ماده اولیه)
                                     TargetStock.objects.create(
                                         stock_entry=stock_entry,
                                         to_content_type=raw_material_content_type,
                                         to_object_id=rmi.raw_material.pk,
-                                        to_warehouse=destination_warehouse,
+                                        to_warehouse=destination_warehouse_for_item,
                                         quantity=rmi.allocated_quantity
                                     )
+                                    
+                                    # Commit کردن StockEntry برای به‌روزرسانی موجودیت‌ها
+                                    stock_entry.commit()
+                                    
+                                    bug_logger.info(
+                                        f"لاگ موجودیت ایجاد شد - "
+                                        f"StockEntry ID: {stock_entry.pk}, "
+                                        f"ماده اولیه: {rmi.raw_material.name}, "
+                                        f"از انبار: {source_warehouse.warehouse_id}, "
+                                        f"به انبار: {destination_warehouse_for_item.warehouse_id}, "
+                                        f"مقدار: {rmi.allocated_quantity} کیلوگرم"
+                                    )
                                 
-                                # Commit کردن StockEntry برای به‌روزرسانی موجودیت‌ها
-                                stock_entry.commit()
-                                
-                                bug_logger.info(
-                                    f"لاگ موجودیت ایجاد شد - "
-                                    f"StockEntry ID: {stock_entry.pk}, "
-                                    f"از انبار: {source_warehouse.warehouse_id}, "
-                                    f"به انبار: {destination_warehouse.warehouse_id}, "
-                                    f"مقدار کل: {net_weight} کیلوگرم"
-                                )
-                                
+                                # لاگ کلی برای audit
+                                warehouses_list = ', '.join([wh.warehouse_id for wh in set(item_warehouses.values())])
                                 audit_logger.info(
                                     f"لاگ موجودیت برای تخلیه - "
                                     f"حمل: {transport_number}, "
                                     f"از انبار: {source_warehouse.warehouse_id}, "
-                                    f"به انبار: {destination_warehouse.warehouse_id}, "
+                                    f"به انبارها: {warehouses_list}, "
                                     f"مقدار کل: {net_weight} کیلوگرم, "
                                     f"کاربر: {request.user.username}"
                                 )
@@ -678,12 +705,16 @@ def warehouse_delivery_detail_view(request, transport_number):
                     'allocated_quantity': info.allocated_quantity
                 })
     
+    # لیست انبارهای مقصد (غیر از تامین‌کننده) برای انتخاب در هر مرحله
+    destination_warehouses = Warehouse.objects.exclude(warehouse_type='supplier')
+    
     context = {
         'form': form,
         'pt': pt,
         'order_items': order_items,
         'read_only': False,
         'awaiting_guard': False,
+        'destination_warehouses': destination_warehouses,
         'accessible_transport_fields': accessible_transport_fields_view,
         'accessible_po_fields': accessible_po_fields,
         'accessible_raw_material_fields': accessible_raw_material_fields,

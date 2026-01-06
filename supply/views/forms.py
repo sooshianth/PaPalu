@@ -67,6 +67,22 @@ class RawMaterialDefineForm(ModelForm):
 		self.fields['main_supplier'].required = False
 		self.fields['main_supplier'].queryset = Person.objects.filter(type='supplier').order_by('name')
 
+	def clean(self):
+		"""اعتبارسنجی فرم: اگر واحد اصلی و فرعی یکسان باشند، ضریب تبدیل باید 1 باشد"""
+		cleaned_data = super().clean()
+		primary_unit = cleaned_data.get('primary_unit')
+		secondary_unit = cleaned_data.get('secondary_unit')
+		conversion_factor = cleaned_data.get('conversion_factor')
+		
+		# بررسی اینکه اگر واحد اصلی و فرعی یکسان باشند، ضریب تبدیل باید 1 باشد
+		if primary_unit and secondary_unit and primary_unit == secondary_unit:
+			if conversion_factor is not None and conversion_factor != 1:
+				raise forms.ValidationError({
+					'conversion_factor': 'وقتی واحد اصلی و واحد فرعی یکسان هستند، ضریب تبدیل باید برابر 1 باشد.'
+				})
+		
+		return cleaned_data
+
 
 class PurchaseInfoInlineForm(ModelForm):
 	"""فرم اطلاعات خرید ماده اولیه"""
