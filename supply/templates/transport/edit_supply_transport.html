@@ -1,176 +1,1206 @@
 {% extends 'base.html' %}
+{% load static %}
+
 {% block title %}ویرایش حمل خرید{% endblock %}
+
 {% block extra_css %}
 <style>
-  .form-wrapper {display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:22px;background:#fff;padding:20px;border:1px solid #e0e5e8;border-radius:16px;box-shadow:0 4px 14px rgba(0,0,0,0.04)}
-  .form-wrapper h4 {grid-column:1/-1;font-size:.95rem;margin:-4px 0 10px;font-weight:600;color:#2d3e50}
-  .form-group {display:flex;flex-direction:column}
-  .form-group label {font-size:.75rem;margin-bottom:4px;font-weight:600;color:#37474f}
-  .form-group input, .form-group select, .form-group textarea {padding:8px 10px;font-size:.8rem;border:1px solid #cfd8dc;border-radius:8px;background:#fdfdfd}
-  .form-group textarea {min-height:70px;resize:vertical}
-  .section-divider {grid-column:1/-1;border-top:2px dashed #e0e5e8;padding-top:14px;margin-top:10px}
-  .section-title {grid-column:1/-1;font-size:.85rem;margin:0 0 6px;font-weight:600;color:#455a64}
+  .form-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 30px;
+    margin-bottom: 30px;
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+  }
+
+  .page-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid var(--primary-green);
+  }
+
+  .page-header h2 {
+    color: var(--gray-800);
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .form-section {
+    background: var(--gray-100);
+    padding: 0;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    border-right: 4px solid var(--primary-green);
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+  }
+
+  .form-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    cursor: pointer;
+    user-select: none;
+    background: var(--gray-100);
+    transition: background-color 0.3s ease;
+  }
+
+  .form-section-header:hover {
+    background: var(--gray-200);
+  }
+
+  .form-section h5 {
+    color: var(--primary-green);
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    border: none;
+  }
+
+  .form-section-toggle-icon {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+    color: var(--primary-green);
+    flex-shrink: 0;
+  }
+
+  .form-section.collapsed .form-section-toggle-icon {
+    transform: rotate(-90deg);
+  }
+
+  .form-section-content {
+    padding: 0 25px 25px 25px;
+    max-height: 5000px;
+    overflow: visible;
+    transition: max-height 0.4s ease, padding 0.3s ease;
+    position: relative;
+    z-index: 1;
+  }
+
+  .form-section.collapsed .form-section-content {
+    max-height: 0;
+    padding: 0 25px;
+  }
+
+  .form-label {
+    color: var(--gray-800);
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .required-field::after {
+    content: '*';
+    color: #dc3545;
+    margin-right: 5px;
+  }
+
+  .form-control,
+  .form-select {
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-size: 1rem;
+    transition: all 0.3s;
+    width: 100%;
+    font-family: inherit;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    outline: none;
+  }
+
+  .text-danger {
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 5px;
+    display: block;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 1px solid var(--gray-300);
+  }
+
+  .mb-3 {
+    margin-bottom: 1rem;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-right: -15px;
+    margin-left: -15px;
+  }
+
+  .col-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-6 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-4 {
+    flex: 0 0 33.3333%;
+    max-width: 33.3333%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-3 {
+    flex: 0 0 25%;
+    max-width: 25%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .col-md-8 {
+    flex: 0 0 66.6667%;
+    max-width: 66.6667%;
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  @media (max-width: 768px) {
+    .col-md-6,
+    .col-md-4,
+    .col-md-3,
+    .col-md-8 {
+      flex: 0 0 100%;
+      max-width: 100%;
+    }
+
+    .form-card {
+      padding: 20px;
+    }
+
+    .form-section-header {
+      padding: 18px 20px;
+      min-height: 50px;
+    }
+
+    .form-section-content {
+      padding: 0 20px 20px 20px;
+    }
+
+    .form-section.collapsed .form-section-content {
+      padding: 0 20px;
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+
+    .btn {
+      width: 100%;
+    }
+  }
+
+  /* License plate input (Iran style) */
+  .plate-input {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    direction: ltr;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .plate-seg {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .plate-input input[type="text"] {
+    text-align: center;
+    padding: 8px 10px;
+    border: 1px solid var(--gray-300);
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+
+  .plate-input .seg-iran {
+    width: 60px;
+  }
+
+  .plate-input .seg-3 {
+    width: 75px;
+  }
+
+  .plate-input .seg-letter {
+    width: 50px;
+  }
+
+  .plate-input .seg-2 {
+    width: 60px;
+  }
+
+  .plate-input .dash {
+    opacity: 0.5;
+    font-size: 1rem;
+    font-weight: bold;
+  }
+
+  .plate-helper {
+    font-size: 0.75rem;
+    color: #666;
+    margin-top: 4px;
+  }
+
+  /* Driver autocomplete styles */
+  .driver-autocomplete-wrapper {
+    position: relative;
+  }
+
+  .driver-autocomplete-input {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .form-group {
+    position: relative;
+    overflow: visible !important;
+  }
+  
+  .suggestions-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 999999 !important;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    margin-top: 4px;
+  }
+
+  .suggestion-item {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.95rem;
+    transition: background 0.2s;
+  }
+
+  .suggestion-item:hover {
+    background-color: #f5f5f5;
+  }
+
+  .suggestion-item:last-child {
+    border-bottom: none;
+  }
+
+  .add-driver-btn {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    background: var(--primary-green);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+    white-space: nowrap;
+  }
+
+  .add-driver-btn:hover {
+    background: #218838;
+  }
+
+  /* Modal styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 90%;
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #2d3e50;
+  }
+
+  .close {
+    color: #aaa;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .close:hover {
+    color: #000;
+  }
+
+  .modal-body .mb-3 {
+    margin-bottom: 16px;
+  }
+
+  .modal-body label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--gray-800);
+  }
+
+  .modal-body input {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+  }
+
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 2px solid #e0e0e0;
+  }
+
+  .alert {
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+  }
+
+  .alert-info {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+    color: #1976d2;
+  }
+
+  .alert-warning {
+    background-color: #fff3e0;
+    border: 1px solid #ffb74d;
+    color: #f57c00;
+  }
+
+  /* Date picker styles */
+  .p-datepicker-trigger {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    font-size: 1.2rem;
+    z-index: 10;
+    user-select: none;
+  }
+
+  .p-datepicker-trigger:hover {
+    opacity: 0.7;
+  }
+
+  #id_expected_arrival_date_display {
+    position: relative;
+    padding-left: 40px;
+  }
+
+  .freight-fields-container {
+    margin-top: 15px;
+  }
 </style>
 {% endblock %}
+
 {% block content %}
-<form method="post" class="form-wrapper">
-  {% csrf_token %}
-  <h4>ویرایش حمل خرید: {{ pt.transport_number }}</h4>
-  
-  <div class="section-title">اطلاعات اصلی حمل</div>
-  
-  <div class="form-group">
-    <label>{{ form.purchase_order.label }}{% if form.purchase_order.field.required %} *{% endif %}</label>
-    {{ form.purchase_order }}
-    {% if form.purchase_order.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.purchase_order.errors|join:'، ' }}</div>{% endif %}
+<div class="page-header">
+  <h2>ویرایش حمل خرید: {{ pt.transport_number }}</h2>
+</div>
+
+<div class="form-card">
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }}" role="alert">
+    {{ message }}
   </div>
-  
-  <div class="form-group">
-    <label>{{ form.transport_type.label }}{% if form.transport_type.field.required %} *{% endif %}</label>
-    {{ form.transport_type }}
-    {% if form.transport_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.transport_type.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">اطلاعات خودرو و راننده</div>
-  
-  <div class="form-group">
-    <label>{{ form.vehicle_type.label }}{% if form.vehicle_type.field.required %} *{% endif %}</label>
-    {{ form.vehicle_type }}
-    {% if form.vehicle_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.vehicle_type.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.plate_number.label }}</label>
-    {{ form.plate_number }}
-    {% if form.plate_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.plate_number.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.driver.label }}</label>
-    {{ form.driver }}
-    {% if form.driver.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">اطلاعات کرایه</div>
-  
-  <div class="form-group">
-    <label>{{ form.freight_payment_type.label }}</label>
-    {{ form.freight_payment_type }}
-    {% if form.freight_payment_type.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment_type.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.initial_freight.label }}</label>
-    {{ form.initial_freight }}
-    {% if form.initial_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.initial_freight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.total_freight.label }}</label>
-    {{ form.total_freight }}
-    {% if form.total_freight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.total_freight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.discount.label }}</label>
-    {{ form.discount }}
-    {% if form.discount.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.discount.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.surplus.label }}</label>
-    {{ form.surplus }}
-    {% if form.surplus.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.surplus.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.freight_payment.label }}</label>
-    {{ form.freight_payment }}
-    {% if form.freight_payment.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.freight_payment.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.driver_account_number.label }}</label>
-    {{ form.driver_account_number }}
-    {% if form.driver_account_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver_account_number.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.driver_sheba_number.label }}</label>
-    {{ form.driver_sheba_number }}
-    {% if form.driver_sheba_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.driver_sheba_number.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">تاریخ‌های حمل</div>
-  
-  <div class="form-group">
-    <label>{{ form.expected_arrival_date.label }}</label>
-    {{ form.expected_arrival_date }}
-    {% if form.expected_arrival_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.expected_arrival_date.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.actual_arrival_date.label }}</label>
-    {{ form.actual_arrival_date }}
-    {% if form.actual_arrival_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.actual_arrival_date.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.loading_date.label }}</label>
-    {{ form.loading_date }}
-    {% if form.loading_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.loading_date.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.delivery_date.label }}</label>
-    {{ form.delivery_date }}
-    {% if form.delivery_date.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.delivery_date.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">اطلاعات وزنی</div>
-  
-  <div class="form-group">
-    <label>{{ form.gross_weight.label }}</label>
-    {{ form.gross_weight }}
-    {% if form.gross_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.gross_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.tare_weight.label }}</label>
-    {{ form.tare_weight }}
-    {% if form.tare_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.tare_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group">
-    <label>{{ form.net_weight.label }}</label>
-    {{ form.net_weight }}
-    {% if form.net_weight.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.net_weight.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="section-divider"></div>
-  <div class="section-title">سایر اطلاعات</div>
-  
-  <div class="form-group">
-    <label>{{ form.waybill_number.label }}</label>
-    {{ form.waybill_number }}
-    {% if form.waybill_number.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.waybill_number.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div class="form-group" style="grid-column:1/-1">
-    <label>{{ form.notes.label }}</label>
-    {{ form.notes }}
-    {% if form.notes.errors %}<div style="color:#d32f2f;font-size:.65rem">{{ form.notes.errors|join:'، ' }}</div>{% endif %}
-  </div>
-  
-  <div style="grid-column:1/-1;display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
-    <a href="{% url 'supply:purchase_transport_detail' pt.transport_number %}" class="btn btn-secondary btn-sm">لغو</a>
-    <button type="submit" class="btn btn-primary btn-sm">ذخیره تغییرات</button>
-  </div>
-</form>
+  {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    <!-- بخش اطلاعات اجباری -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>اطلاعات اجباری</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label required-field">{{ form.purchase_order.label }}</label>
+            {{ form.purchase_order }}
+            {% if form.purchase_order.errors %}
+            <div class="text-danger">{{ form.purchase_order.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <label class="form-label required-field">{{ form.vehicle_type.label }}</label>
+            {{ form.vehicle_type }}
+            {% if form.vehicle_type.errors %}
+            <div class="text-danger">{{ form.vehicle_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- بخش اطلاعات خودرو و راننده -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>اطلاعات خودرو و راننده</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label class="form-label">{{ form.plate_number.label }}</label>
+            <div class="plate-input">
+              <div class="plate-seg">
+                <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="12" inputmode="numeric"
+                  pattern="\d*">
+                <span class="dash">-</span>
+                <input type="text" id="plate-letter" class="seg-letter" maxlength="1" placeholder="ب" dir="rtl">
+                <span class="dash">-</span>
+                <input type="text" id="plate-middle" class="seg-3" maxlength="3" placeholder="345" inputmode="numeric"
+                  pattern="\d*">
+                <span class="dash">-</span>
+                <input type="text" id="plate-iran" class="seg-iran" maxlength="2" placeholder="11" inputmode="numeric"
+                  pattern="\d*">
+              </div>
+            </div>
+            <input type="hidden" id="id_plate_number" name="plate_number" value="{{ form.plate_number.value|default:'' }}">
+            <small class="plate-helper" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">الگو:
+              11-345-ب-12</small>
+            {% if form.plate_number.errors %}
+            <div class="text-danger">{{ form.plate_number.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-md-8 mb-3">
+            <label class="form-label">{{ form.driver.label }}</label>
+            <div class="driver-autocomplete-wrapper">
+              <input type="text" id="driver-autocomplete" class="driver-autocomplete-input"
+                placeholder="جستجوی راننده (نام، تلفن یا کد ملی)..." autocomplete="off">
+              {{ form.driver }}
+              <div id="driver-suggestions" class="suggestions-container"></div>
+            </div>
+            <div style="display: flex; gap: 8px; margin-top: 8px; align-items: center;">
+              <button type="button" class="add-driver-btn" onclick="openAddDriverModal()"
+                style="padding: 6px 12px; font-size: 0.85rem; margin: 0;">+ افزودن راننده</button>
+              <small style="font-size:0.75rem;color:#666;margin:0">جستجو یا افزودن راننده جدید</small>
+            </div>
+            {% if form.driver.errors %}
+            <div class="text-danger">{{ form.driver.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal برای افزودن راننده جدید -->
+    <div id="addDriverModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>افزودن راننده جدید</h3>
+          <span class="close" onclick="closeAddDriverModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label>نام راننده <span style="color:#d32f2f">*</span></label>
+            <input type="text" id="new-driver-name" placeholder="نام و نام خانوادگی">
+          </div>
+          <div class="mb-3">
+            <label>شماره تلفن <span style="color:#d32f2f">*</span></label>
+            <input type="text" id="new-driver-phone" placeholder="09123456789">
+          </div>
+          <div class="mb-3">
+            <label>کد ملی <span style="color:#d32f2f">*</span></label>
+            <input type="text" id="new-driver-national-id" placeholder="کد ملی 10 رقمی">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeAddDriverModal()">انصراف</button>
+          <button type="button" class="btn btn-primary" onclick="saveNewDriver()">ذخیره</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- بخش اطلاعات کرایه -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>اطلاعات کرایه (اختیاری)</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">{{ form.freight_payment_type.label }}</label>
+            {{ form.freight_payment_type }}
+            {% if form.freight_payment_type.errors %}
+            <div class="text-danger">{{ form.freight_payment_type.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- فیلدهای کرایه که فقط برای pay_to_driver و pay_to_supplier نمایش داده می‌شوند -->
+        <div class="freight-fields-container" style="display: none;">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.initial_freight.label }}</label>
+              {{ form.initial_freight }}
+              {% if form.initial_freight.errors %}
+              <div class="text-danger">{{ form.initial_freight.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.total_freight.label }}</label>
+              {{ form.total_freight }}
+              {% if form.total_freight.errors %}
+              <div class="text-danger">{{ form.total_freight.errors.0 }}</div>
+              {% endif %}
+              <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: کرایه اولیه +
+                مازاد - تخفیف</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.discount.label }}</label>
+              {{ form.discount }}
+              {% if form.discount.errors %}
+              <div class="text-danger">{{ form.discount.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.surplus.label }}</label>
+              {{ form.surplus }}
+              {% if form.surplus.errors %}
+              <div class="text-danger">{{ form.surplus.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.freight_payment.label }}</label>
+              {{ form.freight_payment }}
+              {% if form.freight_payment.errors %}
+              <div class="text-danger">{{ form.freight_payment.errors.0 }}</div>
+              {% endif %}
+              <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: برابر با کرایه
+                کل</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- بخش تاریخ‌ها -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>تاریخ‌های حمل (اختیاری)</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">{{ form.expected_arrival_date.label }}</label>
+            <div style="position: relative;">
+              <input type="text" id="id_expected_arrival_date_display" class="form-control" placeholder="1403/09/15"
+                readonly style="background-color: #fff; cursor: pointer;">
+              {{ form.expected_arrival_date }}
+            </div>
+            {% if form.expected_arrival_date.errors %}
+            <div class="text-danger">{{ form.expected_arrival_date.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- بخش سایر اطلاعات -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <h5>سایر اطلاعات (اختیاری)</h5>
+        <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>
+      <div class="form-section-content">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">{{ form.waybill_number.label }}</label>
+            {{ form.waybill_number }}
+            {% if form.waybill_number.errors %}
+            <div class="text-danger">{{ form.waybill_number.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <div class="col-12 mb-3">
+            <label class="form-label">{{ form.notes.label }}</label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+            <div class="text-danger">{{ form.notes.errors.0 }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- دکمه‌ها -->
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+      <a href="{% url 'supply:purchase_transport_detail' pt.transport_number %}" class="btn btn-secondary">لغو</a>
+    </div>
+  </form>
+</div>
 {% endblock %}
+
 {% block extra_js %}
+<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Persian Date Picker Library -->
+<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    // Driver autocomplete
+    const driverInput = document.getElementById('driver-autocomplete');
+    const driverIdInput = document.getElementById('id_driver');
+    const driverSuggestions = document.getElementById('driver-suggestions');
+    let driverSearchTimeout;
+    let driverSuggestionsList = [];
+
+    if (driverInput) {
+      const MIN_SEARCH_LENGTH = 0;
+
+      function performDriverSearch(query) {
+        clearTimeout(driverSearchTimeout);
+
+        if (query.length === 0) {
+        } else if (query.length < MIN_SEARCH_LENGTH) {
+          driverSuggestions.style.display = 'none';
+          driverSuggestionsList = [];
+          if (driverIdInput) driverIdInput.value = '';
+          return;
+        }
+
+        driverSearchTimeout = setTimeout(function () {
+          fetch('{% url "supply:driver_search_api" %}?q=' + encodeURIComponent(query))
+            .then(response => response.json())
+            .then(data => {
+              driverSuggestionsList = data.results || [];
+              displayDriverSuggestions();
+            })
+            .catch(error => {
+              console.error('خطا در جستجوی راننده:', error);
+            });
+        }, 300);
+      }
+
+      driverInput.addEventListener('input', function () {
+        const query = this.value.trim();
+        performDriverSearch(query);
+      });
+
+      driverInput.addEventListener('focus', function () {
+        const query = this.value.trim();
+        if (query.length === 0) {
+          performDriverSearch('');
+        } else {
+          performDriverSearch(query);
+        }
+      });
+
+      function displayDriverSuggestions() {
+        driverSuggestions.innerHTML = '';
+
+        if (driverSuggestionsList.length === 0) {
+          driverSuggestions.style.display = 'none';
+          return;
+        }
+
+        driverSuggestionsList.forEach(function (item) {
+          const suggestionItem = document.createElement('div');
+          suggestionItem.className = 'suggestion-item';
+          suggestionItem.textContent = item.text;
+          suggestionItem.addEventListener('click', function () {
+            driverInput.value = item.text;
+            if (driverIdInput) {
+              driverIdInput.value = item.id;
+            }
+            driverSuggestions.style.display = 'none';
+          });
+          driverSuggestions.appendChild(suggestionItem);
+        });
+
+        driverSuggestions.style.display = 'block';
+      }
+
+      document.addEventListener('click', function (e) {
+        if (!driverInput.contains(e.target) && !driverSuggestions.contains(e.target)) {
+          driverSuggestions.style.display = 'none';
+        }
+      });
+
+      {% if form.driver.value %}
+      fetch('{% url "supply:driver_search_api" %}?id={{ form.driver.value }}')
+        .then(response => response.json())
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            driverInput.value = data.results[0].text;
+          }
+        });
+      {% endif %}
+    }
+
+    // مدیریت باز و بسته شدن بخش‌های فرم
+    document.querySelectorAll('.form-section-header').forEach(function (header) {
+      header.addEventListener('click', function () {
+        const section = this.closest('.form-section');
+        section.classList.toggle('collapsed');
+      });
+    });
+
+    // مدیریت نمایش/مخفی کردن فیلدهای کرایه بر اساس نوع کرایه
+    const freightPaymentTypeSelect = document.getElementById('id_freight_payment_type');
+    const freightFieldsContainer = document.querySelector('.freight-fields-container');
+
+    function updateFreightFieldsVisibility() {
+      const selectedType = freightPaymentTypeSelect ? freightPaymentTypeSelect.value : '';
+
+      if (selectedType === 'calculated_in_invoice') {
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
+      } else if (selectedType === 'pay_to_driver' || selectedType === 'pay_to_supplier') {
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'block';
+      } else {
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
+      }
+    }
+
+    if (freightPaymentTypeSelect) {
+      freightPaymentTypeSelect.addEventListener('change', updateFreightFieldsVisibility);
+      updateFreightFieldsVisibility();
+    }
+
+    // محاسبه خودکار کرایه کل و پرداختی
+    function calculateFreight() {
+      const initialFreightInput = document.getElementById('id_initial_freight');
+      const discountInput = document.getElementById('id_discount');
+      const surplusInput = document.getElementById('id_surplus');
+      const totalFreightInput = document.getElementById('id_total_freight');
+      const freightPaymentInput = document.getElementById('id_freight_payment');
+
+      if (!initialFreightInput || !totalFreightInput) {
+        return;
+      }
+
+      let initialFreight = parseFloat(initialFreightInput.value);
+      if (isNaN(initialFreight) || initialFreight < 0) {
+        initialFreight = 0;
+      }
+
+      let discount = 0;
+      if (discountInput && discountInput.value) {
+        discount = parseFloat(discountInput.value);
+        if (isNaN(discount) || discount < 0) {
+          discount = 0;
+        }
+      }
+
+      let surplus = 0;
+      if (surplusInput && surplusInput.value) {
+        surplus = parseFloat(surplusInput.value);
+        if (isNaN(surplus) || surplus < 0) {
+          surplus = 0;
+        }
+      }
+
+      const totalFreight = initialFreight + surplus - discount;
+      const finalTotalFreight = Math.max(0, totalFreight);
+      const formattedTotal = finalTotalFreight.toFixed(2);
+      totalFreightInput.value = formattedTotal;
+
+      if (freightPaymentInput) {
+        freightPaymentInput.value = formattedTotal;
+      }
+    }
+
+    const initialFreightInput = document.getElementById('id_initial_freight');
+    const discountInput = document.getElementById('id_discount');
+    const surplusInput = document.getElementById('id_surplus');
+
+    if (initialFreightInput) {
+      initialFreightInput.addEventListener('input', calculateFreight);
+      initialFreightInput.addEventListener('blur', calculateFreight);
+    }
+
+    if (discountInput) {
+      discountInput.addEventListener('input', calculateFreight);
+      discountInput.addEventListener('blur', calculateFreight);
+    }
+
+    if (surplusInput) {
+      surplusInput.addEventListener('input', calculateFreight);
+      surplusInput.addEventListener('blur', calculateFreight);
+    }
+
+    calculateFreight();
+  });
+
+  // راه‌اندازی تقویم شمسی برای expected_arrival_date
+  $(document).ready(function () {
+    const expectedArrivalDateDisplay = $('#id_expected_arrival_date_display');
+    const expectedArrivalDateHidden = $('#id_expected_arrival_date');
+
+    if (expectedArrivalDateDisplay.length && expectedArrivalDateHidden.length) {
+      expectedArrivalDateHidden.css('display', 'none');
+
+      let initialValue = '';
+      if (expectedArrivalDateHidden.val()) {
+        try {
+          const dateParts = expectedArrivalDateHidden.val().split('-');
+          if (dateParts.length === 3) {
+            const gregorianDate = persianDate.fromCalendar('gregorian',
+              parseInt(dateParts[0]),
+              parseInt(dateParts[1]),
+              parseInt(dateParts[2])
+            );
+            const persianDateObj = gregorianDate.toCalendar('persian');
+            initialValue = persianDateObj.year + '/' +
+              String(persianDateObj.month).padStart(2, '0') + '/' +
+              String(persianDateObj.day).padStart(2, '0');
+            expectedArrivalDateDisplay.val(initialValue);
+          }
+        } catch (e) {
+          console.error('خطا در تبدیل تاریخ:', e);
+        }
+      }
+
+      expectedArrivalDateDisplay.pDatepicker({
+        observer: true,
+        format: 'YYYY/MM/DD',
+        altField: '#id_expected_arrival_date',
+        altFormat: 'YYYY-MM-DD',
+        calendarType: 'persian',
+        initialValue: initialValue || false,
+        timePicker: {
+          enabled: false
+        },
+        onSelect: function () {
+          const selectedDate = expectedArrivalDateDisplay.val();
+          if (selectedDate) {
+            try {
+              const persianDateParts = selectedDate.split('/');
+              if (persianDateParts.length === 3) {
+                const persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
+                const gregorianDate = persianDateObj.toCalendar('gregorian');
+                const formattedDate = gregorianDate.year + '-' +
+                  String(gregorianDate.month).padStart(2, '0') + '-' +
+                  String(gregorianDate.day).padStart(2, '0');
+
+                expectedArrivalDateHidden.val(formattedDate);
+              }
+            } catch (e) {
+              console.error('خطا در تبدیل تاریخ:', e);
+            }
+          }
+        }
+      });
+
+      if (!expectedArrivalDateDisplay.parent().find('.p-datepicker-trigger').length) {
+        const iconSpan = $('<span>', {
+          class: 'p-datepicker-trigger',
+          html: '📅',
+          css: {
+            'position': 'absolute',
+            'right': '10px',
+            'top': '50%',
+            'transform': 'translateY(-50%)',
+            'cursor': 'pointer',
+            'font-size': '1.2rem',
+            'z-index': '10',
+            'pointer-events': 'none'
+          }
+        });
+
+        expectedArrivalDateDisplay.parent().css('position', 'relative').append(iconSpan);
+      }
+    }
+  });
+
+  // Plate formatting and serialization
+  function normalizeDigits(str) {
+    const persian = '۰۱۲۳۴۵۶۷۸۹';
+    const arabic = '٠١٢٣٤٥٦٧٨٩';
+    return String(str || '').split('').map(ch => {
+      const pIdx = persian.indexOf(ch);
+      if (pIdx > -1) return String(pIdx);
+      const aIdx = arabic.indexOf(ch);
+      if (aIdx > -1) return String(aIdx);
+      return ch;
+    }).join('');
+  }
+  
+  function onlyDigits(el) { el.value = normalizeDigits(el.value).replace(/\D/g, ''); }
+  
+  function onlyLetters(el) {
+    el.value = el.value.replace(/[^آ-یA-Za-z]/g, '');
+    if (el.value.length > 1) {
+      el.value = el.value.charAt(0);
+    }
+  }
+
+  function parsePlateNumber(plateNumber) {
+    if (!plateNumber) return null;
+
+    const match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
+    if (match) {
+      return {
+        iran: match[1],
+        middle: match[2],
+        letter: match[3],
+        last: match[4]
+      };
+    }
+
+    const oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
+    if (oldMatch) {
+      return {
+        iran: oldMatch[1],
+        middle: oldMatch[2],
+        letter: oldMatch[3],
+        last: oldMatch[4]
+      };
+    }
+
+    return null;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const hiddenPlate = document.getElementById('id_plate_number');
+    if (hiddenPlate && hiddenPlate.value) {
+      const parsed = parsePlateNumber(hiddenPlate.value);
+      if (parsed) {
+        document.getElementById('plate-iran').value = parsed.iran;
+        document.getElementById('plate-middle').value = parsed.middle;
+        document.getElementById('plate-letter').value = parsed.letter;
+        document.getElementById('plate-last').value = parsed.last;
+      }
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    if (e.target.id === 'plate-iran' || e.target.id === 'plate-middle' || e.target.id === 'plate-last') {
+      onlyDigits(e.target);
+    }
+    if (e.target.id === 'plate-letter') {
+      onlyLetters(e.target);
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('form[method="post"]');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        const plateIran = document.getElementById('plate-iran');
+        const plateMiddle = document.getElementById('plate-middle');
+        const plateLetter = document.getElementById('plate-letter');
+        const plateLast = document.getElementById('plate-last');
+        const hidden = document.getElementById('id_plate_number');
+
+        if (plateIran && plateMiddle && plateLetter && plateLast && hidden) {
+          const iran = normalizeDigits(plateIran.value).trim();
+          const middle = normalizeDigits(plateMiddle.value).trim();
+          const letter = plateLetter.value.trim();
+          const last = normalizeDigits(plateLast.value).trim();
+
+          const hasAnyValue = iran || middle || letter || last;
+
+          if (hasAnyValue) {
+            if (iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2) {
+              hidden.value = `${iran}|${middle}${letter}${last}`;
+            } else {
+              alert('لطفاً شماره پلاک را کامل وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
+              e.preventDefault();
+              return false;
+            }
+          } else {
+            hidden.value = '';
+          }
+        }
+      }, true);
+    }
+  });
+
+  // Modal functions for adding new driver
+  function openAddDriverModal() {
+    document.getElementById('addDriverModal').style.display = 'block';
+    document.getElementById('new-driver-name').value = '';
+    document.getElementById('new-driver-phone').value = '';
+    document.getElementById('new-driver-national-id').value = '';
+  }
+
+  function closeAddDriverModal() {
+    document.getElementById('addDriverModal').style.display = 'none';
+  }
+
+  function saveNewDriver() {
+    const name = document.getElementById('new-driver-name').value.trim();
+    const phone = document.getElementById('new-driver-phone').value.trim();
+    const nationalId = document.getElementById('new-driver-national-id').value.trim();
+
+    if (!name || !phone || !nationalId) {
+      let errorMsg = 'لطفاً فیلدهای اجباری زیر را پر کنید:\n';
+      if (!name) errorMsg += '- نام راننده\n';
+      if (!phone) errorMsg += '- شماره تلفن\n';
+      if (!nationalId) errorMsg += '- کد ملی\n';
+      alert(errorMsg);
+      return;
+    }
+
+    if (nationalId.length !== 10 || !/^\d+$/.test(nationalId)) {
+      alert('کد ملی باید دقیقاً 10 رقم باشد.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', name);
+    formData.append('phone', phone);
+    if (nationalId) {
+      formData.append('national_id', nationalId);
+    }
+
+    fetch('{% url "supply:create_driver_api" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      }
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const driverInput = document.getElementById('driver-autocomplete');
+          const driverIdInput = document.getElementById('id_driver');
+
+          if (driverInput) {
+            driverInput.value = data.driver.text;
+          }
+          if (driverIdInput) {
+            driverIdInput.value = data.driver.id;
+          }
+
+          closeAddDriverModal();
+          alert('راننده با موفقیت اضافه شد.');
+        } else {
+          if (data.driver) {
+            if (confirm('راننده با این اطلاعات قبلاً ثبت شده است. آیا می‌خواهید از راننده موجود استفاده کنید؟')) {
+              const driverInput = document.getElementById('driver-autocomplete');
+              const driverIdInput = document.getElementById('id_driver');
+
+              if (driverInput) {
+                driverInput.value = `${data.driver.name} - ${data.driver.phone}`;
+              }
+              if (driverIdInput) {
+                driverIdInput.value = data.driver.id;
+              }
+
+              closeAddDriverModal();
+            }
+          } else {
+            alert('خطا: ' + (data.error || 'خطا در ایجاد راننده'));
+          }
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('خطا در ارتباط با سرور');
+      });
+  }
+
+  window.onclick = function (event) {
+    const driverModal = document.getElementById('addDriverModal');
+    if (event.target == driverModal) {
+      closeAddDriverModal();
+    }
+  }
+</script>
 {% endblock %}
