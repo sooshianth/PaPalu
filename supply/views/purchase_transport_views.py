@@ -348,6 +348,27 @@ class TransportForm(ModelForm):
         # تنظیم choices برای freight_payment_type
         self.fields['freight_payment_type'].choices = Order.FREIGHT_PAYMENT_CHOICES
         
+        # نوع پرداخت کرایه: از سفارش خرید گرفته می‌شود و readonly است
+        purchase_order = None
+        if self.instance and self.instance.pk and self.instance.allocation and self.instance.allocation.order:
+            purchase_order = self.instance.allocation.order
+        elif 'purchase_order' in self.initial:
+            purchase_order = self.initial['purchase_order']
+        elif hasattr(self, 'data') and self.data and 'purchase_order' in self.data:
+            try:
+                purchase_order = Order.objects.get(pk=self.data['purchase_order'])
+            except (Order.DoesNotExist, ValueError):
+                pass
+        
+        if purchase_order and purchase_order.freight_payment_type:
+            # تنظیم مقدار از سفارش خرید
+            self.fields['freight_payment_type'].initial = purchase_order.freight_payment_type
+            # readonly کردن فیلد
+            self.fields['freight_payment_type'].widget.attrs['readonly'] = True
+            self.fields['freight_payment_type'].widget.attrs['disabled'] = True
+            self.fields['freight_payment_type'].widget.attrs['style'] = 'background-color: #f5f5f5; cursor: not-allowed;'
+            self.fields['freight_payment_type'].required = False
+        
         # تنظیم queryset برای حساب‌های بانکی راننده (اگر driver موجود است)
         if self.instance and self.instance.pk and self.instance.driver:
             try:
@@ -398,6 +419,10 @@ class TransportForm(ModelForm):
                 )
             
             cleaned_data['allocation'] = allocation
+            
+            # تنظیم freight_payment_type از سفارش خرید (همیشه از سفارش گرفته می‌شود)
+            if purchase_order.freight_payment_type:
+                cleaned_data['freight_payment_type'] = purchase_order.freight_payment_type
         
         # محاسبه خودکار کرایه کل و پرداختی
         initial_freight = cleaned_data.get('initial_freight') or 0
@@ -665,6 +690,10 @@ def create_purchase_transport_view(request):
                         # اطمینان از اینکه وضعیت پیش‌فرض draft است
                         if not pt.status:
                             pt.status = Transport.STATUS_DRAFT
+                        
+                        # تنظیم freight_payment_type از سفارش خرید
+                        if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
+                            pt.freight_payment_type = pt.allocation.order.freight_payment_type
                         
                         # لاگ کردن پلاک قبل از ذخیره
                         if pt.plate_number:

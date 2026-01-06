@@ -128,12 +128,18 @@ def get_accessible_po_material_fields_for_warehouse(user):
 
 class WarehouseDeliveryForm(forms.Form):
     """فرم تحویل انبار - صفحه اطلاعات تخلیه"""
-    # نوع کرایه
+    # نوع کرایه (readonly - از سفارش خرید گرفته می‌شود)
     freight_payment_type = forms.ChoiceField(
         label='نوع کرایه',
         choices=[('', 'انتخاب کنید')] + Transport.FREIGHT_PAYMENT_CHOICES,
-        required=True,
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_freight_payment_type'})
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-control', 
+            'id': 'id_freight_payment_type',
+            'readonly': True,
+            'disabled': True,
+            'style': 'background-color: #f5f5f5; cursor: not-allowed;'
+        })
     )
     
     # کرایه اولیه
@@ -201,24 +207,88 @@ class WarehouseDeliveryForm(forms.Form):
         help_text='انبار کارخانه پیش‌فرض (اختیاری - هر مرحله می‌تواند انبار مقصد جداگانه‌ای داشته باشد)'
     )
     
+    def __init__(self, *args, transport=None, **kwargs):
+        """Initialize form with transport to get freight_payment_type"""
+        super().__init__(*args, **kwargs)
+        self.transport = transport
+        
+        # دریافت freight_payment_type برای تعیین required بودن فیلدهای کرایه
+        freight_payment_type = None
+        
+        # اول از transport بگیر
+        if self.transport:
+            if self.transport.allocation and self.transport.allocation.order and self.transport.allocation.order.freight_payment_type:
+                freight_payment_type = self.transport.allocation.order.freight_payment_type
+            elif self.transport.freight_payment_type:
+                freight_payment_type = self.transport.freight_payment_type
+        
+        # اگر از transport پیدا نشد، از initial بگیر
+        if not freight_payment_type and 'freight_payment_type' in self.initial:
+            freight_payment_type = self.initial.get('freight_payment_type')
+        
+        # اگر نوع کرایه "محاسبه شده در فی" نباشد، فیلدهای کرایه اجباری هستند
+        if freight_payment_type and freight_payment_type != 'calculated_in_invoice':
+            self.fields['initial_freight'].required = True
+            # اضافه کردن ستاره قرمز به label
+            original_label = self.fields['initial_freight'].label
+            if original_label and '*' not in str(original_label):
+                self.fields['initial_freight'].label = format_html('{} <span style="color: red;">*</span>', original_label)
+            
+            # discount و surplus می‌توانند 0 باشند (در initial هم 0 است)
+            # اما باید مقدار داشته باشند (حتی 0)
+            self.fields['discount'].required = True
+            original_discount_label = self.fields['discount'].label
+            if original_discount_label and '*' not in str(original_discount_label):
+                self.fields['discount'].label = format_html('{} <span style="color: red;">*</span>', original_discount_label)
+            
+            self.fields['surplus'].required = True
+            original_surplus_label = self.fields['surplus'].label
+            if original_surplus_label and '*' not in str(original_surplus_label):
+                self.fields['surplus'].label = format_html('{} <span style="color: red;">*</span>', original_surplus_label)
+    
     def clean(self):
         """اعتبارسنجی کلی فرم"""
         cleaned_data = super().clean()
+        
+        # دریافت freight_payment_type از transport (چون فیلد disabled است و در cleaned_data نیست)
         freight_payment_type = cleaned_data.get('freight_payment_type')
+        if not freight_payment_type and self.transport:
+            # از سفارش خرید بگیر
+            if self.transport.allocation and self.transport.allocation.order and self.transport.allocation.order.freight_payment_type:
+                freight_payment_type = self.transport.allocation.order.freight_payment_type
+            elif self.transport.freight_payment_type:
+                freight_payment_type = self.transport.freight_payment_type
+        
+        # اضافه کردن به cleaned_data برای استفاده در view
+        if freight_payment_type:
+            cleaned_data['freight_payment_type'] = freight_payment_type
         
         bug_logger.debug(f"Form validation - freight_payment_type: {freight_payment_type}")
         
         # اگر نوع کرایه "محاسبه شده در فی" نباشد، فیلدهای کرایه باید پر شوند
         if freight_payment_type and freight_payment_type != 'calculated_in_invoice':
             initial_freight = cleaned_data.get('initial_freight')
+            discount = cleaned_data.get('discount')
+            surplus = cleaned_data.get('surplus')
+            
+            # بررسی اجباری بودن فیلدها
             if not initial_freight or initial_freight <= 0:
-                raise forms.ValidationError(
-                    'برای نوع کرایه انتخاب شده، کرایه اولیه باید وارد شود.'
-                )
+                self.add_error('initial_freight', 'کرایه اولیه الزامی است و باید بیشتر از صفر باشد.')
+            
+            # discount و surplus باید مقدار داشته باشند (حتی 0)
+            if discount is None:
+                self.add_error('discount', 'این فیلد الزامی است. در صورت عدم تخفیف، مقدار 0 وارد کنید.')
+            
+            if surplus is None:
+                self.add_error('surplus', 'این فیلد الزامی است. در صورت عدم مازاد، مقدار 0 وارد کنید.')
+            
+            # اگر خطایی وجود دارد، ادامه نده
+            if self.errors:
+                return cleaned_data
             
             # محاسبه کرایه کل و کرایه پرداختی
-            discount = cleaned_data.get('discount') or 0
-            surplus = cleaned_data.get('surplus') or 0
+            discount = discount or 0
+            surplus = surplus or 0
             total_freight = initial_freight - discount + surplus
             cleaned_data['total_freight'] = total_freight
             cleaned_data['freight_payment'] = total_freight
@@ -371,15 +441,22 @@ def warehouse_delivery_detail_view(request, transport_number):
                     })
         
         # Initialize form for display
+        # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
+        freight_payment_type = None
+        if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
+            freight_payment_type = pt.allocation.order.freight_payment_type
+        elif pt.freight_payment_type:
+            freight_payment_type = pt.freight_payment_type
+        
         initial = {
-            'freight_payment_type': pt.freight_payment_type,
+            'freight_payment_type': freight_payment_type,
             'initial_freight': pt.initial_freight,
             'total_freight': pt.total_freight,
             'discount': pt.discount,
             'surplus': pt.surplus,
             'freight_payment': pt.freight_payment,
         }
-        form = WarehouseDeliveryForm(initial=initial)
+        form = WarehouseDeliveryForm(initial=initial, transport=pt)
         
         context = {
             'form': form,
@@ -395,7 +472,7 @@ def warehouse_delivery_detail_view(request, transport_number):
         return render(request, 'warehouse_delivery_detail.html', context)
     
     if request.method == 'POST':
-        form = WarehouseDeliveryForm(request.POST)
+        form = WarehouseDeliveryForm(request.POST, transport=pt)
         if form.is_valid():
             data = form.cleaned_data
             audit_logger.info(f"شروع ثبت تخلیه برای حمل {transport_number}")
@@ -524,7 +601,13 @@ def warehouse_delivery_detail_view(request, transport_number):
                     pt.gross_weight = gross
                     pt.tare_weight = tare  # وزن خالی نهایی
                     pt.net_weight = net_weight
-                    pt.freight_payment_type = data.get('freight_payment_type')
+                    
+                    # نوع کرایه از سفارش خرید گرفته می‌شود (نه از فرم)
+                    if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
+                        pt.freight_payment_type = pt.allocation.order.freight_payment_type
+                    elif data.get('freight_payment_type'):
+                        # Fallback: اگر در سفارش نبود، از فرم بگیر (برای سازگاری با داده‌های قدیمی)
+                        pt.freight_payment_type = data.get('freight_payment_type')
                     
                     # اگر نوع کرایه "محاسبه شده در فی" نباشد، فیلدهای کرایه را تنظیم کن
                     if data.get('freight_payment_type') != 'calculated_in_invoice':
@@ -689,15 +772,22 @@ def warehouse_delivery_detail_view(request, transport_number):
             audit_logger.activity(f"فرم نامعتبر برای ثبت تخلیه حمل {transport_number}")
     else:
         # مقداردهی اولیه فرم
+        # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
+        freight_payment_type = None
+        if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
+            freight_payment_type = pt.allocation.order.freight_payment_type
+        elif pt.freight_payment_type:
+            freight_payment_type = pt.freight_payment_type
+        
         initial = {
-            'freight_payment_type': pt.freight_payment_type,
+            'freight_payment_type': freight_payment_type,
             'initial_freight': pt.initial_freight,
             'total_freight': pt.total_freight,
             'discount': pt.discount,
             'surplus': pt.surplus,
             'freight_payment': pt.freight_payment,
         }
-        form = WarehouseDeliveryForm(initial=initial)
+        form = WarehouseDeliveryForm(initial=initial, transport=pt)
         
     # Prepare order items for context (for both new POST with errors and GET)
     # فقط مواد اولیه‌ای که در این حمل تخصیص یافته‌اند را نمایش می‌دهیم

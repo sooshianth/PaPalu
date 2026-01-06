@@ -164,6 +164,14 @@ class ProcurementPurchaseOrderForm(ModelForm):
         if 'freight_cost' in self.fields:
             self.fields['freight_cost'].widget.attrs['readonly'] = True
             self.fields['freight_cost'].widget.attrs['style'] = 'background-color: #f5f5f5; cursor: not-allowed;'
+        
+        # نوع پرداخت کرایه: فقط در ایجاد قابل ویرایش است، در ویرایش readonly
+        if self.instance and self.instance.pk:
+            # ویرایش - readonly
+            if 'freight_payment_type' in self.fields:
+                self.fields['freight_payment_type'].widget.attrs['readonly'] = True
+                self.fields['freight_payment_type'].widget.attrs['disabled'] = True
+                self.fields['freight_payment_type'].widget.attrs['style'] = 'background-color: #f5f5f5; cursor: not-allowed;'
     
     def clean(self):
         cleaned_data = super().clean()

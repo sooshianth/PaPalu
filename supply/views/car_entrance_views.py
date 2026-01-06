@@ -532,7 +532,14 @@ def register_driver_for_transport_view(request, transport_number):
         if phone:
             driver = Person.objects.filter(phone_number=phone, type='driver').first()
         
-        form = CarEntranceDriverForm(request.POST, request.FILES, freight_payment_type=pt.freight_payment_type, driver=driver)
+        # دریافت freight_payment_type از سفارش خرید (نه از transport)
+        freight_payment_type = None
+        if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
+            freight_payment_type = pt.allocation.order.freight_payment_type
+        elif pt.freight_payment_type:
+            freight_payment_type = pt.freight_payment_type
+        
+        form = CarEntranceDriverForm(request.POST, request.FILES, freight_payment_type=freight_payment_type, driver=driver)
         if form.is_valid():
             data = form.cleaned_data
             phone = data.get('phone')
@@ -576,8 +583,15 @@ def register_driver_for_transport_view(request, transport_number):
                     if 'bill_of_lading_file' in request.FILES:
                         pt.bill_of_lading_file = request.FILES['bill_of_lading_file']
                     
+                    # دریافت freight_payment_type از سفارش خرید
+                    freight_payment_type = None
+                    if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
+                        freight_payment_type = pt.allocation.order.freight_payment_type
+                    elif pt.freight_payment_type:
+                        freight_payment_type = pt.freight_payment_type
+                    
                     # فقط اگر نوع کرایه "پرداخت به راننده" باشد، حساب بانکی را ثبت می‌کنیم
-                    if pt.freight_payment_type == 'pay_to_driver':
+                    if freight_payment_type == 'pay_to_driver':
                         account_number = data.get('account', '').strip()
                         sheba_number = data.get('sheba', '').strip()
                         
@@ -695,8 +709,15 @@ def register_driver_for_transport_view(request, transport_number):
                     if bank_account:
                         initial['account'] = bank_account.account_number or ''
                         initial['sheba'] = bank_account.shaba_number or ''
+        # دریافت freight_payment_type از سفارش خرید (نه از transport)
+        freight_payment_type = None
+        if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
+            freight_payment_type = pt.allocation.order.freight_payment_type
+        elif pt.freight_payment_type:
+            freight_payment_type = pt.freight_payment_type
+        
         # ارسال freight_payment_type و driver به فرم برای تعیین required بودن فیلدهای حساب و شبا
-        form = CarEntranceDriverForm(initial=initial, freight_payment_type=pt.freight_payment_type, driver=pt.driver)
+        form = CarEntranceDriverForm(initial=initial, freight_payment_type=freight_payment_type, driver=pt.driver)
 
     # لیست مواد اولیه که در این ماشین (transport) هستند
     transport_raw_materials_list = []

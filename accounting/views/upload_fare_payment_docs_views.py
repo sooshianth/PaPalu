@@ -9,6 +9,7 @@ import logging
 
 from core.logging_levels import *
 from core.TransportFolder.TransportModel import Transport
+from core.OrderFolder.OrderModel import Order
 from core.RBACModel.TaskPermission import TaskChoices
 from core.RBACModel.Roles import user_has_task
 from accounting.tables import UploadFarePaymentDocsTable
@@ -116,32 +117,66 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
             
             if form.is_valid():
                 try:
-                    # Save the transport with payment document
-                    transport = form.save(commit=False)
-                    transport.freight_payment_document_uploaded_at = timezone.now()
-                    transport.freight_payment_document_uploaded_by = request.user
+                    from django.db import transaction as db_transaction
                     
-                    # If transport is in awaiting_wh_reconciliation status, keep it in the same status
-                    # Otherwise, transition to payment_doc_uploaded status
-                    original_status = transport.status
-                    if transport.status != Transport.STATUS_AWAITING_WH_RECONCILIATION:
-                        transport.status = Transport.STATUS_PAYMENT_DOC_UPLOADED
-                    
-                    transport.save()
-                    
-                    # Log successful upload
-                    status_message = 'سند پرداخت با موفقیت بارگذاری شد.'
-                    if original_status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
-                        status_message += ' وضعیت حمل در حالت آماده خروج باقی ماند.'
-                    else:
-                        status_message += ' وضعیت به "سند پرداخت بارگذاری شده" تغییر یافت.'
-                    
-                    audit_logger.info(
-                        f"بارگذاری موفق سند پرداخت - حمل {transport_number} | "
-                        f"وضعیت قبلی: {original_status} | "
-                        f"وضعیت جدید: {transport.status} | "
-                        f"فایل: {transport.freight_payment_document.name if transport.freight_payment_document else 'N/A'}"
-                    )
+                    with db_transaction.atomic():
+                        # Save the transport with payment document
+                        transport = form.save(commit=False)
+                        transport.freight_payment_document_uploaded_at = timezone.now()
+                        transport.freight_payment_document_uploaded_by = request.user
+                        
+                        # If transport is in awaiting_wh_reconciliation status, keep it in the same status
+                        # If transport is in awaiting_payment_doc status, transition to completed
+                        # Otherwise, transition to payment_doc_uploaded status
+                        original_status = transport.status
+                        if transport.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                            # Keep in same status
+                            pass
+                        elif transport.status == Transport.STATUS_AWAITING_PAYMENT_DOC:
+                            # تایید لجستیک شده و سند بارگذاری شده -> تکمیل شده
+                            transport.status = Transport.STATUS_COMPLETED
+                        else:
+                            transport.status = Transport.STATUS_PAYMENT_DOC_UPLOADED
+                        
+                        transport.save()
+                        
+                        # بررسی اینکه آیا تمام حمل‌های سفارش تکمیل شده‌اند
+                        po = transport.allocation.order if transport.allocation else None
+                        if po and po.order_type == 'purchase':
+                            # بررسی اینکه آیا تمام وزن سفارش تخصیص یافته است
+                            remaining_weight = po.get_remaining_weight()
+                            
+                            # بررسی اینکه آیا تمام حمل‌های سفارش تکمیل شده‌اند
+                            all_transports = Transport.objects.filter(allocation__order=po)
+                            all_completed = not all_transports.exclude(
+                                status=Transport.STATUS_COMPLETED
+                            ).exists()
+                            
+                            # اگر تمام وزن تخصیص یافته و تمام حمل‌ها تکمیل شده‌اند، سفارش را تکمیل کن
+                            if remaining_weight <= 0 and all_completed:
+                                if po.status != Order.STATUS_COMPLETED:
+                                    try:
+                                        po.transition(Order.STATUS_COMPLETED, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند و تمام وزن تخصیص یافت.')
+                                        bug_logger.info(f"وضعیت سفارش {po.order_number} به 'تکمیل شده' تغییر یافت - تمام حمل‌ها تکمیل شدند")
+                                        audit_logger.info(f"سفارش {po.order_number} به صورت خودکار تکمیل شد - تمام حمل‌ها تکمیل شدند")
+                                    except Exception as order_transition_err:
+                                        bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number} به تکمیل شده: {order_transition_err}")
+                        
+                        # Log successful upload
+                        status_message = 'سند پرداخت با موفقیت بارگذاری شد.'
+                        if original_status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                            status_message += ' وضعیت حمل در حالت آماده خروج باقی ماند.'
+                        elif original_status == Transport.STATUS_AWAITING_PAYMENT_DOC:
+                            status_message += ' وضعیت به "تکمیل شده" تغییر یافت.'
+                        else:
+                            status_message += ' وضعیت به "سند پرداخت بارگذاری شده" تغییر یافت.'
+                        
+                        audit_logger.info(
+                            f"بارگذاری موفق سند پرداخت - حمل {transport_number} | "
+                            f"وضعیت قبلی: {original_status} | "
+                            f"وضعیت جدید: {transport.status} | "
+                            f"فایل: {transport.freight_payment_document.name if transport.freight_payment_document else 'N/A'}"
+                        )
                     
                     messages.success(request, status_message)
                     return redirect('accounting:upload_fare_payment_docs_list')

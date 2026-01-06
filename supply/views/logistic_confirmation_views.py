@@ -326,9 +326,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                     
                     # بررسی وضعیت سفارش خرید
                     po = transport.allocation.order if transport.allocation else None
-                    if po:
+                    if po and po.order_type == 'purchase':
                         # بررسی اینکه آیا تمام حمل‌های سفارش در وضعیت awaiting_payment_doc یا بالاتر هستند
-                        # باید از allocation.transports استفاده کنیم
                         all_transports = Transport.objects.filter(allocation__order=po)
                         all_settled = not all_transports.exclude(
                             status__in=[
