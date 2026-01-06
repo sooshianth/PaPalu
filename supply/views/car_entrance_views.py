@@ -698,9 +698,41 @@ def register_driver_for_transport_view(request, transport_number):
         # ارسال freight_payment_type و driver به فرم برای تعیین required بودن فیلدهای حساب و شبا
         form = CarEntranceDriverForm(initial=initial, freight_payment_type=pt.freight_payment_type, driver=pt.driver)
 
-    # تبدیل order_items به list برای جلوگیری از خطای Decimal در template
-    # استفاده از values برای انتخاب فقط فیلدهای مورد نیاز و جلوگیری از خواندن فیلدهای Decimal نامعتبر
-    order_items_list = []
+    # لیست مواد اولیه که در این ماشین (transport) هستند
+    transport_raw_materials_list = []
+    try:
+        # دریافت مواد اولیه از RawMaterialInfo های این transport
+        raw_material_infos = pt.raw_material_infos.select_related('raw_material').all()
+        for rmi in raw_material_infos:
+            if rmi.raw_material:
+                # ساخت یک object ساده برای template
+                class SimpleRawMaterial:
+                    def __init__(self, raw_material_id, raw_material_name, allocated_quantity, weight_unit):
+                        self.id = raw_material_id
+                        self.name = raw_material_name
+                        self.allocated_quantity = allocated_quantity
+                        self.weight_unit = weight_unit
+                
+                # دریافت واحد وزن (نمایشی)
+                try:
+                    weight_unit_display = rmi.get_weight_unit_display()
+                except:
+                    weight_unit_display = rmi.weight_unit or 'کیلوگرم'
+                
+                transport_raw_materials_list.append(
+                    SimpleRawMaterial(
+                        rmi.raw_material.id,
+                        rmi.raw_material.name,
+                        rmi.allocated_quantity,
+                        weight_unit_display
+                    )
+                )
+    except Exception as e:
+        bug_logger.error(f"خطا در خواندن raw_material_infos برای حمل {transport_number}: {e}", exc_info=True)
+        transport_raw_materials_list = []
+    
+    # لیست کل سفارش (برای نمایش در بخش جداگانه)
+    all_order_items_list = []
     purchase_order = pt.purchase_order  # استفاده از property
     if purchase_order:
         try:
@@ -714,19 +746,20 @@ def register_driver_for_transport_view(request, transport_number):
                 def __init__(self, raw_material_id, raw_material_name):
                     self.raw_material = type('RawMaterial', (), {'id': raw_material_id, 'name': raw_material_name})()
             
-            order_items_list = [
+            all_order_items_list = [
                 SimpleOrderItem(item_data['raw_material__id'], item_data['raw_material__name'])
                 for item_data in order_items_data
             ]
         except Exception as e:
             bug_logger.error(f"خطا در خواندن order_items برای حمل {transport_number}: {e}", exc_info=True)
             # در صورت خطا، list خالی برمی‌گردانیم
-            order_items_list = []
+            all_order_items_list = []
 
     context = {
         'form': form,
         'pt': pt,
-        'order_items_list': order_items_list,  # اضافه کردن order_items_list به context
+        'transport_raw_materials_list': transport_raw_materials_list,  # مواد اولیه این ماشین
+        'all_order_items_list': all_order_items_list,  # کل سفارش
         'accessible_transport_fields': accessible_transport_fields,
         'accessible_po_fields': accessible_po_fields,
         'accessible_raw_material_fields': accessible_raw_material_fields,

@@ -390,8 +390,8 @@ def product_info_api(request, product_id):
         ).order_by('-created_at')
         
         # تبدیل main_unit و secondary_unit به weight_unit
-        # mapping: kg -> kg, ton -> ton, bag -> bag, piece -> piece
-        # یا اگر main_unit با وزن واحدها match نمی‌کند، سعی می‌کنیم تطبیق دهیم
+        # فقط واحدهای معتبر در OrderItem را می‌پذیریم: kg, ton, bag, piece
+        # واحدهای نامعتبر (مثل gr, m3, ltr, cc) فیلتر می‌شوند
         weight_unit_mapping = {
             'kg': 'kg',
             'کیلوگرم': 'kg',
@@ -405,6 +405,9 @@ def product_info_api(request, product_id):
             'تعداد': 'piece',
         }
         
+        # لیست واحدهای معتبر در OrderItem
+        valid_weight_units = {'kg', 'ton', 'bag', 'piece'}
+        
         # ساخت لیست واحدهای قابل استفاده (اصلی و فرعی)
         available_units = []
         unit_display_names = {
@@ -414,29 +417,33 @@ def product_info_api(request, product_id):
             'piece': 'عدد',
         }
         
-        # واحد اصلی
+        # واحد اصلی - فقط اگر معتبر باشد اضافه می‌شود
         if product.main_unit:
             main_unit_lower = product.main_unit.lower().strip()
             mapped_main_unit = weight_unit_mapping.get(main_unit_lower)
-            if mapped_main_unit and mapped_main_unit not in [u['value'] for u in available_units]:
-                available_units.append({
-                    'value': mapped_main_unit,
-                    'display': unit_display_names.get(mapped_main_unit, mapped_main_unit),
-                    'is_main': True
-                })
+            # بررسی معتبر بودن واحد: باید در valid_weight_units باشد
+            if mapped_main_unit and mapped_main_unit in valid_weight_units:
+                if mapped_main_unit not in [u['value'] for u in available_units]:
+                    available_units.append({
+                        'value': mapped_main_unit,
+                        'display': unit_display_names.get(mapped_main_unit, mapped_main_unit),
+                        'is_main': True
+                    })
         
-        # واحد فرعی
+        # واحد فرعی - فقط اگر معتبر باشد اضافه می‌شود
         if product.secondary_unit:
             secondary_unit_lower = product.secondary_unit.lower().strip()
             mapped_secondary_unit = weight_unit_mapping.get(secondary_unit_lower)
-            if mapped_secondary_unit and mapped_secondary_unit not in [u['value'] for u in available_units]:
-                available_units.append({
-                    'value': mapped_secondary_unit,
-                    'display': unit_display_names.get(mapped_secondary_unit, mapped_secondary_unit),
-                    'is_main': False
-                })
+            # بررسی معتبر بودن واحد: باید در valid_weight_units باشد
+            if mapped_secondary_unit and mapped_secondary_unit in valid_weight_units:
+                if mapped_secondary_unit not in [u['value'] for u in available_units]:
+                    available_units.append({
+                        'value': mapped_secondary_unit,
+                        'display': unit_display_names.get(mapped_secondary_unit, mapped_secondary_unit),
+                        'is_main': False
+                    })
         
-        # اگر هیچ واحدی پیدا نشد، پیش‌فرض kg
+        # اگر هیچ واحدی معتبر پیدا نشد، پیش‌فرض kg
         if not available_units:
             available_units.append({
                 'value': 'kg',
@@ -445,9 +452,19 @@ def product_info_api(request, product_id):
             })
         
         # برای سازگاری با کد قدیمی، weight_unit را هم برمی‌گردانیم (واحد اصلی)
+        # فقط اگر واحد اصلی معتبر باشد، در غیر این صورت از اولین واحد معتبر استفاده می‌کنیم
         main_unit = product.main_unit or 'kg'
         main_unit_lower = main_unit.lower().strip()
-        weight_unit = weight_unit_mapping.get(main_unit_lower, 'kg')  # پیش‌فرض kg
+        mapped_weight_unit = weight_unit_mapping.get(main_unit_lower, 'kg')
+        # بررسی معتبر بودن: باید در valid_weight_units باشد
+        if mapped_weight_unit in valid_weight_units:
+            weight_unit = mapped_weight_unit
+        else:
+            # اگر واحد اصلی معتبر نیست، از اولین واحد معتبر در available_units استفاده می‌کنیم
+            if available_units:
+                weight_unit = available_units[0]['value']
+            else:
+                weight_unit = 'kg'  # پیش‌فرض
         
         # ساخت لیست قیمت‌ها
         prices_list = []

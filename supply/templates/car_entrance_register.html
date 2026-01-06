@@ -370,8 +370,50 @@
                     
                     {% if accessible_transport_fields.purchase_order and accessible_po_fields.materials %}
                     <div class="col-md-12 mb-3">
-                        <label class="form-label">نام مواد اولیه</label>
-                        <textarea class="form-control" readonly style="min-height: 70px; resize: vertical;">{% for material in order_items_list %}{% if material.raw_material and accessible_raw_material_fields.name %}{{ material.raw_material.name }}{% if not forloop.last %}&#10;{% endif %}{% endif %}{% endfor %}</textarea>
+                        <label class="form-label" style="color: var(--primary-green); font-weight: 600; margin-bottom: 10px;">
+                            مواد اولیه این ماشین
+                        </label>
+                        {% if transport_raw_materials_list %}
+                            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-right: 4px solid var(--primary-green);">
+                                {% for material in transport_raw_materials_list %}
+                                    {% if accessible_raw_material_fields.name %}
+                                        <div style="margin-bottom: 8px; padding: 8px; background: white; border-radius: 5px;">
+                                            <strong>{{ material.name }}</strong>
+                                            {% if material.allocated_quantity %}
+                                                <span style="color: #666; font-size: 0.9rem; margin-right: 10px;">
+                                                    ({{ material.allocated_quantity }} {{ material.weight_unit }})
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-right: 4px solid #ffc107; color: #856404;">
+                                هنوز ماده اولیه‌ای برای این ماشین ثبت نشده است.
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-12 mb-3" style="margin-top: 20px;">
+                        <label class="form-label" style="color: #666; font-weight: 500; margin-bottom: 10px;">
+                            کل سفارش (همه مواد اولیه)
+                        </label>
+                        {% if all_order_items_list %}
+                            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; border-right: 4px solid #999;">
+                                {% for material in all_order_items_list %}
+                                    {% if material.raw_material and accessible_raw_material_fields.name %}
+                                        <div style="margin-bottom: 5px; padding: 5px; color: #666; font-size: 0.9rem;">
+                                            {{ material.raw_material.name }}
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; color: #999;">
+                                سفارش خرید ندارد.
+                            </div>
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>
