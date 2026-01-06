@@ -1,0 +1,720 @@
+{% extends 'base.html' %}
+{% load number_filters %}
+{% block title %}مشاهده انبار | سیمرغ افزار{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h1 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .warehouse-section {
+        margin-bottom: 40px;
+    }
+    
+    .section-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 18px 24px;
+        border-radius: 12px 12px 0 0;
+        margin-bottom: 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .section-header::before {
+        content: "📦";
+        font-size: 1.5rem;
+    }
+    
+    .warehouse-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 24px;
+        padding: 24px;
+        background: var(--gray-100);
+        border-radius: 0 0 12px 12px;
+    }
+    
+    .warehouse-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+        border: 2px solid transparent;
+    }
+    
+    .warehouse-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        border-color: var(--primary-green);
+    }
+    
+    .warehouse-card-header {
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    .warehouse-name {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        margin-bottom: 8px;
+    }
+    
+    .warehouse-id {
+        font-size: 0.9rem;
+        color: var(--gray-600);
+    }
+    
+    .capacity-visual {
+        margin: 24px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+    
+    .capacity-circle {
+        width: 180px;
+        height: 180px;
+        position: relative;
+        margin: 0 auto;
+    }
+    
+    .pie-chart-svg {
+        width: 180px;
+        height: 180px;
+        transform: rotate(-90deg);
+    }
+    
+    .pie-segment {
+        cursor: pointer;
+        transition: opacity 0.3s, filter 0.3s;
+    }
+    
+    .pie-segment:hover {
+        opacity: 0.8;
+        filter: brightness(1.2);
+    }
+    
+    .pie-center {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 140px;
+        height: 140px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        z-index: 10;
+    }
+    
+    .capacity-percentage {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--gray-800);
+        text-align: center;
+        display: block;
+        direction: ltr;
+        unicode-bidi: embed;
+    }
+    
+    .capacity-percentage::after {
+        content: '%';
+        font-size: 1.2rem;
+        margin-right: 4px;
+    }
+    
+    .pie-tooltip {
+        position: absolute;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        pointer-events: none;
+        z-index: 1000;
+        white-space: nowrap;
+        opacity: 0;
+        transition: opacity 0.2s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .pie-tooltip.show {
+        opacity: 1;
+    }
+    
+    .pie-tooltip::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: rgba(0, 0, 0, 0.9);
+    }
+    
+    .capacity-info {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+    }
+    
+    .capacity-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 16px;
+        background: var(--gray-100);
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+    
+    .capacity-label {
+        color: var(--gray-600);
+        font-weight: 500;
+    }
+    
+    .capacity-value {
+        color: var(--gray-800);
+        font-weight: 700;
+    }
+    
+    .items-section {
+        margin-top: 24px;
+        padding-top: 20px;
+        border-top: 2px solid var(--gray-200);
+    }
+    
+    .items-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .items-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    
+    .item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: var(--gray-100);
+        border-radius: 8px;
+        font-size: 0.9rem;
+        transition: background 0.2s;
+    }
+    
+    .item-row:hover {
+        background: var(--light-green);
+    }
+    
+    .item-name {
+        color: var(--gray-800);
+        font-weight: 500;
+        flex: 1;
+    }
+    
+    .item-quantity {
+        color: var(--primary-green);
+        font-weight: 700;
+        margin-left: 12px;
+    }
+    
+    .item-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-right: 8px;
+    }
+    
+    .badge-rawmaterial {
+        background: #e3f2fd;
+        color: #1976d2;
+    }
+    
+    .badge-product {
+        background: #f3e5f5;
+        color: #7b1fa2;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: var(--gray-600);
+    }
+    
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    
+    .empty-state-text {
+        font-size: 1.1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .warehouse-grid {
+            grid-template-columns: 1fr;
+            padding: 16px;
+        }
+        
+        .capacity-circle {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .pie-chart-svg {
+            width: 150px;
+            height: 150px;
+        }
+        
+        .pie-center {
+            width: 120px;
+            height: 120px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="page-header">
+        <h1>مشاهده انبار</h1>
+    </div>
+    
+    {% if error %}
+    <div class="alert alert-danger">
+        {{ error }}
+    </div>
+    {% else %}
+    
+    <!-- انبار مواد اولیه -->
+    <div class="warehouse-section">
+        <div class="section-header" style="background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);">
+            انبار مواد اولیه
+        </div>
+        <div class="warehouse-grid">
+            {% if primary_warehouses %}
+                {% for wh_data in primary_warehouses %}
+                    {% if accessible_warehouse_fields.name %}
+                    <div class="warehouse-card">
+                        <div class="warehouse-card-header">
+                            <div class="warehouse-name">{{ wh_data.warehouse.name|default:"بدون نام" }}</div>
+                            {% if accessible_warehouse_fields.warehouse_id %}
+                            <div class="warehouse-id">شناسه: {{ wh_data.warehouse.warehouse_id|default:"-" }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="capacity-visual">
+                            <div class="capacity-circle" data-warehouse-id="{{ wh_data.warehouse.id }}">
+                                <svg class="pie-chart-svg" viewBox="0 0 180 180">
+                                    <circle cx="90" cy="90" r="90" fill="#e9ecef"/>
+                                    {% if wh_data.items %}
+                                        {% for item in wh_data.items %}
+                                            {% if item.angle > 0 %}
+                                            <path class="pie-segment" 
+                                                  d="M 90,90 L {{ item.start_x }},{{ item.start_y }} A 90,90 0 {{ item.large_arc }},1 {{ item.end_x }},{{ item.end_y }} Z"
+                                                  fill="{{ item.color }}"
+                                                  data-item-name="{{ item.name }}"
+                                                  data-item-quantity="{{ item.quantity_formatted }}"
+                                                  data-item-percentage="{{ item.percentage_formatted }}"
+                                                  data-item-type="{{ item.type }}"/>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        {% if wh_data.percentage > 0 %}
+                                        <path class="pie-segment" 
+                                              d="M 90,90 L 90,0 A 90,90 0 {{ wh_data.large_arc|default:0 }},1 {{ wh_data.end_x|default:90 }},{{ wh_data.end_y|default:0 }} Z"
+                                              fill="{% if wh_data.percentage < 50 %}#28a745{% elif wh_data.percentage < 75 %}#ffc107{% elif wh_data.percentage < 90 %}#fd7e14{% else %}#dc3545{% endif %}"/>
+                                        {% endif %}
+                                    {% endif %}
+                                </svg>
+                                <div class="pie-center">
+                                    <div class="capacity-percentage">{{ wh_data.percentage_formatted }}</div>
+                                </div>
+                                <div class="pie-tooltip" id="tooltip-{{ wh_data.warehouse.id }}"></div>
+                            </div>
+                            
+                            <div class="capacity-info">
+                                {% if accessible_warehouse_fields.warehouse_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">ظرفیت کل:</span>
+                                    <span class="capacity-value">{{ wh_data.capacity_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                                {% if accessible_warehouse_fields.used_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">مصرف شده:</span>
+                                    <span class="capacity-value" style="color: var(--primary-green);">{{ wh_data.used_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                                {% if accessible_warehouse_fields.remaining_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">باقی‌مانده:</span>
+                                    <span class="capacity-value" style="color: #6c757d;">{{ wh_data.remaining_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if wh_data.items %}
+                        <div class="items-section">
+                            <div class="items-title">
+                                <span>📋</span>
+                                <span>مواد موجود ({{ wh_data.items_count }})</span>
+                            </div>
+                            <div class="items-list">
+                                {% for item in wh_data.items %}
+                                    {% if accessible_inventory_item_fields.item %}
+                                    <div class="item-row">
+                                        <div class="item-name">
+                                            <span class="item-badge {% if item.type == 'rawmaterial' %}badge-rawmaterial{% else %}badge-product{% endif %}">
+                                                {% if item.type == 'rawmaterial' %}ماده اولیه{% else %}محصول{% endif %}
+                                            </span>
+                                            {{ item.name }}
+                                        </div>
+                                        {% if accessible_inventory_item_fields.quantity %}
+                                        <div class="item-quantity">{{ item.quantity_formatted }} {{ item.unit }}</div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="items-section">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <div class="empty-state-text">هیچ آیتمی در این انبار وجود ندارد</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-text">هیچ انبار مواد اولیه‌ای وجود ندارد</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- انبار تولید -->
+    <div class="warehouse-section">
+        <div class="section-header" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);">
+            انبار تولید
+        </div>
+        <div class="warehouse-grid">
+            {% if production_warehouses %}
+                {% for wh_data in production_warehouses %}
+                    {% if accessible_warehouse_fields.name %}
+                    <div class="warehouse-card">
+                        <div class="warehouse-card-header">
+                            <div class="warehouse-name">{{ wh_data.warehouse.name|default:"بدون نام" }}</div>
+                            {% if accessible_warehouse_fields.warehouse_id %}
+                            <div class="warehouse-id">شناسه: {{ wh_data.warehouse.warehouse_id|default:"-" }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="capacity-visual">
+                            <div class="capacity-circle" data-warehouse-id="{{ wh_data.warehouse.id }}">
+                                <svg class="pie-chart-svg" viewBox="0 0 180 180">
+                                    <circle cx="90" cy="90" r="90" fill="#e9ecef"/>
+                                    {% if wh_data.items %}
+                                        {% for item in wh_data.items %}
+                                            {% if item.angle > 0 %}
+                                            <path class="pie-segment" 
+                                                  d="M 90,90 L {{ item.start_x }},{{ item.start_y }} A 90,90 0 {{ item.large_arc }},1 {{ item.end_x }},{{ item.end_y }} Z"
+                                                  fill="{{ item.color }}"
+                                                  data-item-name="{{ item.name }}"
+                                                  data-item-quantity="{{ item.quantity_formatted }}"
+                                                  data-item-percentage="{{ item.percentage_formatted }}"
+                                                  data-item-type="{{ item.type }}"/>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        {% if wh_data.percentage > 0 %}
+                                        <path class="pie-segment" 
+                                              d="M 90,90 L 90,0 A 90,90 0 {{ wh_data.large_arc|default:0 }},1 {{ wh_data.end_x|default:90 }},{{ wh_data.end_y|default:0 }} Z"
+                                              fill="{% if wh_data.percentage < 50 %}#28a745{% elif wh_data.percentage < 75 %}#ffc107{% elif wh_data.percentage < 90 %}#fd7e14{% else %}#dc3545{% endif %}"/>
+                                        {% endif %}
+                                    {% endif %}
+                                </svg>
+                                <div class="pie-center">
+                                    <div class="capacity-percentage">{{ wh_data.percentage_formatted }}</div>
+                                </div>
+                                <div class="pie-tooltip" id="tooltip-{{ wh_data.warehouse.id }}"></div>
+                            </div>
+                            
+                            <div class="capacity-info">
+                                {% if accessible_warehouse_fields.warehouse_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">ظرفیت کل:</span>
+                                    <span class="capacity-value">{{ wh_data.capacity_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                                {% if accessible_warehouse_fields.used_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">مصرف شده:</span>
+                                    <span class="capacity-value" style="color: var(--primary-green);">{{ wh_data.used_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                                {% if accessible_warehouse_fields.remaining_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">باقی‌مانده:</span>
+                                    <span class="capacity-value" style="color: #6c757d;">{{ wh_data.remaining_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if wh_data.items %}
+                        <div class="items-section">
+                            <div class="items-title">
+                                <span>📋</span>
+                                <span>مواد موجود ({{ wh_data.items_count }})</span>
+                            </div>
+                            <div class="items-list">
+                                {% for item in wh_data.items %}
+                                    {% if accessible_inventory_item_fields.item %}
+                                    <div class="item-row">
+                                        <div class="item-name">
+                                            <span class="item-badge {% if item.type == 'rawmaterial' %}badge-rawmaterial{% else %}badge-product{% endif %}">
+                                                {% if item.type == 'rawmaterial' %}ماده اولیه{% else %}محصول{% endif %}
+                                            </span>
+                                            {{ item.name }}
+                                        </div>
+                                        {% if accessible_inventory_item_fields.quantity %}
+                                        <div class="item-quantity">{{ item.quantity_formatted }} {{ item.unit }}</div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="items-section">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <div class="empty-state-text">هیچ آیتمی در این انبار وجود ندارد</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-text">هیچ انبار تولیدی وجود ندارد</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- انبار محصولات -->
+    <div class="warehouse-section">
+        <div class="section-header" style="background: linear-gradient(135deg, #7b1fa2 0%, #4a148c 100%);">
+            انبار محصولات
+        </div>
+        <div class="warehouse-grid">
+            {% if secondary_warehouses %}
+                {% for wh_data in secondary_warehouses %}
+                    {% if accessible_warehouse_fields.name %}
+                    <div class="warehouse-card">
+                        <div class="warehouse-card-header">
+                            <div class="warehouse-name">{{ wh_data.warehouse.name|default:"بدون نام" }}</div>
+                            {% if accessible_warehouse_fields.warehouse_id %}
+                            <div class="warehouse-id">شناسه: {{ wh_data.warehouse.warehouse_id|default:"-" }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="capacity-visual">
+                            <div class="capacity-circle" data-warehouse-id="{{ wh_data.warehouse.id }}">
+                                <svg class="pie-chart-svg" viewBox="0 0 180 180">
+                                    <circle cx="90" cy="90" r="90" fill="#e9ecef"/>
+                                    {% if wh_data.items %}
+                                        {% for item in wh_data.items %}
+                                            {% if item.angle > 0 %}
+                                            <path class="pie-segment" 
+                                                  d="M 90,90 L {{ item.start_x }},{{ item.start_y }} A 90,90 0 {{ item.large_arc }},1 {{ item.end_x }},{{ item.end_y }} Z"
+                                                  fill="{{ item.color }}"
+                                                  data-item-name="{{ item.name }}"
+                                                  data-item-quantity="{{ item.quantity_formatted }}"
+                                                  data-item-percentage="{{ item.percentage_formatted }}"
+                                                  data-item-type="{{ item.type }}"/>
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        {% if wh_data.percentage > 0 %}
+                                        <path class="pie-segment" 
+                                              d="M 90,90 L 90,0 A 90,90 0 {{ wh_data.large_arc|default:0 }},1 {{ wh_data.end_x|default:90 }},{{ wh_data.end_y|default:0 }} Z"
+                                              fill="{% if wh_data.percentage < 50 %}#28a745{% elif wh_data.percentage < 75 %}#ffc107{% elif wh_data.percentage < 90 %}#fd7e14{% else %}#dc3545{% endif %}"/>
+                                        {% endif %}
+                                    {% endif %}
+                                </svg>
+                                <div class="pie-center">
+                                    <div class="capacity-percentage">{{ wh_data.percentage_formatted }}</div>
+                                </div>
+                                <div class="pie-tooltip" id="tooltip-{{ wh_data.warehouse.id }}"></div>
+                            </div>
+                            
+                            <div class="capacity-info">
+                                {% if accessible_warehouse_fields.warehouse_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">ظرفیت کل:</span>
+                                    <span class="capacity-value">{{ wh_data.capacity_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                                {% if accessible_warehouse_fields.used_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">مصرف شده:</span>
+                                    <span class="capacity-value" style="color: var(--primary-green);">{{ wh_data.used_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                                {% if accessible_warehouse_fields.remaining_capacity %}
+                                <div class="capacity-row">
+                                    <span class="capacity-label">باقی‌مانده:</span>
+                                    <span class="capacity-value" style="color: #6c757d;">{{ wh_data.remaining_formatted }} کیلوگرم</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        {% if wh_data.items %}
+                        <div class="items-section">
+                            <div class="items-title">
+                                <span>📋</span>
+                                <span>محصولات موجود ({{ wh_data.items_count }})</span>
+                            </div>
+                            <div class="items-list">
+                                {% for item in wh_data.items %}
+                                    {% if accessible_inventory_item_fields.item %}
+                                    <div class="item-row">
+                                        <div class="item-name">
+                                            <span class="item-badge {% if item.type == 'rawmaterial' %}badge-rawmaterial{% else %}badge-product{% endif %}">
+                                                {% if item.type == 'rawmaterial' %}ماده اولیه{% else %}محصول{% endif %}
+                                            </span>
+                                            {{ item.name }}
+                                        </div>
+                                        {% if accessible_inventory_item_fields.quantity %}
+                                        <div class="item-quantity">{{ item.quantity_formatted }} {{ item.unit }}</div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="items-section">
+                            <div class="empty-state">
+                                <div class="empty-state-icon">📭</div>
+                                <div class="empty-state-text">هیچ آیتمی در این انبار وجود ندارد</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-state-icon">📦</div>
+                    <div class="empty-state-text">هیچ انبار محصولاتی وجود ندارد</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% endif %}
+</div>
+
+<script>
+    // مدیریت tooltip برای نمودارهای دایره‌ای
+    document.addEventListener('DOMContentLoaded', function() {
+        const pieSegments = document.querySelectorAll('.pie-segment');
+        
+        pieSegments.forEach(function(segment) {
+            const tooltip = segment.closest('.capacity-circle').querySelector('.pie-tooltip');
+            const itemName = segment.getAttribute('data-item-name');
+            const itemQuantity = segment.getAttribute('data-item-quantity');
+            const itemPercentage = segment.getAttribute('data-item-percentage');
+            const itemType = segment.getAttribute('data-item-type');
+            
+            if (!itemName) return; // اگر داده‌ای نباشد، ادامه نده
+            
+            const typeText = itemType === 'rawmaterial' ? 'ماده اولیه' : 'محصول';
+            
+            segment.addEventListener('mouseenter', function(e) {
+                if (tooltip) {
+                    tooltip.innerHTML = `
+                        <strong>${itemName}</strong><br>
+                        ${typeText}<br>
+                        ${itemQuantity} کیلوگرم<br>
+                        ${itemPercentage}% از ظرفیت
+                    `;
+                    tooltip.classList.add('show');
+                    
+                    // موقعیت tooltip
+                    const rect = segment.getBoundingClientRect();
+                    const circleRect = segment.closest('.capacity-circle').getBoundingClientRect();
+                    tooltip.style.left = (rect.left + rect.width / 2 - circleRect.left) + 'px';
+                    tooltip.style.top = (rect.top - circleRect.top - 10) + 'px';
+                }
+            });
+            
+            segment.addEventListener('mouseleave', function() {
+                if (tooltip) {
+                    tooltip.classList.remove('show');
+                }
+            });
+            
+            segment.addEventListener('mousemove', function(e) {
+                if (tooltip && tooltip.classList.contains('show')) {
+                    const circleRect = segment.closest('.capacity-circle').getBoundingClientRect();
+                    const x = e.clientX - circleRect.left;
+                    const y = e.clientY - circleRect.top;
+                    tooltip.style.left = x + 'px';
+                    tooltip.style.top = (y - 40) + 'px';
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
+

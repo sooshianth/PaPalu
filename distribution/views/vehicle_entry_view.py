@@ -345,6 +345,19 @@ def register_vehicle_entry_view(request, waybill_number):
                         attachment_type='national_card',
                         file=previous_card_attachment.file
                     )
+                    # ذخیره کارت ملی در Attachment مربوط به Person
+                    person_national_card, created = Attachment.objects.get_or_create(
+                        person=driver_person,
+                        description='کارت ملی',
+                        defaults={
+                            'file': previous_card_attachment.file,
+                            'doc_type': 'other'
+                        }
+                    )
+                    if not created:
+                        # اگر از قبل وجود داشت، فایل را به‌روزرسانی کن
+                        person_national_card.file = previous_card_attachment.file
+                        person_national_card.save()
                 elif national_card_file:
                     # آپلود فایل جدید
                     TransportAttachment.objects.create(
@@ -352,6 +365,19 @@ def register_vehicle_entry_view(request, waybill_number):
                         attachment_type='national_card',
                         file=national_card_file
                     )
+                    # ذخیره کارت ملی در Attachment مربوط به Person
+                    person_national_card, created = Attachment.objects.get_or_create(
+                        person=driver_person,
+                        description='کارت ملی',
+                        defaults={
+                            'file': national_card_file,
+                            'doc_type': 'other'
+                        }
+                    )
+                    if not created:
+                        # اگر از قبل وجود داشت، فایل را به‌روزرسانی کن
+                        person_national_card.file = national_card_file
+                        person_national_card.save()
                 
                 # تغییر وضعیت حمل به loading (در حال بارگیری)
                 transport.status = 'loading'
@@ -542,6 +568,40 @@ def get_driver_info_by_national_id_view(request):
         
         if national_card_attachment and national_card_attachment.file:
             response_data['national_card_url'] = national_card_attachment.file.url
+        
+        # دریافت پلاک‌های قبلی این راننده
+        previous_plates = []
+        # پیدا کردن Transportهای مربوط به این راننده
+        transports = Transport.objects.filter(
+            driver=driver
+        ).prefetch_related('truck_infos')
+        
+        # جمع‌آوری پلاک‌های منحصر به فرد
+        seen_plates = set()
+        for transport in transports:
+            for truck_info in transport.truck_infos.all():
+                if truck_info.plate_number and truck_info.plate_number not in seen_plates:
+                    seen_plates.add(truck_info.plate_number)
+                    # تجزیه پلاک برای نمایش
+                    plate_parts = truck_info.plate_number.split('|')
+                    if len(plate_parts) == 2:
+                        plate_part1 = plate_parts[0]
+                        plate_middle = plate_parts[1]
+                        # استخراج حرف و اعداد از وسط
+                        plate_middle_match = re.match(r'^(\d{3})([ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی])(\d{2})$', plate_middle)
+                        if plate_middle_match:
+                            previous_plates.append({
+                                'plate_number': truck_info.plate_number,
+                                'plate_part1': plate_part1,
+                                'plate_part2': plate_middle_match.group(1),
+                                'plate_part3': plate_middle_match.group(2),
+                                'plate_part4': plate_middle_match.group(3),
+                                'vehicle_type': truck_info.vehicle_type,
+                                'loading_type': truck_info.loading_type,
+                                'display': truck_info.plate_number.replace('|', ' ')
+                            })
+        
+        response_data['previous_plates'] = previous_plates
         
         return JsonResponse(response_data)
         

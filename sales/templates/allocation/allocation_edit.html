@@ -703,9 +703,34 @@
 
     // تابع برای بارگذاری اطلاعات آدرس بر اساس کد پستی
     function loadDeliveryInfo(postalCode) {
-        // این تابع فقط برای نشان دادن دکمه است
-        // هنگام کلیک دکمه، سرور خود بررسی می‌کند
-        // دکمه همیشه نمایش داده می‌شود
+        if (!postalCode || postalCode.length !== 10 || !/^\d{10}$/.test(postalCode)) {
+            clearDeliveryInfo();
+            return;
+        }
+
+        // استفاده از API برای دریافت اطلاعات آدرس
+        const url = baseDeliveryInfoRenderedUrl.replace('PLACEHOLDER', encodeURIComponent(postalCode));
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.html) {
+                    // نمایش اطلاعات
+                    const container = document.getElementById('delivery-info-container');
+                    const content = document.getElementById('delivery-info-content');
+                    if (content) {
+                        content.innerHTML = data.html;
+                    }
+                    if (container) {
+                        container.style.display = 'block';
+                    }
+                } else {
+                    clearDeliveryInfo();
+                }
+            })
+            .catch(error => {
+                console.error('خطا در بارگذاری اطلاعات آدرس:', error);
+                clearDeliveryInfo();
+            });
     }
 
     // تابع برای باز کردن popup ایجاد آدرس
@@ -753,6 +778,12 @@
 
         // مدیریت autocomplete برای جستجوی کد پستی
         if (postalCodeInput) {
+            // تعریف متغیرها قبل از استفاده
+            let postalCodeSuggestions = [];
+            let searchTimeout;
+            let lastPostalCode = ''; // برای ذخیره آخرین کد پستی که اطلاعاتش نمایش داده شده
+            let isFocusing = false; // Flag برای جلوگیری از بسته شدن فوری suggestionsContainer
+            
             // بارگذاری اولیه اطلاعات آدرس در صورت وجود کد پستی
             const initialPostalCode = postalCodeInput.value.trim();
             if (initialPostalCode && initialPostalCode.length === 10 && /^\d{10}$/.test(initialPostalCode)) {
@@ -764,8 +795,12 @@
             const suggestionsContainer = document.createElement('div');
             suggestionsContainer.className = 'postal-code-suggestions';
             suggestionsContainer.style.cssText = 'position: absolute; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; display: none; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.1);';
-            postalCodeInput.parentElement.style.position = 'relative';
-            postalCodeInput.parentElement.appendChild(suggestionsContainer);
+            
+            // پیدا کردن wrapper مناسب برای append کردن suggestionsContainer
+            const postalCodeWrapper = postalCodeInput.closest('.postal-code-input-wrapper');
+            const parentElement = postalCodeWrapper || postalCodeInput.parentElement;
+            parentElement.style.position = 'relative';
+            parentElement.appendChild(suggestionsContainer);
 
             // ایجاد عنصر برای نمایش خطا
             const errorMessage = document.createElement('div');
@@ -773,13 +808,8 @@
             errorMessage.style.cssText = 'color: #dc3545; font-size: 0.875rem; margin-top: 5px; display: none;';
             postalCodeInput.parentElement.appendChild(errorMessage);
 
-            let postalCodeSuggestions = [];
-            let searchTimeout;
-            let lastPostalCode = ''; // برای ذخیره آخرین کد پستی که اطلاعاتش نمایش داده شده
-
-            postalCodeInput.addEventListener('input', function () {
-                const query = this.value.trim();
-
+            // تابع برای انجام جستجوی کد پستی
+            function performPostalCodeSearch(query, instant = false) {
                 clearTimeout(searchTimeout);
                 errorMessage.style.display = 'none';
                 postalCodeInput.style.borderColor = '';
@@ -816,12 +846,8 @@
                         });
                 }
 
-                if (query.length < 2) {
-                    suggestionsContainer.style.display = 'none';
-                    postalCodeSuggestions = [];
-                    return;
-                }
-
+                // همیشه جستجو انجام بده (بدون نیاز به حداقل کاراکتر)
+                const delay = instant ? 0 : 300;
                 searchTimeout = setTimeout(function () {
                     fetch(postalCodeSearchUrl + '?q=' + encodeURIComponent(query))
                         .then(response => response.json())
@@ -839,7 +865,28 @@
                             postalCodeSuggestions = [];
                             displayPostalCodeSuggestions();
                         });
-                }, 300);
+                }, delay);
+            }
+
+            postalCodeInput.addEventListener('input', function () {
+                const query = this.value.trim();
+                performPostalCodeSearch(query, false);
+            });
+
+            // جستجو هنگام focus (کلیک روی فیلد) - بلافاصله بدون timeout
+            postalCodeInput.addEventListener('focus', function (e) {
+                isFocusing = true;
+                const query = this.value.trim();
+                performPostalCodeSearch(query, true);
+                // بعد از یک لحظه، flag را reset کن
+                setTimeout(function() {
+                    isFocusing = false;
+                }, 500);
+            });
+            
+            // جلوگیری از بسته شدن suggestionsContainer هنگام کلیک روی input
+            postalCodeInput.addEventListener('mousedown', function (e) {
+                e.stopPropagation();
             });
 
             function displayPostalCodeSuggestions() {
@@ -879,8 +926,18 @@
                 suggestionsContainer.style.display = 'block';
             }
 
-            // بستن پیشنهادات با کلیک خارج
-            document.addEventListener('click', function (e) {
+            // جلوگیری از بسته شدن suggestionsContainer هنگام کلیک روی آن
+            suggestionsContainer.addEventListener('mousedown', function(e) {
+                e.stopPropagation();
+            });
+
+            // بستن پیشنهادات با کلیک خارج (استفاده از mousedown برای جلوگیری از conflict با focus)
+            document.addEventListener('mousedown', function (e) {
+                // اگر در حال focus هستیم، suggestionsContainer را نبند
+                if (isFocusing) {
+                    return;
+                }
+                // اگر کلیک روی input یا suggestionsContainer نیست، ببند
                 if (!postalCodeInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
                     suggestionsContainer.style.display = 'none';
                 }
