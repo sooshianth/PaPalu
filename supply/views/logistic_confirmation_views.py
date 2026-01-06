@@ -320,27 +320,46 @@ def logistic_confirmation_detail_view(request, transport_number):
             try:
                 from django.db import transaction
                 with transaction.atomic():
-                    # تغییر وضعیت به awaiting payment doc
-                    transport.status = Transport.STATUS_AWAITING_PAYMENT_DOC
+                    # تنظیم تایید لجستیک
+                    transport.logistic_confirmed = True
+                    
+                    # اگر سند پرداخت هم بارگذاری شده است، وضعیت را به completed ببر
+                    # در غیر این صورت، وضعیت را به awaiting_payment_doc ببر
+                    if transport.payment_doc_uploaded:
+                        # هر دو شرط برقرار است -> تکمیل شده
+                        transport.status = Transport.STATUS_COMPLETED
+                        bug_logger.info(f"حمل {transport_number} تکمیل شد - تایید لجستیک و بارگذاری سند هر دو انجام شده است")
+                    else:
+                        # فقط تایید لجستیک انجام شده -> در انتظار بارگذاری سند
+                        transport.status = Transport.STATUS_AWAITING_PAYMENT_DOC
+                    
                     transport.save()
                     
                     # بررسی وضعیت سفارش خرید
                     po = transport.allocation.order if transport.allocation else None
                     if po and po.order_type == 'purchase':
-                        # بررسی اینکه آیا تمام حمل‌های سفارش در وضعیت awaiting_payment_doc یا بالاتر هستند
+                        # بررسی اینکه آیا تمام حمل‌های سفارش تکمیل شده‌اند
                         all_transports = Transport.objects.filter(allocation__order=po)
-                        all_settled = not all_transports.exclude(
-                            status__in=[
-                                Transport.STATUS_AWAITING_PAYMENT_DOC,
-                                Transport.STATUS_PAYMENT_DOC_UPLOADED,
-                                Transport.STATUS_COMPLETED
-                            ]
+                        all_completed = not all_transports.exclude(
+                            status=Transport.STATUS_COMPLETED
                         ).exists()
                         
-                        # اگر تمام حمل‌های سفارش تسویه شدند، وضعیت سفارش را به "در انتظار تسویه نهایی" تغییر می‌دهیم
-                        if all_settled:
+                        # بررسی اینکه آیا تمام وزن سفارش تخصیص یافته است
+                        remaining_weight = po.get_remaining_weight()
+                        
+                        # اگر تمام وزن تخصیص یافته و تمام حمل‌ها تکمیل شده‌اند، سفارش را تکمیل کن
+                        if remaining_weight <= 0 and all_completed:
+                            if po.status != Order.STATUS_COMPLETED:
+                                try:
+                                    po.transition(Order.STATUS_COMPLETED, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند و تمام وزن تخصیص یافت.')
+                                    bug_logger.info(f"وضعیت سفارش {po.order_number} به 'تکمیل شده' تغییر یافت - تمام حمل‌ها تکمیل شدند")
+                                    audit_logger.info(f"سفارش {po.order_number} به صورت خودکار تکمیل شد - تمام حمل‌ها تکمیل شدند")
+                                except Exception as order_transition_err:
+                                    bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number} به تکمیل شده: {order_transition_err}")
+                        elif all_completed:
+                            # اگر تمام حمل‌ها تکمیل شده‌اند اما وزن هنوز تخصیص نیافته، به awaiting_final_settlement ببر
                             if po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
-                                po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"تمام حمل‌های سفارش تسویه شدند.")
+                                po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"تمام حمل‌های سفارش تکمیل شدند.")
                                 bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
                                 audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تسویه همه حمل‌ها به‌روزرسانی شد")
                     
@@ -348,12 +367,16 @@ def logistic_confirmation_detail_view(request, transport_number):
                     audit_logger.info(
                         f"تایید نهایی لجستیک - حمل {transport_number} | "
                         f"کاربر: {request.user.username} | "
-                        f"زمان: {timezone.now()}"
+                        f"زمان: {timezone.now()} | "
+                        f"وضعیت جدید: {transport.status}"
                     )
                     
-                    bug_logger.info(f"تایید لجستیک موفق - حمل {transport_number}")
+                    bug_logger.info(f"تایید لجستیک موفق - حمل {transport_number} - وضعیت: {transport.status}")
                     
-                messages.success(request, 'تایید نهایی لجستیک با موفقیت انجام شد و وضعیت به "در انتظار بارگذاری اسناد پرداخت کرایه" تغییر یافت.')
+                if transport.status == Transport.STATUS_COMPLETED:
+                    messages.success(request, 'تایید نهایی لجستیک با موفقیت انجام شد. حمل تکمیل شد (سند پرداخت قبلاً بارگذاری شده بود).')
+                else:
+                    messages.success(request, 'تایید نهایی لجستیک با موفقیت انجام شد و وضعیت به "در انتظار بارگذاری اسناد پرداخت کرایه" تغییر یافت.')
                 return redirect('supply:logistic_confirmation_list')
                     
             except ValueError as ve:

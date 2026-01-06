@@ -125,18 +125,22 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
                         transport.freight_payment_document_uploaded_at = timezone.now()
                         transport.freight_payment_document_uploaded_by = request.user
                         
-                        # If transport is in awaiting_wh_reconciliation status, keep it in the same status
-                        # If transport is in awaiting_payment_doc status, transition to completed
-                        # Otherwise, transition to payment_doc_uploaded status
+                        # تنظیم payment_doc_uploaded
+                        transport.payment_doc_uploaded = True
+                        
+                        # اگر تایید لجستیک هم انجام شده است، وضعیت را به completed ببر
+                        # در غیر این صورت، وضعیت را بر اساس وضعیت قبلی تنظیم کن
                         original_status = transport.status
-                        if transport.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
-                            # Keep in same status
-                            pass
-                        elif transport.status == Transport.STATUS_AWAITING_PAYMENT_DOC:
-                            # تایید لجستیک شده و سند بارگذاری شده -> تکمیل شده
+                        if transport.logistic_confirmed:
+                            # هر دو شرط برقرار است -> تکمیل شده
                             transport.status = Transport.STATUS_COMPLETED
+                            bug_logger.info(f"حمل {transport_number} تکمیل شد - تایید لجستیک و بارگذاری سند هر دو انجام شده است")
+                        elif transport.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                            # Keep in same status (آماده خروج)
+                            pass
                         else:
-                            transport.status = Transport.STATUS_PAYMENT_DOC_UPLOADED
+                            # فقط سند بارگذاری شده -> در انتظار تایید لجستیک
+                            transport.status = Transport.STATUS_AWAITING_PAYMENT_DOC
                         
                         transport.save()
                         
@@ -164,12 +168,12 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
                         
                         # Log successful upload
                         status_message = 'سند پرداخت با موفقیت بارگذاری شد.'
-                        if original_status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                        if transport.status == Transport.STATUS_COMPLETED:
+                            status_message += ' حمل تکمیل شد (تایید لجستیک قبلاً انجام شده بود).'
+                        elif original_status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
                             status_message += ' وضعیت حمل در حالت آماده خروج باقی ماند.'
-                        elif original_status == Transport.STATUS_AWAITING_PAYMENT_DOC:
-                            status_message += ' وضعیت به "تکمیل شده" تغییر یافت.'
                         else:
-                            status_message += ' وضعیت به "سند پرداخت بارگذاری شده" تغییر یافت.'
+                            status_message += ' وضعیت به "در انتظار تایید لجستیک" تغییر یافت.'
                         
                         audit_logger.info(
                             f"بارگذاری موفق سند پرداخت - حمل {transport_number} | "

@@ -417,6 +417,19 @@ class Transport(models.Model):
         verbose_name='بارگذار کننده سند'
     )
     
+    # فیلدهای boolean برای ردیابی تایید لجستیک و بارگذاری سند پرداخت
+    logistic_confirmed = models.BooleanField(
+        default=False,
+        verbose_name='تایید لجستیک',
+        help_text='آیا تایید لجستیک انجام شده است؟'
+    )
+    
+    payment_doc_uploaded = models.BooleanField(
+        default=False,
+        verbose_name='سند پرداخت بارگذاری شده',
+        help_text='آیا سند پرداخت کرایه بارگذاری شده است؟'
+    )
+    
     # فیلدهای اضافی برای سازگاری
     transport_number = models.CharField(
         max_length=50,
@@ -499,6 +512,12 @@ class Transport(models.Model):
         return None
 
     def save(self, *args, **kwargs):
+        # بررسی اینکه آیا هر دو شرط (تایید لجستیک و بارگذاری سند) انجام شده‌اند
+        # اگر بله، وضعیت را به completed ببر
+        if self.logistic_confirmed and self.payment_doc_uploaded:
+            if self.status != self.STATUS_COMPLETED:
+                self.status = self.STATUS_COMPLETED
+        
         # وضعیت‌های مجاز بر اساس جهت حمل را بررسی می‌کنیم
         if self.direction == 'inbound':
             allowed_statuses = [
