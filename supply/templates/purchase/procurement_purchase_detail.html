@@ -322,12 +322,6 @@
         {% endfor %}
     {% endif %}
     
-    <div class="actions">
-      <a href="{% url 'supply:edit_procurement_purchase_order' po.order_number %}" class="btn btn-primary">ویرایش</a>
-      {% if can_delete %}<a href="{% url 'supply:delete_procurement_purchase_order' po.order_number %}" class="btn btn-danger" onclick="return confirm('آیا از حذف سفارش مطمئن هستید؟')">حذف (پیش‌نویس)</a>{% endif %}
-      {% if not po.payment_confirmed %}<a href="{% url 'supply:confirm_procurement_purchase_order_payment' po.order_number %}" class="btn btn-success" onclick="return confirm('تایید پرداخت؟ پس از تایید امکان ویرایش مالی وجود ندارد')">تایید پرداخت</a>{% endif %}
-    </div>
-    
     <div class="form-section">
         <h5 class="section-title">اطلاعات سفارش</h5>
         <div class="detail-grid">

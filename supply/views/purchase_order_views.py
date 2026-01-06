@@ -876,7 +876,7 @@ def procurement_purchase_order_detail_view(request, order_number):
     can_delete = po.can_delete()  # محاسبه مقدار can_delete برای استفاده در template
     
     # Get transports for this purchase order
-    transports = Transport.objects.filter(allocation__order=po).order_by('-created_at')
+    transports = Transport.objects.filter(allocation__order=po).select_related('driver').order_by('-created_at')
     
     # Create tables for materials and transports
     from supply.tables import PurchaseOrderMaterialTable, PurchaseOrderTransportTable

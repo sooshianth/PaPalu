@@ -889,9 +889,9 @@ class GuardExitTable(TransportTable):
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # ستون‌های مورد نیاز: شماره سفارش، نوع ماده اولیه، مقدار، واحد، پلاک، نوع ماشین
+        # ستون‌های مورد نیاز: شماره حمل، شماره سفارش، نوع ماده اولیه، مقدار، واحد، پلاک، نوع ماشین
         # این ستون‌ها باید همیشه نمایش داده شوند
-        required_columns = ['purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions']
+        required_columns = ['transport_number', 'purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions']
         
         # همیشه ستون‌های مورد نیاز را نمایش بده
         for col_name in required_columns:
@@ -936,6 +936,12 @@ class GuardExitTable(TransportTable):
             return format_html('<br>'.join(units)) if units else '—'
         return '—'
     
+    def render_transport_number(self, value):
+        """نمایش شماره حمل به صورت bold"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
     def render_actions(self, record):
         """نمایش دکمه تایید خروج خودرو"""
         # استفاده از transport_number یا pk در صورت None بودن
@@ -949,8 +955,8 @@ class GuardExitTable(TransportTable):
         )
     
     class Meta(TransportTable.Meta):
-        sequence = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
-        fields = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+        sequence = ('transport_number', 'purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+        fields = ('transport_number', 'purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
 
 
 class WarehouseDeliveryTable(TransportTable):
@@ -992,9 +998,9 @@ class WarehouseDeliveryTable(TransportTable):
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # ستون‌های مورد نیاز برای انباردار: شماره سفارش، نوع ماده اولیه، مقدار، واحد، پلاک، نوع ماشین
+        # ستون‌های مورد نیاز برای انباردار: شماره حمل، شماره سفارش، نوع ماده اولیه، مقدار، واحد، پلاک، نوع ماشین
         # این ستون‌ها باید همیشه نمایش داده شوند
-        required_columns = ['purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions']
+        required_columns = ['transport_number', 'purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions']
         
         # همیشه ستون‌های مورد نیاز را نمایش بده
         for col_name in required_columns:
@@ -1038,6 +1044,12 @@ class WarehouseDeliveryTable(TransportTable):
             return format_html('<br>'.join(units)) if units else '—'
         return '—'
     
+    def render_transport_number(self, value):
+        """نمایش شماره حمل به صورت bold"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
     def render_actions(self, record):
         """نمایش دکمه جزئیات حمل"""
         # استفاده از transport_number یا pk در صورت None بودن
@@ -1051,8 +1063,8 @@ class WarehouseDeliveryTable(TransportTable):
         )
     
     class Meta(TransportTable.Meta):
-        sequence = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
-        fields = ('purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+        sequence = ('transport_number', 'purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
+        fields = ('transport_number', 'purchase_order', 'raw_materials', 'quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
 
 
 class RawMaterialTable(tables.Table):
@@ -1829,6 +1841,34 @@ class PurchaseOrderMaterialTable(tables.Table):
 class PurchaseOrderTransportTable(tables.Table):
     """جدول حمل‌های مرتبط با سفارش خرید"""
     
+    transport_number = tables.Column(
+        verbose_name='شماره حمل',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    driver = tables.Column(
+        verbose_name='راننده',
+        accessor='driver.name',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    plate_number = tables.Column(
+        verbose_name='پلاک',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
     vehicle_type = tables.Column(
         verbose_name='نوع ماشین',
         accessor='get_vehicle_type_display',
@@ -1882,7 +1922,7 @@ class PurchaseOrderTransportTable(tables.Table):
         from core.TransportFolder.TransportModel import Transport
         model = Transport
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('vehicle_type', 'status', 'created_at', 'total_freight', 'actions')
+        fields = ('transport_number', 'driver', 'plate_number', 'vehicle_type', 'status', 'created_at', 'total_freight', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.88rem'
@@ -1890,7 +1930,57 @@ class PurchaseOrderTransportTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('vehicle_type', 'status', 'created_at', 'total_freight', 'actions')
+        sequence = ('transport_number', 'driver', 'plate_number', 'vehicle_type', 'status', 'created_at', 'total_freight', 'actions')
+    
+    def render_transport_number(self, value):
+        """نمایش شماره حمل به صورت bold"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
+    def render_driver(self, value):
+        """نمایش نام راننده"""
+        if value:
+            return format_html('<strong>{}</strong>', value)
+        return '—'
+    
+    def render_plate_number(self, value):
+        """نمایش پلاک با فرمت جدید: 11|345ب12"""
+        if not value:
+            return '—'
+        try:
+            # فرمت جدید: 11|345ب12
+            if '|' in str(value):
+                parts = str(value).split('|')
+                if len(parts) == 2:
+                    iran = parts[0]
+                    rest = parts[1]
+                    # استخراج 3 رقم، 1 حرف، 2 رقم از rest
+                    import re
+                    match = re.match(r'(\d{3})([آ-یA-Za-z])(\d{2})', rest)
+                    if match:
+                        middle, letter, last = match.groups()
+                        display = f"{iran}|{middle}{letter}{last}"
+                    else:
+                        display = value
+                else:
+                    display = value
+            # فرمت قدیمی: 11-345-ب-12
+            elif '-' in str(value):
+                parts = str(value).split('-')
+                if len(parts) == 4:
+                    iran, middle, letter, last = parts
+                    display = f"{iran}|{middle}{letter}{last}"
+                elif len(parts) == 3:
+                    first, letter, last = parts
+                    display = f"{last} | {letter} | {first}"
+                else:
+                    display = value
+            else:
+                display = value
+            return format_html('<span class="plate-badge"><span class="ir-flag"></span><span class="seg">{}</span></span>', display)
+        except Exception:
+            return value or '—'
     
     def render_status(self, record):
         """نمایش وضعیت با badge"""
@@ -1910,9 +2000,11 @@ class PurchaseOrderTransportTable(tables.Table):
     
     def render_actions(self, record):
         """نمایش دکمه جزئیات"""
-        if not record.transport_number:
-            return format_html('<span class="text-muted">شماره حمل ناموجود</span>')
-        detail_url = reverse('supply:purchase_transport_detail', kwargs={'transport_number': record.transport_number})
+        # استفاده از transport_number یا pk در صورت None بودن
+        transport_id = record.transport_number
+        if not transport_id or transport_id == 'None' or str(transport_id).strip() == '':
+            transport_id = str(record.pk)
+        detail_url = reverse('supply:purchase_transport_detail', kwargs={'transport_number': str(transport_id)})
         return format_html(
             '<a href="{}" class="btn btn-secondary btn-sm">جزئیات</a>',
             detail_url
