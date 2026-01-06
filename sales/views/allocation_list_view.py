@@ -633,6 +633,10 @@ def allocation_edit_view(request, order_number, allocation_number):
             else:
                 try:
                     with transaction.atomic():
+                        allocation = form.save()
+                        # بعد از save allocation، formset را با instance جدید تنظیم می‌کنیم
+                        formset.instance = allocation
+                        formset.save()
                         # بررسی اینکه آیا allocation_number تغییر کرده است
                         new_allocation_number = form.cleaned_data.get('allocation_number')
                         allocation_number_changed = (new_allocation_number != original_allocation_number)
