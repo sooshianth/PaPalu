@@ -1880,6 +1880,41 @@ class PurchaseOrderMaterialTable(tables.Table):
         if value:
             return format_html('<span title="{}">{}</span>', value, value[:30] + '...' if len(value) > 30 else value)
         return '—'
+    
+    def render_quantity(self, value):
+        """نمایش مقدار با فرمت فارسی و کاما"""
+        if value:
+            formatted_value = format_number_persian(value, decimal_places=3)
+            return format_html('{}', formatted_value)
+        return '—'
+    
+    def render_unit_price(self, value):
+        """نمایش قیمت واحد با فرمت فارسی و کاما"""
+        if value:
+            formatted_value = format_number_persian(value, decimal_places=2)
+            return format_html('{}', formatted_value)
+        return '—'
+    
+    def render_vat_percent(self, value):
+        """نمایش درصد مالیات با فرمت فارسی و کاما"""
+        if value:
+            formatted_value = format_number_persian(value, decimal_places=2)
+            return format_html('{}', formatted_value)
+        return '—'
+    
+    def render_freight_cost(self, value):
+        """نمایش بهای تمام شده کرایه با فرمت فارسی و کاما"""
+        if value:
+            formatted_value = format_number_persian(value, decimal_places=2)
+            return format_html('{}', formatted_value)
+        return '—'
+    
+    def render_total_purchase_cost(self, value):
+        """نمایش بهای تمام شده خرید با فرمت فارسی و کاما"""
+        if value:
+            formatted_value = format_number_persian(value, decimal_places=2)
+            return format_html('{}', formatted_value)
+        return '—'
 
 
 class PurchaseOrderTransportTable(tables.Table):

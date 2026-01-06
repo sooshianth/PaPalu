@@ -212,6 +212,35 @@ class WarehouseDeliveryForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.transport = transport
         
+        # دریافت انبار تأمین‌کننده
+        supplier_warehouse = None
+        if self.transport and self.transport.allocation and self.transport.allocation.order:
+            supplier = self.transport.allocation.order.customer
+            if supplier and supplier.warehouse:
+                supplier_warehouse = supplier.warehouse
+        
+        # اگر تأمین‌کننده انبار دارد، فیلد را readonly کن و مقدار را تنظیم کن
+        if supplier_warehouse:
+            # غیرفعال کردن required چون خودمان مقدار را تنظیم می‌کنیم
+            self.fields['source_warehouse'].required = False
+            # تنظیم مقدار اولیه
+            if 'source_warehouse' not in self.initial:
+                self.initial['source_warehouse'] = supplier_warehouse
+            # محدود کردن queryset به فقط انبار تأمین‌کننده
+            self.fields['source_warehouse'].queryset = Warehouse.objects.filter(pk=supplier_warehouse.pk)
+            # استفاده از disabled (مقدار در clean تنظیم می‌شود)
+            self.fields['source_warehouse'].widget.attrs['disabled'] = True
+            self.fields['source_warehouse'].widget.attrs['style'] = 'background-color: #f5f5f5; cursor: not-allowed;'
+            # تغییر label برای نشان دادن اینکه فقط خواندنی است
+            self.fields['source_warehouse'].label = 'انبار مبدأ (تأمین‌کننده)'
+            # ذخیره انبار تأمین‌کننده برای استفاده در clean
+            self._supplier_warehouse = supplier_warehouse
+        else:
+            # اگر انبار ندارد، فقط انبارهای supplier را نمایش بده
+            self.fields['source_warehouse'].queryset = Warehouse.objects.filter(warehouse_type='supplier')
+            self.fields['source_warehouse'].label = 'انتخاب انبار مبدأ (تأمین‌کننده)'
+            self._supplier_warehouse = None
+        
         # دریافت freight_payment_type برای تعیین required بودن فیلدهای کرایه
         freight_payment_type = None
         
@@ -249,6 +278,23 @@ class WarehouseDeliveryForm(forms.Form):
     def clean(self):
         """اعتبارسنجی کلی فرم"""
         cleaned_data = super().clean()
+        
+        # دریافت source_warehouse از انبار تأمین‌کننده اگر disabled است
+        source_warehouse = cleaned_data.get('source_warehouse')
+        if not source_warehouse:
+            # اگر فیلد disabled است (یعنی تأمین‌کننده انبار دارد)، از انبار تأمین‌کننده بگیر
+            if hasattr(self, '_supplier_warehouse') and self._supplier_warehouse:
+                source_warehouse = self._supplier_warehouse
+                cleaned_data['source_warehouse'] = source_warehouse
+            elif self.transport and self.transport.allocation and self.transport.allocation.order:
+                supplier = self.transport.allocation.order.customer
+                if supplier and supplier.warehouse:
+                    source_warehouse = supplier.warehouse
+                    cleaned_data['source_warehouse'] = source_warehouse
+        
+        # بررسی اینکه source_warehouse حتماً وجود داشته باشد
+        if not source_warehouse:
+            self.add_error('source_warehouse', 'انبار مبدأ باید انتخاب شود.')
         
         # دریافت freight_payment_type از transport (چون فیلد disabled است و در cleaned_data نیست)
         freight_payment_type = cleaned_data.get('freight_payment_type')

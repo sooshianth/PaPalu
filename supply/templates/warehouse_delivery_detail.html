@@ -864,7 +864,27 @@
 
         function persianNumber(num) {
             const persianDigits = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-            return num.toString().replace(/\d/g, (digit) => persianDigits[parseInt(digit)]);
+            // تبدیل به رشته برای پردازش
+            let numStr = typeof num === 'string' ? num : num.toString();
+            
+            // اگر رشته خالی یا نامعتبر است
+            if (!numStr || numStr === 'NaN' || numStr === 'undefined') {
+                return numStr || '';
+            }
+            
+            // جدا کردن قسمت صحیح و اعشاری
+            const parts = numStr.split('.');
+            const integerPart = parts[0];
+            const decimalPart = parts[1] || '';
+            
+            // اضافه کردن کاما به قسمت صحیح
+            const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+            
+            // ترکیب قسمت صحیح و اعشاری
+            const formatted = decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+            
+            // تبدیل اعداد به فارسی
+            return formatted.replace(/\d/g, (digit) => persianDigits[parseInt(digit)]);
         }
 
         function getUsedItemIds() {
@@ -1546,6 +1566,17 @@
         if (freightPaymentTypeSelect) {
             freightPaymentTypeSelect.addEventListener('change', toggleFreightFields);
             toggleFreightFields(); // اجرای اولیه
+        }
+
+        // اضافه کردن hidden input برای source_warehouse اگر disabled است
+        const sourceWarehouseSelect = document.getElementById('id_source_warehouse');
+        if (sourceWarehouseSelect && sourceWarehouseSelect.disabled) {
+            // اگر فیلد disabled است، یک hidden input اضافه کن
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'source_warehouse';
+            hiddenInput.value = sourceWarehouseSelect.value;
+            sourceWarehouseSelect.parentNode.appendChild(hiddenInput);
         }
 
         // محاسبه خودکار کرایه کل و کرایه پرداختی
