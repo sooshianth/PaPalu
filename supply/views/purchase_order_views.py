@@ -1066,7 +1066,7 @@ def raw_material_info_api(request, raw_material_id):
     """
     API endpoint برای دریافت اطلاعات کامل ماده اولیه شامل:
     - واحدهای اصلی و فرعی
-    - آخرین استعلام قیمت
+    - آخرین استعلام قیمت (اگر تامین‌کننده مشخص باشد، استعلام مربوط به آن تامین‌کننده)
     - درصد مالیات بر ارزش افزوده از اطلاعات خرید
     """
     audit_logger.info(f"دریافت اطلاعات ماده اولیه از طریق API - شناسه: {raw_material_id}")
@@ -1077,11 +1077,25 @@ def raw_material_info_api(request, raw_material_id):
     try:
         raw_material = RawMaterial.objects.get(id=raw_material_id, status='active')
         
+        # دریافت تامین‌کننده از query parameter (اختیاری)
+        supplier_national_id = request.GET.get('supplier_id', '').strip()
+        
         # دریافت آخرین استعلام قیمت
         from core.SupplyFolder.RawMaterialPriceInquiryModel import RawMaterialPriceInquiry
-        latest_inquiry = RawMaterialPriceInquiry.objects.filter(
+        inquiry_query = RawMaterialPriceInquiry.objects.filter(
             raw_material=raw_material
-        ).order_by('-inquiry_date', '-created_at').first()
+        )
+        
+        # اگر تامین‌کننده مشخص شده باشد، فقط استعلام‌های مربوط به آن تامین‌کننده را در نظر بگیر
+        if supplier_national_id:
+            try:
+                supplier = Person.objects.get(national_id=supplier_national_id, type='supplier')
+                inquiry_query = inquiry_query.filter(supplier=supplier)
+            except Person.DoesNotExist:
+                # اگر تامین‌کننده پیدا نشد، از آخرین استعلام عمومی استفاده کن
+                pass
+        
+        latest_inquiry = inquiry_query.order_by('-inquiry_date', '-created_at').first()
         
         # دریافت اطلاعات خرید (برای vat_percentage)
         from core.RawMaterialFolder.RawMaterialPurchaseInfoModel import RawMaterialPurchaseInfo

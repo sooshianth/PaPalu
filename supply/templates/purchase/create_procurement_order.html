@@ -309,11 +309,57 @@ document.addEventListener('DOMContentLoaded', function() {
                         supplierIdInput.value = item.id;
                     }
                     suggestionsContainer.style.display = 'none';
+                    
+                    // بروزرسانی قیمت‌های همه اقلام با تامین‌کننده جدید
+                    updateAllMaterialPrices();
                 });
                 suggestionsContainer.appendChild(suggestionItem);
             });
             
             suggestionsContainer.style.display = 'block';
+        }
+        
+        // تابع برای بروزرسانی قیمت همه اقلام بر اساس تامین‌کننده انتخابی
+        function updateAllMaterialPrices() {
+            const supplierIdInput = document.querySelector('input[name="supplier_id"]');
+            if (!supplierIdInput || !supplierIdInput.value) {
+                return; // اگر تامین‌کننده انتخاب نشده، کاری نکن
+            }
+            
+            // پیدا کردن همه ردیف‌های اقلام
+            const materialRows = document.querySelectorAll('.item-form-row');
+            materialRows.forEach(function(formRow) {
+                const rawMaterialIdInput = formRow.querySelector('input[name*="-raw_material_id"]');
+                if (!rawMaterialIdInput || !rawMaterialIdInput.value) {
+                    return; // اگر ماده اولیه انتخاب نشده، نادیده بگیر
+                }
+                
+                // دریافت اطلاعات ماده اولیه با تامین‌کننده جدید
+                let url = '{% url "supply:raw_material_info_api" raw_material_id=0 %}'.replace('0', rawMaterialIdInput.value);
+                url += '?supplier_id=' + encodeURIComponent(supplierIdInput.value);
+                
+                fetch(url)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            console.error('خطا در دریافت اطلاعات ماده اولیه:', data.error);
+                            return;
+                        }
+                        
+                        // بروزرسانی قیمت واحد
+                        const unitPriceInput = formRow.querySelector('input[name*="-unit_price"]');
+                        if (unitPriceInput && data.latest_price) {
+                            unitPriceInput.value = data.latest_price;
+                            // محاسبه قیمت کل
+                            if (typeof calculateRowTotal === 'function') {
+                                calculateRowTotal(formRow);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('خطا در بروزرسانی قیمت ماده اولیه:', error);
+                    });
+            });
         }
         
         // لود کردن 20 مورد اولیه در پس‌زمینه (بدون نمایش)
@@ -485,7 +531,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (suggestionsDiv) suggestionsDiv.style.display = 'none';
                     
                     // دریافت اطلاعات کامل ماده اولیه از API
-                    const url = '{% url "supply:raw_material_info_api" raw_material_id=0 %}'.replace('0', item.id);
+                    // اگر تامین‌کننده انتخاب شده باشد، آن را هم به API بفرست
+                    let url = '{% url "supply:raw_material_info_api" raw_material_id=0 %}'.replace('0', item.id);
+                    const supplierIdInput = document.querySelector('input[name="supplier_id"]');
+                    if (supplierIdInput && supplierIdInput.value) {
+                        url += '?supplier_id=' + encodeURIComponent(supplierIdInput.value);
+                    }
                     fetch(url)
                         .then(response => response.json())
                         .then(data => {

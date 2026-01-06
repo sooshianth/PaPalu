@@ -296,7 +296,7 @@
 
     .stage-item-content {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 15px;
     }
 
@@ -752,7 +752,7 @@
         <!-- بخش: انتخاب انبار -->
         <div class="form-section">
             <div class="form-section-header">
-                <h5 class="form-section-title">انتخاب انبار (اجباری)</h5>
+                <h5 class="form-section-title">انتخاب انبار مبدأ (اجباری)</h5>
                 <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none"
                     xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -774,16 +774,9 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="{{ form.destination_warehouse.id_for_label }}" class="required">{{ form.destination_warehouse.label }}</label>
-                    {% if form.destination_warehouse.help_text %}
-                    <small style="color: var(--gray-600); display: block; margin-bottom: 4px;">{{ form.destination_warehouse.help_text }}</small>
-                    {% endif %}
-                    {{ form.destination_warehouse }}
-                    {% if form.destination_warehouse.errors %}
-                    <div class="alert alert-error">
-                        {{ form.destination_warehouse.errors }}
+                    <div class="alert alert-info">
+                        <strong>نکته:</strong> انبار مقصد برای هر ماده اولیه در بخش "توزین مرحله‌ای مواد اولیه" انتخاب می‌شود.
                     </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
@@ -835,6 +828,16 @@
                 name: "{{ item_data.raw_material.name|escapejs }}",
                 unit: "{{ item_data.item.get_weight_unit_display|escapejs }}",
                 allocated: {{ item_data.allocated_quantity|default:0 }}
+            }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        const warehousesData = [
+            {% for warehouse in destination_warehouses %}
+            {
+                id: {{ warehouse.pk }},
+                name: "{{ warehouse.name|escapejs }}",
+                warehouse_id: "{{ warehouse.warehouse_id|escapejs }}"
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         ];
@@ -1015,6 +1018,16 @@
                 selectOptions += `<option value="${i.id}" ${selected}>${i.name}</option>`;
             });
 
+            // ساخت لیست انبارهای مقصد
+            let warehousesOptions = '';
+            warehousesData.forEach(wh => {
+                const selected = stage.warehouseId && stage.warehouseId == wh.id ? 'selected' : '';
+                warehousesOptions += `<option value="${wh.id}" ${selected}>${wh.name} (${wh.warehouse_id})</option>`;
+            });
+            
+            const warehouseName = stage.warehouseId ? 
+                (warehousesData.find(w => w.id == stage.warehouseId)?.name || '—') : '—';
+
             stageDiv.innerHTML = `
                 <div class="stage-item-header">
                     <h6 class="stage-item-title">مرحله ${persianNumber(index + 1)}</h6>
@@ -1056,6 +1069,17 @@
                         <div class="form-control calculated-field" id="stage-${stage.id}-net" style="text-align: center;">
                             ${stage.netWeight > 0 ? persianNumber(stage.netWeight.toFixed(3)) + ' کیلوگرم' : '—'}
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label required">انبار مقصد</label>
+                        ${readOnly ? `
+                        <input type="text" class="form-control" id="stage-${stage.id}-warehouse" value="${stage.warehouseName || '—'}" readonly>
+                        ` : `
+                        <select class="form-select" id="stage-${stage.id}-warehouse" onchange="updateStageWarehouse(${stage.id}, this.value)" required>
+                            <option value="">انتخاب انبار...</option>
+                            ${warehousesOptions}
+                        </select>
+                        `}
                     </div>
                 </div>
             `;
@@ -1164,7 +1188,8 @@
                 id: stageCounter,
                 itemId: null,
                 weightAfter: '',
-                netWeight: 0
+                netWeight: 0,
+                warehouseId: null
             });
 
             renderAllStages();
@@ -1188,6 +1213,18 @@
                 }
                 renderAllStages();
                 updateComparison();
+            }
+        };
+
+        window.updateStageWarehouse = function(stageId, warehouseId) {
+            const stage = stages.find(s => s.id === stageId);
+            if (stage) {
+                const parsedWarehouseId = parseInt(warehouseId);
+                if (!isNaN(parsedWarehouseId) && parsedWarehouseId > 0) {
+                    stage.warehouseId = parsedWarehouseId;
+                } else {
+                    stage.warehouseId = null;
+                }
             }
         };
 
@@ -1359,16 +1396,27 @@
                 const oldFields = form.querySelectorAll('input[name^="unloading_stages"]');
                 oldFields.forEach(field => field.remove());
                 
-                // Sync values from DOM to stages array before validation
+                // فقط مراحلی که واقعاً در DOM وجود دارند را جمع‌آوری کن
+                const validStages = [];
                 stages.forEach((stage) => {
+                    // بررسی کن که آیا این مرحله در DOM وجود دارد
+                    const stageContainer = document.getElementById(`stage-container-${stage.id}`);
+                    if (!stageContainer) {
+                        // اگر مرحله در DOM نیست، از validation رد کن
+                        return;
+                    }
+                    
                     // Get current values from DOM
                     const itemSelect = document.getElementById(`stage-${stage.id}-item`);
                     const weightInput = document.getElementById(`stage-${stage.id}-after`);
+                    const warehouseSelect = document.getElementById(`stage-${stage.id}-warehouse`);
                     
                     if (itemSelect) {
                         const itemId = itemSelect.value;
                         if (itemId) {
                             stage.itemId = parseInt(itemId);
+                        } else {
+                            stage.itemId = null;
                         }
                     }
                     
@@ -1376,20 +1424,47 @@
                         const weight = weightInput.value.trim();
                         if (weight) {
                             stage.weightAfter = weight;
+                        } else {
+                            stage.weightAfter = '';
                         }
+                    }
+                    
+                    if (warehouseSelect) {
+                        const warehouseId = warehouseSelect.value;
+                        if (warehouseId) {
+                            stage.warehouseId = parseInt(warehouseId);
+                        } else {
+                            stage.warehouseId = null;
+                        }
+                    }
+                    
+                    // فقط مراحلی که محصول و انبار انتخاب کرده‌اند را اضافه کن
+                    const itemId = parseInt(stage.itemId);
+                    const warehouseId = parseInt(stage.warehouseId);
+                    if (stage.itemId && !isNaN(itemId) && itemId > 0 && 
+                        stage.warehouseId && !isNaN(warehouseId) && warehouseId > 0) {
+                        validStages.push(stage);
                     }
                 });
                 
-                // Validate all stages before submission
+                // Validate only valid stages (those with selected products)
                 let hasError = false;
                 let errorMessage = '';
                 
-                stages.forEach((stage, index) => {
-                    // Check if itemId is set and valid
+                validStages.forEach((stage, index) => {
+                    // Check if itemId is set and valid (should already be checked, but double-check)
                     const itemId = parseInt(stage.itemId);
                     if (!stage.itemId || isNaN(itemId) || itemId <= 0) {
                         hasError = true;
                         errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً محصول را انتخاب کنید.`;
+                        return;
+                    }
+                    
+                    // Check if warehouseId is set and valid
+                    const warehouseId = parseInt(stage.warehouseId);
+                    if (!stage.warehouseId || isNaN(warehouseId) || warehouseId <= 0) {
+                        hasError = true;
+                        errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً انبار مقصد را انتخاب کنید.`;
                         return;
                     }
                     
@@ -1409,8 +1484,8 @@
                     return false;
                 }
                 
-                // Add hidden fields for each stage
-                stages.forEach((stage, index) => {
+                // Add hidden fields only for valid stages
+                validStages.forEach((stage, index) => {
                     // Add item_id
                     const itemInput = document.createElement('input');
                     itemInput.type = 'hidden';
@@ -1424,6 +1499,13 @@
                     weightInput.name = `unloading_stages[${index}][weight]`;
                     weightInput.value = stage.weightAfter;
                     form.appendChild(weightInput);
+                    
+                    // Add warehouse_id
+                    const warehouseInput = document.createElement('input');
+                    warehouseInput.type = 'hidden';
+                    warehouseInput.name = `unloading_stages[${index}][warehouse_id]`;
+                    warehouseInput.value = stage.warehouseId;
+                    form.appendChild(warehouseInput);
                 });
             });
         }
