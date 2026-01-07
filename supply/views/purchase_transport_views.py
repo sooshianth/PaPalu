@@ -852,6 +852,18 @@ def purchase_transport_detail_view(request, transport_number):
     log_table = TransportStatusLogTable(logs)
     RequestConfig(request, paginate=False).configure(log_table)
     
+    # دریافت مواد اولیه ثبت شده در این حمل
+    raw_material_infos = pt.raw_material_infos.select_related('raw_material', 'order_item', 'order_item__order').all()
+    
+    # محاسبه مجموع مقادیر
+    total_allocated = Decimal('0')
+    total_net_weight = Decimal('0')
+    for rmi in raw_material_infos:
+        if rmi.allocated_quantity:
+            total_allocated += rmi.allocated_quantity
+        if rmi.net_weight:
+            total_net_weight += rmi.net_weight
+    
     # لیست تمام وضعیت‌های ممکن
     next_status_choices = pt.STATUS_CHOICES
     
@@ -860,6 +872,9 @@ def purchase_transport_detail_view(request, transport_number):
         'logs': logs,
         'log_table': log_table,
         'next_status_choices': next_status_choices,
+        'raw_material_infos': raw_material_infos,
+        'total_allocated': total_allocated,
+        'total_net_weight': total_net_weight,
     })
 
 
