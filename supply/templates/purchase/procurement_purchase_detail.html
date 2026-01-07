@@ -371,5 +371,59 @@
         <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem;">هیچ حمل خریدی برای این سفارش ثبت نشده است. برای ایجاد حمل جدید، روی دکمه "ثبت حمل جدید" کلیک کنید.</p>
         {% endif %}
     </div>
+
+    {% if final_unit_price_details %}
+    <div class="form-section" style="background: #f0f9ff; border-right: 4px solid #0b74c7;">
+        <h5 class="section-title" style="color: #0b74c7;">محاسبه فی تمام شده خرید</h5>
+        <div class="detail-grid">
+            <div class="kv" style="background: white;">
+                <span>قیمت اول پرداختی (ریال)</span>
+                <strong style="font-size: 1.1rem;">{{ final_unit_price_details.initial_payment|persian_number:2 }}</strong>
+            </div>
+            <div class="kv" style="background: white;">
+                <span>مجموع کرایه‌های حمل‌ها (ریال)</span>
+                <strong style="font-size: 1.1rem;">{{ final_unit_price_details.total_freight|persian_number:2 }}</strong>
+            </div>
+            <div class="kv" style="background: white;">
+                <span>مجموع هزینه‌ها (ریال)</span>
+                <strong style="font-size: 1.1rem; color: #0b74c7;">{{ final_unit_price_details.total_cost|persian_number:2 }}</strong>
+            </div>
+            <div class="kv" style="background: white;">
+                <span>وزن کل سفارش (کیلوگرم)</span>
+                <strong>{{ final_unit_price_details.order_total_weight|persian_number:3 }}</strong>
+            </div>
+            <div class="kv" style="background: white;">
+                <span>مجموع وزن خالص حمل‌ها (کیلوگرم)</span>
+                <strong>{{ final_unit_price_details.total_net_weight|persian_number:3 }}</strong>
+            </div>
+            {% if final_unit_price_details.weight_difference is not None %}
+            <div class="kv" style="background: white;">
+                <span>تفاوت وزن (کیلوگرم)</span>
+                <strong style="color: {% if final_unit_price_details.weight_difference > 0 %}#dc3545{% elif final_unit_price_details.weight_difference < 0 %}#28a745{% else %}#6c757d{% endif %};">
+                    {{ final_unit_price_details.weight_difference|persian_number:3 }}
+                    {% if final_unit_price_details.weight_difference > 0 %}
+                        <span style="font-size: 0.9rem;">(بیشتر از سفارش)</span>
+                    {% elif final_unit_price_details.weight_difference < 0 %}
+                        <span style="font-size: 0.9rem;">(کمتر از سفارش)</span>
+                    {% else %}
+                        <span style="font-size: 0.9rem;">(برابر با سفارش)</span>
+                    {% endif %}
+                </strong>
+            </div>
+            {% endif %}
+            {% if final_unit_price_details.final_unit_price %}
+            <div class="kv" style="grid-column: 1/-1; background: #e8f5e9; border: 3px solid var(--primary-green); padding: 20px;">
+                <span style="font-size: 1.1rem; color: var(--dark-green);">فی تمام شده خرید (ریال/کیلوگرم)</span>
+                <strong style="font-size: 1.5rem; color: var(--primary-green); font-weight: 700;">{{ final_unit_price_details.final_unit_price|persian_number:2 }}</strong>
+            </div>
+            {% else %}
+            <div class="kv" style="grid-column: 1/-1; background: #fff3cd; border: 2px solid #ffc107; padding: 15px;">
+                <span style="color: #856404;">فی تمام شده خرید قابل محاسبه نیست</span>
+                <strong style="color: #856404;">وزن خالص حمل‌ها صفر است یا سفارش تکمیل نشده است</strong>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
