@@ -20,8 +20,8 @@ class CreateProformaForm(forms.ModelForm):
                 'placeholder': 'شماره سریال پیش فاکتور'
             }),
             'validity_date': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date',
+                'class': 'form-control js-date-picker',
+                'type': 'text',
                 'placeholder': 'تاریخ اعتبار سریال'
             }),
             'company': forms.Select(attrs={

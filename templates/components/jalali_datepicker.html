@@ -1,0 +1,654 @@
+<style>
+    /* Custom Jalali Datepicker Styles */
+    :root {
+        --jdp-primary-color: #28a745;
+        --jdp-light-color: #d4edda;
+        --jdp-header-color: #f8f9fa;
+        --jdp-text-color: #333;
+        --jdp-border-radius: 8px;
+        --jdp-box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .jdp-container {
+        position: relative;
+        display: inline-block;
+        width: 100%;
+    }
+
+    .jdp-input-group {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .jdp-icon {
+        position: absolute;
+        left: 10px;
+        color: #6c757d;
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    .jdp-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        z-index: 9998;
+        display: none;
+    }
+
+    .jdp-calendar {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        width: 280px;
+        background: white;
+        border-radius: var(--jdp-border-radius);
+        box-shadow: var(--jdp-box-shadow);
+        border: 1px solid #ddd;
+        z-index: 9999;
+        display: none;
+        margin-top: 5px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        user-select: none;
+        animation: jdpFadeIn 0.2s ease-out;
+    }
+
+    @keyframes jdpFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .jdp-header {
+        background-color: var(--jdp-header-color);
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+        border-radius: var(--jdp-border-radius) var(--jdp-border-radius) 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .jdp-header-title {
+        font-weight: bold;
+        color: var(--jdp-text-color);
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background 0.2s;
+        font-size: 0.95rem;
+    }
+
+    .jdp-header-title:hover {
+        background: #e9ecef;
+    }
+
+    .jdp-btn-nav {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: #666;
+        padding: 0 8px;
+        border-radius: 4px;
+        transition: color 0.2s;
+    }
+
+    .jdp-btn-nav:hover {
+        color: var(--jdp-primary-color);
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+
+    .jdp-days-header {
+        display: flex;
+        padding: 5px 0;
+        background-color: #fff;
+        font-size: 0.8rem;
+        color: #888;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .jdp-day-header {
+        flex: 1;
+        text-align: center;
+    }
+
+    .jdp-days-body {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 5px;
+    }
+
+    .jdp-day {
+        width: 14.28%;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        margin-bottom: 2px;
+        transition: all 0.2s;
+    }
+
+    .jdp-day:hover:not(.empty):not(.disabled) {
+        background-color: #f0f0f0;
+        color: var(--jdp-primary-color);
+    }
+
+    .jdp-day.selected {
+        background-color: var(--jdp-primary-color);
+        color: white;
+        font-weight: bold;
+    }
+
+    .jdp-day.today {
+        border: 1px solid var(--jdp-primary-color);
+        color: var(--jdp-primary-color);
+    }
+
+    .jdp-day.today.selected {
+        color: white;
+    }
+
+    .jdp-day.empty {
+        cursor: default;
+    }
+
+    .jdp-day.disabled {
+        color: #ccc;
+        cursor: not-allowed;
+    }
+
+    /* Year/Month Selector View */
+    .jdp-months-view,
+    .jdp-years-view {
+        display: flex;
+        flex-wrap: wrap;
+        padding: 10px;
+        height: 250px;
+        overflow-y: auto;
+    }
+
+    .jdp-month-item,
+    .jdp-year-item {
+        width: 33.33%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 15px 0;
+        cursor: pointer;
+        border-radius: 4px;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+    }
+
+    .jdp-month-item:hover,
+    .jdp-year-item:hover {
+        background-color: #f0f0f0;
+        color: var(--jdp-primary-color);
+    }
+
+    .jdp-month-item.selected,
+    .jdp-year-item.selected {
+        background-color: var(--jdp-primary-color);
+        color: white;
+    }
+
+    .jdp-footer {
+        padding: 8px;
+        border-top: 1px solid #eee;
+        display: flex;
+        justify-content: center;
+    }
+
+    .jdp-btn-today {
+        background: none;
+        border: none;
+        color: var(--jdp-primary-color);
+        font-size: 0.9rem;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .jdp-btn-today:hover {
+        text-decoration: underline;
+    }
+</style>
+
+<div id="jdp-overlay" class="jdp-overlay"></div>
+
+<script>
+    /**
+     * Jalali Datepicker Core
+     * Implements basic Jalali algorithms and UI logic
+     */
+
+    const Jalaali = (function () {
+        const breaks = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210
+            , 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178
+        ];
+
+        function toJalaali(gy, gm, gd) {
+            var g_d_m, jy, jm, jd, gy2, days;
+            g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+            gy2 = (gm > 2) ? (gy + 1) : gy;
+            days = 355666 + (365 * gy) + ~~((gy2 + 3) / 4) - ~~((gy2 + 99) / 100) + ~~((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+            jy = -1595 + (33 * ~~(days / 12053));
+            days %= 12053;
+            jy += 4 * ~~(days / 1461);
+            days %= 1461;
+            if (days > 365) {
+                jy += ~~((days - 1) / 365);
+                days = (days - 1) % 365;
+            }
+            if (days < 186) {
+                jm = 1 + ~~(days / 31);
+                jd = 1 + (days % 31);
+            } else {
+                jm = 7 + ~~((days - 186) / 30);
+                jd = 1 + ((days - 186) % 30);
+            }
+            return { jy: jy, jm: jm, jd: jd };
+        }
+
+        function toGregorian(jy, jm, jd) {
+            var gy, gm, gd, days, v, sal_a, dan;
+            jy += 1595;
+            days = -355668 + (365 * jy) + (~~(jy / 33) * 8) + ~~(((jy % 33) + 3) / 4) + jd + ((jm < 7) ? (jm - 1) * 31 : ((jm - 7) * 30) + 186);
+            gy = 400 * ~~(days / 146097);
+            days %= 146097;
+            if (days > 36524) {
+                days--;
+                gy += 100 * ~~(days / 36524);
+                days %= 36524;
+                if (days >= 365) days++;
+            }
+            gy += 4 * ~~(days / 1461);
+            days %= 1461;
+            if (days > 365) {
+                gy += ~~((days - 1) / 365);
+                days = (days - 1) % 365;
+            }
+            gd = days + 1;
+            sal_a = [0, 31, ((gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            for (gm = 0; gm < 13; gm++) {
+                v = sal_a[gm];
+                if (gd <= v) break;
+                gd -= v;
+            }
+            return { gy: gy, gm: gm, gd: gd };
+        }
+
+        function jalaaliMonthLength(jy, jm) {
+            if (jm <= 6) return 31;
+            if (jm <= 11) return 30;
+            if (isLeapJalaaliYear(jy)) return 30;
+            return 29;
+        }
+
+        function isLeapJalaaliYear(jy) {
+            // Simplified leap year check
+            var r = jy % 33;
+            return r === 1 || r === 5 || r === 9 || r === 13 || r === 17 || r === 22 || r === 26 || r === 30;
+        }
+
+        return {
+            toJalaali: toJalaali,
+            toGregorian: toGregorian,
+            jalaaliMonthLength: jalaaliMonthLength,
+            isLeapJalaaliYear: isLeapJalaaliYear
+        };
+    })();
+
+    const JalaliDatepicker = (function () {
+        const months = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];
+        const daysShort = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']; // Shanbe to Jome
+
+        let activeInstance = null;
+        let viewDate = { y: 0, m: 0, d: 0 };
+
+        function init(selector, options) {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => bind(el, options));
+        }
+
+        function bind(element, options = {}) {
+            // Create container
+            if (element.parentElement.classList.contains('jdp-input-group')) return; // Already bound
+
+            const wrapper = document.createElement('div');
+            wrapper.className = 'jdp-container';
+            element.parentNode.insertBefore(wrapper, element);
+
+            const group = document.createElement('div');
+            group.className = 'jdp-input-group';
+            wrapper.appendChild(group);
+
+            // Hidden input for Gregorian Value (if needed)
+            let hiddenInput = null;
+            if (element.getAttribute('data-jdp-target')) {
+                // If specific target ID is provided
+                hiddenInput = document.getElementById(element.getAttribute('data-jdp-target'));
+            } else if (element.name) {
+                // Create a hidden input usually for backend, renaming the original or handling value sync
+                // For now, we will assume the main input is the text input shown to user, 
+                // and we sync the Gregorian value to the original input (if it was hidden) or 
+                // we'll use a new hidden input for the Gregorian date.
+                // Strategy: 
+                // 1. Rename original input to `_original_name` (if it was type='date' or 'text')
+                // 2. Create hidden input with `name`
+                // 3. Keep visual input without name
+
+                // Keep it simple: element is the Visual Input (Text)
+                // We typically require a Hidden Input for the real value.
+            }
+
+            group.appendChild(element);
+
+            // Icon
+            const icon = document.createElement('span');
+            icon.className = 'jdp-icon';
+            icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+            group.appendChild(icon);
+            element.style.paddingLeft = '35px'; // Make space for icon (RTL: paddingRight? No, icon is typically left or right depending on dir)
+            // Fix for RTL: 
+            if (document.dir === 'rtl' || document.documentElement.dir === 'rtl') {
+                icon.style.right = 'auto';
+                icon.style.left = '10px';
+                element.style.paddingLeft = '35px'; // Actually in RTL left is the end.
+            } else {
+                icon.style.left = 'auto'; // default
+            }
+
+            // Calendar Dropdown
+            const calendar = document.createElement('div');
+            calendar.className = 'jdp-calendar';
+            group.appendChild(calendar);
+
+            // Event Listeners
+            element.addEventListener('focus', (e) => {
+                showCalendar(element, calendar);
+                e.stopPropagation();
+            });
+
+            element.addEventListener('click', (e) => {
+                showCalendar(element, calendar);
+                e.stopPropagation();
+            });
+
+            // Initial Formatting if value exists
+            if (element.value) {
+                // Assume value is Gregorian YYYY-MM-DD
+                const parts = element.value.split('-');
+                if (parts.length === 3) {
+                    const j = Jalaali.toJalaali(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
+                    element.setAttribute('data-gdate', element.value);
+                    element.value = formatJalali(j.jy, j.jm, j.jd);
+                }
+            }
+        }
+
+        function formatJalali(y, m, d) {
+            return `${y}/${m.toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}`; // Standard format
+            // optionally use month names: return `${d} ${months[m-1]} ${y}`;
+        }
+
+        function showCalendar(input, container) {
+            // Close others
+            if (activeInstance && activeInstance !== container) {
+                activeInstance.style.display = 'none';
+            }
+            activeInstance = container;
+
+            // Show overlay
+            document.getElementById('jdp-overlay').style.display = 'block';
+            container.style.display = 'block';
+
+            // Determine initial view date
+            let jy, jm, jd;
+            if (input.getAttribute('data-gdate')) {
+                const parts = input.getAttribute('data-gdate').split('-');
+                const j = Jalaali.toJalaali(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
+                jy = j.jy; jm = j.jm; jd = j.jd;
+            } else {
+                // Today
+                const today = new Date();
+                const j = Jalaali.toJalaali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+                jy = j.jy; jm = j.jm; jd = j.jd;
+            }
+
+            viewDate = { y: jy, m: jm, d: jd };
+            renderMonthView(container, input);
+        }
+
+        function renderMonthView(container, input) {
+            container.innerHTML = '';
+
+            // Header
+            const header = document.createElement('div');
+            header.className = 'jdp-header';
+
+            const btnPrev = document.createElement('button');
+            btnPrev.className = 'jdp-btn-nav';
+            btnPrev.innerHTML = '&lt;'; // In RTL this points to next month naturally? No, math wise prev month is smaller.
+            // In RTL context: < (Left) usually means Next if time flows LTR, but UI usually puts Right as Next.
+            // Let's use simple arrows and logic: Next Month (Future) -> | Prev Month (Past) <-
+            // In RTL: Prev (Right Arrow) | Next (Left Arrow) ?
+            // Let's stick to logical Prev/Next functions.
+
+            const btnNext = document.createElement('button');
+            btnNext.className = 'jdp-btn-nav';
+            btnNext.innerHTML = '&gt;';
+
+            const title = document.createElement('div');
+            title.className = 'jdp-header-title';
+            title.textContent = `${months[viewDate.m - 1]} ${viewDate.y}`;
+            title.onclick = () => renderYearView(container, input);
+
+            // RTL Logic: 
+            // Previous Month (Past): Right Arrow in RTL? No, stick to standard:
+            // Right Arrow (>): Next Month
+            // Left Arrow (<): Prev Month
+            btnPrev.onclick = (e) => { e.preventDefault(); changeMonth(-1, container, input); };
+            btnNext.onclick = (e) => { e.preventDefault(); changeMonth(1, container, input); };
+
+            header.appendChild(btnPrev);
+            header.appendChild(title);
+            header.appendChild(btnNext);
+            container.appendChild(header);
+
+            // Days Header
+            const daysHeader = document.createElement('div');
+            daysHeader.className = 'jdp-days-header';
+            daysShort.forEach(d => {
+                const dh = document.createElement('div');
+                dh.className = 'jdp-day-header';
+                dh.textContent = d;
+                daysHeader.appendChild(dh);
+            });
+            container.appendChild(daysHeader);
+
+            // Days Body
+            const daysBody = document.createElement('div');
+            daysBody.className = 'jdp-days-body';
+
+            // Calculate days
+            // 1st of month day of week
+            const g1 = Jalaali.toGregorian(viewDate.y, viewDate.m, 1);
+            const date1 = new Date(g1.gy, g1.gm - 1, g1.gd);
+            let startDay = date1.getDay() + 1; // 0=Sun, 6=Sat. Jalali: 0=Sat, 6=Fri.
+            // Map Gregorian Day (0=Sun...6=Sat) to Jalali (0=Sat...6=Fri)
+            // Sun(0) -> 1
+            // Mon(1) -> 2
+            // ...
+            // Sat(6) -> 0
+            const mapDay = [1, 2, 3, 4, 5, 6, 0];
+            const startCol = mapDay[date1.getDay()]; // 0..6
+
+            const daysInMonth = Jalaali.jalaaliMonthLength(viewDate.y, viewDate.m);
+
+            // Empty slots
+            for (let i = 0; i < startCol; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'jdp-day empty';
+                daysBody.appendChild(empty);
+            }
+
+            const today = new Date();
+            const jToday = Jalaali.toJalaali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+
+            // Selected Date
+            let selectedDate = null;
+            if (input.getAttribute('data-gdate')) {
+                const parts = input.getAttribute('data-gdate').split('-');
+                const j = Jalaali.toJalaali(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
+                selectedDate = j;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayEl = document.createElement('div');
+                dayEl.className = 'jdp-day';
+                dayEl.textContent = d;
+
+                // Check Today
+                if (viewDate.y === jToday.jy && viewDate.m === jToday.jm && d === jToday.jd) {
+                    dayEl.classList.add('today');
+                }
+
+                // Check Selected
+                if (selectedDate && viewDate.y === selectedDate.jy && viewDate.m === selectedDate.jm && d === selectedDate.jd) {
+                    dayEl.classList.add('selected');
+                }
+
+                dayEl.onclick = (e) => {
+                    e.stopPropagation();
+                    selectDate(viewDate.y, viewDate.m, d, input, container);
+                };
+
+                daysBody.appendChild(dayEl);
+            }
+
+            container.appendChild(daysBody);
+
+            // Footer
+            const footer = document.createElement('div');
+            footer.className = 'jdp-footer';
+            const btnToday = document.createElement('button');
+            btnToday.className = 'jdp-btn-today';
+            btnToday.textContent = 'امروز';
+            btnToday.onclick = (e) => {
+                e.preventDefault();
+                const t = new Date();
+                const j = Jalaali.toJalaali(t.getFullYear(), t.getMonth() + 1, t.getDate());
+                selectDate(j.jy, j.jm, j.jd, input, container);
+            };
+            footer.appendChild(btnToday);
+            container.appendChild(footer);
+        }
+
+        function renderYearView(container, input) {
+            container.innerHTML = '';
+            // Header
+            const header = document.createElement('div');
+            header.className = 'jdp-header';
+            const btnBack = document.createElement('button');
+            btnBack.className = 'jdp-btn-nav';
+            btnBack.innerHTML = 'بازگشت';
+            btnBack.onclick = () => renderMonthView(container, input);
+            header.appendChild(btnBack);
+            container.appendChild(header);
+
+            const yearsBody = document.createElement('div');
+            yearsBody.className = 'jdp-years-view';
+
+            const startYear = viewDate.y - 50;
+            const endYear = viewDate.y + 10;
+
+            for (let y = startYear; y <= endYear; y++) {
+                const yItem = document.createElement('div');
+                yItem.className = 'jdp-year-item';
+                yItem.textContent = y;
+                if (y === viewDate.y) yItem.classList.add('selected');
+                yItem.onclick = (e) => {
+                    e.stopPropagation();
+                    viewDate.y = y;
+                    renderMonthView(container, input);
+                };
+                yearsBody.appendChild(yItem);
+            }
+            container.appendChild(yearsBody);
+
+            // Scroll to selected year
+            setTimeout(() => {
+                const selected = yearsBody.querySelector('.selected');
+                if (selected) selected.scrollIntoView({ block: 'center' });
+            }, 0);
+        }
+
+        function changeMonth(delta, container, input) {
+            viewDate.m += delta;
+            if (viewDate.m > 12) {
+                viewDate.m = 1;
+                viewDate.y++;
+            } else if (viewDate.m < 1) {
+                viewDate.m = 12;
+                viewDate.y--;
+            }
+            renderMonthView(container, input);
+        }
+
+        function selectDate(jy, jm, jd, input, container) {
+            const g = Jalaali.toGregorian(jy, jm, jd);
+            const gDateStr = `${g.gy}-${g.gm.toString().padStart(2, '0')}-${g.gd.toString().padStart(2, '0')}`;
+            const jDateStr = formatJalali(jy, jm, jd); // Simple 1404/01/01
+            // Or use Full Date: `${jd} ${months[jm-1]} ${jy}`
+            const jDateFull = `${jd} ${months[jm - 1]} ${jy}`;
+
+            // Set values
+            input.value = jDateFull; // Show user friendly text
+            input.setAttribute('data-gdate', gDateStr); // Store Technical Value
+
+            // Hide Calendar
+            container.style.display = 'none';
+            document.getElementById('jdp-overlay').style.display = 'none';
+            activeInstance = null;
+
+            // If there's a real Hidden Input associated, update it too
+            // Assuming the pattern: name="foo" -> id="id_foo"
+            // We should find the input expected by Django.
+            // In the Proforma form, we have id_validity_date (visual) and we need to verify what is sent.
+            // Usually we submit the input with `name`.
+            // So we'll update the Visual Input's value to the GREGORIAN date just before submit?
+            // OR we use a hidden input for the name, and remove name from visual input.
+            // Let's dispatch an event so the glue code can handle it.
+
+            const event = new CustomEvent('jdp:change', { detail: { jalali: jDateFull, gregorian: gDateStr } });
+            input.dispatchEvent(event);
+        }
+
+        // Overlay close
+        document.getElementById('jdp-overlay').addEventListener('click', () => {
+            if (activeInstance) {
+                activeInstance.style.display = 'none';
+                activeInstance = null;
+                document.getElementById('jdp-overlay').style.display = 'none';
+            }
+        });
+
+        return {
+            init: init
+        };
+    })();
+</script>
