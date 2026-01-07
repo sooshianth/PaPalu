@@ -897,6 +897,9 @@ def procurement_purchase_order_detail_view(request, order_number):
     allowed_next_statuses = po.WORKFLOW_ALLOWED.get(po.status, set())
     next_status_choices = [(code, label) for code, label in po.STATUS_CHOICES if code in allowed_next_statuses]
     
+    # محاسبه جزئیات فی تمام شده خرید
+    final_unit_price_details = po.get_final_unit_price_details()
+    
     return render(request, 'purchase/procurement_purchase_detail.html', {
         'po': po,
         'material_table': material_table,
@@ -906,6 +909,7 @@ def procurement_purchase_order_detail_view(request, order_number):
         'can_delete': can_delete,
         'next_status_choices': next_status_choices,
         'transport_table': transport_table,
+        'final_unit_price_details': final_unit_price_details,
     })
 
 

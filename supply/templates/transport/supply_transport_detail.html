@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load render_table from django_tables2 %}
+{% load number_filters %}
 {% block title %}جزئیات حمل خرید{% endblock %}
 {% block extra_css %}
 <style>
@@ -98,15 +99,16 @@
     }
     
     .table-container .table thead th {
-        padding: 12px 15px;
+        padding: 15px;
         text-align: center;
         font-weight: 600;
         color: var(--gray-800);
-        border: 1px solid var(--gray-300);
+        border-bottom: 2px solid var(--primary-green);
         vertical-align: middle;
     }
     
     .table-container .table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
         transition: background-color 0.2s;
     }
     
@@ -115,11 +117,16 @@
     }
     
     .table-container .table tbody td {
-        padding: 12px 15px;
+        padding: 15px;
         color: var(--gray-600);
-        border: 1px solid var(--gray-300);
         text-align: center;
         vertical-align: middle;
+        font-weight: 500;
+    }
+    
+    /* Bold کردن محتوای سلول‌ها */
+    .table-container .table tbody td strong {
+        font-weight: 600;
     }
     
     .actions {
@@ -313,6 +320,75 @@
             <strong>{{ pt.notes }}</strong>
         </div>
     </div>
+    {% endif %}
+    
+    <h3 class="section-title">مواد اولیه ثبت شده در این حمل</h3>
+    {% if raw_material_infos %}
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ماده اولیه</th>
+                    <th>مقدار تخصیص یافته</th>
+                    <th>واحد</th>
+                    <th>وزن خالص (کیلوگرم)</th>
+                    <th>نوع بسته‌بندی</th>
+                    <th>تعداد بسته</th>
+                    <th>یادداشت</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rmi in raw_material_infos %}
+                <tr>
+                    <td style="text-align: right;">
+                        <strong>{{ rmi.raw_material.name|default:"—" }}</strong>
+                        {% if rmi.order_item and rmi.order_item.order %}
+                        <br>
+                        <small style="color: var(--gray-600); font-size: 0.85rem;">سفارش: {{ rmi.order_item.order.order_number }}</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ rmi.allocated_quantity|persian_number:2|default:"—" }}</td>
+                    <td>{{ rmi.get_weight_unit_display|default:"—" }}</td>
+                    <td>
+                        {% if rmi.net_weight %}
+                            <strong style="color: var(--primary-green);">{{ rmi.net_weight|persian_number:3 }}</strong>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ rmi.get_packaging_type_display|default:"—" }}</td>
+                    <td>{{ rmi.number_of_packages|default:"—" }}</td>
+                    <td style="text-align: right;">{{ rmi.notes|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="background: var(--light-green); border-top: 2px solid var(--primary-green);">
+                    <td style="font-weight: 600; padding: 15px;"><strong>جمع کل</strong></td>
+                    <td style="font-weight: 600; padding: 15px;">
+                        {% if total_allocated %}
+                            <strong>{{ total_allocated|persian_number:2 }}</strong>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px;">—</td>
+                    <td style="font-weight: 600; padding: 15px;">
+                        {% if total_net_weight %}
+                            <strong style="color: var(--primary-green); font-size: 1.1rem;">{{ total_net_weight|persian_number:3 }}</strong>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td colspan="3" style="padding: 15px;">—</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--gray-600); font-size: 0.9rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;">
+        هیچ ماده اولیه‌ای در این حمل ثبت نشده است.
+    </p>
     {% endif %}
     
     <h3 class="section-title">تاریخچه تغییر وضعیت</h3>

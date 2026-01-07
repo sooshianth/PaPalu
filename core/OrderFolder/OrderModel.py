@@ -199,6 +199,16 @@ class Order(models.Model):
         verbose_name='شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت'
     )
     
+    # فی تمام شده خرید (محاسبه شده پس از تکمیل سفارش)
+    final_unit_price = models.DecimalField(
+        max_digits=50,
+        decimal_places=2,
+        verbose_name='فی تمام شده خرید (ریال/کیلوگرم)',
+        null=True,
+        blank=True,
+        help_text='محاسبه شده: (هزینه پرداخت اولیه + مجموع کرایه‌های حمل‌ها) / (مجموع وزن‌های خالص حمل‌ها)'
+    )
+    
     # Timestamps
     created_at = jmodels.jDateTimeField(
         auto_now_add=True,
@@ -296,6 +306,139 @@ class Order(models.Model):
         بررسی امکان ایجاد حمل جدید - اگر هنوز مواد اولیه تخصیص نیافته وجود داشته باشد
         """
         return self.get_remaining_weight() > 0
+    
+    def _calculate_final_unit_price(self):
+        """
+        محاسبه فی تمام شده خرید پس از تکمیل سفارش
+        فرمول: (هزینه پرداخت اولیه + مجموع کرایه‌های هر حمل) / (مجموع وزن‌های خالص حمل‌ها)
+        این متد برای استفاده داخلی است و مقدار را محاسبه می‌کند
+        """
+        from decimal import Decimal
+        from django.db.models import Sum
+        
+        # فقط برای سفارش‌های خرید و فقط وقتی که سفارش تکمیل شده است
+        if self.order_type != 'purchase' or self.status != self.STATUS_COMPLETED:
+            return None
+        
+        # هزینه پرداخت اولیه
+        initial_payment = self.subtotal_without_freight or Decimal('0')
+        
+        # مجموع کرایه‌های حمل‌ها
+        from core.TransportFolder.TransportModel import Transport
+        transports = Transport.objects.filter(allocation__order=self)
+        
+        # استفاده از total_freight اگر موجود باشد، در غیر این صورت از freight_payment
+        total_freight = Decimal('0')
+        for transport in transports:
+            if transport.total_freight:
+                total_freight += transport.total_freight
+            elif transport.freight_payment:
+                total_freight += transport.freight_payment
+        
+        # مجموع وزن‌های خالص حمل‌ها
+        # ابتدا سعی می‌کنیم از net_weight در Transport استفاده کنیم
+        total_net_weight = transports.aggregate(
+            total=Sum('net_weight')
+        )['total'] or Decimal('0')
+        
+        # اگر net_weight در Transport نبود، از RawMaterialInfo استفاده می‌کنیم
+        if total_net_weight == 0:
+            from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
+            total_net_weight = RawMaterialInfo.objects.filter(
+                transport__allocation__order=self
+            ).aggregate(
+                total=Sum('net_weight')
+            )['total'] or Decimal('0')
+        
+        # اگر وزن خالص صفر باشد، نمی‌توانیم تقسیم کنیم
+        if total_net_weight == 0:
+            return None
+        
+        # محاسبه فی تمام شده خرید
+        total_cost = initial_payment + total_freight
+        final_unit_price = total_cost / total_net_weight
+        
+        # گرد کردن به 2 رقم اعشار
+        return final_unit_price.quantize(Decimal('0.01'))
+    
+    def get_final_unit_price(self):
+        """
+        دریافت فی تمام شده خرید از فیلد ذخیره شده
+        اگر فیلد خالی باشد و سفارش تکمیل شده است، محاسبه و ذخیره می‌کند
+        """
+        # اگر فیلد ذخیره شده وجود دارد، از آن استفاده کن
+        if self.final_unit_price is not None:
+            return self.final_unit_price
+        
+        # اگر فیلد خالی است و سفارش تکمیل شده است، محاسبه و ذخیره کن
+        if self.order_type == 'purchase' and self.status == self.STATUS_COMPLETED:
+            calculated_price = self._calculate_final_unit_price()
+            if calculated_price is not None:
+                # ذخیره بدون فراخوانی save برای جلوگیری از حلقه بی‌نهایت
+                Order.objects.filter(pk=self.pk).update(final_unit_price=calculated_price)
+                self.final_unit_price = calculated_price
+                return calculated_price
+        
+        return None
+    
+    def get_final_unit_price_details(self):
+        """
+        دریافت جزئیات محاسبه فی تمام شده خرید
+        شامل: قیمت اول پرداختی، مجموع کرایه‌ها، مجموع وزن خالص حمل‌ها، وزن سفارش
+        """
+        from decimal import Decimal
+        from django.db.models import Sum
+        
+        # فقط برای سفارش‌های خرید
+        if self.order_type != 'purchase':
+            return None
+        
+        # قیمت اول پرداختی
+        initial_payment = self.subtotal_without_freight or Decimal('0')
+        
+        # مجموع کرایه‌های حمل‌ها
+        from core.TransportFolder.TransportModel import Transport
+        transports = Transport.objects.filter(allocation__order=self)
+        
+        total_freight = Decimal('0')
+        for transport in transports:
+            if transport.total_freight:
+                total_freight += transport.total_freight
+            elif transport.freight_payment:
+                total_freight += transport.freight_payment
+        
+        # مجموع وزن‌های خالص حمل‌ها
+        total_net_weight = transports.aggregate(
+            total=Sum('net_weight')
+        )['total'] or Decimal('0')
+        
+        # اگر net_weight در Transport نبود، از RawMaterialInfo استفاده می‌کنیم
+        if total_net_weight == 0:
+            from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
+            total_net_weight = RawMaterialInfo.objects.filter(
+                transport__allocation__order=self
+            ).aggregate(
+                total=Sum('net_weight')
+            )['total'] or Decimal('0')
+        
+        # وزن سفارش (مجموع وزن تمام مواد اولیه سفارش)
+        order_total_weight = self.get_total_order_weight()
+        
+        # فی تمام شده خرید
+        final_unit_price = self.get_final_unit_price()
+        
+        # محاسبه تفاوت وزن
+        weight_difference = order_total_weight - total_net_weight
+        
+        return {
+            'initial_payment': initial_payment,
+            'total_freight': total_freight,
+            'total_net_weight': total_net_weight,
+            'order_total_weight': order_total_weight,
+            'weight_difference': weight_difference,
+            'final_unit_price': final_unit_price,
+            'total_cost': initial_payment + total_freight,
+        }
     
     @staticmethod
     def generate_order_number(order_type='sale'):
@@ -421,6 +564,15 @@ class Order(models.Model):
         # تغییر خودکار وضعیت وقتی پیش‌فاکتور تایید می‌شود
         if self.pre_invoice_approved and self.status == self.STATUS_DRAFT and self.order_type == 'purchase':
             self.status = self.STATUS_AWAITING_TRANSPORT_DEFINITION
+        
+        # محاسبه و ذخیره فی تمام شده خرید هنگام تکمیل سفارش
+        if self.order_type == 'purchase' and self.status == self.STATUS_COMPLETED:
+            calculated_final_unit_price = self._calculate_final_unit_price()
+            if calculated_final_unit_price is not None:
+                self.final_unit_price = calculated_final_unit_price
+        elif self.order_type == 'purchase' and self.status != self.STATUS_COMPLETED:
+            # اگر سفارش از وضعیت completed خارج شد، فیلد را پاک کن
+            self.final_unit_price = None
         
         super().save(*args, **kwargs)
 
