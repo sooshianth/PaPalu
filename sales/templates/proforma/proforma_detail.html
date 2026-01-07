@@ -12,7 +12,7 @@
         padding: 30px;
         margin-bottom: 30px;
     }
-    
+
     .page-header {
         margin-bottom: 30px;
         padding-bottom: 20px;
@@ -23,14 +23,14 @@
         flex-wrap: wrap;
         gap: 15px;
     }
-    
+
     .page-header h2 {
         color: var(--gray-800);
         font-size: 1.8rem;
         font-weight: 600;
         margin: 0;
     }
-    
+
     .form-section {
         background: var(--gray-100);
         padding: 25px;
@@ -38,7 +38,7 @@
         margin-bottom: 25px;
         border-right: 4px solid var(--primary-green);
     }
-    
+
     .form-section h5 {
         color: var(--primary-green);
         font-size: 1.2rem;
@@ -47,20 +47,20 @@
         padding-bottom: 10px;
         border-bottom: 2px solid var(--light-green);
     }
-    
+
     .form-label {
         color: var(--gray-800);
         font-weight: 500;
         margin-bottom: 8px;
         display: block;
     }
-    
+
     .required-field::after {
         content: '*';
         color: #dc3545;
         margin-right: 5px;
     }
-    
+
     .form-control,
     .form-select {
         border: 1px solid var(--gray-300);
@@ -71,21 +71,21 @@
         width: 100%;
         font-family: inherit;
     }
-    
+
     .form-control:focus,
     .form-select:focus {
         border-color: var(--primary-green);
         box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
         outline: none;
     }
-    
+
     .text-danger {
         color: #dc3545;
         font-size: 0.875rem;
         margin-top: 5px;
         display: block;
     }
-    
+
     .form-actions {
         display: flex;
         justify-content: center;
@@ -94,28 +94,32 @@
         padding-top: 30px;
         border-top: 1px solid var(--gray-300);
     }
-    
-    .mb-3 { margin-bottom: 1rem; }
-    
+
+    .mb-3 {
+        margin-bottom: 1rem;
+    }
+
     .row {
         display: flex;
         flex-wrap: wrap;
         margin-right: -15px;
         margin-left: -15px;
     }
+
     .col-12 {
         flex: 0 0 100%;
         max-width: 100%;
         padding-right: 15px;
         padding-left: 15px;
     }
+
     .col-md-6 {
         flex: 0 0 50%;
         max-width: 50%;
         padding-right: 15px;
         padding-left: 15px;
     }
-    
+
     .info-box {
         background: white;
         border: 2px solid var(--primary-green);
@@ -123,7 +127,7 @@
         padding: 20px;
         margin-bottom: 25px;
     }
-    
+
     .info-item {
         display: flex;
         justify-content: space-between;
@@ -131,33 +135,33 @@
         padding-bottom: 15px;
         border-bottom: 1px solid var(--gray-200);
     }
-    
+
     .info-item:last-child {
         border-bottom: none;
         margin-bottom: 0;
         padding-bottom: 0;
     }
-    
+
     .info-label {
         color: var(--gray-600);
         font-weight: 500;
     }
-    
+
     .info-value {
         color: var(--gray-800);
         font-weight: 600;
     }
-    
+
     .order-items-table {
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
     }
-    
+
     .order-items-table thead {
         background: var(--gray-100);
     }
-    
+
     .order-items-table th {
         padding: 12px;
         text-align: right;
@@ -165,17 +169,17 @@
         color: var(--gray-800);
         border-bottom: 2px solid var(--primary-green);
     }
-    
+
     .order-items-table td {
         padding: 12px;
         border-bottom: 1px solid var(--gray-200);
         color: var(--gray-600);
     }
-    
+
     .order-items-table tbody tr:hover {
         background-color: var(--light-green);
     }
-    
+
     .alert-warning {
         background-color: #fff6db;
         border-color: #ffe1a3;
@@ -184,7 +188,7 @@
         border-radius: 8px;
         margin-bottom: 20px;
     }
-    
+
     .alert-success {
         background-color: var(--light-green);
         color: var(--dark-green);
@@ -192,17 +196,33 @@
         border-radius: 8px;
         margin-bottom: 20px;
     }
-    
+
     @media (max-width: 768px) {
         .col-md-6 {
             flex: 0 0 100%;
             max-width: 100%;
         }
-        .form-card { padding: 20px; }
-        .form-section { padding: 15px; }
-        .form-actions { flex-direction: column; }
-        .btn { width: 100%; }
-        .page-header { flex-direction: column; align-items: flex-start; }
+
+        .form-card {
+            padding: 20px;
+        }
+
+        .form-section {
+            padding: 15px;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+
+        .btn {
+            width: 100%;
+        }
+
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
     }
 </style>
 {% endblock %}
@@ -217,11 +237,11 @@
 
 <div class="form-card">
     {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }}" role="alert">
-                {{ message }}
-            </div>
-        {% endfor %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" role="alert">
+        {{ message }}
+    </div>
+    {% endfor %}
     {% endif %}
 
     {% if is_done %}
@@ -319,7 +339,8 @@
             </div>
             <div class="info-item">
                 <span class="info-label">شماره تلفن:</span>
-                <span class="info-value">{{ customer_info.phone_number }} {% if customer_info.phone_type != '-' %}({{ customer_info.phone_type }}){% endif %}</span>
+                <span class="info-value">{{ customer_info.phone_number }} {% if customer_info.phone_type != '-' %}({{
+                    customer_info.phone_type }}){% endif %}</span>
             </div>
         </div>
     </div>
@@ -368,7 +389,8 @@
             </div>
             <div class="info-item">
                 <span class="info-label">شماره تلفن:</span>
-                <span class="info-value">{{ company_info.phone_number }} {% if company_info.phone_type != '-' %}({{ company_info.phone_type }}){% endif %}</span>
+                <span class="info-value">{{ company_info.phone_number }} {% if company_info.phone_type != '-' %}({{
+                    company_info.phone_type }}){% endif %}</span>
             </div>
         </div>
     </div>
@@ -403,10 +425,10 @@
                     <td>{{ item.vat|default:"0" }}</td>
                     <td>
                         {% if item.quantity and item.unit_price %}
-                            {% widthratio item.quantity 1 item.unit_price as total %}
-                            {{ total }}
+                        {% widthratio item.quantity 1 item.unit_price as total %}
+                        {{ total }}
                         {% else %}
-                            -
+                        -
                         {% endif %}
                     </td>
                 </tr>
@@ -417,7 +439,7 @@
     {% endif %}
 
     <!-- فرم ویرایش پیش فاکتور -->
-    <form method="post" enctype="multipart/form-data"{% if is_done %} onsubmit="return false;"{% endif %}>
+    <form method="post" enctype="multipart/form-data" {% if is_done %} onsubmit="return false;" {% endif %}>
         {% csrf_token %}
 
         <div class="form-section">
@@ -427,17 +449,20 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.order.label }}</label>
                     {% if is_done %}
-                        {% if order %}
-                            <input type="text" class="form-control" value="{{ order.order_number }}{% if order.customer %} - {{ order.customer.name }}{% else %} - بدون مشتری{% endif %}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
-                        {% else %}
-                            <input type="text" class="form-control" value="" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
-                        {% endif %}
+                    {% if order %}
+                    <input type="text" class="form-control"
+                        value="{{ order.order_number }}{% if order.customer %} - {{ order.customer.name }}{% else %} - بدون مشتری{% endif %}"
+                        readonly style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% else %}
-                        {{ form.order }}
-                        {{ form.order_id }}
+                    <input type="text" class="form-control" value="" readonly
+                        style="background-color: var(--gray-200); cursor: not-allowed;">
+                    {% endif %}
+                    {% else %}
+                    {{ form.order }}
+                    {{ form.order_id }}
                     {% endif %}
                     {% if form.order.errors %}
-                        <div class="text-danger">{{ form.order.errors.0 }}</div>
+                    <div class="text-danger">{{ form.order.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -446,12 +471,13 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.proforma_number.label }}</label>
                     {% if is_done %}
-                        <input type="text" class="form-control" value="{{ proforma.proforma_number|default:'' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    <input type="text" class="form-control" value="{{ proforma.proforma_number|default:'' }}" readonly
+                        style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% else %}
-                        {{ form.proforma_number }}
+                    {{ form.proforma_number }}
                     {% endif %}
                     {% if form.proforma_number.errors %}
-                        <div class="text-danger">{{ form.proforma_number.errors.0 }}</div>
+                    <div class="text-danger">{{ form.proforma_number.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -460,12 +486,14 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.validity_date.label }}</label>
                     {% if is_done %}
-                        <input type="text" class="form-control" value="{% if proforma.validity_date %}{{ proforma.validity_date|date:'Y-m-d' }}{% endif %}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    <input type="text" class="form-control"
+                        value="{% if proforma.validity_date %}{{ proforma.validity_date|date:'Y-m-d' }}{% endif %}"
+                        readonly style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% else %}
-                        {{ form.validity_date }}
+                    {{ form.validity_date }}
                     {% endif %}
                     {% if form.validity_date.errors %}
-                        <div class="text-danger">{{ form.validity_date.errors.0 }}</div>
+                    <div class="text-danger">{{ form.validity_date.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -474,17 +502,20 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.customer.label }}</label>
                     {% if is_done %}
-                        {% if proforma.customer %}
-                            <input type="text" class="form-control" value="{{ proforma.customer.name }} ({{ proforma.customer.national_id }})" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
-                        {% else %}
-                            <input type="text" class="form-control" value="" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
-                        {% endif %}
+                    {% if proforma.customer %}
+                    <input type="text" class="form-control"
+                        value="{{ proforma.customer.name }} ({{ proforma.customer.national_id }})" readonly
+                        style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% else %}
-                        {{ form.customer }}
-                        {{ form.customer_id }}
+                    <input type="text" class="form-control" value="" readonly
+                        style="background-color: var(--gray-200); cursor: not-allowed;">
+                    {% endif %}
+                    {% else %}
+                    {{ form.customer }}
+                    {{ form.customer_id }}
                     {% endif %}
                     {% if form.customer.errors %}
-                        <div class="text-danger">{{ form.customer.errors.0 }}</div>
+                    <div class="text-danger">{{ form.customer.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -493,13 +524,15 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ form.company.label }}</label>
                     {% if is_done %}
-                        {{ form.company }}
+                    {{ form.company }}
                     {% else %}
-                        {{ form.company }}
+                    {{ form.company }}
                     {% endif %}
-                    <input type="text" class="form-control" value="{{ form.company_display.name|default:proforma.company.name|default:'تامین نهاده سیمرغ' }}" readonly style="background-color: var(--gray-200); cursor: not-allowed;">
+                    <input type="text" class="form-control"
+                        value="{{ form.company_display.name|default:proforma.company.name|default:'تامین نهاده سیمرغ' }}"
+                        readonly style="background-color: var(--gray-200); cursor: not-allowed;">
                     {% if form.company.errors %}
-                        <div class="text-danger">{{ form.company.errors.0 }}</div>
+                    <div class="text-danger">{{ form.company.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -508,12 +541,13 @@
                 <div class="col-12 mb-3">
                     <label class="form-label">{{ form.description.label }}</label>
                     {% if is_done %}
-                        <textarea class="form-control" rows="4" readonly style="background-color: var(--gray-200); cursor: not-allowed;">{{ form.description.value|default:proforma.description|default:'' }}</textarea>
+                    <textarea class="form-control" rows="4" readonly
+                        style="background-color: var(--gray-200); cursor: not-allowed;">{{ form.description.value|default:proforma.description|default:'' }}</textarea>
                     {% else %}
-                        {{ form.description }}
+                    {{ form.description }}
                     {% endif %}
                     {% if form.description.errors %}
-                        <div class="text-danger">{{ form.description.errors.0 }}</div>
+                    <div class="text-danger">{{ form.description.errors.0 }}</div>
                     {% endif %}
                 </div>
                 {% endif %}
@@ -523,9 +557,13 @@
         <!-- دکمه‌ها -->
         <div class="form-actions">
             {% if is_complete %}
-            <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success">دانلود PDF پیش فاکتور</a>
+            <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success">دانلود PDF پیش
+                فاکتور</a>
             {% else %}
-            <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success" style="opacity: 0.5; cursor: not-allowed;" onclick="event.preventDefault(); alert('لطفاً ابتدا تمام اطلاعات پیش فاکتور را تکمیل کنید.');">دانلود PDF پیش فاکتور</a>
+            <a href="{% url 'sales:proforma_download_pdf' proforma.id %}" class="btn btn-success"
+                style="opacity: 0.5; cursor: not-allowed;"
+                onclick="event.preventDefault(); alert('لطفاً ابتدا تمام اطلاعات پیش فاکتور را تکمیل کنید.');">دانلود
+                PDF پیش فاکتور</a>
             {% endif %}
             <a href="{% url 'sales:proforma_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
         </div>
@@ -534,122 +572,38 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- jQuery (برای استفاده از تقویم شمسی) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Persian Date Picker Library -->
-<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<!-- Custom Jalali Datepicker Component -->
+{% include 'components/jalali_datepicker.html' %}
 
 <script>
-$(document).ready(function() {
-    // تبدیل فیلد تاریخ اعتبار به تقویم شمسی
-    var validityDateInput = $('#id_validity_date');
-    
-    if (validityDateInput.length) {
-        // تبدیل type='date' به text برای استفاده از تقویم شمسی
-        validityDateInput.attr('type', 'text');
-        validityDateInput.attr('readonly', 'readonly');
-        validityDateInput.css('cursor', 'pointer');
-        
-        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
-        var initialValue = validityDateInput.val();
-        var persianDateValue = '';
-        
-        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
-        if (initialValue) {
-            var parts = initialValue.split('-');
-            if (parts.length === 3) {
-                var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                var pDate = persianDate.fromGregorian(gregorianDate);
-                persianDateValue = pDate.format('YYYY/MM/DD');
-                validityDateInput.val(persianDateValue);
-            }
-        }
-        
-        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
-        var hiddenInput = $('<input>', {
-            type: 'hidden',
-            id: 'id_validity_date_hidden',
-            name: 'validity_date'
-        });
-        if (initialValue) {
-            hiddenInput.val(initialValue);
-        }
-        validityDateInput.after(hiddenInput);
-        
-        // راه‌اندازی تقویم شمسی
-        validityDateInput.pDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            altField: '#id_validity_date_hidden',
-            altFormat: 'YYYY-MM-DD',
-            calendarType: 'persian',
-            initialValue: persianDateValue || false,
-            timePicker: {
-                enabled: false
-            },
-            onSelect: function() {
-                // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
-                var selectedDate = validityDateInput.val();
-                if (selectedDate) {
-                    try {
-                        var persianDateParts = selectedDate.split('/');
-                        if (persianDateParts.length === 3) {
-                            var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
-                            var gregorianDate = persianDateObj.toCalendar('gregorian');
-                            var formattedDate = gregorianDate.year + '-' + 
-                                               String(gregorianDate.month).padStart(2, '0') + '-' + 
-                                               String(gregorianDate.day).padStart(2, '0');
-                            
-                            hiddenInput.val(formattedDate);
-                        }
-                    } catch (e) {
-                        console.error('خطا در تبدیل تاریخ:', e);
-                    }
+    document.addEventListener('DOMContentLoaded', function () {
+        // Initialize Jalali Datepicker for validity date
+        const validityDateInput = document.getElementById('id_validity_date');
+        if (validityDateInput) {
+            // Handle name mapping for backend
+            const originalName = validityDateInput.name;
+            if (originalName) {
+                validityDateInput.removeAttribute('name');
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = originalName;
+                hidden.id = 'id_validity_date_hidden';
+                if (validityDateInput.value) {
+                    hidden.value = validityDateInput.value;
                 }
+                validityDateInput.parentNode.insertBefore(hidden, validityDateInput.nextSibling);
+
+                validityDateInput.addEventListener('jdp:change', function (e) {
+                    hidden.value = e.detail.gregorian;
+                });
+
+                validityDateInput.addEventListener('input', function (e) {
+                    if (!this.value) hidden.value = '';
+                });
             }
-        });
-        
-        // اضافه کردن آیکون تقویم
-        if (!validityDateInput.parent().find('.p-datepicker-trigger').length) {
-            var iconSpan = $('<span>', {
-                class: 'p-datepicker-trigger',
-                html: '📅',
-                css: {
-                    'position': 'absolute',
-                    'right': '10px',
-                    'top': '50%',
-                    'transform': 'translateY(-50%)',
-                    'cursor': 'pointer',
-                    'font-size': '1.2rem',
-                    'z-index': '10',
-                    'pointer-events': 'none'
-                }
-            });
-            validityDateInput.parent().css('position', 'relative');
-            validityDateInput.parent().append(iconSpan);
+
+            JalaliDatepicker.init('#id_validity_date', { time: false });
         }
-    }
-});
+    });
 </script>
-
-<style>
-#id_validity_date {
-    position: relative;
-    padding-left: 40px;
-}
-
-.p-datepicker-trigger {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 1.2rem;
-    z-index: 10;
-    pointer-events: none;
-}
-</style>
 {% endblock %}
-
