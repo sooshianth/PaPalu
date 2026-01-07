@@ -36,7 +36,17 @@ class ProductInfo(models.Model):
         decimal_places=3,
         verbose_name='وزن',
         null=True,
-        blank=True
+        blank=True,
+        help_text='وزن تخصیص یافته یا وزن اولیه'
+    )
+    
+    net_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن خالص',
+        null=True,
+        blank=True,
+        help_text='وزن خالص محاسبه شده از توزین مرحله‌ای بارگیری'
     )
     
     item_type = models.CharField(

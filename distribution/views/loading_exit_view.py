@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import transaction, models
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
@@ -216,40 +216,41 @@ def register_loading_exit_view(request, waybill_number):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # دریافت وزن پر اولیه از فیلد جداگانه
-                    gross = request.POST.get('initial_gross_weight')
+                    # دریافت وزن خالی اولیه از فیلد جداگانه
+                    empty_weight = request.POST.get('initial_empty_weight')
                     packaging_type = form.cleaned_data['packaging_type']
-                    origin_warehouse_obj = form.cleaned_data['origin_warehouse']
                     destination_warehouse_obj = form.cleaned_data['destination_warehouse']
                     driver_account_number = form.cleaned_data.get('driver_account_number', '').strip()
                     
-                    if not gross:
-                        messages.error(request, 'وزن پر اولیه وارد نشده است.')
+                    if not empty_weight:
+                        messages.error(request, 'وزن خالی اولیه وارد نشده است.')
                         return redirect('distribution:loading_exit_list')
                     
                     try:
-                        gross = float(gross)
+                        empty_weight = float(empty_weight)
                     except (ValueError, TypeError):
-                        messages.error(request, 'وزن پر اولیه نامعتبر است.')
+                        messages.error(request, 'وزن خالی اولیه نامعتبر است.')
                         return redirect('distribution:loading_exit_list')
                     
-                    if gross <= 0:
-                        messages.error(request, 'وزن پر اولیه باید بزرگتر از صفر باشد.')
+                    if empty_weight <= 0:
+                        messages.error(request, 'وزن خالی اولیه باید بزرگتر از صفر باشد.')
                         return redirect('distribution:loading_exit_list')
                     
-                    # پردازش داده‌های مرحله‌ای تخلیه
-                    # فرمت: unloading_stages[0][product_info_id]=X&unloading_stages[0][weight]=Y
+                    # پردازش داده‌های مرحله‌ای بارگیری
+                    # فرمت: loading_stages[0][product_info_id]=X&loading_stages[0][weight]=Y
                     product_infos_qs = transport.product_infos.all()
                     
-                    # دریافت مراحل تخلیه از POST
-                    unloading_stages = []
+                    # دریافت مراحل بارگیری از POST
+                    loading_stages = []
                     stage_index = 0
                     while True:
-                        product_info_id_key = f'unloading_stages[{stage_index}][product_info_id]'
-                        weight_key = f'unloading_stages[{stage_index}][weight]'
+                        product_info_id_key = f'loading_stages[{stage_index}][product_info_id]'
+                        weight_key = f'loading_stages[{stage_index}][weight]'
+                        origin_warehouse_key = f'loading_stages[{stage_index}][origin_warehouse_id]'
                         
                         product_info_id = request.POST.get(product_info_id_key)
                         weight = request.POST.get(weight_key)
+                        origin_warehouse_id = request.POST.get(origin_warehouse_key)
                         
                         if not product_info_id or not weight:
                             break
@@ -257,69 +258,81 @@ def register_loading_exit_view(request, waybill_number):
                         try:
                             product_info_id = int(product_info_id)
                             weight = float(weight)
+                            origin_warehouse_id = int(origin_warehouse_id) if origin_warehouse_id else None
                             if weight > 0:
-                                unloading_stages.append({
+                                loading_stages.append({
                                     'product_info_id': product_info_id,
-                                    'weight': weight
+                                    'weight': weight,
+                                    'origin_warehouse_id': origin_warehouse_id
                                 })
                         except (ValueError, TypeError):
                             pass
                         
                         stage_index += 1
                     
-                    if not unloading_stages:
-                        messages.error(request, 'حداقل یک مرحله تخلیه باید ثبت شود.')
+                    if not loading_stages:
+                        messages.error(request, 'حداقل یک مرحله بارگیری باید ثبت شود.')
                         return redirect('distribution:loading_exit_list')
                     
-                    # محاسبه وزن‌های خالص هر محصول و وزن خالی نهایی
-                    product_info_weights = {}
-                    current_weight = float(gross)
+                    # محاسبه وزن‌های خالص هر محصول و وزن پر نهایی
+                    product_info_data = {}  # {product_info_id: {'weight': net_weight, 'origin_warehouse_id': id}}
+                    current_weight = float(empty_weight)
                     
-                    for stage in unloading_stages:
+                    for stage in loading_stages:
                         product_info_id = stage['product_info_id']
-                        weight_after_unloading = stage['weight']
+                        weight_after_loading = stage['weight']
+                        origin_warehouse_id = stage.get('origin_warehouse_id')
                         
-                        # وزن خالص این محصول = وزن قبلی - وزن بعد از تخلیه
-                        net_item_weight = current_weight - weight_after_unloading
+                        # بررسی اینکه انبار مبدأ انتخاب شده است
+                        if not origin_warehouse_id:
+                            messages.error(request, f'برای مرحله بارگیری، انتخاب انبار مبدأ الزامی است.')
+                            return redirect('distribution:loading_exit_list')
+                        
+                        try:
+                            origin_warehouse_obj = Warehouse.objects.get(pk=origin_warehouse_id)
+                        except Warehouse.DoesNotExist:
+                            messages.error(request, f'انبار مبدأ انتخاب شده معتبر نیست.')
+                            return redirect('distribution:loading_exit_list')
+                        
+                        # وزن خالص این محصول = وزن بعد از بارگیری - وزن قبل از بارگیری
+                        net_item_weight = weight_after_loading - current_weight
                         
                         if net_item_weight <= 0:
-                            messages.error(request, f'وزن خالص محصول نامعتبر است. وزن بعد از تخلیه باید کمتر از وزن قبلی باشد.')
+                            messages.error(request, f'وزن خالص محصول نامعتبر است. وزن بعد از بارگیری باید بیشتر از وزن قبلی باشد.')
                             return redirect('distribution:loading_exit_list')
                         
-                        # بررسی اینکه این محصول قبلاً تخلیه نشده باشد
-                        if product_info_id in product_info_weights:
-                            messages.error(request, 'هر محصول فقط یک بار می‌تواند تخلیه شود.')
+                        # بررسی اینکه این محصول قبلاً بارگیری نشده باشد
+                        if product_info_id in product_info_data:
+                            messages.error(request, 'هر محصول فقط یک بار می‌تواند بارگیری شود.')
                             return redirect('distribution:loading_exit_list')
                         
-                        product_info_weights[product_info_id] = net_item_weight
-                        current_weight = weight_after_unloading
+                        product_info_data[product_info_id] = {
+                            'weight': net_item_weight,
+                            'origin_warehouse_id': origin_warehouse_id,
+                            'origin_warehouse_obj': origin_warehouse_obj
+                        }
+                        current_weight = weight_after_loading
                     
-                    # وزن خالی نهایی = آخرین وزن ثبت شده
-                    empty_weight = current_weight
-                    net_weight = float(gross) - float(empty_weight)
+                    # وزن پر نهایی = آخرین وزن ثبت شده
+                    gross_weight = current_weight
+                    net_weight = float(gross_weight) - float(empty_weight)
                     
-                    # بررسی اینکه همه محصولات تخلیه شده‌اند
+                    # بررسی اینکه همه محصولات بارگیری شده‌اند
                     if product_infos_qs.exists():
-                        product_info_ids_in_stages = set(product_info_weights.keys())
+                        product_info_ids_in_stages = set(product_info_data.keys())
                         product_info_ids_in_transport = set(product_infos_qs.values_list('id', flat=True))
                         
                         if product_info_ids_in_stages != product_info_ids_in_transport:
                             missing = product_info_ids_in_transport - product_info_ids_in_stages
-                            messages.error(request, f'همه محصولات باید تخلیه شوند. محصولات باقیمانده: {missing}')
+                            messages.error(request, f'همه محصولات باید بارگیری شوند. محصولات باقیمانده: {missing}')
                             return redirect('distribution:loading_exit_list')
-                    
-                    # بررسی اینکه انبار مبدأ انتخاب شده است
-                    if not origin_warehouse_obj:
-                        messages.error(request, 'انتخاب انبار مبدأ الزامی است.')
-                        return redirect('distribution:loading_exit_list')
                     
                     # بررسی اینکه انبار مقصد انتخاب شده است
                     if not destination_warehouse_obj:
                         messages.error(request, 'انتخاب انبار مقصد الزامی است.')
                         return redirect('distribution:loading_exit_list')
                     
-                    # تبدیل انبارها به نام (چون ProductInfo از CharField استفاده می‌کند)
-                    origin_warehouse = origin_warehouse_obj.name if origin_warehouse_obj else ''
+                    # تبدیل انبار مقصد به نام (چون ProductInfo از CharField استفاده می‌کند)
                     destination_warehouse = destination_warehouse_obj.name if destination_warehouse_obj else ''
                     
                     
@@ -417,141 +430,175 @@ def register_loading_exit_view(request, waybill_number):
                             )
                     
                     # به‌روزرسانی وزن‌های Transport
-                    transport.gross_weight = gross
+                    transport.gross_weight = gross_weight
                     transport.empty_weight = empty_weight
                     transport.net_weight = net_weight
                     transport.save(update_fields=['gross_weight', 'empty_weight', 'net_weight'])
                     
-                    # به‌روزرسانی وزن هر ProductInfo
+                    # به‌روزرسانی وزن خالص هر ProductInfo و انبار مبدأ مربوط به آن
                     for product_info in product_infos_qs:
-                        weight = product_info_weights.get(product_info.id, 0)
-                        if weight > 0:
-                            product_info.weight = weight
+                        product_data = product_info_data.get(product_info.id)
+                        if product_data and product_data['weight'] > 0:
+                            # ذخیره وزن خالص محاسبه شده از توزین مرحله‌ای
+                            product_info.net_weight = product_data['weight']
                             product_info.packaging_type = packaging_type
                             # تبدیل انبارها به نام (چون ProductInfo از CharField استفاده می‌کند)
-                            if origin_warehouse_obj:
-                                product_info.origin_warehouse = origin_warehouse_obj.name
+                            if product_data['origin_warehouse_obj']:
+                                product_info.origin_warehouse = product_data['origin_warehouse_obj'].name
                             if destination_warehouse_obj:
                                 product_info.destination_warehouse = destination_warehouse_obj.name
-                            product_info.save()
+                            product_info.save(update_fields=['net_weight', 'packaging_type', 'origin_warehouse', 'destination_warehouse'])
                     
                     # ایجاد StockEntry برای commit موجودی انبار
-                    # برای هر ProductInfo، از انبار مبدا کم می‌کنیم و به انبار مقصد اضافه می‌کنیم
+                    # گروه‌بندی ProductInfoها بر اساس انبار مبدأ و ایجاد StockEntry جداگانه برای هر انبار
                     product_infos = transport.product_infos.all()
-                    if product_infos.exists() and origin_warehouse_obj and destination_warehouse_obj:
-                        # ایجاد یک StockEntry برای تمام محصولات این حمل
-                        stock_entry = StockEntry.objects.create(
-                            transaction_date=timezone.now(),
-                            entry_type=StockEntry.StockEntryType.SALE,
-                            notes=f'خروج کالا برای حمل {waybill_number} - انتقال از انبار {origin_warehouse_obj.name} به انبار {destination_warehouse_obj.name}',
-                            is_committed=False
-                        )
-                        
+                    if product_infos.exists() and destination_warehouse_obj:
                         # دریافت ContentType برای Product و RawMaterial
                         product_ct = ContentType.objects.get_for_model(Product)
                         raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
                         
-                        # پردازش هر ProductInfo
+                        # گروه‌بندی ProductInfoها بر اساس انبار مبدأ
+                        product_infos_by_origin = {}
                         for product_info in product_infos:
-                            if not product_info.weight or product_info.weight <= 0:
+                            # استفاده از net_weight اگر موجود باشد، در غیر این صورت از weight
+                            product_weight_check = product_info.net_weight if product_info.net_weight else (product_info.weight or 0)
+                            if product_weight_check <= 0:
                                 continue
                             
-                            # تعیین نوع آیتم (محصول یا مواد اولیه)
-                            item = None
-                            is_product = False
-                            content_type = None
-                            
-                            if product_info.product:
-                                item = product_info.product
-                                is_product = True
-                                content_type = product_ct
-                            elif product_info.raw_material:
-                                item = product_info.raw_material
-                                is_product = False
-                                content_type = raw_material_ct
-                            
-                            if not item or not content_type:
-                                bug_logger.warning(f"ProductInfo {product_info.id} برای حمل {waybill_number} فاقد محصول یا مواد اولیه است")
+                            # دریافت انبار مبدأ از product_info_data
+                            product_data = product_info_data.get(product_info.id)
+                            if not product_data:
                                 continue
                             
+                            origin_warehouse_obj = product_data['origin_warehouse_obj']
+                            if not origin_warehouse_obj:
+                                continue
                             
-                            # -------------------------------------------------------------------------
-                            # FIFO Tracing: Link to Parent (Production/Purchase) Entries
-                            # -------------------------------------------------------------------------
-                            try:
-                                remaining_needed = product_info.weight
-                                
-                                # Find valid parent candidates:
-                                # 1. Production (Finished Good) or Purchase (Trading) or Opening
-                                # 2. Must contain the specific Item (TargetStock matches matches to_object_id)
-                                # 3. Must be in the SOURCE warehouse
-                                # 4. Must be committed
-                                candidates = StockEntry.objects.filter(
-                                    entry_type__in=[
-                                        StockEntry.StockEntryType.PRODUCTION, 
-                                        StockEntry.StockEntryType.PURCHASE,
-                                        StockEntry.StockEntryType.OPENING,
-                                        StockEntry.StockEntryType.RETURN_IN
-                                    ],
-                                    target_stocks__to_content_type=content_type,
-                                    target_stocks__to_object_id=item.id,
-                                    target_stocks__to_warehouse=origin_warehouse_obj,
-                                    is_committed=True
-                                ).distinct().order_by('transaction_date')
-
-                                for candidate in candidates:
-                                    if remaining_needed <= 0:
-                                        break
-                                        
-                                    # Check how much is available in this parent entry
-                                    available = candidate.get_remaining_quantity()
-                                    if available <= 0:
-                                        continue
-                                        
-                                    take = min(remaining_needed, available)
-                                    
-                                    # Create or Update Link
-                                    link, created_link = StockEntryParent.objects.get_or_create(
-                                        parent=candidate,
-                                        child=stock_entry,
-                                        defaults={'quantity': 0}
-                                    )
-                                    # Use F expression to avoid race condition if possible, but we need 'take' value
-                                    link.quantity = models.F('quantity') + take
-                                    link.save()
-                                    
-                                    remaining_needed -= take
-                                    bug_logger.info(f"FIFO Sales: Took {take} from Parent {candidate.id} for {item.name}")
-
-                            except Exception as e:
-                                bug_logger.warning(f"FIFO Tracing failed for sale of {item.name}: {e}")
-                            # -------------------------------------------------------------------------
+                            if origin_warehouse_obj.id not in product_infos_by_origin:
+                                product_infos_by_origin[origin_warehouse_obj.id] = {
+                                    'warehouse': origin_warehouse_obj,
+                                    'product_infos': []
+                                }
                             
-                            # ایجاد SourceStock (کاهش از انبار مبدا)
-                            SourceStock.objects.create(
-                                stock_entry=stock_entry,
-                                from_content_type=content_type,
-                                from_object_id=item.id,
-                                from_warehouse=origin_warehouse_obj,
-                                quantity=product_info.weight
-                            )
-                            
-                            # ایجاد TargetStock (افزایش به انبار مقصد)
-                            TargetStock.objects.create(
-                                stock_entry=stock_entry,
-                                to_content_type=content_type,
-                                to_object_id=item.id,
-                                to_warehouse=destination_warehouse_obj,
-                                quantity=product_info.weight
-                            )
+                            product_infos_by_origin[origin_warehouse_obj.id]['product_infos'].append(product_info)
                         
-                        # Commit کردن StockEntry برای اعمال تغییرات در موجودی انبار
-                        try:
-                            stock_entry.commit()
-                            bug_logger.info(f"StockEntry {stock_entry.id} برای حمل {waybill_number} با موفقیت commit شد")
-                        except Exception as e:
-                            bug_logger.error(f"خطا در commit کردن StockEntry {stock_entry.id} برای حمل {waybill_number}: {str(e)}")
-                            raise
+                        # ایجاد StockEntry جداگانه برای هر انبار مبدأ
+                        for origin_warehouse_id, origin_data in product_infos_by_origin.items():
+                            origin_warehouse_obj = origin_data['warehouse']
+                            origin_product_infos = origin_data['product_infos']
+                            
+                            # ایجاد یک StockEntry برای این انبار مبدأ
+                            stock_entry = StockEntry.objects.create(
+                                transaction_date=timezone.now(),
+                                entry_type=StockEntry.StockEntryType.SALE,
+                                notes=f'خروج کالا برای حمل {waybill_number} - انتقال از انبار {origin_warehouse_obj.name} به انبار {destination_warehouse_obj.name}',
+                                is_committed=False
+                            )
+                            
+                            # پردازش هر ProductInfo در این انبار مبدأ
+                            for product_info in origin_product_infos:
+                                # تعیین نوع آیتم (محصول یا مواد اولیه)
+                                item = None
+                                is_product = False
+                                content_type = None
+                                
+                                if product_info.product:
+                                    item = product_info.product
+                                    is_product = True
+                                    content_type = product_ct
+                                elif product_info.raw_material:
+                                    item = product_info.raw_material
+                                    is_product = False
+                                    content_type = raw_material_ct
+                                
+                                if not item or not content_type:
+                                    bug_logger.warning(f"ProductInfo {product_info.id} برای حمل {waybill_number} فاقد محصول یا مواد اولیه است")
+                                    continue
+                                
+                                # استفاده از net_weight اگر موجود باشد، در غیر این صورت از weight
+                                product_weight = product_info.net_weight if product_info.net_weight else (product_info.weight or 0)
+                                
+                                if product_weight <= 0:
+                                    continue
+                                
+                                
+                                # -------------------------------------------------------------------------
+                                # FIFO Tracing: Link to Parent (Production/Purchase) Entries
+                                # -------------------------------------------------------------------------
+                                try:
+                                    remaining_needed = product_weight
+                                    
+                                    # Find valid parent candidates:
+                                    # 1. Production (Finished Good) or Purchase (Trading) or Opening
+                                    # 2. Must contain the specific Item (TargetStock matches matches to_object_id)
+                                    # 3. Must be in the SOURCE warehouse
+                                    # 4. Must be committed
+                                    candidates = StockEntry.objects.filter(
+                                        entry_type__in=[
+                                            StockEntry.StockEntryType.PRODUCTION, 
+                                            StockEntry.StockEntryType.PURCHASE,
+                                            StockEntry.StockEntryType.OPENING,
+                                            StockEntry.StockEntryType.RETURN_IN
+                                        ],
+                                        target_stocks__to_content_type=content_type,
+                                        target_stocks__to_object_id=item.id,
+                                        target_stocks__to_warehouse=origin_warehouse_obj,
+                                        is_committed=True
+                                    ).distinct().order_by('transaction_date')
+
+                                    for candidate in candidates:
+                                        if remaining_needed <= 0:
+                                            break
+                                            
+                                        # Check how much is available in this parent entry
+                                        available = candidate.get_remaining_quantity()
+                                        if available <= 0:
+                                            continue
+                                        
+                                        take = min(remaining_needed, available)
+                                        
+                                        # Create or Update Link
+                                        link, created_link = StockEntryParent.objects.get_or_create(
+                                            parent=candidate,
+                                            child=stock_entry,
+                                            defaults={'quantity': 0}
+                                        )
+                                        # Use F expression to avoid race condition if possible, but we need 'take' value
+                                        link.quantity = models.F('quantity') + take
+                                        link.save()
+                                        
+                                        remaining_needed -= take
+                                        bug_logger.info(f"FIFO Sales: Took {take} from Parent {candidate.id} for {item.name} from warehouse {origin_warehouse_obj.name}")
+
+                                except Exception as e:
+                                    bug_logger.warning(f"FIFO Tracing failed for sale of {item.name} from warehouse {origin_warehouse_obj.name}: {e}")
+                                # -------------------------------------------------------------------------
+                                
+                                # ایجاد SourceStock (کاهش از انبار مبدا)
+                                SourceStock.objects.create(
+                                    stock_entry=stock_entry,
+                                    from_content_type=content_type,
+                                    from_object_id=item.id,
+                                    from_warehouse=origin_warehouse_obj,
+                                    quantity=product_weight
+                                )
+                                
+                                # ایجاد TargetStock (افزایش به انبار مقصد)
+                                TargetStock.objects.create(
+                                    stock_entry=stock_entry,
+                                    to_content_type=content_type,
+                                    to_object_id=item.id,
+                                    to_warehouse=destination_warehouse_obj,
+                                    quantity=product_weight
+                                )
+                            
+                            # Commit کردن StockEntry برای اعمال تغییرات در موجودی انبار
+                            try:
+                                stock_entry.commit()
+                                bug_logger.info(f"StockEntry {stock_entry.id} برای حمل {waybill_number} از انبار {origin_warehouse_obj.name} با موفقیت commit شد")
+                            except Exception as e:
+                                bug_logger.error(f"خطا در commit کردن StockEntry {stock_entry.id} برای حمل {waybill_number} از انبار {origin_warehouse_obj.name}: {str(e)}")
+                                raise
                     
                     # ثبت زمان خروج خودرو
                     schedule_info, created = LoadingScheduleInfo.objects.get_or_create(
@@ -711,20 +758,15 @@ def register_loading_exit_view(request, waybill_number):
         if product_info:
             initial_data['packaging_type'] = product_info.packaging_type
             
-            # تبدیل نام انبار به شیء
-            if product_info.origin_warehouse:
-                origin_warehouse_obj = Warehouse.objects.filter(
-                    name=product_info.origin_warehouse,
-                    warehouse_type='secondary'
-                ).first()
-                if origin_warehouse_obj:
-                    initial_data['origin_warehouse'] = origin_warehouse_obj
-            
             if product_info.destination_warehouse and customer_warehouse:
                 if product_info.destination_warehouse == customer_warehouse.name:
                     initial_data['destination_warehouse'] = customer_warehouse
             elif customer_warehouse:
                 initial_data['destination_warehouse'] = customer_warehouse
+        
+        # تنظیم وزن خالی اولیه از Transport.empty_weight
+        if transport.empty_weight:
+            initial_data['initial_empty_weight'] = transport.empty_weight
         
         # اگر انبار مقصد در initial_data نیست، از انبار مشتری استفاده می‌کنیم
         if 'destination_warehouse' not in initial_data and customer_warehouse:
@@ -874,6 +916,9 @@ def register_loading_exit_view(request, waybill_number):
     # بررسی دسترسی فیلدها
     accessible_person_fields = get_accessible_person_fields(request.user)
     
+    # دریافت لیست انبارهای مبدأ (انبارهای ثانویه)
+    origin_warehouses = Warehouse.objects.filter(warehouse_type='secondary').order_by('name')
+    
     context = {
         'form': form,
         'transport': transport,
@@ -886,6 +931,7 @@ def register_loading_exit_view(request, waybill_number):
         'product_info_list': product_info_list,
         'order_number': order_number or 'نامشخص',
         'accessible_person_fields': accessible_person_fields,
+        'origin_warehouses': origin_warehouses,
         'page_title': f'ثبت خروج کالا - {transport.waybill_number}',
     }
     return render(request, 'distribution/loading_exit_detail.html', context)

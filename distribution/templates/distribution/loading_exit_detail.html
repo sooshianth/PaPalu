@@ -139,6 +139,20 @@
         cursor: not-allowed;
     }
     
+    #initial_empty_weight {
+        pointer-events: auto !important;
+        opacity: 1 !important;
+        cursor: text !important;
+    }
+    
+    #initial_empty_weight:disabled,
+    #initial_empty_weight[readonly] {
+        pointer-events: auto !important;
+        opacity: 1 !important;
+        cursor: text !important;
+        background-color: white !important;
+    }
+    
     .plate-input-group {
         display: flex;
         gap: 10px;
@@ -420,7 +434,7 @@
 
     .stage-item-content {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
         gap: 15px;
     }
 
@@ -621,28 +635,30 @@
                 {% if product_info_list %}
                 <div class="alert alert-info mb-3">
                     <strong>📋 راهنما:</strong><br>
-                    ۱. وزن پر اولیه خودرو با بار کامل را ثبت کنید<br>
-                    ۲. محصول اول را انتخاب کرده و پس از تخلیه، وزن باقیمانده خودرو را ثبت کنید<br>
+                    ۱. وزن خالی اولیه خودرو را ثبت کنید<br>
+                    ۲. محصول اول را انتخاب کرده و پس از بارگیری، وزن جدید خودرو را ثبت کنید<br>
                     ۳. برای هر محصول بعدی این فرآیند را تکرار کنید<br>
-                    ۴. آخرین وزن ثبت شده، وزن خالی خودرو خواهد بود
+                    ۴. آخرین وزن ثبت شده، وزن پر خودرو خواهد بود
                 </div>
 
-                <!-- وزن پر اولیه -->
+                <!-- وزن خالی اولیه -->
                 <div class="initial-weight-box">
                     <div class="form-group">
-                        <label for="initial_gross_weight" class="form-label required">وزن پر اولیه (کیلوگرم)</label>
-                        <input type="number" class="form-control" id="initial_gross_weight" 
-                               name="initial_gross_weight" step="0.001" 
-                               placeholder="وزن خودرو با بار کامل" 
-                               value="{{ transport.gross_weight|default:'' }}"
+                        <label for="initial_empty_weight" class="form-label required">وزن خالی اولیه (کیلوگرم)</label>
+                        <input type="number" class="form-control" id="initial_empty_weight" 
+                               name="initial_empty_weight" step="0.001" 
+                               placeholder="وزن خودرو خالی" 
+                               value="{{ transport.empty_weight|default:'' }}"
+                               autocomplete="off"
+                               tabindex="1"
                                required>
-                        <small class="text-muted" style="display: block; margin-top: 5px;">وزن خودرو با بار کامل قبل از شروع تخلیه</small>
+                        <small class="text-muted" style="display: block; margin-top: 5px;">وزن خودرو خالی قبل از شروع بارگیری</small>
                     </div>
                 </div>
 
-                <!-- مراحل تخلیه -->
-                <div id="unloading-stages-container">
-                    <h6 class="mb-3 fw-bold" style="color: var(--primary-green);">مراحل تخلیه:</h6>
+                <!-- مراحل بارگیری -->
+                <div id="loading-stages-container">
+                    <h6 class="mb-3 fw-bold" style="color: var(--primary-green);">مراحل بارگیری:</h6>
                     
                     <div id="stages-list">
                         <!-- مراحل به صورت داینامیک اضافه می‌شوند -->
@@ -653,7 +669,7 @@
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                             <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                         </svg>
-                        افزودن مرحله تخلیه
+                        افزودن مرحله بارگیری
                     </button>
                 </div>
 
@@ -662,12 +678,12 @@
                     <h6 class="fw-bold mb-2">خلاصه وزن‌ها:</h6>
                     <div class="summary-items-row">
                         <div class="summary-item">
-                            <div class="summary-item-label">وزن پر</div>
-                            <div class="summary-item-value" id="summary-gross-weight">—</div>
+                            <div class="summary-item-label">وزن خالی</div>
+                            <div class="summary-item-value" id="summary-empty-weight">—</div>
                         </div>
                         <div class="summary-item">
-                            <div class="summary-item-label">وزن خالی</div>
-                            <div class="summary-item-value" id="summary-tare-weight">—</div>
+                            <div class="summary-item-label">وزن پر</div>
+                            <div class="summary-item-value" id="summary-gross-weight">—</div>
                         </div>
                         <div class="summary-item">
                             <div class="summary-item-label">وزن خالص کل</div>
@@ -688,10 +704,10 @@
             </div>
         </div>
         
-        <!-- بخش 2: فیلدهای اجباری بسته‌بندی و انبار -->
+        <!-- بخش 2: فیلدهای اجباری بسته‌بندی و انبار مقصد -->
         <div class="form-section">
             <div class="form-section-header">
-                <h5 class="form-section-title">اطلاعات بسته‌بندی و انبار (اجباری)</h5>
+                <h5 class="form-section-title">اطلاعات بسته‌بندی و انبار مقصد (اجباری)</h5>
                 <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
@@ -709,40 +725,11 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.origin_warehouse.id_for_label }}" class="required">انبار مبدأ</label>
-                {{ form.origin_warehouse }}
-                {% if form.origin_warehouse.errors %}
-                    <div class="alert alert-error">
-                        {{ form.origin_warehouse.errors }}
-                    </div>
-                {% endif %}
-            </div>
-            
-            <div class="form-group">
                 <label for="{{ form.destination_warehouse.id_for_label }}" class="required">انبار مقصد</label>
                 {{ form.destination_warehouse }}
                 {% if form.destination_warehouse.errors %}
                     <div class="alert alert-error">
                         {{ form.destination_warehouse.errors }}
-                    </div>
-                {% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.driver_account_number.id_for_label }}">شماره حساب راننده</label>
-                <div style="display: flex; gap: 10px; align-items: flex-end;">
-                    <div style="flex: 1;">
-                        {{ form.driver_account_number }}
-                    </div>
-                    {% if transport.driver %}
-                    <button type="button" id="createAccountBtn" class="btn-outline-primary" style="white-space: nowrap;">
-                        ایجاد حساب جدید
-                    </button>
-                    {% endif %}
-                </div>
-                {% if form.driver_account_number.errors %}
-                    <div class="alert alert-error">
-                        {{ form.driver_account_number.errors }}
                     </div>
                 {% endif %}
             </div>
@@ -785,6 +772,25 @@
                 {% if form.driver_mobile.errors %}
                     <div class="alert alert-error">
                         {{ form.driver_mobile.errors }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.driver_account_number.id_for_label }}">شماره حساب راننده</label>
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <div style="flex: 1;">
+                        {{ form.driver_account_number }}
+                    </div>
+                    {% if transport.driver %}
+                    <button type="button" id="createAccountBtn" class="btn-outline-primary" style="white-space: nowrap;">
+                        ایجاد حساب جدید
+                    </button>
+                    {% endif %}
+                </div>
+                {% if form.driver_account_number.errors %}
+                    <div class="alert alert-error">
+                        {{ form.driver_account_number.errors }}
                     </div>
                 {% endif %}
             </div>
@@ -930,7 +936,7 @@
         });
         
         // ==========================================
-        //       SEQUENTIAL WEIGHING SYSTEM
+        //       SEQUENTIAL LOADING WEIGHING SYSTEM
         // ==========================================
 
         const productInfosData = [
@@ -947,20 +953,54 @@
         let stages = [];
         let stageCounter = 0;
 
-        const initialGrossInput = document.getElementById('initial_gross_weight');
+        const initialEmptyInput = document.getElementById('initial_empty_weight');
         const stagesList = document.getElementById('stages-list');
         const addStageBtn = document.getElementById('add-stage-btn');
         const submitBtn = document.getElementById('submitBtn');
 
         // Summary displays
+        const summaryEmpty = document.getElementById('summary-empty-weight');
         const summaryGross = document.getElementById('summary-gross-weight');
-        const summaryTare = document.getElementById('summary-tare-weight');
         const summaryNet = document.getElementById('summary-net-weight');
         const summaryStagesCount = document.getElementById('summary-stages-count');
 
         // Check if elements exist
-        if (!initialGrossInput || !stagesList) {
+        if (!initialEmptyInput || !stagesList) {
             console.error('Required elements not found!');
+        }
+        
+        // اطمینان از اینکه فیلد وزن خالی اولیه قابل تایپ است
+        if (initialEmptyInput) {
+            console.log('Initial empty weight input found:', initialEmptyInput);
+            console.log('Readonly:', initialEmptyInput.readOnly);
+            console.log('Disabled:', initialEmptyInput.disabled);
+            
+            initialEmptyInput.removeAttribute('readonly');
+            initialEmptyInput.removeAttribute('disabled');
+            initialEmptyInput.readOnly = false;
+            initialEmptyInput.disabled = false;
+            initialEmptyInput.style.pointerEvents = 'auto';
+            initialEmptyInput.style.opacity = '1';
+            initialEmptyInput.style.cursor = 'text';
+            
+            // اضافه کردن event listener برای focus
+            initialEmptyInput.addEventListener('focus', function() {
+                console.log('Input focused');
+                this.removeAttribute('readonly');
+                this.removeAttribute('disabled');
+                this.readOnly = false;
+                this.disabled = false;
+                this.style.pointerEvents = 'auto';
+                this.style.opacity = '1';
+            });
+            
+            // اضافه کردن event listener برای click
+            initialEmptyInput.addEventListener('click', function() {
+                console.log('Input clicked');
+                this.focus();
+            });
+        } else {
+            console.error('Initial empty weight input not found!');
         }
 
         function persianNumber(num) {
@@ -978,31 +1018,31 @@
         }
 
         function updateSummary() {
-            if (!summaryGross || !summaryTare || !summaryNet || !summaryStagesCount) {
+            if (!summaryEmpty || !summaryGross || !summaryNet || !summaryStagesCount) {
                 return;
             }
             
-            const grossWeight = parseFloat(initialGrossInput ? initialGrossInput.value : 0) || 0;
-            let tareWeight = 0;
+            const emptyWeight = parseFloat(initialEmptyInput ? initialEmptyInput.value : 0) || 0;
+            let grossWeight = emptyWeight;
             let totalNet = 0;
 
             if (stages.length > 0) {
-                tareWeight = parseFloat(stages[stages.length - 1].weightAfter) || 0;
+                grossWeight = parseFloat(stages[stages.length - 1].weightAfter) || emptyWeight;
             }
 
             stages.forEach(stage => {
                 totalNet += parseFloat(stage.netWeight) || 0;
             });
 
-            summaryGross.textContent = grossWeight > 0 ? persianNumber(grossWeight.toFixed(3)) + ' کیلوگرم' : '—';
-            summaryTare.textContent = tareWeight > 0 ? persianNumber(tareWeight.toFixed(3)) + ' کیلوگرم' : '—';
+            summaryEmpty.textContent = emptyWeight > 0 ? persianNumber(emptyWeight.toFixed(3)) + ' کیلوگرم' : '—';
+            summaryGross.textContent = grossWeight > emptyWeight ? persianNumber(grossWeight.toFixed(3)) + ' کیلوگرم' : '—';
             summaryNet.textContent = totalNet > 0 ? persianNumber(totalNet.toFixed(3)) + ' کیلوگرم' : '—';
             summaryStagesCount.textContent = persianNumber(stages.length);
 
             // Validation for submit button
             if (submitBtn) {
                 const allProductsProcessed = stages.length === productInfosData.length;
-                const hasValidWeights = grossWeight > 0 && tareWeight > 0 && totalNet > 0;
+                const hasValidWeights = emptyWeight > 0 && grossWeight > emptyWeight && totalNet > 0;
                 submitBtn.disabled = !(allProductsProcessed && hasValidWeights);
             }
         }
@@ -1014,7 +1054,7 @@
             stageDiv.id = `stage-container-${stage.id}`;
 
             const weightBefore = index === 0 
-                ? (parseFloat(initialGrossInput ? initialGrossInput.value : 0) || 0)
+                ? (parseFloat(initialEmptyInput ? initialEmptyInput.value : 0) || 0)
                 : (stages[index - 1] ? parseFloat(stages[index - 1].weightAfter) || 0 : 0);
 
             const productName = productInfo ? productInfo.name : '';
@@ -1030,6 +1070,18 @@
                 selectOptions += `<option value="${i.id}" ${selected}>${i.name}</option>`;
             });
 
+            // ساخت options برای انبارهای مبدأ
+            let warehouseOptions = '<option value="">انتخاب انبار مبدأ...</option>';
+            const originWarehouses = [
+                {% for warehouse in origin_warehouses %}
+                {id: {{ warehouse.id }}, name: "{{ warehouse.name|escapejs }}"}{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ];
+            originWarehouses.forEach(function(wh) {
+                const selected = stage.originWarehouseId == wh.id ? 'selected' : '';
+                warehouseOptions += `<option value="${wh.id}" ${selected}>${wh.name}</option>`;
+            });
+
             stageDiv.innerHTML = `
                 <div class="stage-item-header">
                     <h6 class="stage-item-title">مرحله ${persianNumber(index + 1)}</h6>
@@ -1043,20 +1095,26 @@
                 </div>
                 <div class="stage-item-content">
                     <div class="form-group">
-                        <label class="form-label">محصول</label>
+                        <label class="form-label required">محصول</label>
                         <select class="form-select" id="stage-${stage.id}-product" onchange="updateStageProduct(${stage.id}, this.value)" required>
                             ${selectOptions}
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">وزن قبل از تخلیه</label>
+                        <label class="form-label required">انبار مبدأ</label>
+                        <select class="form-select" id="stage-${stage.id}-origin-warehouse" onchange="updateStageOriginWarehouse(${stage.id}, this.value)" required>
+                            ${warehouseOptions}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">وزن قبل از بارگیری</label>
                         <input type="text" class="form-control" id="stage-${stage.id}-before" 
                                value="${persianNumber(weightBefore.toFixed(3))} کیلوگرم" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label required">وزن بعد از تخلیه (کیلوگرم)</label>
+                        <label class="form-label required">وزن بعد از بارگیری (کیلوگرم)</label>
                         <input type="number" class="form-control" id="stage-${stage.id}-after" 
-                               step="0.001" placeholder="وزن باقیمانده" 
+                               step="0.001" placeholder="وزن جدید" 
                                value="${stage.weightAfter || ''}"
                                required>
                     </div>
@@ -1075,13 +1133,15 @@
                 const newWeightInput = weightInput.cloneNode(true);
                 weightInput.parentNode.replaceChild(newWeightInput, weightInput);
                 
+                // در input فقط مقدار را به‌روزرسانی می‌کنیم بدون اعتبارسنجی
                 newWeightInput.addEventListener('input', function() {
                     const value = this.value.trim();
-                    if (value) {
-                        updateStageWeight(stage.id, value);
-                    } else {
-                        const stageObj = stages.find(s => s.id === stage.id);
-                        if (stageObj) {
+                    const stageObj = stages.find(s => s.id === stage.id);
+                    if (stageObj) {
+                        if (value) {
+                            // فقط مقدار را ذخیره می‌کنیم و وزن خالص را محاسبه می‌کنیم (بدون اعتبارسنجی)
+                            updateStageWeight(stage.id, value, false);
+                        } else {
                             stageObj.weightAfter = '';
                             stageObj.netWeight = 0;
                             updateSummary();
@@ -1089,11 +1149,13 @@
                     }
                 });
                 
+                // در blur اعتبارسنجی را انجام می‌دهیم
                 newWeightInput.addEventListener('blur', function() {
                     const value = this.value.trim();
                     const stageObj = stages.find(s => s.id === stage.id);
                     if (stageObj && value) {
-                        stageObj.weightAfter = value;
+                        // اعتبارسنجی کامل
+                        updateStageWeight(stage.id, value, true);
                     }
                 });
             }
@@ -1120,14 +1182,14 @@
                 const availableProductInfos = getAvailableProductInfos();
                 addStageBtn.disabled = availableProductInfos.length === 0;
                 if (availableProductInfos.length === 0) {
-                    addStageBtn.innerHTML = '<span>✓ همه محصولات تخلیه شده‌اند</span>';
+                    addStageBtn.innerHTML = '<span>✓ همه محصولات بارگیری شده‌اند</span>';
                 } else {
                     addStageBtn.innerHTML = `
                         <svg width="16" height="16" fill="currentColor" class="bi bi-plus-circle" viewBox="0 0 16 16" style="margin-left: 5px;">
                             <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                             <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                         </svg>
-                        افزودن مرحله تخلیه
+                        افزودن مرحله بارگیری
                     `;
                 }
             }
@@ -1136,17 +1198,17 @@
         }
 
         function addStage() {
-            if (!initialGrossInput) {
-                alert('خطا: فیلد وزن پر اولیه یافت نشد.');
+            if (!initialEmptyInput) {
+                alert('خطا: فیلد وزن خالی اولیه یافت نشد.');
                 return;
             }
             
-            const grossWeight = parseFloat(initialGrossInput.value) || 0;
+            const emptyWeight = parseFloat(initialEmptyInput.value) || 0;
             
-            if (grossWeight <= 0) {
-                alert('ابتدا وزن پر اولیه را وارد کنید.');
-                if (initialGrossInput) {
-                    initialGrossInput.focus();
+            if (emptyWeight <= 0) {
+                alert('ابتدا وزن خالی اولیه را وارد کنید.');
+                if (initialEmptyInput) {
+                    initialEmptyInput.focus();
                 }
                 return;
             }
@@ -1154,7 +1216,7 @@
             const availableProductInfos = getAvailableProductInfos();
             
             if (availableProductInfos.length === 0) {
-                alert('همه محصولات تخلیه شده‌اند.');
+                alert('همه محصولات بارگیری شده‌اند.');
                 return;
             }
 
@@ -1162,6 +1224,7 @@
             stages.push({
                 id: stageCounter,
                 productInfoId: null,
+                originWarehouseId: null,
                 weightAfter: '',
                 netWeight: 0
             });
@@ -1186,38 +1249,52 @@
                 renderAllStages();
             }
         };
+        
+        window.updateStageOriginWarehouse = function(stageId, warehouseId) {
+            const stage = stages.find(s => s.id === stageId);
+            if (stage) {
+                const parsedWarehouseId = parseInt(warehouseId);
+                if (!isNaN(parsedWarehouseId) && parsedWarehouseId > 0) {
+                    stage.originWarehouseId = parsedWarehouseId;
+                } else {
+                    stage.originWarehouseId = null;
+                }
+            }
+        };
 
-        window.updateStageWeight = function(stageId, weight) {
+        window.updateStageWeight = function(stageId, weight, validate = false) {
             const stage = stages.find(s => s.id === stageId);
             if (!stage) return;
 
             const stageIndex = stages.indexOf(stage);
             const weightBefore = stageIndex === 0 
-                ? (parseFloat(initialGrossInput ? initialGrossInput.value : 0) || 0)
+                ? (parseFloat(initialEmptyInput ? initialEmptyInput.value : 0) || 0)
                 : (parseFloat(stages[stageIndex - 1].weightAfter) || 0);
             
             const weightAfter = parseFloat(weight) || 0;
             
-            // Validation: weight after should be less than weight before
-            if (weightAfter >= weightBefore && weightAfter > 0) {
-                alert(`وزن بعد از تخلیه (${weightAfter}) نمی‌تواند بزرگتر یا برابر با وزن قبل از تخلیه (${weightBefore}) باشد.`);
-                const inputElement = document.getElementById(`stage-${stageId}-after`);
-                if (inputElement) {
-                    inputElement.value = '';
+            // Validation: فقط در صورت نیاز (validate = true) اعتبارسنجی انجام می‌شود
+            if (validate && weightAfter > 0) {
+                if (weightAfter <= weightBefore) {
+                    alert(`وزن بعد از بارگیری (${weightAfter}) باید بیشتر از وزن قبل از بارگیری (${weightBefore}) باشد.`);
+                    const inputElement = document.getElementById(`stage-${stageId}-after`);
+                    if (inputElement) {
+                        inputElement.value = '';
+                    }
+                    stage.weightAfter = '';
+                    stage.netWeight = 0;
+                    const netDisplay = document.getElementById(`stage-${stageId}-net`);
+                    if (netDisplay) {
+                        netDisplay.textContent = '—';
+                        netDisplay.style.color = '';
+                    }
+                    updateSummary();
+                    return;
                 }
-                stage.weightAfter = '';
-                stage.netWeight = 0;
-                const netDisplay = document.getElementById(`stage-${stageId}-net`);
-                if (netDisplay) {
-                    netDisplay.textContent = '—';
-                    netDisplay.style.color = '';
-                }
-                updateSummary();
-                return;
             }
             
             stage.weightAfter = String(weight).trim();
-            const netWeight = weightBefore - weightAfter;
+            const netWeight = weightAfter - weightBefore;
             stage.netWeight = netWeight > 0 ? netWeight : 0;
             
             // Update only the net display
@@ -1236,7 +1313,7 @@
             for (let i = stageIndex + 1; i < stages.length; i++) {
                 const nextStage = stages[i];
                 const nextWeightBefore = i === 0 
-                    ? (parseFloat(initialGrossInput ? initialGrossInput.value : 0) || 0)
+                    ? (parseFloat(initialEmptyInput ? initialEmptyInput.value : 0) || 0)
                     : (parseFloat(stages[i - 1].weightAfter) || 0);
                 
                 const beforeDisplay = document.getElementById(`stage-${nextStage.id}-before`);
@@ -1246,7 +1323,7 @@
                 
                 if (nextStage.weightAfter) {
                     const nextWeightAfter = parseFloat(nextStage.weightAfter) || 0;
-                    const nextNetWeight = nextWeightBefore - nextWeightAfter;
+                    const nextNetWeight = nextWeightAfter - nextWeightBefore;
                     nextStage.netWeight = nextNetWeight > 0 ? nextNetWeight : 0;
                     
                     const nextNetDisplay = document.getElementById(`stage-${nextStage.id}-net`);
@@ -1274,11 +1351,11 @@
             });
         }
 
-        if (initialGrossInput) {
-            initialGrossInput.addEventListener('input', function() {
+        if (initialEmptyInput) {
+            initialEmptyInput.addEventListener('input', function() {
                 stages.forEach((stage, index) => {
                     const weightBefore = index === 0 
-                        ? (parseFloat(initialGrossInput.value) || 0)
+                        ? (parseFloat(initialEmptyInput.value) || 0)
                         : (parseFloat(stages[index - 1].weightAfter) || 0);
                     
                     const beforeDisplay = document.getElementById(`stage-${stage.id}-before`);
@@ -1288,7 +1365,7 @@
                     
                     if (stage.weightAfter) {
                         const weightAfter = parseFloat(stage.weightAfter) || 0;
-                        const netWeight = weightBefore - weightAfter;
+                        const netWeight = weightAfter - weightBefore;
                         stage.netWeight = netWeight > 0 ? netWeight : 0;
                         
                         const netDisplay = document.getElementById(`stage-${stage.id}-net`);
@@ -1308,12 +1385,12 @@
         }
 
         // Initialize
-        if (stagesList && initialGrossInput) {
+        if (stagesList && initialEmptyInput) {
             renderAllStages();
         } else {
             console.error('Cannot initialize: required elements missing', {
                 stagesList: !!stagesList,
-                initialGrossInput: !!initialGrossInput
+                initialEmptyInput: !!initialEmptyInput
             });
         }
 
@@ -1322,18 +1399,26 @@
         if (form) {
             form.addEventListener('submit', function(e) {
                 // Remove old hidden fields if any
-                const oldFields = form.querySelectorAll('input[name^="unloading_stages"]');
+                const oldFields = form.querySelectorAll('input[name^="loading_stages"]');
                 oldFields.forEach(field => field.remove());
                 
                 // Sync values from DOM to stages array before validation
                 stages.forEach((stage) => {
                     const productSelect = document.getElementById(`stage-${stage.id}-product`);
                     const weightInput = document.getElementById(`stage-${stage.id}-after`);
+                    const originWarehouseSelect = document.getElementById(`stage-${stage.id}-origin-warehouse`);
                     
                     if (productSelect) {
                         const productInfoId = productSelect.value;
                         if (productInfoId) {
                             stage.productInfoId = parseInt(productInfoId);
+                        }
+                    }
+                    
+                    if (originWarehouseSelect) {
+                        const warehouseId = originWarehouseSelect.value;
+                        if (warehouseId) {
+                            stage.originWarehouseId = parseInt(warehouseId);
                         }
                     }
                     
@@ -1357,11 +1442,29 @@
                         return;
                     }
                     
+                    const originWarehouseId = parseInt(stage.originWarehouseId);
+                    if (!stage.originWarehouseId || isNaN(originWarehouseId) || originWarehouseId <= 0) {
+                        hasError = true;
+                        errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً انبار مبدأ را انتخاب کنید.`;
+                        return;
+                    }
+                    
                     const weightAfterStr = String(stage.weightAfter || '').trim();
                     const weightAfter = parseFloat(weightAfterStr);
                     if (!weightAfterStr || weightAfterStr === '' || isNaN(weightAfter) || weightAfter <= 0) {
                         hasError = true;
-                        errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً وزن بعد از تخلیه را وارد کنید.`;
+                        errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً وزن بعد از بارگیری را وارد کنید.`;
+                        return;
+                    }
+                    
+                    // اعتبارسنجی: وزن بعد از بارگیری باید بیشتر از وزن قبل باشد
+                    const weightBefore = index === 0 
+                        ? (parseFloat(initialEmptyInput ? initialEmptyInput.value : 0) || 0)
+                        : (parseFloat(stages[index - 1].weightAfter) || 0);
+                    
+                    if (weightAfter <= weightBefore) {
+                        hasError = true;
+                        errorMessage = `مرحله ${persianNumber(index + 1)}: وزن بعد از بارگیری (${weightAfter}) باید بیشتر از وزن قبل از بارگیری (${weightBefore}) باشد.`;
                         return;
                     }
                 });
@@ -1376,13 +1479,19 @@
                 stages.forEach((stage, index) => {
                     const productInfoInput = document.createElement('input');
                     productInfoInput.type = 'hidden';
-                    productInfoInput.name = `unloading_stages[${index}][product_info_id]`;
+                    productInfoInput.name = `loading_stages[${index}][product_info_id]`;
                     productInfoInput.value = stage.productInfoId;
                     form.appendChild(productInfoInput);
                     
+                    const originWarehouseInput = document.createElement('input');
+                    originWarehouseInput.type = 'hidden';
+                    originWarehouseInput.name = `loading_stages[${index}][origin_warehouse_id]`;
+                    originWarehouseInput.value = stage.originWarehouseId;
+                    form.appendChild(originWarehouseInput);
+                    
                     const weightInput = document.createElement('input');
                     weightInput.type = 'hidden';
-                    weightInput.name = `unloading_stages[${index}][weight]`;
+                    weightInput.name = `loading_stages[${index}][weight]`;
                     weightInput.value = stage.weightAfter;
                     form.appendChild(weightInput);
                 });

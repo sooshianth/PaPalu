@@ -27,12 +27,11 @@ class LoadingExitForm(forms.Form):
     )
     
     origin_warehouse = forms.ModelChoiceField(
-        required=True,
+        required=False,  # دیگر از form استفاده نمی‌شود - در هر مرحله توزین انتخاب می‌شود
         label='انبار مبدأ',
         queryset=Warehouse.objects.filter(warehouse_type='secondary'),
         widget=forms.Select(attrs={
-            'class': 'form-control',
-            'required': True
+            'class': 'form-control'
         }),
         empty_label='-- انتخاب انبار مبدأ --'
     )
