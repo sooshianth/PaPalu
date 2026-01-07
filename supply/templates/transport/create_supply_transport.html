@@ -710,6 +710,14 @@
           {% if accessible_transport_fields.plate_number %}
           <div class="col-md-4 mb-3">
             <label class="form-label">{{ form.plate_number.label }}</label>
+            <!-- نمایش پلاک‌های پیشنهادی راننده -->
+            <div id="driver-plates-suggestions" style="display: none; margin-bottom: 10px;">
+              <label style="font-size: 0.85rem; color: #666; margin-bottom: 5px; display: block;">پلاک‌های ثبت شده برای این راننده:</label>
+              <select id="driver-plates-select" class="form-control" style="font-size: 0.9rem;">
+                <option value="">-- انتخاب پلاک --</option>
+              </select>
+              <small style="font-size:0.75rem;color:#666;margin-top:4px;display:block">می‌توانید یکی از پلاک‌های قبلی را انتخاب کنید</small>
+            </div>
             <div class="plate-input">
               <div class="plate-seg">
                 <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="12" inputmode="numeric"
@@ -1065,6 +1073,139 @@
     return null;
   }
 
+  // Flag برای جلوگیری از اضافه شدن event listener تکراری برای dropdown پلاک
+  let plateSelectListenerAdded = false;
+
+  // تابع برای parse کردن پلاک ذخیره شده (فرمت: 11|345ب12)
+  function parsePlateNumber(plateNumber) {
+    if (!plateNumber) return null;
+
+    // فرمت: 11|345ب12
+    const match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
+    if (match) {
+      return {
+        iran: match[1],
+        middle: match[2],
+        letter: match[3],
+        last: match[4]
+      };
+    }
+
+    // فرمت قدیمی: 11-345-ب-12 یا 11|345-ب-12
+    const oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
+    if (oldMatch) {
+      return {
+        iran: oldMatch[1],
+        middle: oldMatch[2],
+        letter: oldMatch[3],
+        last: oldMatch[4]
+      };
+    }
+
+    return null;
+  }
+
+  // تابع برای بارگذاری پلاک‌های راننده (باید در scope بالاتر تعریف شود)
+  function loadDriverPlateNumbers(driverId) {
+    if (!driverId) {
+      const driverPlatesSuggestions = document.getElementById('driver-plates-suggestions');
+      if (driverPlatesSuggestions) {
+        driverPlatesSuggestions.style.display = 'none';
+      }
+      return;
+    }
+
+    const platesSelect = document.getElementById('driver-plates-select');
+    const driverPlatesSuggestions = document.getElementById('driver-plates-suggestions');
+    
+    if (!platesSelect || !driverPlatesSuggestions) {
+      console.warn('عناصر dropdown پلاک یافت نشدند');
+      return;
+    }
+
+    // پاک کردن گزینه‌های قبلی
+    platesSelect.innerHTML = '<option value="">-- انتخاب پلاک --</option>';
+
+    // اضافه کردن event listener برای انتخاب پلاک (فقط یک بار)
+    if (!plateSelectListenerAdded) {
+      platesSelect.addEventListener('change', function () {
+        const selectedPlate = this.value;
+        if (selectedPlate) {
+          console.log('پلاک انتخاب شد:', selectedPlate);
+          
+          // parse کردن پلاک و پر کردن فیلدها
+          const parsed = parsePlateNumber(selectedPlate);
+          console.log('پلاک parse شده:', parsed);
+          
+          if (parsed) {
+            const plateIran = document.getElementById('plate-iran');
+            const plateMiddle = document.getElementById('plate-middle');
+            const plateLetter = document.getElementById('plate-letter');
+            const plateLast = document.getElementById('plate-last');
+            const hidden = document.getElementById('id_plate_number');
+            
+            if (plateIran) {
+              plateIran.value = parsed.iran;
+              console.log('plate-iran set to:', parsed.iran);
+            }
+            if (plateMiddle) {
+              plateMiddle.value = parsed.middle;
+              console.log('plate-middle set to:', parsed.middle);
+            }
+            if (plateLetter) {
+              plateLetter.value = parsed.letter;
+              console.log('plate-letter set to:', parsed.letter);
+            }
+            if (plateLast) {
+              plateLast.value = parsed.last;
+              console.log('plate-last set to:', parsed.last);
+            }
+            
+            // ذخیره در hidden field
+            if (hidden) {
+              hidden.value = selectedPlate;
+              console.log('hidden field set to:', selectedPlate);
+            }
+          } else {
+            console.warn('نتوانست پلاک را parse کند:', selectedPlate);
+          }
+        }
+      });
+      plateSelectListenerAdded = true;
+    }
+
+    console.log('در حال دریافت پلاک‌های راننده با ID:', driverId);
+    fetch(`{% url "supply:get_driver_plate_numbers_api" 0 %}`.replace('0', driverId))
+      .then(response => {
+        console.log('پاسخ API دریافت شد:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('پاسخ API پلاک‌ها:', data);
+        if (data.success && data.plates && data.plates.length > 0) {
+          // نمایش dropdown پلاک‌ها
+          driverPlatesSuggestions.style.display = 'block';
+          
+          // اضافه کردن پلاک‌ها به dropdown
+          data.plates.forEach(function (plate) {
+            const option = document.createElement('option');
+            option.value = plate.plate_number;
+            option.textContent = plate.display;
+            platesSelect.appendChild(option);
+          });
+          console.log(`تعداد ${data.plates.length} پلاک به dropdown اضافه شد`);
+        } else {
+          // اگر پلاکی وجود نداشت، dropdown را مخفی کن
+          driverPlatesSuggestions.style.display = 'none';
+          console.log('پلاکی برای این راننده یافت نشد');
+        }
+      })
+      .catch(error => {
+        console.error('خطا در دریافت پلاک‌های راننده:', error);
+        driverPlatesSuggestions.style.display = 'none';
+      });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     const orderSelect = document.getElementById('id_purchase_order');
 
@@ -1177,6 +1318,8 @@
               driverIdInput.value = item.id;
               // بارگذاری حساب‌های بانکی راننده
               loadDriverBankAccounts(item.id);
+              // بارگذاری پلاک‌های راننده
+              loadDriverPlateNumbers(item.id);
             }
             driverSuggestions.style.display = 'none';
           });
@@ -1206,6 +1349,8 @@
         .then(data => {
           if (data.results && data.results.length > 0) {
             driverInput.value = data.results[0].text;
+            // بارگذاری پلاک‌های راننده
+            loadDriverPlateNumbers({{ form.driver.value }});
           }
         });
       {% endif %}
@@ -1753,34 +1898,6 @@
     if (el.value.length > 1) {
       el.value = el.value.charAt(0);
     }
-  }
-  // تابع برای parse کردن پلاک ذخیره شده (فرمت: 11|345ب12)
-  function parsePlateNumber(plateNumber) {
-    if (!plateNumber) return null;
-
-    // فرمت: 11|345ب12
-    const match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
-    if (match) {
-      return {
-        iran: match[1],
-        middle: match[2],
-        letter: match[3],
-        last: match[4]
-      };
-    }
-
-    // فرمت قدیمی: 11-345-ب-12 یا 11|345-ب-12
-    const oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
-    if (oldMatch) {
-      return {
-        iran: oldMatch[1],
-        middle: oldMatch[2],
-        letter: oldMatch[3],
-        last: oldMatch[4]
-      };
-    }
-
-    return null;
   }
 
   // اگر پلاک از قبل وجود دارد، آن را parse و نمایش بده

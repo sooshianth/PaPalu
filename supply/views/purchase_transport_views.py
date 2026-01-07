@@ -695,6 +695,11 @@ def create_purchase_transport_view(request):
                         if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
                             pt.freight_payment_type = pt.allocation.order.freight_payment_type
                         
+                        # اگر کرایه از نوع "محاسبه شده در فی" باشد، payment_doc_uploaded را خودکار True کن
+                        if pt.freight_payment_type == 'calculated_in_invoice':
+                            pt.payment_doc_uploaded = True
+                            bug_logger.info(f"حمل {pt.transport_number if pt.transport_number else 'در حال ایجاد'} - کرایه محاسبه شده در فی است، payment_doc_uploaded به True تنظیم شد")
+                        
                         # لاگ کردن پلاک قبل از ذخیره
                         if pt.plate_number:
                             bug_logger.info(f"پلاک قبل از ذخیره: {pt.plate_number}")
@@ -1282,6 +1287,44 @@ def create_supplier_bank_account_api(request):
     except Exception as e:
         bug_logger.error(f"Create supplier bank account API error: {e}", exc_info=True)
         return JsonResponse({'error': f'خطا در ایجاد حساب بانکی: {str(e)}'}, status=500)
+
+
+@login_required
+def get_driver_plate_numbers_api(request, driver_id):
+    """API endpoint برای دریافت لیست پلاک‌های ثبت شده برای یک راننده"""
+    from django.http import JsonResponse
+    from django.db.models import Q
+    
+    audit_logger.info(f"دریافت پلاک‌های راننده از طریق API - ID: {driver_id}")
+    try:
+        driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
+        
+        # دریافت پلاک‌های منحصر به فرد که برای این راننده ثبت شده‌اند
+        # فقط پلاک‌هایی که خالی نیستند
+        plate_numbers = Transport.objects.filter(
+            driver=driver
+        ).exclude(
+            Q(plate_number__isnull=True) | Q(plate_number='')
+        ).values_list('plate_number', flat=True).distinct()
+        
+        plates_data = []
+        for plate in plate_numbers:
+            if plate:
+                plates_data.append({
+                    'plate_number': plate,
+                    'display': plate  # می‌توانیم فرمت را تغییر دهیم اگر نیاز باشد
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'plates': plates_data,
+        })
+    except (ValueError, TypeError) as e:
+        bug_logger.error(f"Get driver plate numbers API error: {e}")
+        return JsonResponse({'error': 'شناسه راننده نامعتبر است'}, status=400)
+    except Exception as e:
+        bug_logger.error(f"Get driver plate numbers API error: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در دریافت پلاک‌های راننده: {str(e)}'}, status=400)
 
 
 @login_required
