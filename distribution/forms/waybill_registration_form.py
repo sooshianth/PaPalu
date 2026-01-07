@@ -2,6 +2,7 @@ from django import forms
 from django_jalali import forms as jforms
 from core.TransportFolder.TransportModel import Transport
 from core.TransportFolder.TransportAttachmentModel import TransportAttachment
+from datetime import datetime
 
 
 class WaybillRegistrationForm(forms.Form):
@@ -30,15 +31,16 @@ class WaybillRegistrationForm(forms.Form):
         })
     )
     
-    waybill_date = forms.DateField(
+    waybill_date = forms.CharField(
         required=True,
         label='تاریخ بارنامه',
-        widget=forms.DateInput(attrs={
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
             'type': 'text',
             'placeholder': '1403/09/15',
             'id': 'id_waybill_date',
-            'required': True
+            'required': True,
+            'dir': 'ltr'
         })
     )
     
@@ -193,4 +195,17 @@ class WaybillRegistrationForm(forms.Form):
             'step': '0.01'
         })
     )
+    
+    def clean_waybill_date(self):
+        """تبدیل تاریخ از رشته به date object"""
+        date_str = self.cleaned_data.get('waybill_date')
+        if not date_str:
+            raise forms.ValidationError('این فیلد لازم است.')
+        
+        # تبدیل تاریخ میلادی (YYYY-MM-DD) به date object
+        try:
+            date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            return date_obj
+        except ValueError:
+            raise forms.ValidationError('فرمت تاریخ نامعتبر است.')
 

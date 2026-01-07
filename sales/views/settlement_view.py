@@ -70,44 +70,55 @@ def settlement_list_view(request):
             transport_dict[allocation_number].append(transport)
 
     # Annotate کردن وزن سفارش، وزن تحویلی و مبلغ اختلاف
+    from core.TransportFolder.ProductInfoModel import ProductInfo
+    
     for order in orders_qs:
-        # محاسبه وزن سفارش
-        order_weight = Decimal('0')
-        for item in order.order_items.all():
-            weight_kg = item.get_weight_in_kg()
-            order_weight += Decimal(str(weight_kg))
-        order._order_weight = order_weight
-        
-        # محاسبه وزن تحویلی
+        # محاسبه اختلاف برای هر محصول (به روش جدید)
         allocation_numbers = allocation_dict.get(order.pk, [])
+        transports_for_order = [t for alloc_num in allocation_numbers for t in transport_dict.get(alloc_num, [])]
+        
+        total_difference_amount = Decimal('0')
+        order_weight = Decimal('0')
         delivered_weight = Decimal('0')
-        for alloc_num in allocation_numbers:
-            transports = transport_dict.get(alloc_num, [])
-            for transport in transports:
-                if transport.net_weight:
-                    delivered_weight += Decimal(str(transport.net_weight))
+        
+        # برای هر محصول در سفارش
+        for order_item in order.order_items.all():
+            product = order_item.product
+            if not product:
+                continue
+            
+            # وزن تخصیص یافته
+            allocated_weight = Decimal(str(order_item.get_weight_in_kg()))
+            order_weight += allocated_weight
+            
+            # وزن خالص تحویلی
+            delivered_weight_for_product = Decimal('0')
+            for transport in transports_for_order:
+                # دریافت ProductInfo های مربوط به این محصول
+                product_infos = ProductInfo.objects.filter(
+                    transport=transport,
+                    product=product,
+                    item_type='product'
+                )
+                for product_info in product_infos:
+                    if product_info.net_weight:
+                        delivered_weight_for_product += Decimal(str(product_info.net_weight))
+            
+            delivered_weight += delivered_weight_for_product
+            
+            # اختلاف وزن
+            weight_diff = delivered_weight_for_product - allocated_weight
+            
+            # فی محصول
+            unit_price = Decimal(str(order_item.unit_price)) if order_item.unit_price else Decimal('0')
+            
+            # مبلغ اختلاف
+            difference_amount_for_product = weight_diff * unit_price
+            total_difference_amount += difference_amount_for_product
+        
+        order._order_weight = order_weight
         order._delivered_weight = delivered_weight
-        
-        # محاسبه میانگین وزن‌دار فی فروش
-        total_price = Decimal('0')
-        total_weight_for_avg = Decimal('0')
-        
-        for item in order.order_items.all():
-            if item.unit_price and item.quantity:
-                item_weight = Decimal(str(item.get_weight_in_kg()))
-                item_price = Decimal(str(item.unit_price))
-                total_price += item_weight * item_price
-                total_weight_for_avg += item_weight
-        
-        if total_weight_for_avg > 0:
-            weighted_avg_price = total_price / total_weight_for_avg
-        else:
-            weighted_avg_price = Decimal('0')
-        
-        # محاسبه مبلغ اختلاف
-        weight_difference = delivered_weight - order_weight
-        difference_amount = weight_difference * weighted_avg_price
-        order._difference_amount = difference_amount
+        order._difference_amount = total_difference_amount
 
     bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار تسویه لود شد")
 
@@ -154,41 +165,67 @@ def settlement_detail_view(request, order_number):
         messages.error(request, 'این سفارش در وضعیت مناسب برای تسویه نیست.')
         return redirect('sales:settlement_list')
 
-    # محاسبه وزن سفارش
-    order_weight = Decimal('0')
-    for item in order.order_items.all():
-        weight_kg = item.get_weight_in_kg()
-        order_weight += Decimal(str(weight_kg))
-    
-    # محاسبه وزن تحویلی
+    # دریافت حمل‌های مربوط به سفارش
     allocations = Allocation.objects.filter(order=order)
-    transports = Transport.objects.filter(allocation__in=allocations)
-    delivered_weight = sum(
-        Decimal(str(t.net_weight or 0)) for t in transports
-    )
+    transports = Transport.objects.filter(allocation__in=allocations).prefetch_related('product_infos')
     
-    # محاسبه اختلاف وزن
+    # محاسبه اختلاف برای هر محصول
+    from core.TransportFolder.ProductInfoModel import ProductInfo
+    
+    product_discrepancies = []  # لیست جزئیات اختلاف هر محصول
+    total_difference_amount = Decimal('0')
+    order_weight = Decimal('0')
+    delivered_weight = Decimal('0')
+    
+    # برای هر محصول در سفارش
+    for order_item in order.order_items.all():
+        product = order_item.product
+        if not product:
+            continue
+        
+        # وزن تخصیص یافته (وزن سفارش برای این محصول)
+        allocated_weight = Decimal(str(order_item.get_weight_in_kg()))
+        order_weight += allocated_weight
+        
+        # وزن خالص تحویلی (از ProductInfo های مربوط به این محصول در حمل‌های این سفارش)
+        delivered_weight_for_product = Decimal('0')
+        for transport in transports:
+            product_infos = transport.product_infos.filter(product=product, item_type='product')
+            for product_info in product_infos:
+                if product_info.net_weight:
+                    delivered_weight_for_product += Decimal(str(product_info.net_weight))
+        
+        delivered_weight += delivered_weight_for_product
+        
+        # اختلاف وزن برای این محصول
+        weight_diff = delivered_weight_for_product - allocated_weight
+        
+        # فی محصول
+        unit_price = Decimal(str(order_item.unit_price)) if order_item.unit_price else Decimal('0')
+        
+        # مبلغ اختلاف برای این محصول
+        difference_amount_for_product = weight_diff * unit_price
+        total_difference_amount += difference_amount_for_product
+        
+        # ذخیره جزئیات برای نمایش
+        product_discrepancies.append({
+            'product_name': product.name if product.name else 'نامشخص',
+            'allocated_weight': allocated_weight,
+            'delivered_weight': delivered_weight_for_product,
+            'weight_difference': weight_diff,
+            'unit_price': unit_price,
+            'difference_amount': difference_amount_for_product,
+        })
+    
+    # مبلغ کل اختلاف
+    difference_amount = total_difference_amount
     weight_difference = delivered_weight - order_weight
     
-    # محاسبه میانگین وزن‌دار فی فروش
-    total_price = Decimal('0')
-    total_weight_for_avg = Decimal('0')
-    
-    for item in order.order_items.all():
-        if item.unit_price and item.quantity:
-            item_weight = Decimal(str(item.get_weight_in_kg()))
-            item_price = Decimal(str(item.unit_price))
-            total_price += item_weight * item_price
-            total_weight_for_avg += item_weight
-    
-    # محاسبه میانگین فی
-    if total_weight_for_avg > 0:
-        weighted_avg_price = total_price / total_weight_for_avg
+    # محاسبه میانگین وزن‌دار فی فروش (برای نمایش)
+    if order_weight > 0:
+        weighted_avg_price = abs(difference_amount) / abs(weight_difference) if weight_difference != 0 else Decimal('0')
     else:
         weighted_avg_price = Decimal('0')
-    
-    # محاسبه مبلغ اختلاف
-    difference_amount = weight_difference * weighted_avg_price
     
     # دریافت یا ایجاد Settlement با نوع کسری و سرک
     settlement, created = Settlement.objects.get_or_create(
@@ -327,6 +364,7 @@ def settlement_detail_view(request, order_number):
         'has_no_difference': has_no_difference,
         'transactions': transactions,
         'customer_info': customer_info,
+        'product_discrepancies': product_discrepancies,  # جزئیات اختلاف هر محصول
         'page_title': f'تسویه سفارش - {order.order_number}',
     }
     return render(request, 'settlement/settlement_detail.html', context)
@@ -355,37 +393,42 @@ def skip_settlement_view(request, order_number):
     
     try:
         with transaction.atomic():
-            # محاسبه مبلغ اختلاف برای بررسی
-            order_weight = Decimal('0')
-            for item in order.order_items.all():
-                weight_kg = item.get_weight_in_kg()
-                order_weight += Decimal(str(weight_kg))
+            # محاسبه مبلغ اختلاف برای بررسی (به روش جدید: برای هر محصول جداگانه)
+            from core.TransportFolder.ProductInfoModel import ProductInfo
             
             allocations = Allocation.objects.filter(order=order)
-            transports = Transport.objects.filter(allocation__in=allocations)
-            delivered_weight = sum(
-                Decimal(str(t.net_weight or 0)) for t in transports
-            )
+            transports = Transport.objects.filter(allocation__in=allocations).prefetch_related('product_infos')
             
-            weight_difference = delivered_weight - order_weight
+            total_difference_amount = Decimal('0')
             
-            # محاسبه میانگین وزن‌دار فی فروش
-            total_price = Decimal('0')
-            total_weight_for_avg = Decimal('0')
+            # برای هر محصول در سفارش
+            for order_item in order.order_items.all():
+                product = order_item.product
+                if not product:
+                    continue
+                
+                # وزن تخصیص یافته
+                allocated_weight = Decimal(str(order_item.get_weight_in_kg()))
+                
+                # وزن خالص تحویلی
+                delivered_weight_for_product = Decimal('0')
+                for transport in transports:
+                    product_infos = transport.product_infos.filter(product=product, item_type='product')
+                    for product_info in product_infos:
+                        if product_info.net_weight:
+                            delivered_weight_for_product += Decimal(str(product_info.net_weight))
+                
+                # اختلاف وزن
+                weight_diff = delivered_weight_for_product - allocated_weight
+                
+                # فی محصول
+                unit_price = Decimal(str(order_item.unit_price)) if order_item.unit_price else Decimal('0')
+                
+                # مبلغ اختلاف
+                difference_amount_for_product = weight_diff * unit_price
+                total_difference_amount += difference_amount_for_product
             
-            for item in order.order_items.all():
-                if item.unit_price and item.quantity:
-                    item_weight = Decimal(str(item.get_weight_in_kg()))
-                    item_price = Decimal(str(item.unit_price))
-                    total_price += item_weight * item_price
-                    total_weight_for_avg += item_weight
-            
-            if total_weight_for_avg > 0:
-                weighted_avg_price = total_price / total_weight_for_avg
-            else:
-                weighted_avg_price = Decimal('0')
-            
-            difference_amount = weight_difference * weighted_avg_price
+            difference_amount = total_difference_amount
             
             # بررسی اینکه مبلغ اختلاف صفر است
             if abs(difference_amount) > Decimal('0.01'):  # با توجه به خطای محاسباتی

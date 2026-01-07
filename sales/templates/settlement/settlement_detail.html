@@ -401,12 +401,49 @@
                 <span>{{ delivered_weight|floatformat:2 }} کیلوگرم</span>
             </div>
             <div class="info-item">
-                <strong>مبلغ اختلاف:</strong>
+                <strong>مبلغ اختلاف کل:</strong>
                 <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
                     {{ difference_amount|floatformat:0 }} ریال
                 </span>
             </div>
         </div>
+        
+        <!-- جدول جزئیات اختلاف هر محصول -->
+        {% if product_discrepancies %}
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--gray-200);">
+            <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-800);">جزئیات اختلاف برای هر محصول</h4>
+            <div style="overflow-x: auto;">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>نام محصول</th>
+                            <th>وزن تخصیص یافته (کیلوگرم)</th>
+                            <th>وزن تحویلی (کیلوگرم)</th>
+                            <th>اختلاف وزن (کیلوگرم)</th>
+                            <th>فی (ریال/کیلوگرم)</th>
+                            <th>مبلغ اختلاف (ریال)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for discrepancy in product_discrepancies %}
+                        <tr>
+                            <td><strong>{{ discrepancy.product_name }}</strong></td>
+                            <td>{{ discrepancy.allocated_weight|floatformat:2 }}</td>
+                            <td>{{ discrepancy.delivered_weight|floatformat:2 }}</td>
+                            <td class="{% if discrepancy.weight_difference > 0 %}positive{% elif discrepancy.weight_difference < 0 %}negative{% endif %}">
+                                {{ discrepancy.weight_difference|floatformat:2 }}
+                            </td>
+                            <td>{{ discrepancy.unit_price|floatformat:0 }}</td>
+                            <td class="{% if discrepancy.difference_amount > 0 %}positive{% elif discrepancy.difference_amount < 0 %}negative{% endif %}">
+                                <strong>{{ discrepancy.difference_amount|floatformat:0 }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
         
         <!-- نوار پیشرفت -->
         <div class="progress-bar">
