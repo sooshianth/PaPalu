@@ -44,7 +44,7 @@
         position: absolute;
         top: 100%;
         right: 0;
-        width: 280px;
+        width: 300px;
         background: white;
         border-radius: var(--jdp-border-radius);
         box-shadow: var(--jdp-box-shadow);
@@ -206,11 +206,44 @@
         color: white;
     }
 
+    /* Time Picker Styles */
+    .jdp-time-container {
+        border-top: 1px solid #eee;
+        padding: 10px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        direction: ltr;
+        /* Ensure HH:MM order */
+        background-color: #fafafa;
+    }
+
+    .jdp-time-input {
+        width: 50px;
+        padding: 4px;
+        text-align: center;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+        margin: 0 5px;
+    }
+
+    .jdp-time-input:focus {
+        border-color: var(--jdp-primary-color);
+        outline: none;
+    }
+
+    .jdp-time-separator {
+        font-weight: bold;
+        color: #555;
+    }
+
     .jdp-footer {
         padding: 8px;
         border-top: 1px solid #eee;
         display: flex;
-        justify-content: center;
+        justify-content: space-between;
+        align-items: center;
     }
 
     .jdp-btn-today {
@@ -220,10 +253,26 @@
         font-size: 0.9rem;
         cursor: pointer;
         font-weight: 500;
+        padding: 4px 8px;
+    }
+
+    .jdp-btn-confirm {
+        background: var(--jdp-primary-color);
+        border: none;
+        color: white;
+        font-size: 0.9rem;
+        cursor: pointer;
+        font-weight: 500;
+        padding: 5px 12px;
+        border-radius: 4px;
     }
 
     .jdp-btn-today:hover {
         text-decoration: underline;
+    }
+
+    .jdp-btn-confirm:hover {
+        opacity: 0.9;
     }
 </style>
 
@@ -317,14 +366,27 @@
         const daysShort = ['ش', 'ی', 'د', 'س', 'چ', 'پ', 'ج']; // Shanbe to Jome
 
         let activeInstance = null;
-        let viewDate = { y: 0, m: 0, d: 0 };
+        let viewDate = { y: 0, m: 0, d: 0, h: 0, i: 0 };
+        let currentOptions = {};
 
-        function init(selector, options) {
+        function init(selector, options = {}) {
             const elements = document.querySelectorAll(selector);
             elements.forEach(el => bind(el, options));
         }
 
         function bind(element, options = {}) {
+            // Init config
+            const config = {
+                time: options.enableTime || options.time || element.getAttribute('data-time') === 'true' || element.classList.contains('jalali-datetime') || false,
+                useGregorianForValue: true,
+                ...options
+            };
+
+            // Allow override via explicit data attribute
+            if (element.hasAttribute('data-enable-time')) {
+                config.time = element.getAttribute('data-enable-time') === 'true';
+            }
+
             // Create container
             if (element.parentElement.classList.contains('jdp-input-group')) return; // Already bound
 
@@ -336,25 +398,6 @@
             group.className = 'jdp-input-group';
             wrapper.appendChild(group);
 
-            // Hidden input for Gregorian Value (if needed)
-            let hiddenInput = null;
-            if (element.getAttribute('data-jdp-target')) {
-                // If specific target ID is provided
-                hiddenInput = document.getElementById(element.getAttribute('data-jdp-target'));
-            } else if (element.name) {
-                // Create a hidden input usually for backend, renaming the original or handling value sync
-                // For now, we will assume the main input is the text input shown to user, 
-                // and we sync the Gregorian value to the original input (if it was hidden) or 
-                // we'll use a new hidden input for the Gregorian date.
-                // Strategy: 
-                // 1. Rename original input to `_original_name` (if it was type='date' or 'text')
-                // 2. Create hidden input with `name`
-                // 3. Keep visual input without name
-
-                // Keep it simple: element is the Visual Input (Text)
-                // We typically require a Hidden Input for the real value.
-            }
-
             group.appendChild(element);
 
             // Icon
@@ -362,14 +405,15 @@
             icon.className = 'jdp-icon';
             icon.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
             group.appendChild(icon);
-            element.style.paddingLeft = '35px'; // Make space for icon (RTL: paddingRight? No, icon is typically left or right depending on dir)
-            // Fix for RTL: 
+            element.style.paddingLeft = '35px';
+
+            // Fix for RTL
             if (document.dir === 'rtl' || document.documentElement.dir === 'rtl') {
                 icon.style.right = 'auto';
                 icon.style.left = '10px';
-                element.style.paddingLeft = '35px'; // Actually in RTL left is the end.
+                element.style.paddingLeft = '35px';
             } else {
-                icon.style.left = 'auto'; // default
+                icon.style.left = 'auto';
             }
 
             // Calendar Dropdown
@@ -377,35 +421,80 @@
             calendar.className = 'jdp-calendar';
             group.appendChild(calendar);
 
+            // Store config on element
+            element._jdpConfig = config;
+
             // Event Listeners
             element.addEventListener('focus', (e) => {
-                showCalendar(element, calendar);
+                showCalendar(element, calendar, config);
                 e.stopPropagation();
             });
 
             element.addEventListener('click', (e) => {
-                showCalendar(element, calendar);
+                showCalendar(element, calendar, config);
                 e.stopPropagation();
             });
 
             // Initial Formatting if value exists
             if (element.value) {
-                // Assume value is Gregorian YYYY-MM-DD
-                const parts = element.value.split('-');
-                if (parts.length === 3) {
-                    const j = Jalaali.toJalaali(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
-                    element.setAttribute('data-gdate', element.value);
-                    element.value = formatJalali(j.jy, j.jm, j.jd);
+                parseAndFormatInitialValue(element, config);
+            }
+        }
+
+        function parseAndFormatInitialValue(element, config) {
+            // Try to detect if parsing needed
+            // Assume value is Gregorian YYYY-MM-DD [HH:MM:ss]
+            let val = element.value.trim();
+            if (!val) return;
+
+            // Normalize separators
+            val = val.replace('T', ' ');
+
+            const parts = val.split(/[- :]/); // Split by dash, space, colon
+            // parts: [Y, M, D, H, i, s]
+
+            if (parts.length >= 3) {
+                const gy = parseInt(parts[0]);
+                const gm = parseInt(parts[1]);
+                const gd = parseInt(parts[2]);
+                const gh = parts.length >= 4 ? parseInt(parts[3]) : 0;
+                const gi = parts.length >= 5 ? parseInt(parts[4]) : 0;
+
+                if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd)) {
+                    // It looks like ISO Gregorian, check range roughly (Year > 1900)
+                    // If Year < 1500, it might be Jalali already? 
+                    // Let's assume input value IS Gregorian as per our design (hidden syncing is done separately if needed, but here we format visual input)
+                    // Wait, if the input is PRE-FILLED by Django (e.g. edit form), it comes as Gregorian string typically.
+
+                    if (gy > 1900) {
+                        const j = Jalaali.toJalaali(gy, gm, gd);
+
+                        // Store Gregorian Value
+                        // If time is enabled, store full ISO-like string
+                        let gStr = `${gy}-${gm.toString().padStart(2, '0')}-${gd.toString().padStart(2, '0')}`;
+                        if (config.time) {
+                            gStr += ` ${gh.toString().padStart(2, '0')}:${gi.toString().padStart(2, '0')}:00`;
+                        }
+                        element.setAttribute('data-gdate', gStr);
+
+                        // Show Jalali Value
+                        let jStr = formatJalali(j.jy, j.jm, j.jd);
+                        if (config.time) {
+                            jStr += ` ${gh.toString().padStart(2, '0')}:${gi.toString().padStart(2, '0')}`;
+                        }
+                        element.value = jStr;
+                    }
                 }
             }
         }
 
         function formatJalali(y, m, d) {
-            return `${y}/${m.toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}`; // Standard format
-            // optionally use month names: return `${d} ${months[m-1]} ${y}`;
+            return `${y}/${m.toString().padStart(2, '0')}/${d.toString().padStart(2, '0')}`;
         }
 
-        function showCalendar(input, container) {
+        function showCalendar(input, container, config) {
+            currentOptions = config;
+
             // Close others
             if (activeInstance && activeInstance !== container) {
                 activeInstance.style.display = 'none';
@@ -417,19 +506,28 @@
             container.style.display = 'block';
 
             // Determine initial view date
-            let jy, jm, jd;
+            let jy, jm, jd, jh = 0, ji = 0;
+
             if (input.getAttribute('data-gdate')) {
-                const parts = input.getAttribute('data-gdate').split('-');
+                // Parse stored gregorian
+                let val = input.getAttribute('data-gdate').trim().replace('T', ' ');
+                const parts = val.split(/[- :]/);
                 const j = Jalaali.toJalaali(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
                 jy = j.jy; jm = j.jm; jd = j.jd;
+                if (parts.length >= 5) {
+                    jh = parseInt(parts[3]);
+                    ji = parseInt(parts[4]);
+                }
             } else {
                 // Today
                 const today = new Date();
                 const j = Jalaali.toJalaali(today.getFullYear(), today.getMonth() + 1, today.getDate());
                 jy = j.jy; jm = j.jm; jd = j.jd;
+                jh = today.getHours();
+                ji = today.getMinutes();
             }
 
-            viewDate = { y: jy, m: jm, d: jd };
+            viewDate = { y: jy, m: jm, d: jd, h: jh, i: ji };
             renderMonthView(container, input);
         }
 
@@ -442,11 +540,7 @@
 
             const btnPrev = document.createElement('button');
             btnPrev.className = 'jdp-btn-nav';
-            btnPrev.innerHTML = '&lt;'; // In RTL this points to next month naturally? No, math wise prev month is smaller.
-            // In RTL context: < (Left) usually means Next if time flows LTR, but UI usually puts Right as Next.
-            // Let's use simple arrows and logic: Next Month (Future) -> | Prev Month (Past) <-
-            // In RTL: Prev (Right Arrow) | Next (Left Arrow) ?
-            // Let's stick to logical Prev/Next functions.
+            btnPrev.innerHTML = '&lt;';
 
             const btnNext = document.createElement('button');
             btnNext.className = 'jdp-btn-nav';
@@ -457,10 +551,6 @@
             title.textContent = `${months[viewDate.m - 1]} ${viewDate.y}`;
             title.onclick = () => renderYearView(container, input);
 
-            // RTL Logic: 
-            // Previous Month (Past): Right Arrow in RTL? No, stick to standard:
-            // Right Arrow (>): Next Month
-            // Left Arrow (<): Prev Month
             btnPrev.onclick = (e) => { e.preventDefault(); changeMonth(-1, container, input); };
             btnNext.onclick = (e) => { e.preventDefault(); changeMonth(1, container, input); };
 
@@ -484,18 +574,13 @@
             const daysBody = document.createElement('div');
             daysBody.className = 'jdp-days-body';
 
-            // Calculate days
-            // 1st of month day of week
             const g1 = Jalaali.toGregorian(viewDate.y, viewDate.m, 1);
             const date1 = new Date(g1.gy, g1.gm - 1, g1.gd);
-            let startDay = date1.getDay() + 1; // 0=Sun, 6=Sat. Jalali: 0=Sat, 6=Fri.
-            // Map Gregorian Day (0=Sun...6=Sat) to Jalali (0=Sat...6=Fri)
-            // Sun(0) -> 1
-            // Mon(1) -> 2
-            // ...
-            // Sat(6) -> 0
+            // Gregorian Day: 0=Sun, 1=Mon ... 6=Sat
+            // Jalali Week: Sat=0, Sun=1 ... Fri=6
+            // Mapping: Sun(0)->1, Sat(6)->0
             const mapDay = [1, 2, 3, 4, 5, 6, 0];
-            const startCol = mapDay[date1.getDay()]; // 0..6
+            const startCol = mapDay[date1.getDay()];
 
             const daysInMonth = Jalaali.jalaaliMonthLength(viewDate.y, viewDate.m);
 
@@ -509,32 +594,45 @@
             const today = new Date();
             const jToday = Jalaali.toJalaali(today.getFullYear(), today.getMonth() + 1, today.getDate());
 
-            // Selected Date
+            // Selected Date Check
             let selectedDate = null;
             if (input.getAttribute('data-gdate')) {
-                const parts = input.getAttribute('data-gdate').split('-');
+                let val = input.getAttribute('data-gdate').trim().replace('T', ' ');
+                const parts = val.split(/[- :]/);
                 const j = Jalaali.toJalaali(parseInt(parts[0]), parseInt(parts[1]), parseInt(parts[2]));
                 selectedDate = j;
             }
+
+            // Correction: Check if selectedDate matches the viewDate YEAR and MONTH before highlighting day
+            // logic inside loop does this: if (viewDate.y === selectedDate.jy ...) 
 
             for (let d = 1; d <= daysInMonth; d++) {
                 const dayEl = document.createElement('div');
                 dayEl.className = 'jdp-day';
                 dayEl.textContent = d;
 
-                // Check Today
+                // Today
                 if (viewDate.y === jToday.jy && viewDate.m === jToday.jm && d === jToday.jd) {
                     dayEl.classList.add('today');
                 }
 
-                // Check Selected
+                // Selected
                 if (selectedDate && viewDate.y === selectedDate.jy && viewDate.m === selectedDate.jm && d === selectedDate.jd) {
                     dayEl.classList.add('selected');
                 }
 
                 dayEl.onclick = (e) => {
                     e.stopPropagation();
-                    selectDate(viewDate.y, viewDate.m, d, input, container);
+                    viewDate.d = d; // Set Selected Day
+
+                    if (!currentOptions.time) {
+                        applySelection(input, container);
+                    } else {
+                        // Visual update only
+                        const prev = daysBody.querySelector('.selected');
+                        if (prev) prev.classList.remove('selected');
+                        dayEl.classList.add('selected');
+                    }
                 };
 
                 daysBody.appendChild(dayEl);
@@ -542,19 +640,83 @@
 
             container.appendChild(daysBody);
 
+            // Time Picker Section
+            if (currentOptions.time) {
+                const timeContainer = document.createElement('div');
+                timeContainer.className = 'jdp-time-container';
+
+                // Hour
+                const hourInput = document.createElement('input');
+                hourInput.type = 'number';
+                hourInput.className = 'jdp-time-input';
+                hourInput.min = 0; hourInput.max = 23;
+                hourInput.value = viewDate.h.toString().padStart(2, '0');
+                hourInput.onchange = (e) => {
+                    let v = parseInt(e.target.value);
+                    if (isNaN(v)) v = 0;
+                    if (v < 0) v = 0; if (v > 23) v = 23;
+                    viewDate.h = v;
+                    e.target.value = v.toString().padStart(2, '0');
+                };
+
+                const sep = document.createElement('span');
+                sep.className = 'jdp-time-separator';
+                sep.textContent = ':';
+
+                // Minute
+                const minInput = document.createElement('input');
+                minInput.type = 'number';
+                minInput.className = 'jdp-time-input';
+                minInput.min = 0; minInput.max = 59;
+                minInput.value = viewDate.i.toString().padStart(2, '0');
+                minInput.onchange = (e) => {
+                    let v = parseInt(e.target.value);
+                    if (isNaN(v)) v = 0;
+                    if (v < 0) v = 0; if (v > 59) v = 59;
+                    viewDate.i = v;
+                    e.target.value = v.toString().padStart(2, '0');
+                };
+
+                timeContainer.appendChild(hourInput);
+                timeContainer.appendChild(sep);
+                timeContainer.appendChild(minInput);
+                container.appendChild(timeContainer);
+            }
+
             // Footer
             const footer = document.createElement('div');
             footer.className = 'jdp-footer';
+
             const btnToday = document.createElement('button');
             btnToday.className = 'jdp-btn-today';
-            btnToday.textContent = 'امروز';
+            btnToday.textContent = (currentOptions.time) ? 'هم‌اکنون' : 'امروز';
             btnToday.onclick = (e) => {
                 e.preventDefault();
                 const t = new Date();
                 const j = Jalaali.toJalaali(t.getFullYear(), t.getMonth() + 1, t.getDate());
-                selectDate(j.jy, j.jm, j.jd, input, container);
+                viewDate.y = j.jy;
+                viewDate.m = j.jm;
+                viewDate.d = j.jd;
+                if (currentOptions.time) {
+                    viewDate.h = t.getHours();
+                    viewDate.i = t.getMinutes();
+                }
+                applySelection(input, container);
             };
             footer.appendChild(btnToday);
+
+            // If time is enabled, we need a Confirm button
+            if (currentOptions.time) {
+                const btnConfirm = document.createElement('button');
+                btnConfirm.className = 'jdp-btn-confirm';
+                btnConfirm.textContent = 'تایید';
+                btnConfirm.onclick = (e) => {
+                    e.preventDefault();
+                    applySelection(input, container);
+                };
+                footer.appendChild(btnConfirm);
+            }
+
             container.appendChild(footer);
         }
 
@@ -590,7 +752,6 @@
             }
             container.appendChild(yearsBody);
 
-            // Scroll to selected year
             setTimeout(() => {
                 const selected = yearsBody.querySelector('.selected');
                 if (selected) selected.scrollIntoView({ block: 'center' });
@@ -609,32 +770,46 @@
             renderMonthView(container, input);
         }
 
-        function selectDate(jy, jm, jd, input, container) {
+        function applySelection(input, container) {
+            const jy = viewDate.y;
+            const jm = viewDate.m;
+            let jd = viewDate.d;
+
+            // Safety: if jd is out of month range
+            const maxDays = Jalaali.jalaaliMonthLength(jy, jm);
+            if (jd > maxDays) jd = maxDays;
+            if (jd < 1) jd = 1; // Fallback
+
             const g = Jalaali.toGregorian(jy, jm, jd);
-            const gDateStr = `${g.gy}-${g.gm.toString().padStart(2, '0')}-${g.gd.toString().padStart(2, '0')}`;
-            const jDateStr = formatJalali(jy, jm, jd); // Simple 1404/01/01
-            // Or use Full Date: `${jd} ${months[jm-1]} ${jy}`
-            const jDateFull = `${jd} ${months[jm - 1]} ${jy}`;
+
+            let gDateStr = `${g.gy}-${g.gm.toString().padStart(2, '0')}-${g.gd.toString().padStart(2, '0')}`;
+            let jDateFull = `${jd} ${months[jm - 1]} ${jy}`;
+
+            if (currentOptions.time) {
+                const hh = viewDate.h.toString().padStart(2, '0');
+                const ii = viewDate.i.toString().padStart(2, '0');
+                gDateStr += ` ${hh}:${ii}:00`;
+                jDateFull += ` ${hh}:${ii}`;
+            }
 
             // Set values
-            input.value = jDateFull; // Show user friendly text
-            input.setAttribute('data-gdate', gDateStr); // Store Technical Value
+            input.value = jDateFull;
+            input.setAttribute('data-gdate', gDateStr);
 
             // Hide Calendar
             container.style.display = 'none';
             document.getElementById('jdp-overlay').style.display = 'none';
             activeInstance = null;
 
-            // If there's a real Hidden Input associated, update it too
-            // Assuming the pattern: name="foo" -> id="id_foo"
-            // We should find the input expected by Django.
-            // In the Proforma form, we have id_validity_date (visual) and we need to verify what is sent.
-            // Usually we submit the input with `name`.
-            // So we'll update the Visual Input's value to the GREGORIAN date just before submit?
-            // OR we use a hidden input for the name, and remove name from visual input.
-            // Let's dispatch an event so the glue code can handle it.
-
-            const event = new CustomEvent('jdp:change', { detail: { jalali: jDateFull, gregorian: gDateStr } });
+            // Dispatch Event
+            const event = new CustomEvent('jdp:change', {
+                detail: {
+                    jalali: jDateFull,
+                    gregorian: gDateStr,
+                    year: jy, month: jm, day: jd,
+                    hour: viewDate.h, minute: viewDate.i
+                }
+            });
             input.dispatchEvent(event);
         }
 
