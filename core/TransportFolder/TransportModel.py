@@ -512,6 +512,10 @@ class Transport(models.Model):
         return None
 
     def save(self, *args, **kwargs):
+        # اگر کرایه از نوع "محاسبه شده در فی" باشد، payment_doc_uploaded را خودکار True کن
+        if self.freight_payment_type == 'calculated_in_invoice':
+            self.payment_doc_uploaded = True
+        
         # بررسی اینکه آیا هر دو شرط (تایید لجستیک و بارگذاری سند) انجام شده‌اند
         # اگر بله، وضعیت را به completed ببر
         if self.logistic_confirmed and self.payment_doc_uploaded:

@@ -307,8 +307,8 @@ class CarEntranceTable(TransportTable):
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # ستون‌های مورد نیاز برای نگهبان: نوع ماشین، نام ماده اولیه، زمان ثبت، وضعیت، عملیات
-        required_columns = ['vehicle_type', 'raw_materials', 'created_at', 'status', 'actions']
+        # ستون‌های مورد نیاز برای نگهبان: شماره حمل، نوع ماشین، نام ماده اولیه، زمان ثبت، وضعیت، عملیات
+        required_columns = ['transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions']
         
         # همیشه ستون‌های مورد نیاز را نمایش بده
         for col_name in required_columns:
@@ -373,12 +373,12 @@ class CarEntranceTable(TransportTable):
     
     class Meta(TransportTable.Meta):
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
 
 @login_required

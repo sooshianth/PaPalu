@@ -41,6 +41,7 @@ from .views import (
     get_order_materials_api,
     get_driver_bank_accounts_api,
     create_driver_bank_account_api,
+    get_driver_plate_numbers_api,
     get_supplier_bank_accounts_api,
     create_supplier_bank_account_api,
     # Car Entrance Views
@@ -98,6 +99,7 @@ urlpatterns = [
     path('api/order-materials/<str:order_number>/', get_order_materials_api, name='get_order_materials_api'),
     path('api/driver-bank-accounts/<int:driver_id>/', get_driver_bank_accounts_api, name='get_driver_bank_accounts_api'),
     path('api/driver-bank-account-create/', create_driver_bank_account_api, name='create_driver_bank_account_api'),
+    path('api/driver-plate-numbers/<int:driver_id>/', get_driver_plate_numbers_api, name='get_driver_plate_numbers_api'),
     path('api/supplier-bank-accounts/<int:order_id>/', get_supplier_bank_accounts_api, name='get_supplier_bank_accounts_api'),
     path('api/supplier-bank-account-create/', create_supplier_bank_account_api, name='create_supplier_bank_account_api'),
     # Car Entrance (Gatekeeper)

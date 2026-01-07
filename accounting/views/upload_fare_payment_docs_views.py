@@ -34,12 +34,15 @@ def upload_fare_payment_docs_list_view(request):
         # Get transports that need payment document upload
         # Include: awaiting_wh_reconciliation (آماده خروج), pending_settlement (در انتظار تایید لجستیک), awaiting_payment_doc (در انتظار بارگذاری اسناد)
         # Only those that don't have payment documents uploaded yet
+        # Exclude transports with freight_payment_type = 'calculated_in_invoice' (کرایه محاسبه شده در فی)
         transports = Transport.objects.filter(
             status__in=[
                 Transport.STATUS_AWAITING_WH_RECONCILIATION,
                 Transport.STATUS_AWAITING_SETTLEMENT,
                 Transport.STATUS_AWAITING_PAYMENT_DOC
             ]
+        ).exclude(
+            freight_payment_type='calculated_in_invoice'  # حمل‌هایی که کرایه در فی محاسبه شده، نیاز به بارگذاری سند ندارند
         ).filter(
             Q(freight_payment_document__isnull=True) | Q(freight_payment_document='')  # NULL or empty string
         ).select_related(
@@ -91,6 +94,14 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
             ),
             transport_number=transport_number
         )
+        
+        # بررسی اینکه آیا کرایه از نوع "محاسبه شده در فی" است
+        if transport.freight_payment_type == 'calculated_in_invoice':
+            audit_logger.warning(
+                f"تلاش برای بارگذاری سند برای حمل با کرایه محاسبه شده در فی - حمل {transport_number}"
+            )
+            messages.info(request, 'این حمل دارای کرایه محاسبه شده در فی است و نیازی به بارگذاری سند پرداخت ندارد.')
+            return redirect('accounting:upload_fare_payment_docs_list')
         
         # Check if transport is in valid status (awaiting_wh_reconciliation, pending_settlement, or awaiting_payment_doc)
         # and doesn't already have a document
