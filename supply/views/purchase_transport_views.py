@@ -796,9 +796,23 @@ def create_purchase_transport_view(request):
                         
                         order_number = pt.allocation.order.order_number if pt.allocation and pt.allocation.order else 'نامشخص'
                         audit_logger.info(f"حمل جدید ایجاد شد - شماره: {pt.transport_number} - سفارش: {order_number}")
+                        
+                        # بررسی وزن باقیمانده برای تصمیم‌گیری درباره redirect
+                        remaining_weight = Decimal('0')
+                        order_for_redirect = None
+                        if pt.allocation and pt.allocation.order:
+                            order_for_redirect = pt.allocation.order
+                            remaining_weight = order_for_redirect.get_remaining_weight()
                     
                     messages.success(request, f'حمل {pt.transport_number} ثبت شد و اعلان به نگهبان ارسال شد.')
-                    return redirect(reverse('supply:purchase_transport_list'))
+                    
+                    # اگر وزن باقیمانده وجود دارد، در همان صفحه بمان و فرم جدید را نمایش بده
+                    if remaining_weight > Decimal('0') and order_for_redirect:
+                        # بازگشت به همان صفحه با همان سفارش
+                        return redirect(reverse('supply:create_purchase_transport') + f'?order={order_for_redirect.order_number}')
+                    else:
+                        # اگر وزن باقیمانده صفر شد، به لیست برو
+                        return redirect(reverse('supply:purchase_transport_list'))
                 except ValueError as ve:
                     bug_logger.error(f"خطا در ایجاد حمل: {ve}", exc_info=True)
                     messages.error(request, f'خطا در ایجاد حمل: {str(ve)}')
