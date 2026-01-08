@@ -723,10 +723,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     {% else %}
     // اگر خطا وجود ندارد، دکمه تأیید به صورت عادی کار می‌کند
-    if (confirmBtn) {
+    if (confirmBtn && form) {
         confirmBtn.addEventListener('click', function(e) {
-            if (!confirm('آیا از تأیید نهایی لجستیک و تغییر وضعیت به «در انتظار بارگذاری اسناد پرداخت کرایه» اطمینان دارید؟')) {
-                e.preventDefault();
+            e.preventDefault();
+            if (confirm('آیا از تأیید نهایی لجستیک و تغییر وضعیت به «در انتظار بارگذاری اسناد پرداخت کرایه» اطمینان دارید؟')) {
+                form.submit();
             }
         });
     }

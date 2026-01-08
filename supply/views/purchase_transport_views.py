@@ -668,9 +668,24 @@ def create_purchase_transport_view(request):
     # Check if coming from purchase order detail page
     order_number = request.GET.get('order')
     initial_order = None
+    existing_transports = None
+    existing_transports_table = None
     if order_number:
         try:
             initial_order = Order.objects.get(order_number=order_number)
+            # دریافت حمل‌های موجود برای این سفارش
+            from core.AllocationFolder.AllocationModel import Allocation
+            allocation = Allocation.objects.filter(order=initial_order).first()
+            if allocation:
+                existing_transports = Transport.objects.filter(
+                    allocation=allocation
+                ).select_related('driver', 'allocation', 'allocation__order').order_by('-created_at')
+                
+                # ایجاد جدول برای نمایش حمل‌های موجود
+                if existing_transports.exists():
+                    from supply.tables import PurchaseOrderTransportTable
+                    existing_transports_table = PurchaseOrderTransportTable(existing_transports)
+                    RequestConfig(request, paginate=False).configure(existing_transports_table)
         except Order.DoesNotExist:
             pass
     
@@ -793,6 +808,25 @@ def create_purchase_transport_view(request):
             else:
                 bug_logger.warning(f"Purchase transport form invalid: form={form.errors}, materials={raw_material_formset.errors}")
                 audit_logger.activity(f"فرم نامعتبر برای ایجاد حمل")
+                # اگر فرم نامعتبر است، حمل‌های موجود را برای نمایش دوباره پیدا کن
+                purchase_order_id = request.POST.get('purchase_order')
+                if purchase_order_id:
+                    try:
+                        order = Order.objects.get(pk=purchase_order_id)
+                        initial_order = order  # تنظیم initial_order برای نمایش اطلاعات سفارش
+                        from core.AllocationFolder.AllocationModel import Allocation
+                        allocation = Allocation.objects.filter(order=order).first()
+                        if allocation:
+                            existing_transports = Transport.objects.filter(
+                                allocation=allocation
+                            ).select_related('driver', 'allocation', 'allocation__order').order_by('-created_at')
+                            
+                            if existing_transports.exists():
+                                from supply.tables import PurchaseOrderTransportTable
+                                existing_transports_table = PurchaseOrderTransportTable(existing_transports)
+                                RequestConfig(request, paginate=False).configure(existing_transports_table)
+                    except (Order.DoesNotExist, ValueError):
+                        pass
         else:
             if initial_order:
                 form = TransportForm(initial={'purchase_order': initial_order})
@@ -807,6 +841,7 @@ def create_purchase_transport_view(request):
             'form': form,
             'raw_material_formset': raw_material_formset,
             'initial_order': initial_order,
+            'existing_transports_table': existing_transports_table,
             'accessible_transport_fields': accessible_transport_fields,
         })
     except Exception as e:
@@ -816,6 +851,7 @@ def create_purchase_transport_view(request):
             'form': TransportForm(),
             'raw_material_formset': RawMaterialInfoFormSet(prefix='materials'),
             'initial_order': None,
+            'existing_transports_table': None,
             'accessible_transport_fields': accessible_transport_fields,
         })
 
