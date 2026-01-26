@@ -556,7 +556,8 @@
     }
 </style>
 <!-- Persian Datepicker CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+<!-- Custom Jalali Datepicker Component -->
+{% include "components/jalali_datepicker.html" %}
 {% endblock %}
 
 {% block content %}
@@ -1234,13 +1235,9 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- jQuery (needed for persian-datepicker) -->
+<!-- jQuery (needed for other functionality) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
-
-<!-- Persian Date Picker -->
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
 
 <script>
 // Permission variables for frontend
@@ -1676,49 +1673,66 @@ function showStartProductionModal() {
     
     showModal('startProductionModal');
     
-    // Initialize Jalali date picker for modal (date only, no time)
-    if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.persianDatepicker) {
-        const $actualStartDate = jQuery('#actualStartDate');
-        
-        // Destroy existing datepicker if any
-        if ($actualStartDate.data('persianDatepicker')) {
-            $actualStartDate.persianDatepicker('destroy');
+    // Initialize Custom Jalali date picker for modal (date only, no time)
+    const actualStartDateInput = document.getElementById('actualStartDate');
+    if (actualStartDateInput && !actualStartDateInput.hasAttribute('data-jdp-initialized')) {
+        // ایجاد فیلد مخفی برای actualStartDateField
+        const hiddenInput = document.getElementById('actualStartDateField');
+        if (!hiddenInput) {
+            const newHiddenInput = document.createElement('input');
+            newHiddenInput.type = 'hidden';
+            newHiddenInput.id = 'actualStartDateField';
+            newHiddenInput.name = 'actual_start_date';
+            actualStartDateInput.parentNode.appendChild(newHiddenInput);
         }
         
-        // Django-jalali uses Jalali dates directly, no conversion needed
-        $actualStartDate.persianDatepicker({
-            format: 'YYYY-MM-DD',
-            calendarType: 'persian',
-            initialValueType: 'persian',
-            observer: true,
-            autoClose: true,
-            timePicker: {
-                enabled: false
+        // حذف name از فیلد نمایشی (اگر وجود دارد)
+        actualStartDateInput.removeAttribute('name');
+        const originalId = actualStartDateInput.id;
+        actualStartDateInput.id = 'visual_actualStartDate';
+        
+        // راه‌اندازی datepicker
+        JalaliDatepicker.init('#' + actualStartDateInput.id, { time: false });
+        
+        // گوش دادن به تغییرات
+        actualStartDateInput.addEventListener('jdp:change', function (e) {
+            const jy = e.detail.year;
+            const jm = String(e.detail.month).padStart(2, '0');
+            const jd = String(e.detail.day).padStart(2, '0');
+            const jalaliDateStr = `${jy}-${jm}-${jd}`;
+            const hiddenField = document.getElementById('actualStartDateField');
+            if (hiddenField) {
+                hiddenField.value = jalaliDateStr;
             }
         });
+        
+        actualStartDateInput.setAttribute('data-jdp-initialized', 'true');
     }
 }
 
 function showCompleteProductionModal() {
-    // Initialize Persian datepicker for completion date
-    if (window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker) {
-        const $completionDate = jQuery('#completionDate');
-        if ($completionDate.length) {
-            // Destroy existing datepicker if any
-            if ($completionDate.data('persianDatepicker')) {
-                $completionDate.persianDatepicker('destroy');
-            }
-            $completionDate.persianDatepicker({
-                format: 'YYYY-MM-DD',
-                calendarType: 'persian',
-                initialValueType: 'persian',
-                observer: true,
-                autoClose: true,
-                timePicker: {
-                    enabled: false
-                }
-            });
-        }
+    // Initialize Custom Jalali datepicker for completion date
+    const completionDateInput = document.getElementById('completionDate');
+    if (completionDateInput && !completionDateInput.hasAttribute('data-jdp-initialized')) {
+        // حذف name از فیلد نمایشی (اگر وجود دارد)
+        completionDateInput.removeAttribute('name');
+        const originalId = completionDateInput.id;
+        completionDateInput.id = 'visual_completionDate';
+        
+        // راه‌اندازی datepicker
+        JalaliDatepicker.init('#' + completionDateInput.id, { time: false });
+        
+        // گوش دادن به تغییرات - مقدار در confirmCompleteProduction استفاده می‌شود
+        completionDateInput.addEventListener('jdp:change', function (e) {
+            const jy = e.detail.year;
+            const jm = String(e.detail.month).padStart(2, '0');
+            const jd = String(e.detail.day).padStart(2, '0');
+            const jalaliDateStr = `${jy}-${jm}-${jd}`;
+            // ذخیره در data attribute برای استفاده در confirmCompleteProduction
+            completionDateInput.setAttribute('data-jalali-value', jalaliDateStr);
+        });
+        
+        completionDateInput.setAttribute('data-jdp-initialized', 'true');
     }
     
     // Get current production info ID
@@ -1874,7 +1888,23 @@ function showCompleteProductionModal() {
 }
 
 function confirmStartProduction() {
-    let startDate = document.getElementById('actualStartDate').value;
+    // دریافت مقدار از hidden field (که توسط jdp:change event تنظیم شده)
+    const hiddenField = document.getElementById('actualStartDateField');
+    let startDate = hiddenField ? hiddenField.value : '';
+    
+    // اگر hidden field خالی است، از input اصلی بگیر (fallback)
+    if (!startDate) {
+        const actualStartDateInput = document.getElementById('visual_actualStartDate') || document.getElementById('actualStartDate');
+        if (actualStartDateInput) {
+            const jalaliValue = actualStartDateInput.getAttribute('data-jalali-value');
+            if (jalaliValue) {
+                startDate = jalaliValue;
+                if (hiddenField) hiddenField.value = jalaliValue;
+            } else {
+                startDate = actualStartDateInput.value;
+            }
+        }
+    }
     const startTime = document.getElementById('actualStartTime').value;
     const productionWarehouse = document.getElementById('productionWarehouse').value;
     
@@ -1996,7 +2026,9 @@ function confirmStartProduction() {
 
 function confirmCompleteProduction() {
     const weight = document.getElementById('producedWeight').value;
-    const completionDate = document.getElementById('completionDate').value;
+    // دریافت مقدار از data attribute (که توسط jdp:change event تنظیم شده)
+    const completionDateInput = document.getElementById('visual_completionDate') || document.getElementById('completionDate');
+    const completionDate = completionDateInput ? (completionDateInput.getAttribute('data-jalali-value') || completionDateInput.value) : '';
     const completionTime = document.getElementById('completionTime').value;
     // Grab stored start datetime for validation
     const startDateStr = document.getElementById('actualStartDateField') ? document.getElementById('actualStartDateField').value : '';

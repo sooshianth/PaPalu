@@ -20,7 +20,8 @@
   .submit-row{margin-top:8px;display:flex;gap:10px}
 </style>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+<!-- Custom Jalali Datepicker Component -->
+{% include "components/jalali_datepicker.html" %}
 {% endblock %}
 
 {% block content %}
@@ -342,24 +343,95 @@
 
 {% block extra_js %}
 <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <script>
   (function() {
     function initJalali() {
       var inputs = document.querySelectorAll('.jalali-date');
       inputs.forEach(function(inp){
-        try {
-          if (!inp._pd_inited) {
-            $(inp).persianDatepicker({
-              format: 'YYYY-MM-DD',
-              autoClose: true,
-              initialValue: false,
-              initialValueType: 'gregorian'
-            });
-            inp._pd_inited = true;
+        // جلوگیری از راه‌اندازی مجدد
+        if (inp.hasAttribute('data-jdp-initialized')) {
+          return;
+        }
+        
+        const originalName = inp.name;
+        if (!originalName) return;
+        
+        // ایجاد فیلد مخفی
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = originalName;
+        hiddenInput.id = 'hidden_' + (inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9));
+        
+        // حذف name از فیلد نمایشی
+        inp.removeAttribute('name');
+        const originalId = inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9);
+        inp.id = 'visual_' + originalId;
+        
+        // اضافه کردن کلاس
+        inp.classList.add('form-control');
+        
+        // قرار دادن hidden input
+        inp.parentNode.appendChild(hiddenInput);
+        
+        // راه‌اندازی datepicker
+        JalaliDatepicker.init('#' + inp.id, { time: false });
+        
+        // تنظیم مقدار اولیه
+        setTimeout(function() {
+          const gdate = inp.getAttribute('data-gdate');
+          if (gdate) {
+            const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+            if (parts.length >= 3) {
+              const gy = parseInt(parts[0]);
+              const gm = parseInt(parts[1]);
+              const gd = parseInt(parts[2]);
+              
+              if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+                const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+                const gy2 = (gm > 2) ? (gy + 1) : gy;
+                let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+                let jy = -1595 + (33 * Math.floor(days / 12053));
+                days %= 12053;
+                jy += 4 * Math.floor(days / 1461);
+                days %= 1461;
+                if (days > 365) {
+                  jy += Math.floor((days - 1) / 365);
+                  days = (days - 1) % 365;
+                }
+                let jm, jd;
+                if (days < 186) {
+                  jm = 1 + Math.floor(days / 31);
+                  jd = 1 + (days % 31);
+                } else {
+                  jm = 7 + Math.floor((days - 186) / 30);
+                  jd = 1 + ((days - 186) % 30);
+                }
+                
+                const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
+                hiddenInput.value = jalaliDateStr;
+              }
+            }
+          } else if (inp.value) {
+            const valueParts = inp.value.trim().split(/[-/]/);
+            if (valueParts.length === 3) {
+              const year = parseInt(valueParts[0]);
+              if (year > 1900 && year < 2100) {
+                hiddenInput.value = inp.value;
+              }
+            }
           }
-        } catch (e) {}
+        }, 300);
+        
+        // گوش دادن به تغییرات
+        inp.addEventListener('jdp:change', function (e) {
+          const jy = e.detail.year;
+          const jm = String(e.detail.month).padStart(2, '0');
+          const jd = String(e.detail.day).padStart(2, '0');
+          const jalaliDateStr = `${jy}-${jm}-${jd}`;
+          hiddenInput.value = jalaliDateStr;
+        });
+        
+        inp.setAttribute('data-jdp-initialized', 'true');
       });
     }
     

@@ -401,8 +401,8 @@
         z-index: 10000 !important;
     }
 </style>
-<!-- Persian Datepicker CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+<!-- Custom Jalali Datepicker Component -->
+{% include "components/jalali_datepicker.html" %}
 {% endblock %}
 
 {% block content %}
@@ -813,29 +813,183 @@
 	let tabCounter = 0;
 
 	function initJalaliPickers(rootEl){
-		if (!(window.jQuery && jQuery.fn && jQuery.fn.persianDatepicker)) return;
-		jQuery(rootEl).find('.jalali-date').each(function(){
-			const $el = jQuery(this);
-			$el.attr('dir','ltr');
+		// راه‌اندازی Custom Jalali Datepicker برای فیلدهای با کلاس jalali-date و jalali-datetime
+		const dateInputs = rootEl.querySelectorAll('.jalali-date');
+		const datetimeInputs = rootEl.querySelectorAll('.jalali-datetime');
+		
+		// راه‌اندازی فیلدهای تاریخ (بدون زمان)
+		dateInputs.forEach(function(input) {
+			if (input.hasAttribute('data-jdp-initialized')) return;
 			
-			// Django-jalali uses Jalali dates directly, no conversion needed
-			$el.persianDatepicker({
-				format: 'YYYY-MM-DD',
-				calendarType: 'persian',
-				initialValueType: 'persian',
-				observer: true,
-				autoClose: true
+			const originalName = input.name;
+			if (!originalName) return;
+			
+			// ایجاد فیلد مخفی
+			const hiddenInput = document.createElement('input');
+			hiddenInput.type = 'hidden';
+			hiddenInput.name = originalName;
+			hiddenInput.id = 'hidden_' + input.id;
+			
+			// حذف name از فیلد نمایشی
+			input.removeAttribute('name');
+			const originalId = input.id;
+			input.id = 'visual_' + originalId;
+			
+			// اضافه کردن کلاس
+			input.classList.add('form-control');
+			
+			// قرار دادن hidden input
+			input.parentNode.appendChild(hiddenInput);
+			
+			// راه‌اندازی datepicker
+			JalaliDatepicker.init('#' + input.id, { time: false });
+			
+			// تنظیم مقدار اولیه
+			setTimeout(function() {
+				const gdate = input.getAttribute('data-gdate');
+				if (gdate) {
+					const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+					if (parts.length >= 3) {
+						const gy = parseInt(parts[0]);
+						const gm = parseInt(parts[1]);
+						const gd = parseInt(parts[2]);
+						
+						if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+							const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+							const gy2 = (gm > 2) ? (gy + 1) : gy;
+							let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+							let jy = -1595 + (33 * Math.floor(days / 12053));
+							days %= 12053;
+							jy += 4 * Math.floor(days / 1461);
+							days %= 1461;
+							if (days > 365) {
+								jy += Math.floor((days - 1) / 365);
+								days = (days - 1) % 365;
+							}
+							let jm, jd;
+							if (days < 186) {
+								jm = 1 + Math.floor(days / 31);
+								jd = 1 + (days % 31);
+							} else {
+								jm = 7 + Math.floor((days - 186) / 30);
+								jd = 1 + ((days - 186) % 30);
+							}
+							
+							const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
+							hiddenInput.value = jalaliDateStr;
+						}
+					}
+				} else if (input.value) {
+					const valueParts = input.value.trim().split(/[-/]/);
+					if (valueParts.length === 3) {
+						const year = parseInt(valueParts[0]);
+						if (year > 1900 && year < 2100) {
+							hiddenInput.value = input.value;
+						}
+					}
+				}
+			}, 300);
+			
+			// گوش دادن به تغییرات
+			input.addEventListener('jdp:change', function (e) {
+				const jy = e.detail.year;
+				const jm = String(e.detail.month).padStart(2, '0');
+				const jd = String(e.detail.day).padStart(2, '0');
+				const jalaliDateStr = `${jy}-${jm}-${jd}`;
+				hiddenInput.value = jalaliDateStr;
 			});
+			
+			input.setAttribute('data-jdp-initialized', 'true');
 		});
-		jQuery(rootEl).find('.jalali-datetime').each(function(){
-			const $el = jQuery(this);
-			$el.attr('dir','ltr');
-			$el.persianDatepicker({
-				format: 'YYYY-MM-DD HH:mm',
-				calendarType: 'persian',
-				timePicker: { enabled: true, second: {enabled: false} },
-				autoClose: true
+		
+		// راه‌اندازی فیلدهای تاریخ و زمان
+		datetimeInputs.forEach(function(input) {
+			if (input.hasAttribute('data-jdp-initialized')) return;
+			
+			const originalName = input.name;
+			if (!originalName) return;
+			
+			// ایجاد فیلد مخفی
+			const hiddenInput = document.createElement('input');
+			hiddenInput.type = 'hidden';
+			hiddenInput.name = originalName;
+			hiddenInput.id = 'hidden_' + input.id;
+			
+			// حذف name از فیلد نمایشی
+			input.removeAttribute('name');
+			const originalId = input.id;
+			input.id = 'visual_' + originalId;
+			
+			// اضافه کردن کلاس
+			input.classList.add('form-control');
+			
+			// قرار دادن hidden input
+			input.parentNode.appendChild(hiddenInput);
+			
+			// راه‌اندازی datepicker با زمان
+			JalaliDatepicker.init('#' + input.id, { time: true });
+			
+			// تنظیم مقدار اولیه
+			setTimeout(function() {
+				const gdate = input.getAttribute('data-gdate');
+				if (gdate) {
+					const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+					if (parts.length >= 3) {
+						const gy = parseInt(parts[0]);
+						const gm = parseInt(parts[1]);
+						const gd = parseInt(parts[2]);
+						const gh = parts.length >= 4 ? parseInt(parts[3]) : 0;
+						const gi = parts.length >= 5 ? parseInt(parts[4]) : 0;
+						
+						if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+							const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+							const gy2 = (gm > 2) ? (gy + 1) : gy;
+							let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+							let jy = -1595 + (33 * Math.floor(days / 12053));
+							days %= 12053;
+							jy += 4 * Math.floor(days / 1461);
+							days %= 1461;
+							if (days > 365) {
+								jy += Math.floor((days - 1) / 365);
+								days = (days - 1) % 365;
+							}
+							let jm, jd;
+							if (days < 186) {
+								jm = 1 + Math.floor(days / 31);
+								jd = 1 + (days % 31);
+							} else {
+								jm = 7 + Math.floor((days - 186) / 30);
+								jd = 1 + ((days - 186) % 30);
+							}
+							
+							const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')} ${String(gh).padStart(2, '0')}:${String(gi).padStart(2, '0')}:00`;
+							hiddenInput.value = jalaliDateStr;
+						}
+					}
+				} else if (input.value) {
+					const valueParts = input.value.trim().split(/[-/]/);
+					if (valueParts.length === 3) {
+						const year = parseInt(valueParts[0]);
+						if (year > 1900 && year < 2100) {
+							hiddenInput.value = input.value;
+						}
+					}
+				}
+			}, 300);
+			
+			// گوش دادن به تغییرات
+			input.addEventListener('jdp:change', function (e) {
+				const jy = e.detail.year;
+				const jm = String(e.detail.month).padStart(2, '0');
+				const jd = String(e.detail.day).padStart(2, '0');
+				const hh = String(e.detail.hour || 0).padStart(2, '0');
+				const mm = String(e.detail.minute || 0).padStart(2, '0');
+				const ss = '00';
+				const jalaliDateStr = `${jy}-${jm}-${jd} ${hh}:${mm}:${ss}`;
+				hiddenInput.value = jalaliDateStr;
 			});
+			
+			input.setAttribute('data-jdp-initialized', 'true');
 		});
 	}
 
@@ -1348,11 +1502,8 @@ if (productFlowStatusData) {
 		}, 100);
 	});
 </script>
-<!-- jQuery (needed for persian-datepicker) -->
+<!-- jQuery (needed for other functionality) -->
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<!-- Persian Date libraries -->
-<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 <script>
 	// Jalali helpers are initialized per-tab by initJalaliPickers()
 </script>

@@ -435,25 +435,8 @@
     color: #f57c00;
   }
 
-  /* Date picker styles */
-  .p-datepicker-trigger {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 1.2rem;
-    z-index: 10;
-    user-select: none;
-  }
-
-  .p-datepicker-trigger:hover {
-    opacity: 0.7;
-  }
-
   #id_expected_arrival_date_display {
     position: relative;
-    padding-left: 40px;
   }
 
   .freight-fields-container {
@@ -732,12 +715,10 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- jQuery (برای استفاده از تقویم شمسی) -->
+<!-- jQuery (برای سایر عملکردها) -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Persian Date Picker Library -->
-<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<!-- Custom Jalali Datepicker Component -->
+{% include "components/jalali_datepicker.html" %}
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
@@ -925,86 +906,126 @@
     calculateFreight();
   });
 
-  // راه‌اندازی تقویم شمسی برای expected_arrival_date
-  $(document).ready(function () {
-    const expectedArrivalDateDisplay = $('#id_expected_arrival_date_display');
-    const expectedArrivalDateHidden = $('#id_expected_arrival_date');
+  // راه‌اندازی Custom Jalali Datepicker برای expected_arrival_date
+  document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(initializeExpectedArrivalDatePicker, 200);
+  });
 
-    if (expectedArrivalDateDisplay.length && expectedArrivalDateHidden.length) {
-      expectedArrivalDateHidden.css('display', 'none');
+  function initializeExpectedArrivalDatePicker() {
+    const expectedArrivalDateDisplay = document.getElementById('id_expected_arrival_date_display');
+    const expectedArrivalDateHidden = document.getElementById('id_expected_arrival_date');
 
-      let initialValue = '';
-      if (expectedArrivalDateHidden.val()) {
-        try {
-          const dateParts = expectedArrivalDateHidden.val().split('-');
-          if (dateParts.length === 3) {
-            const gregorianDate = persianDate.fromCalendar('gregorian',
-              parseInt(dateParts[0]),
-              parseInt(dateParts[1]),
-              parseInt(dateParts[2])
-            );
-            const persianDateObj = gregorianDate.toCalendar('persian');
-            initialValue = persianDateObj.year + '/' +
-              String(persianDateObj.month).padStart(2, '0') + '/' +
-              String(persianDateObj.day).padStart(2, '0');
-            expectedArrivalDateDisplay.val(initialValue);
+    if (!expectedArrivalDateDisplay || !expectedArrivalDateHidden) {
+      return;
+    }
+
+    // جلوگیری از راه‌اندازی مجدد
+    if (expectedArrivalDateDisplay.hasAttribute('data-jdp-initialized')) {
+      return;
+    }
+
+    // ذخیره نام اصلی
+    const originalName = expectedArrivalDateHidden.name || 'expected_arrival_date';
+
+    // مخفی کردن فیلد hidden
+    expectedArrivalDateHidden.style.display = 'none';
+
+    // حذف name از فیلد نمایشی (اگر وجود دارد)
+    expectedArrivalDateDisplay.removeAttribute('name');
+    const originalId = expectedArrivalDateDisplay.id;
+    expectedArrivalDateDisplay.id = 'visual_expected_arrival_date';
+
+    // اضافه کردن کلاس
+    expectedArrivalDateDisplay.classList.add('form-control');
+
+    // راه‌اندازی datepicker
+    JalaliDatepicker.init('#' + expectedArrivalDateDisplay.id, { time: false });
+
+    // تنظیم مقدار اولیه
+    setTimeout(function() {
+      const gdate = expectedArrivalDateDisplay.getAttribute('data-gdate');
+      if (gdate) {
+        const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+        if (parts.length >= 3) {
+          const gy = parseInt(parts[0]);
+          const gm = parseInt(parts[1]);
+          const gd = parseInt(parts[2]);
+          
+          if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+            const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+            const gy2 = (gm > 2) ? (gy + 1) : gy;
+            let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+            let jy = -1595 + (33 * Math.floor(days / 12053));
+            days %= 12053;
+            jy += 4 * Math.floor(days / 1461);
+            days %= 1461;
+            if (days > 365) {
+              jy += Math.floor((days - 1) / 365);
+              days = (days - 1) % 365;
+            }
+            let jm, jd;
+            if (days < 186) {
+              jm = 1 + Math.floor(days / 31);
+              jd = 1 + (days % 31);
+            } else {
+              jm = 7 + Math.floor((days - 186) / 30);
+              jd = 1 + ((days - 186) % 30);
+            }
+            
+            const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
+            expectedArrivalDateHidden.value = jalaliDateStr;
           }
-        } catch (e) {
-          console.error('خطا در تبدیل تاریخ:', e);
         }
-      }
-
-      expectedArrivalDateDisplay.pDatepicker({
-        observer: true,
-        format: 'YYYY/MM/DD',
-        altField: '#id_expected_arrival_date',
-        altFormat: 'YYYY-MM-DD',
-        calendarType: 'persian',
-        initialValue: initialValue || false,
-        timePicker: {
-          enabled: false
-        },
-        onSelect: function () {
-          const selectedDate = expectedArrivalDateDisplay.val();
-          if (selectedDate) {
-            try {
-              const persianDateParts = selectedDate.split('/');
-              if (persianDateParts.length === 3) {
-                const persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
-                const gregorianDate = persianDateObj.toCalendar('gregorian');
-                const formattedDate = gregorianDate.year + '-' +
-                  String(gregorianDate.month).padStart(2, '0') + '-' +
-                  String(gregorianDate.day).padStart(2, '0');
-
-                expectedArrivalDateHidden.val(formattedDate);
+      } else if (expectedArrivalDateHidden.value) {
+        const valueParts = expectedArrivalDateHidden.value.trim().split(/[-/]/);
+        if (valueParts.length === 3) {
+          const year = parseInt(valueParts[0]);
+          if (year > 1900 && year < 2100) {
+            // احتمالاً میلادی است - تبدیل به شمسی
+            const gy = parseInt(valueParts[0]);
+            const gm = parseInt(valueParts[1]);
+            const gd = parseInt(valueParts[2]);
+            
+            if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+              const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+              const gy2 = (gm > 2) ? (gy + 1) : gy;
+              let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+              let jy = -1595 + (33 * Math.floor(days / 12053));
+              days %= 12053;
+              jy += 4 * Math.floor(days / 1461);
+              days %= 1461;
+              if (days > 365) {
+                jy += Math.floor((days - 1) / 365);
+                days = (days - 1) % 365;
               }
-            } catch (e) {
-              console.error('خطا در تبدیل تاریخ:', e);
+              let jm, jd;
+              if (days < 186) {
+                jm = 1 + Math.floor(days / 31);
+                jd = 1 + (days % 31);
+              } else {
+                jm = 7 + Math.floor((days - 186) / 30);
+                jd = 1 + ((days - 186) % 30);
+              }
+              
+              const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
+              expectedArrivalDateHidden.value = jalaliDateStr;
             }
           }
         }
-      });
-
-      if (!expectedArrivalDateDisplay.parent().find('.p-datepicker-trigger').length) {
-        const iconSpan = $('<span>', {
-          class: 'p-datepicker-trigger',
-          html: '📅',
-          css: {
-            'position': 'absolute',
-            'right': '10px',
-            'top': '50%',
-            'transform': 'translateY(-50%)',
-            'cursor': 'pointer',
-            'font-size': '1.2rem',
-            'z-index': '10',
-            'pointer-events': 'none'
-          }
-        });
-
-        expectedArrivalDateDisplay.parent().css('position', 'relative').append(iconSpan);
       }
-    }
-  });
+    }, 300);
+
+    // گوش دادن به تغییرات
+    expectedArrivalDateDisplay.addEventListener('jdp:change', function (e) {
+      const jy = e.detail.year;
+      const jm = String(e.detail.month).padStart(2, '0');
+      const jd = String(e.detail.day).padStart(2, '0');
+      const jalaliDateStr = `${jy}-${jm}-${jd}`;
+      expectedArrivalDateHidden.value = jalaliDateStr;
+    });
+
+    expectedArrivalDateDisplay.setAttribute('data-jdp-initialized', 'true');
+  }
 
   // Plate formatting and serialization
   function normalizeDigits(str) {

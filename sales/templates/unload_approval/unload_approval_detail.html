@@ -385,155 +385,147 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- jQuery (برای استفاده از تقویم شمسی) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<!-- Persian Date Picker Library -->
-<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<!-- Custom Jalali Datepicker Component -->
+{% include "components/jalali_datepicker.html" %}
 
 <script>
-$(document).ready(function() {
-    // تبدیل فیلد تاریخ تایید تخلیه به تقویم شمسی
-    var unloadTimeInput = $('#id_unload_approval_time');
+document.addEventListener('DOMContentLoaded', function() {
+    // راه‌اندازی Custom Jalali Datepicker با تاخیر
+    setTimeout(initializeUnloadApprovalTimePicker, 200);
     
-    if (unloadTimeInput.length) {
-        console.log('تقویم شمسی در حال راه‌اندازی...');
-        
-        // تبدیل type='date' به text برای استفاده از تقویم شمسی
-        unloadTimeInput.attr('type', 'text');
-        unloadTimeInput.attr('readonly', 'readonly');
-        unloadTimeInput.css('cursor', 'pointer');
-        
-        // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
-        var initialValue = unloadTimeInput.val();
-        var persianDateValue = '';
-        
-        console.log('مقدار اولیه:', initialValue);
-        
-        // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
-        if (initialValue && initialValue.trim() !== '') {
-            var parts = initialValue.split('-');
-            if (parts.length === 3) {
-                try {
-                    var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                    var pDate = new persianDate(gregorianDate);
-                    persianDateValue = pDate.format('YYYY/MM/DD');
-                    console.log('تاریخ شمسی محاسبه شده:', persianDateValue);
-                } catch (e) {
-                    console.error('خطا در تبدیل تاریخ اولیه:', e);
-                }
-            }
-        }
-        
-        // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
-        var hiddenInput = $('<input>', {
-            type: 'hidden',
-            id: 'id_unload_approval_time_hidden',
-            name: 'unload_approval_time'
-        });
-        
-        // اگر مقدار اولیه داریم، در hidden input قرار می‌دهیم
-        if (initialValue && initialValue.trim() !== '') {
-            hiddenInput.val(initialValue);
-        }
-        
-        unloadTimeInput.after(hiddenInput);
-        
-        // حذف attribute name از input اصلی تا تنها hidden input ارسال شود
-        unloadTimeInput.removeAttr('name');
-        
-        // راه‌اندازی تقویم شمسی
-        unloadTimeInput.pDatepicker({
-            observer: true,
-            format: 'YYYY/MM/DD',
-            altField: '#id_unload_approval_time_hidden',
-            altFormat: 'YYYY-MM-DD',
-            calendarType: 'persian',
-            initialValue: persianDateValue || false,
-            autoClose: true,
-            timePicker: {
-                enabled: false
-            },
-            onSelect: function(unix) {
-                console.log('تاریخ انتخاب شد');
-                // تبدیل Unix timestamp به تاریخ میلادی
-                var selectedUnix = unix / 1000;  // تبدیل میلی‌ثانیه به ثانیه
-                var date = new Date(unix);
-                
-                var year = date.getFullYear();
-                var month = String(date.getMonth() + 1).padStart(2, '0');
-                var day = String(date.getDate()).padStart(2, '0');
-                var formattedDate = year + '-' + month + '-' + day;
-                
-                console.log('تاریخ میلادی:', formattedDate);
-                hiddenInput.val(formattedDate);
-                
-                // نمایش تاریخ شمسی در input
-                var selectedPersianDate = unloadTimeInput.val();
-                console.log('تاریخ شمسی نمایش داده شده:', selectedPersianDate);
+    // اعتبارسنجی قبل از submit
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const hiddenInput = document.getElementById('hidden_id_unload_approval_time');
+            if (!hiddenInput || !hiddenInput.value || hiddenInput.value.trim() === '') {
+                alert('لطفاً زمان تایید تخلیه را انتخاب کنید');
+                e.preventDefault();
+                return false;
             }
         });
-        
-        // اگر مقدار اولیه داریم، نمایش می‌دهیم
-        if (persianDateValue) {
-            unloadTimeInput.val(persianDateValue);
-        }
-        
-        // اضافه کردن آیکون تقویم
-        if (!unloadTimeInput.parent().find('.p-datepicker-trigger').length) {
-            var iconSpan = $('<span>', {
-                class: 'p-datepicker-trigger',
-                html: '📅',
-                css: {
-                    'position': 'absolute',
-                    'left': '10px',
-                    'top': '50%',
-                    'transform': 'translateY(-50%)',
-                    'cursor': 'pointer',
-                    'font-size': '1.2rem',
-                    'z-index': '10',
-                    'pointer-events': 'none'
-                }
-            });
-            unloadTimeInput.parent().css('position', 'relative');
-            unloadTimeInput.parent().append(iconSpan);
-        }
-        
-        console.log('تقویم شمسی راه‌اندازی شد');
     }
-    
-    // دیباگ: نمایش مقادیر قبل از submit
-    $('form').on('submit', function(e) {
-        var hiddenVal = $('#id_unload_approval_time_hidden').val();
-        console.log('مقدار hidden input در زمان submit:', hiddenVal);
-        
-        if (!hiddenVal || hiddenVal.trim() === '') {
-            alert('لطفاً تاریخ تایید تخلیه را انتخاب کنید');
-            e.preventDefault();
-            return false;
-        }
-    });
 });
+
+// Moved to global scope to avoid ReferenceError
+function initializeUnloadApprovalTimePicker() {
+    // فیلد زمان تایید تخلیه (jDateTimeField - تاریخ و زمان)
+    const unloadTimeInput = document.getElementById('id_unload_approval_time');
+
+    if (unloadTimeInput) {
+        // جلوگیری از راه‌اندازی مجدد
+        if (unloadTimeInput.hasAttribute('data-jdp-initialized')) {
+            console.log('Datepicker already initialized for unload_approval_time');
+            return;
+        }
+
+        // ذخیره نام اصلی قبل از حذف
+        const originalName = unloadTimeInput.name || 'unload_approval_time';
+
+        // 1. تبدیل type='date' به text (اگر باشد)
+        if (unloadTimeInput.type === 'date' || unloadTimeInput.type === 'datetime-local') {
+            unloadTimeInput.type = 'text';
+        }
+
+        // 2. ایجاد فیلد مخفی برای ارسال مقدار اصلی (میلادی) به سرور
+        const hiddenInput = document.createElement('input');
+        hiddenInput.type = 'hidden';
+        hiddenInput.name = originalName; // نام اصلی به فیلد مخفی داده می‌شود
+        hiddenInput.id = 'hidden_id_unload_approval_time';
+
+        // 3. حذف نام از فیلد نمایشی تا به سرور ارسال نشود
+        unloadTimeInput.removeAttribute('name');
+        const originalId = unloadTimeInput.id;
+        unloadTimeInput.id = 'visual_id_unload_approval_time';
+
+        // 4. اضافه کردن کلاس برای استایل دهی
+        unloadTimeInput.classList.add('form-control'); // اطمینان از استایل
+
+        // 5. قرار دادن فیلد مخفی کنار فیلد نمایشی
+        unloadTimeInput.parentNode.appendChild(hiddenInput);
+
+        // 6. راه‌اندازی کامپوننت با پشتیبانی از ساعت (jDateTimeField)
+        JalaliDatepicker.init('#' + unloadTimeInput.id, { time: true });
+
+        // 7. تنظیم مقدار اولیه hiddenInput (اگر وجود دارد)
+        setTimeout(function() {
+            const gdate = unloadTimeInput.getAttribute('data-gdate');
+            if (gdate) {
+                // Parse تاریخ میلادی از data-gdate
+                const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+                if (parts.length >= 3) {
+                    const gy = parseInt(parts[0]);
+                    const gm = parseInt(parts[1]);
+                    const gd = parseInt(parts[2]);
+                    const gh = parts.length >= 4 ? parseInt(parts[3]) : 0;
+                    const gi = parts.length >= 5 ? parseInt(parts[4]) : 0;
+                    
+                    if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+                        // استفاده از منطق تبدیل ساده (مشابه Jalaali.toJalaali)
+                        const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+                        const gy2 = (gm > 2) ? (gy + 1) : gy;
+                        let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+                        let jy = -1595 + (33 * Math.floor(days / 12053));
+                        days %= 12053;
+                        jy += 4 * Math.floor(days / 1461);
+                        days %= 1461;
+                        if (days > 365) {
+                            jy += Math.floor((days - 1) / 365);
+                            days = (days - 1) % 365;
+                        }
+                        let jm, jd;
+                        if (days < 186) {
+                            jm = 1 + Math.floor(days / 31);
+                            jd = 1 + (days % 31);
+                        } else {
+                            jm = 7 + Math.floor((days - 186) / 30);
+                            jd = 1 + ((days - 186) % 30);
+                        }
+                        
+                        // فرمت: YYYY-MM-DD HH:MM:SS (شمسی)
+                        const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')} ${String(gh).padStart(2, '0')}:${String(gi).padStart(2, '0')}:00`;
+                        hiddenInput.value = jalaliDateStr;
+                        console.log('Initial value converted - Gregorian:', gdate, 'Jalali:', jalaliDateStr);
+                    }
+                }
+            } else if (unloadTimeInput.value) {
+                // اگر data-gdate وجود ندارد اما value وجود دارد، بررسی کن
+                const valueParts = unloadTimeInput.value.trim().split(/[-/]/);
+                if (valueParts.length === 3) {
+                    const year = parseInt(valueParts[0]);
+                    if (year > 1900 && year < 2100) {
+                        // احتمالاً میلادی است
+                        hiddenInput.value = unloadTimeInput.value;
+                    }
+                }
+            }
+        }, 300);
+
+        // 8. گوش دادن به تغییرات برای آپدیت فیلد مخفی
+        // jDateTimeField انتظار دارد تاریخ شمسی به فرمت YYYY-MM-DD HH:MM:SS دریافت کند
+        unloadTimeInput.addEventListener('jdp:change', function (e) {
+            // ساخت تاریخ شمسی به فرمت مورد نیاز jDateTimeField
+            const jy = e.detail.year;
+            const jm = String(e.detail.month).padStart(2, '0');
+            const jd = String(e.detail.day).padStart(2, '0');
+            const hh = String(e.detail.hour || 0).padStart(2, '0');
+            const mm = String(e.detail.minute || 0).padStart(2, '0');
+            const ss = '00';
+            
+            // فرمت: YYYY-MM-DD HH:MM:SS (شمسی)
+            const jalaliDateStr = `${jy}-${jm}-${jd} ${hh}:${mm}:${ss}`;
+            hiddenInput.value = jalaliDateStr;
+            
+            console.log('Date changed - Jalali:', jalaliDateStr, 'Gregorian:', e.detail.gregorian);
+        });
+
+        unloadTimeInput.setAttribute('data-jdp-initialized', 'true');
+        console.log('Custom Jalali Datepicker initialized for unload_approval_time');
+    }
+}
 </script>
 
 <style>
-#id_unload_approval_time {
-    position: relative;
-    padding-right: 40px;
-}
-
-.p-datepicker-trigger {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    cursor: pointer;
-    font-size: 1.2rem;
-    z-index: 10;
-    pointer-events: none;
-}
-
 /* استایل‌های اضافی برای errorlist */
 .form-group .errorlist {
     list-style: none;
