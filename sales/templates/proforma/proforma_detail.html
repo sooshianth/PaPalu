@@ -577,33 +577,104 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Initialize Jalali Datepicker for validity date
-        const validityDateInput = document.getElementById('id_validity_date');
-        if (validityDateInput) {
-            // Handle name mapping for backend
-            const originalName = validityDateInput.name;
-            if (originalName) {
-                validityDateInput.removeAttribute('name');
-                const hidden = document.createElement('input');
-                hidden.type = 'hidden';
-                hidden.name = originalName;
-                hidden.id = 'id_validity_date_hidden';
-                if (validityDateInput.value) {
-                    hidden.value = validityDateInput.value;
-                }
-                validityDateInput.parentNode.insertBefore(hidden, validityDateInput.nextSibling);
-
-                validityDateInput.addEventListener('jdp:change', function (e) {
-                    hidden.value = e.detail.gregorian;
-                });
-
-                validityDateInput.addEventListener('input', function (e) {
-                    if (!this.value) hidden.value = '';
-                });
-            }
-
-            JalaliDatepicker.init('#id_validity_date', { time: false });
-        }
+        // راه‌اندازی Custom Jalali Datepicker برای فیلد validity_date
+        setTimeout(initializeValidityDatePicker, 200);
     });
+
+    // Moved to global scope to avoid ReferenceError
+    function initializeValidityDatePicker() {
+        // فیلد تاریخ اعتبار
+        const validityDateInput = document.getElementById('id_validity_date');
+
+        if (validityDateInput) {
+            // جلوگیری از راه‌اندازی مجدد
+            if (validityDateInput.hasAttribute('data-jdp-initialized')) return;
+
+            // ذخیره نام اصلی قبل از حذف
+            const originalName = validityDateInput.name || 'validity_date';
+
+            // 1. ایجاد فیلد مخفی برای ارسال مقدار اصلی (میلادی) به سرور
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = originalName; // نام اصلی به فیلد مخفی داده می‌شود
+            hiddenInput.id = 'hidden_' + validityDateInput.id;
+
+            // 2. حذف نام از فیلد نمایشی تا به سرور ارسال نشود
+            validityDateInput.removeAttribute('name');
+            validityDateInput.id = 'visual_' + validityDateInput.id;
+
+            // 3. اضافه کردن کلاس برای استایل دهی
+            validityDateInput.classList.add('form-control'); // اطمینان از استایل
+
+            // 4. قرار دادن فیلد مخفی کنار فیلد نمایشی
+            validityDateInput.parentNode.appendChild(hiddenInput);
+
+            // 5. راه‌اندازی کامپوننت بدون پشتیبانی از ساعت
+            JalaliDatepicker.init('#' + validityDateInput.id, { time: false });
+
+            // 6. تنظیم مقدار اولیه hiddenInput (اگر وجود دارد)
+            setTimeout(function() {
+                const gdate = validityDateInput.getAttribute('data-gdate');
+                if (gdate) {
+                    // Parse تاریخ میلادی از data-gdate
+                    const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+                    if (parts.length >= 3) {
+                        const gy = parseInt(parts[0]);
+                        const gm = parseInt(parts[1]);
+                        const gd = parseInt(parts[2]);
+                        
+                        if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+                            // استفاده از منطق تبدیل ساده (مشابه Jalaali.toJalaali)
+                            const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+                            const gy2 = (gm > 2) ? (gy + 1) : gy;
+                            let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+                            let jy = -1595 + (33 * Math.floor(days / 12053));
+                            days %= 12053;
+                            jy += 4 * Math.floor(days / 1461);
+                            days %= 1461;
+                            if (days > 365) {
+                                jy += Math.floor((days - 1) / 365);
+                                days = (days - 1) % 365;
+                            }
+                            let jm, jd;
+                            if (days < 186) {
+                                jm = 1 + Math.floor(days / 31);
+                                jd = 1 + (days % 31);
+                            } else {
+                                jm = 7 + Math.floor((days - 186) / 30);
+                                jd = 1 + ((days - 186) % 30);
+                            }
+                            
+                            // فرمت: YYYY-MM-DD (شمسی)
+                            const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
+                            hiddenInput.value = jalaliDateStr;
+                            console.log('Initial value converted - Gregorian:', gdate, 'Jalali:', jalaliDateStr);
+                        }
+                    }
+                } else if (validityDateInput.value) {
+                    // اگر data-gdate وجود ندارد اما value وجود دارد، از value استفاده کن
+                    hiddenInput.value = validityDateInput.value;
+                }
+            }, 300);
+
+            // 7. گوش دادن به تغییرات برای آپدیت فیلد مخفی
+            // jDateField انتظار دارد تاریخ شمسی به فرمت YYYY-MM-DD دریافت کند
+            validityDateInput.addEventListener('jdp:change', function (e) {
+                // ساخت تاریخ شمسی به فرمت مورد نیاز jDateField
+                const jy = e.detail.year;
+                const jm = String(e.detail.month).padStart(2, '0');
+                const jd = String(e.detail.day).padStart(2, '0');
+                
+                // فرمت: YYYY-MM-DD (شمسی)
+                const jalaliDateStr = `${jy}-${jm}-${jd}`;
+                hiddenInput.value = jalaliDateStr;
+                
+                console.log('Date changed - Jalali:', jalaliDateStr, 'Gregorian:', e.detail.gregorian);
+            });
+
+            validityDateInput.setAttribute('data-jdp-initialized', 'true');
+            console.log('Custom Jalali Datepicker initialized for validity_date');
+        }
+    }
 </script>
 {% endblock %}
