@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'data_exflow.apps.DataExflowConfig',
     'core.apps.CoreConfig',
     'authentication.apps.AuthenticationConfig',
+    'sms_api.apps.SmsApiConfig',
     # Other apps
     'perm_manager.apps.PermManagerConfig',
     'accounting.apps.AccountingConfig',
