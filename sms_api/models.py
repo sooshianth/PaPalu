@@ -29,6 +29,7 @@ class SmsQueue(models.Model):
         ('barnameh_notification', 'اطلاع رسانی بارنامه'),
         ('extelaf_notification', 'اطلاع رسانی اختلاف'),
         ('purchase_aware', 'اطلاع رسانی خرید جدید (مدیریت)'),
+        ('freight_payment_notification', 'اطلاع رسانی پرداخت کرایه به راننده'),
         ('bulk_campaign', 'کمپین پیامک انبوه'),
         ('custom', 'پیام سفارشی'),
     ]

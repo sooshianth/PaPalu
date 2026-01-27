@@ -14,9 +14,31 @@ from core.RBACModel.TaskPermission import TaskChoices
 from core.RBACModel.Roles import user_has_task
 from accounting.tables import UploadFarePaymentDocsTable
 from accounting.forms import UploadFarePaymentDocForm
+from sms_api.apis import queue_sms
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def to_persian_digits(value):
+    """تبدیل اعداد انگلیسی به فارسی"""
+    if value is None:
+        return ""
+    return str(value).replace("0", "۰").replace("1", "۱").replace("2", "۲").replace("3", "۳").replace("4", "۴").replace("5", "۵").replace("6", "۶").replace("7", "۷").replace("8", "۸").replace("9", "۹")
+
+
+def format_currency_persian(value):
+    """فرمت کردن عدد به صورت پول با کاما و تبدیل به فارسی"""
+    if value is None:
+        return "۰"
+    try:
+        # حذف اعشار و فرمت با کاما
+        num = int(value)
+        formatted = f"{num:,}"
+        # تبدیل به فارسی
+        return to_persian_digits(formatted)
+    except (ValueError, TypeError):
+        return to_persian_digits(str(value))
 
 
 @login_required
@@ -192,6 +214,53 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
                             f"وضعیت جدید: {transport.status} | "
                             f"فایل: {transport.freight_payment_document.name if transport.freight_payment_document else 'N/A'}"
                         )
+                        
+                        # ارسال پیامک به راننده
+                        try:
+                            if transport.driver and transport.driver.phone_number:
+                                # آماده‌سازی اطلاعات پیامک
+                                driver_name = transport.driver.name if transport.driver.name else "راننده محترم"
+                                transport_num = to_persian_digits(transport.transport_number or transport_number)
+                                
+                                # محاسبه مبلغ پرداختی
+                                amount = transport.freight_payment if transport.freight_payment else transport.total_freight
+                                if amount:
+                                    amount_formatted = format_currency_persian(amount)
+                                    amount_text = f"مبلغ {amount_formatted} ریال"
+                                else:
+                                    amount_text = "مبلغ کرایه"
+                                
+                                # اطلاعات حساب بانکی
+                                bank_info = ""
+                                if transport.driver_bank_account:
+                                    bank_account = transport.driver_bank_account
+                                    if bank_account.account_number:
+                                        account_num = to_persian_digits(bank_account.account_number[-4:])  # 4 رقم آخر
+                                        bank_name = bank_account.bank_name if bank_account.bank_name else "بانک"
+                                        bank_info = f" به حساب {bank_name} به شماره کارت *{account_num}"
+                                
+                                # ساخت متن پیامک
+                                sms_message = (
+                                    f"{driver_name} گرامی،\n"
+                                    f"{amount_text} بابت کرایه حمل شماره {transport_num}{bank_info} واریز گردید.\n"
+                                    f"با تشکر از همکاری شما\n"
+                                    f"شرکت تأمین نهاده سیمرغ (هاشمی)"
+                                )
+                                
+                                # ارسال پیامک به صف
+                                queue_sms(
+                                    number=transport.driver.phone_number,
+                                    message=sms_message,
+                                    notification_type='freight_payment_notification'
+                                )
+                                
+                                bug_logger.info(f"پیامک اطلاع‌رسانی پرداخت کرایه برای راننده {driver_name} (حمل {transport_number}) به صف اضافه شد")
+                                audit_logger.info(f"ارسال پیامک اطلاع‌رسانی پرداخت کرایه - حمل {transport_number}")
+                            else:
+                                bug_logger.warning(f"راننده یا شماره تلفن راننده برای حمل {transport_number} موجود نیست - پیامک ارسال نشد")
+                        except Exception as sms_error:
+                            # خطا در ارسال پیامک نباید مانع از ادامه فرآیند شود
+                            bug_logger.error(f"خطا در ارسال پیامک اطلاع‌رسانی پرداخت کرایه - حمل {transport_number}: {str(sms_error)}", exc_info=True)
                     
                     messages.success(request, status_message)
                     return redirect('accounting:upload_fare_payment_docs_list')
