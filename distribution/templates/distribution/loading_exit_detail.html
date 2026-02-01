@@ -605,7 +605,12 @@
         .form-actions a,
         .form-actions button {
             width: 100%;
+            min-height: 44px;
+            padding: 10px 14px;
             text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .summary-items-row {
@@ -617,9 +622,12 @@
         }
         
         .modal-content {
-            width: 95%;
+            width: 100%;
+            max-width: none;
             padding: 20px;
-            max-height: 90vh;
+            max-height: 100vh;
+            min-height: 100vh;
+            border-radius: 0;
         }
         
         .modal-header h3 {

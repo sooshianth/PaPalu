@@ -434,6 +434,12 @@
         .table-container .btn-group a,
         .table-container .btn-group button {
             white-space: normal;
+            min-height: 44px;
+            min-width: 44px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .delivery-info-label {
@@ -441,9 +447,12 @@
         }
         
         .modal-content {
-            width: 95%;
+            width: 100%;
+            max-width: none;
             padding: 20px;
-            max-height: 85vh;
+            max-height: 100vh;
+            min-height: 100vh;
+            border-radius: 0;
         }
         
         .modal-header h3 {
@@ -457,9 +466,13 @@
         
         .pagination a,
         .pagination span {
-            padding: 8px 12px;
-            min-width: 36px;
+            padding: 10px 14px;
+            min-width: 40px;
+            min-height: 40px;
             font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
     }
     
@@ -478,8 +491,24 @@
             font-size: 0.85rem;
         }
         
+        .delivery-info-label {
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .delivery-info-item {
+            flex-wrap: wrap;
+        }
+        
         .modal-content {
             padding: 15px;
+        }
+        
+        .pagination a,
+        .pagination span {
+            min-width: 40px;
+            min-height: 40px;
+            padding: 8px 12px;
         }
     }
 </style>

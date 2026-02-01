@@ -296,9 +296,24 @@
         
         .pagination a,
         .pagination span {
-            padding: 8px 12px;
-            min-width: 36px;
+            padding: 10px 14px;
+            min-width: 40px;
+            min-height: 40px;
             font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .table-container .btn,
+        .table-container .btn-warning,
+        .table-container .btn-secondary {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
     }
     
@@ -317,6 +332,13 @@
         .table-container table tbody td {
             padding: 8px;
             font-size: 0.85rem;
+        }
+        
+        .pagination a,
+        .pagination span {
+            min-width: 40px;
+            min-height: 40px;
+            padding: 8px 12px;
         }
     }
 </style>

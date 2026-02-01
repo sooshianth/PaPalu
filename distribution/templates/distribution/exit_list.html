@@ -368,8 +368,12 @@
         }
         
         .modal-content {
-            width: 95%;
+            width: 100%;
+            max-width: none;
             padding: 20px;
+            max-height: 100vh;
+            min-height: 100vh;
+            border-radius: 0;
         }
         
         .modal-header h3 {
@@ -378,13 +382,38 @@
         
         .modal-footer {
             flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .modal-footer button,
+        .modal-footer .btn-outline-primary {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .data-table .btn-outline-primary,
+        .table-container .btn-outline-primary {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .pagination a,
         .pagination span {
-            padding: 8px 12px;
-            min-width: 36px;
+            padding: 10px 14px;
+            min-width: 40px;
+            min-height: 40px;
             font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
     }
     
@@ -405,6 +434,13 @@
         
         .modal-content {
             padding: 15px;
+        }
+        
+        .pagination a,
+        .pagination span {
+            min-width: 40px;
+            min-height: 40px;
+            padding: 8px 12px;
         }
     }
 </style>

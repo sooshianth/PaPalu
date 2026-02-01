@@ -256,6 +256,16 @@
         .table-container .btn-group button {
             flex-wrap: wrap;
         }
+        
+        .info-card-body .btn,
+        .info-card-body a[class*="btn"] {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
     }
     
     @media (max-width: 480px) {
@@ -274,8 +284,17 @@
         
         .modern-table th,
         .modern-table td {
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             padding: 0.4rem;
+        }
+        
+        .info-card-body .btn,
+        .info-card-body a[class*="btn"] {
+            min-height: 44px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
     }
 </style>

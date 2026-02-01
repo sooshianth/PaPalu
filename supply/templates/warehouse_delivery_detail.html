@@ -493,6 +493,8 @@
         
         .comparison-section {
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: inset -8px 0 12px -8px rgba(0,0,0,0.15);
         }
         
         .comparison-table {
@@ -507,13 +509,18 @@
         
         .form-actions {
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
         }
         
         .form-actions a,
         .form-actions button {
             width: 100%;
+            min-height: 44px;
+            padding: 10px 14px;
             text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .summary-items-row {

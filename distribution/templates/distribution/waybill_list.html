@@ -251,6 +251,81 @@
     .alert-success { background-color: var(--light-green); color: var(--dark-green); }
     .alert-info { background-color: #d1ecf1; color: #0c5460; }
     .alert-danger { background-color: #f8d7da; color: #721c24; }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding-bottom: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.85rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+        
+        .data-table tbody td.actions,
+        .data-table tbody td:has(.btn-group) {
+            white-space: normal;
+        }
+        
+        .data-table .btn-outline-primary,
+        .data-table .btn-success,
+        .table-container .btn-outline-primary,
+        .table-container .btn-success {
+            min-height: 44px;
+            min-width: 44px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pagination a,
+        .pagination span {
+            min-width: 40px;
+            min-height: 40px;
+            padding: 10px 14px;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .list-card {
+            padding: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.2rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 8px;
+            font-size: 0.8rem;
+        }
+        
+        .pagination a,
+        .pagination span {
+            min-width: 40px;
+            min-height: 40px;
+            padding: 8px 12px;
+            font-size: 0.8rem;
+        }
+    }
 </style>
 {% endblock %}
 
