@@ -339,6 +339,74 @@
         padding-top: 15px;
         border-top: 1px solid var(--gray-200);
     }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding-bottom: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+        
+        .data-table tbody td.actions,
+        .data-table tbody td:has(.btn-group) {
+            white-space: normal;
+        }
+        
+        .modal-content {
+            width: 95%;
+            padding: 20px;
+        }
+        
+        .modal-header h3 {
+            font-size: 1.1rem;
+        }
+        
+        .modal-footer {
+            flex-wrap: wrap;
+        }
+        
+        .pagination a,
+        .pagination span {
+            padding: 8px 12px;
+            min-width: 36px;
+            font-size: 0.85rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .list-card {
+            padding: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.2rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .modal-content {
+            padding: 15px;
+        }
+    }
 </style>
 {% endblock %}
 

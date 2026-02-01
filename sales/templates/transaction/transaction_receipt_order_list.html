@@ -449,6 +449,10 @@
             align-items: flex-start;
         }
         
+        .page-header h2 {
+            font-size: 1.4rem;
+        }
+        
         .list-card {
             padding: 20px;
         }
@@ -460,6 +464,34 @@
         .data-table thead th,
         .data-table tbody td {
             padding: 10px;
+        }
+        
+        .pagination {
+            gap: 6px;
+        }
+        
+        .pagination a,
+        .pagination span {
+            padding: 8px 12px;
+            min-width: 36px;
+            font-size: 0.85rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .page-header h2 {
+            font-size: 1.2rem;
+        }
+        
+        .list-card {
+            padding: 15px;
+        }
+        
+        .pagination a,
+        .pagination span {
+            padding: 6px 10px;
+            min-width: 32px;
+            font-size: 0.8rem;
         }
     }
 </style>

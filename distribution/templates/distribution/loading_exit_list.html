@@ -247,6 +247,57 @@
     .alert-success { background-color: var(--light-green); color: var(--dark-green); }
     .alert-info { background-color: #d1ecf1; color: #0c5460; }
     .alert-danger { background-color: #f8d7da; color: #721c24; }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            padding-bottom: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+        
+        .data-table tbody td.actions,
+        .data-table tbody td:has(.btn-group) {
+            white-space: normal;
+        }
+        
+        .pagination a,
+        .pagination span {
+            padding: 8px 12px;
+            min-width: 36px;
+            font-size: 0.85rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .list-card {
+            padding: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.2rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+    }
 </style>
 {% endblock %}
 

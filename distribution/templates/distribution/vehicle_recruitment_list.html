@@ -399,6 +399,89 @@
     .alert-success { background-color: var(--light-green); color: var(--dark-green); }
     .alert-info { background-color: #d1ecf1; color: #0c5460; }
     .alert-danger { background-color: #f8d7da; color: #721c24; }
+    
+    @media (max-width: 768px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            padding-bottom: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .list-card {
+            padding: 20px;
+        }
+        
+        .data-table {
+            font-size: 0.9rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 10px;
+        }
+        
+        .data-table tbody td.actions,
+        .data-table tbody td:has(.btn-group) {
+            white-space: normal;
+        }
+        
+        .data-table .btn-group a,
+        .data-table .btn-group button,
+        .table-container .btn-group a,
+        .table-container .btn-group button {
+            white-space: normal;
+        }
+        
+        .delivery-info-label {
+            min-width: auto;
+        }
+        
+        .modal-content {
+            width: 95%;
+            padding: 20px;
+            max-height: 85vh;
+        }
+        
+        .modal-header h3 {
+            font-size: 1.1rem;
+        }
+        
+        .form-actions {
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .pagination a,
+        .pagination span {
+            padding: 8px 12px;
+            min-width: 36px;
+            font-size: 0.85rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .list-card {
+            padding: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.2rem;
+        }
+        
+        .data-table thead th,
+        .data-table tbody td {
+            padding: 8px;
+            font-size: 0.85rem;
+        }
+        
+        .modal-content {
+            padding: 15px;
+        }
+    }
 </style>
 {% endblock %}
 

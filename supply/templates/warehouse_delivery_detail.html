@@ -449,6 +449,116 @@
     .comparison-section {
         margin-top: 25px;
     }
+    
+    @media (max-width: 768px) {
+        .page-header h2 {
+            font-size: 1.4rem;
+        }
+        
+        .form-card {
+            padding: 20px;
+        }
+        
+        .form-section-header {
+            padding: 15px 20px;
+        }
+        
+        .form-section-title {
+            font-size: 1rem;
+        }
+        
+        .form-section-body.weight-fields,
+        .form-section-body.freight-fields {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        
+        .form-section-body.warehouse-fields {
+            grid-template-columns: 1fr;
+        }
+        
+        .stage-item-content {
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        
+        .stage-item-header {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .readonly-info {
+            grid-template-columns: 1fr;
+        }
+        
+        .comparison-section {
+            overflow-x: auto;
+        }
+        
+        .comparison-table {
+            font-size: 0.85rem;
+            min-width: 320px;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 10px 12px;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .form-actions a,
+        .form-actions button {
+            width: 100%;
+            text-align: center;
+        }
+        
+        .summary-items-row {
+            gap: 15px;
+        }
+        
+        .summary-item {
+            min-width: 90px;
+        }
+        
+        .initial-weight-box {
+            padding: 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .form-card {
+            padding: 15px;
+        }
+        
+        .page-header h2 {
+            font-size: 1.2rem;
+        }
+        
+        .form-section-header {
+            padding: 12px 15px;
+        }
+        
+        .form-section-body {
+            padding: 0 15px 15px 15px;
+        }
+        
+        .stage-item {
+            padding: 15px;
+        }
+        
+        .comparison-table {
+            font-size: 0.8rem;
+        }
+        
+        .comparison-table th,
+        .comparison-table td {
+            padding: 8px 10px;
+        }
+    }
 </style>
 {% endblock %}
 
