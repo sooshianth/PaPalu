@@ -226,81 +226,105 @@
         display: none;
     }
     
-    /* Category Accordion Styles */
-    .category-header {
-        background-color: #2d7a4f;
-        color: white;
-        padding: 0.75rem 1rem;
+    /* سطر گروه بخش */
+    .category-row {
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
         cursor: pointer;
         user-select: none;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         transition: all 0.2s ease;
+    }
+    
+    .category-row:hover {
+        background: linear-gradient(135deg, #256342 0%, #1a4d2e 100%);
+    }
+    
+    .category-row td {
+        background: transparent !important;
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 1rem !important;
+        padding: 0.9rem 1rem !important;
+        border-bottom: 2px solid #1e5a3a !important;
+    }
+    
+    .category-row td:first-child {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        font-weight: 500;
-        font-size: 0.9375rem;
-        min-height: 44px;
-    }
-    
-    .category-header:hover {
-        background-color: #256342;
-    }
-    
-    .category-header.active {
-        background-color: #1e5a3a;
+        background: transparent !important;
+        border-left: none !important;
     }
     
     .category-toggle {
         font-size: 0.875rem;
         transition: transform 0.25s ease;
-        margin-left: 0.75rem;
         display: inline-block;
         opacity: 0.9;
     }
     
-    .category-header.active .category-toggle {
+    .category-row.active .category-toggle {
         transform: rotate(180deg);
     }
     
-    .category-columns {
-        display: none !important;
+    /* سطرهای وظیفه */
+    .task-row {
+        display: none;
     }
     
-    .category-columns.active {
-        display: table-cell !important;
+    .task-row.active {
+        display: table-row;
     }
     
-    /* Category Header Row */
-    .category-header-row {
-        background-color: #fafafa;
-    }
-    
-    .category-header-cell {
-        padding: 0;
-        border-bottom: 1px solid #e5e7eb;
-        vertical-align: middle;
-    }
-    
-    .category-header-cell:first-child {
-        padding: 0.75rem 0.875rem;
-        background-color: #fafafa;
-        font-size: 0.8125rem;
-        color: #6b7280;
-    }
-    
-    /* Task labels row styling */
-    #taskLabelsRow th {
-        background-color: #f3f4f6;
-        border-bottom: 1px solid #e5e7eb;
-        font-size: 0.8125rem;
-        padding: 0.625rem 0.75rem;
+    .task-row td:first-child {
+        padding-right: 2.5rem !important;
+        font-size: 0.9rem;
+        color: #495057;
         font-weight: 500;
-        color: #6b7280;
     }
     
-    #taskLabelsRow th:first-child {
-        background-color: #f3f4f6;
+    .task-row:hover td {
+        background: linear-gradient(90deg, #e8f4f0 0%, #f0f5f9 100%) !important;
+    }
+    
+    .task-row:hover td:first-child {
+        background: linear-gradient(90deg, #d4edda 0%, #e8f4f0 100%) !important;
+    }
+    
+    /* ستون‌های مجوز با خط جداکننده سبز */
+    .perm-col {
+        border-right: 2px solid #2d7a4f;
+    }
+    
+    .perm-col:first-of-type {
+        border-right: none;
+    }
+    
+    .perm-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        font-size: 0.85rem;
+        padding: 0.8rem 0.6rem !important;
+        font-weight: 600;
+        text-align: center;
+        color: #2d7a4f;
+        border-right: 2px solid #2d7a4f;
+    }
+    
+    .perm-header:first-of-type {
+        border-right: none;
+    }
+    
+    .access-type-subheader {
+        font-size: 0.75rem;
+        color: #6c757d;
+        font-weight: 600;
+        text-align: center;
+        padding: 0.4rem !important;
+        background: #f8f9fa;
+        border-right: 2px solid #2d7a4f;
+    }
+    
+    .access-type-subheader:first-of-type {
+        border-right: none;
     }
 </style>
 {% endblock %}
@@ -323,64 +347,60 @@
 <div class="table-container">
     <table id="permissionsTable">
         <thead>
-            <!-- Category Headers Row -->
-            <tr class="category-header-row">
-                <th class="category-header-cell">نام مجوز</th>
-                {% for category, tasks in grouped_choices %}
-                <th class="category-header-cell" colspan="{{ tasks|length }}" data-category="{{ category }}">
-                    <div class="category-header" data-category="{{ category }}">
-                        <span>{{ category }}</span>
-                        <span class="category-toggle">▼</span>
+            <tr>
+                <th style="font-size: 0.875rem; color: #5a6c7d;">بخش / وظیفه ←</th>
+                <!-- ستون افزودن مجوز جدید -->
+                <th class="perm-header" style="background: linear-gradient(135deg, #f0f5f9 0%, #e8eef5 100%);">
+                    <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                        <input type="text" id="newPermName" placeholder="نام مجوز جدید..." 
+                               style="width: 120px; padding: 0.4rem 0.6rem; border: 2px solid #e8eef5; border-radius: 8px; font-size: 0.85rem; font-family: 'Vazirmatn', 'Tahoma', sans-serif;" />
+                        <button class="add-btn" id="addBtn" title="افزودن مجوز جدید" style="padding: 0.4rem 0.7rem; font-size: 1.1rem;">+</button>
+                    </div>
+                </th>
+                {% for perm in task_permissions %}
+                <th class="perm-header perm-col">
+                    <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; flex-wrap: wrap;">
+                        <span>{{ perm.name|escape }}</span>
+                        <button class="delete-btn" data-id="{{ perm.id }}" data-name="{{ perm.name|escape }}" 
+                                style="padding: 0.25rem 0.5rem; font-size: 0.7rem; margin: 0;">حذف</button>
                     </div>
                 </th>
                 {% endfor %}
             </tr>
-            <!-- Task Labels Row (Hidden by default) -->
-            <tr id="taskLabelsRow" style="display: none;">
-                <th>نام مجوز</th>
-                {% for category, tasks in grouped_choices %}
-                    {% for code, label in tasks %}
-                    <th class="task-label category-columns" data-category="{{ category }}" title="{{ label }}">{{ label }}</th>
-                    {% endfor %}
-                {% endfor %}
-            </tr>
         </thead>
         <tbody>
-            <!-- New permission row -->
-            <tr class="new-row">
-                <td>
-                    <div class="new-row-input-container">
-                        <input type="text" id="newPermName" placeholder="نام مجوز جدید را وارد کنید..." />
-                        <button class="add-btn" id="addBtn" title="افزودن مجوز جدید">+</button>
-                    </div>
-                </td>
-                {% for category, tasks in grouped_choices %}
-                    {% for code, label in tasks %}
-                    <td class="category-columns" data-category="{{ category }}"></td>
-                    {% endfor %}
-                {% endfor %}
-            </tr>
-            
-            <!-- Existing permissions -->
-            {% for perm in task_permissions %}
-            <tr data-id="{{ perm.id }}">
-                <td>
-                    <div class="perm-name-cell">
-                        <span>{{ perm.name|escape }}</span>
-                        <button class="delete-btn" data-id="{{ perm.id }}" data-name="{{ perm.name|escape }}">حذف</button>
-                    </div>
-                </td>
-                {% for category, tasks in grouped_choices %}
-                    {% for code, label in tasks %}
-                    <td class="checkbox-cell category-columns" data-category="{{ category }}">
-                        <input type="checkbox" 
-                               data-perm-id="{{ perm.id }}" 
-                               data-task="{{ code|escape }}"
+            {% for category, tasks in grouped_choices %}
+                <!-- سطر گروه بخش -->
+                <tr class="category-row" data-category="{{ category }}">
+                    <td colspan="{{ task_permissions|length|add:2 }}">
+                        <strong>{{ category }}</strong>
+                        <span class="category-toggle">▼</span>
+                    </td>
+                </tr>
+                
+                <!-- سطرهای وظایف این بخش -->
+                {% for code, label in tasks %}
+                <tr class="task-row" data-category="{{ category }}" data-task="{{ code }}">
+                    <td>{{ label }}</td>
+                    <!-- ستون خالی برای "افزودن مجوز جدید" -->
+                    <td></td>
+                    <!-- ستون‌های مجوزها -->
+                    {% for perm in task_permissions %}
+                    <td class="checkbox-cell perm-col">
+                        <input type="checkbox"
+                               data-perm-id="{{ perm.id }}"
+                               data-task="{{ code }}"
                                {% if code in perm.tasks %}checked{% endif %}>
                     </td>
                     {% endfor %}
+                </tr>
                 {% endfor %}
-            </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="{{ task_permissions|length|add:2 }}" style="text-align: center; padding: 2rem; color: #6c757d;">
+                        هیچ وظیفه‌ای تعریف نشده است.
+                    </td>
+                </tr>
             {% endfor %}
         </tbody>
     </table>
@@ -409,25 +429,19 @@
     }
     
     function markPermChanged(permId) {
-        const row = document.querySelector(`tr[data-id="${permId}"]`);
-        if (row) {
-            row.classList.add('perm-changed');
-        }
+        // هایلایت کردن هدر مجوز
+        const permHeaders = document.querySelectorAll(`th[data-perm-id="${permId}"]`);
+        permHeaders.forEach(th => th.style.background = 'linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%)');
     }
     
     function unmarkPermChanged(permId) {
-        const row = document.querySelector(`tr[data-id="${permId}"]`);
-        if (row) {
-            row.classList.remove('perm-changed');
-        }
+        const permHeaders = document.querySelectorAll(`th[data-perm-id="${permId}"]`);
+        permHeaders.forEach(th => th.style.background = '');
     }
     
     function checkIfChanged(permId) {
-        const row = document.querySelector(`tr[data-id="${permId}"]`);
-        if (!row) return false;
-        
         const currentTasks = [];
-        row.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        document.querySelectorAll(`input[type="checkbox"][data-perm-id="${permId}"]:checked`).forEach(cb => {
             currentTasks.push(cb.dataset.task);
         });
         
@@ -454,15 +468,18 @@
     saveBtn.addEventListener('click', async () => {
         const permissions = {};
         
-        // Collect all checkboxes
-        document.querySelectorAll('tbody tr:not(.new-row)').forEach(row => {
-            const permId = row.dataset.id;
+        // جمع‌آوری لیست یکتای مجوزها
+        const permIds = new Set();
+        document.querySelectorAll('input[type="checkbox"][data-perm-id]').forEach(cb => {
+            permIds.add(parseInt(cb.dataset.permId));
+        });
+        
+        // جمع‌آوری وظایف برای هر مجوز
+        permIds.forEach(permId => {
             const tasks = [];
-            
-            row.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+            document.querySelectorAll(`input[type="checkbox"][data-perm-id="${permId}"]:checked`).forEach(cb => {
                 tasks.push(cb.dataset.task);
             });
-            
             permissions[permId] = tasks;
         });
         
@@ -600,26 +617,28 @@
     });
     
     // Initialize original states and add change listeners
-    document.querySelectorAll('tbody tr:not(.new-row)').forEach(row => {
-        const permId = row.dataset.id;
-        const tasks = [];
+    const permIds = new Set();
+    document.querySelectorAll('input[type="checkbox"][data-perm-id]').forEach(checkbox => {
+        const permId = parseInt(checkbox.dataset.permId);
+        permIds.add(permId);
         
-        row.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        // Add change listener
+        checkbox.addEventListener('change', function() {
+            if (checkIfChanged(permId)) {
+                markPermChanged(permId);
+            } else {
+                unmarkPermChanged(permId);
+            }
+        });
+    });
+    
+    // ذخیره حالت اولیه هر مجوز
+    permIds.forEach(permId => {
+        const tasks = [];
+        document.querySelectorAll(`input[type="checkbox"][data-perm-id="${permId}"]:checked`).forEach(cb => {
             tasks.push(cb.dataset.task);
         });
-        
         originalStates.set(permId, tasks);
-        
-        // Add change listener to all checkboxes in this row
-        row.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
-                if (checkIfChanged(permId)) {
-                    markPermChanged(permId);
-                } else {
-                    unmarkPermChanged(permId);
-                }
-            });
-        });
     });
     
     // Make entire cell clickable
@@ -638,41 +657,27 @@
     
     // Category Accordion Functionality
     function toggleCategory(category) {
-        const columns = document.querySelectorAll(`.category-columns[data-category="${category}"]`);
-        const header = document.querySelector(`.category-header[data-category="${category}"]`);
-        const isActive = header.classList.contains('active');
+        const categoryRow = document.querySelector(`.category-row[data-category="${category}"]`);
+        const taskRows = document.querySelectorAll(`.task-row[data-category="${category}"]`);
+        const isActive = categoryRow.classList.contains('active');
         
         if (isActive) {
-            // Close category
-            header.classList.remove('active');
-            columns.forEach(col => col.classList.remove('active'));
+            // بستن بخش
+            categoryRow.classList.remove('active');
+            taskRows.forEach(row => row.classList.remove('active'));
         } else {
-            // Open category
-            header.classList.add('active');
-            columns.forEach(col => col.classList.add('active'));
-        }
-        
-        // Show/hide task labels row based on any open category
-        const taskLabelsRow = document.getElementById('taskLabelsRow');
-        const hasOpenCategory = document.querySelector('.category-header.active');
-        if (hasOpenCategory) {
-            taskLabelsRow.style.display = 'table-row';
-        } else {
-            taskLabelsRow.style.display = 'none';
+            // باز کردن بخش
+            categoryRow.classList.add('active');
+            taskRows.forEach(row => row.classList.add('active'));
         }
     }
     
-    // Initialize: All categories closed
-    document.querySelectorAll('.category-header').forEach(header => {
-        header.addEventListener('click', function() {
+    // Initialize: All categories closed, add click handlers
+    document.querySelectorAll('.category-row').forEach(row => {
+        row.addEventListener('click', function() {
             const category = this.dataset.category;
             toggleCategory(category);
         });
-    });
-    
-    // Initially hide all category columns
-    document.querySelectorAll('.category-columns').forEach(col => {
-        col.classList.remove('active');
     });
 </script>
 {% endblock %}
