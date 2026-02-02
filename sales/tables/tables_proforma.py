@@ -16,15 +16,19 @@ class ProformaTable(tables.Table):
         self.accessible_fields = kwargs.pop('accessible_fields', None)
         user = kwargs.pop('user', None)
         
-        super().__init__(*args, **kwargs)
-        
         # اگر accessible_fields داده نشده و user داده شده، محاسبه کن
         if self.accessible_fields is None and user is not None:
             self.accessible_fields = self._get_accessible_fields(user)
         
-        # فیلتر کردن ستون‌ها بر اساس دسترسی
+        # اضافه کردن ستون‌های غیرقابل دسترس به exclude قبل از super().__init__()
         if self.accessible_fields:
-            self._filter_columns_by_access()
+            exclude_columns = [col for col, access in self.accessible_fields.items() if not access]
+            if exclude_columns:
+                existing_exclude = list(getattr(self._meta, 'exclude', []) or [])
+                existing_exclude.extend(exclude_columns)
+                self._meta.exclude = tuple(existing_exclude)
+        
+        super().__init__(*args, **kwargs)
     
     def _get_accessible_fields(self, user):
         """محاسبه فیلدهای قابل دسترسی برای کاربر"""
@@ -66,46 +70,6 @@ class ProformaTable(tables.Table):
         
         return accessible_fields
     
-    def _filter_columns_by_access(self):
-        """فیلتر کردن ستون‌ها بر اساس دسترسی کاربر"""
-        if not self.accessible_fields:
-            return
-        
-        # تعیین ستون‌هایی که باید حذف شوند
-        columns_to_exclude = []
-        for column_name in list(self.columns.columns.keys()):
-            if column_name in self.accessible_fields:
-                if not self.accessible_fields[column_name]:
-                    columns_to_exclude.append(column_name)
-        
-        # حذف ستون‌ها از columns
-        for column_name in columns_to_exclude:
-            if column_name in self.columns.columns:
-                del self.columns.columns[column_name]
-        
-        # به‌روزرسانی Meta برای exclude کردن ستون‌ها
-        if columns_to_exclude:
-            # استفاده از exclude در Meta
-            if not hasattr(self._meta, 'exclude') or self._meta.exclude is None:
-                self._meta.exclude = tuple(columns_to_exclude)
-            else:
-                # ترکیب exclude موجود با ستون‌های جدید
-                existing_exclude = set(self._meta.exclude) if self._meta.exclude else set()
-                existing_exclude.update(columns_to_exclude)
-                self._meta.exclude = tuple(existing_exclude)
-            
-            # به‌روزرسانی fields و sequence
-            if hasattr(self._meta, 'fields') and self._meta.fields:
-                self._meta.fields = tuple(
-                    field for field in self._meta.fields 
-                    if field not in columns_to_exclude
-                )
-            
-            if hasattr(self._meta, 'sequence') and self._meta.sequence:
-                self._meta.sequence = tuple(
-                    field for field in self._meta.sequence 
-                    if field not in columns_to_exclude
-                )
     
     proforma_number = tables.Column(
         verbose_name='شماره پیش فاکتور',

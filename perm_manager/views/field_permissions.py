@@ -48,18 +48,20 @@ def field_permissions_view(request):
         'content_type__app_label', 'content_type__model', 'field_name'
     )
 
-    # گروه‌بندی ManagedField ها به ساختار مشابه model_fields قبلی برای استفاده در تمپلیت
+    # گروه‌بندی ManagedField ها به‌صورت تفکیک‌شده برای هر مدل (برای نمایش جداگانه در تمپلیت)
     model_fields = []
     current_ct_id = None
     current_entry = None
     for mf in managed_fields_qs:
         ct = mf.content_type
         if current_ct_id != ct.id:
-            # ورودی جدید برای این مدل
+            model_class = ct.model_class()
+            verbose = str(getattr(model_class._meta, 'verbose_name', ct.model)) if model_class else ct.model
             current_entry = {
                 'app_label': ct.app_label,
                 'model_name': ct.model,
                 'display_name': f"{ct.app_label}.{ct.model}",
+                'verbose_name': verbose,
                 'content_type_id': ct.id,
                 'fields': []
             }
