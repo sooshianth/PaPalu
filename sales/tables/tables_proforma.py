@@ -213,6 +213,18 @@ class ApproveProformaTable(tables.Table):
     """جدول لیست سفارش‌های در انتظار آپلود پیش فاکتور مشتری با استفاده از django-tables2"""
     
     def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها (اختیاری)
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
+        user = kwargs.pop('user', None)
+        
+        # اگر accessible_fields داده نشده، همه فیلدها قابل دسترسی هستند
+        if self.accessible_fields:
+            exclude_columns = [col for col, access in self.accessible_fields.items() if not access]
+            if exclude_columns:
+                existing_exclude = list(getattr(self._meta, 'exclude', []) or [])
+                existing_exclude.extend(exclude_columns)
+                self._meta.exclude = tuple(existing_exclude)
+        
         super().__init__(*args, **kwargs)
     
     order_number = tables.Column(
@@ -474,7 +486,18 @@ class PendingProformaOrderTable(tables.Table):
     """جدول لیست سفارش‌های در انتظار صدور پیش فاکتور با استفاده از django-tables2"""
     
     def __init__(self, *args, **kwargs):
+        # دریافت اطلاعات دسترسی فیلدها (اختیاری)
+        self.accessible_fields = kwargs.pop('accessible_fields', None)
         user = kwargs.pop('user', None)
+        
+        # اگر accessible_fields داده نشده، همه فیلدها قابل دسترسی هستند
+        if self.accessible_fields:
+            exclude_columns = [col for col, access in self.accessible_fields.items() if not access]
+            if exclude_columns:
+                existing_exclude = list(getattr(self._meta, 'exclude', []) or [])
+                existing_exclude.extend(exclude_columns)
+                self._meta.exclude = tuple(existing_exclude)
+        
         super().__init__(*args, **kwargs)
     
     order_number = tables.Column(
