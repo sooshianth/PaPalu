@@ -112,7 +112,11 @@ def supply_settlement_list_view(request):
         order._delivered_weight = delivered_weight
         order._difference_amount = difference_amount
 
-    bug_logger.debug(f"تعداد {orders_qs.count()} سفارش خرید در انتظار تسویه لود شد")
+    # لیست آبجکت‌ها را به جدول بده (نه QuerySet) تا با صفحه‌بندی، slice همان instanceهای دارای
+    # _order_weight و ... باشد؛ وگرنه django-tables2 روی QuerySet slice میزند و instanceهای جدید
+    # از دیتابیس می‌آید که این attributeها را ندارند و خطای 500 می‌دهد.
+    orders_list = list(orders_qs)
+    bug_logger.debug(f"تعداد {len(orders_list)} سفارش خرید در انتظار تسویه لود شد")
 
     # محاسبه فیلدهای قابل دسترسی
     accessible_fields = {
@@ -124,8 +128,8 @@ def supply_settlement_list_view(request):
         'actions': True,
     }
     
-    # ایجاد جدول با django-tables2
-    table = PendingSupplySettlementOrderTable(orders_qs, user=request.user, accessible_fields=accessible_fields)
+    # ایجاد جدول با django-tables2 (با list تا pagination روی همان آبجکت‌های annotate‌شده باشد)
+    table = PendingSupplySettlementOrderTable(orders_list, user=request.user, accessible_fields=accessible_fields)
     
     RequestConfig(request, paginate={'per_page': 20}).configure(table)
     
