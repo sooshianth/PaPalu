@@ -48,8 +48,8 @@ from .views import (
     car_entrance_list_view,
     register_driver_for_transport_view,
     driver_lookup_api,
-    car_exit_list_view,
-    mark_vehicle_exited_view,
+    # car_exit_list_view,
+    # mark_vehicle_exited_view,
     # Warehouse Delivery Views
     warehouse_delivery_list_view,
     warehouse_delivery_detail_view,
@@ -113,8 +113,8 @@ urlpatterns = [
     path('carentrance/<str:transport_number>/register/', register_driver_for_transport_view, name='carentrance_register_driver'),
     path('api/driver-lookup/', driver_lookup_api, name='driver_lookup_api'),
     # Car Exit (Gatekeeper)
-    path('carexit/', car_exit_list_view, name='carexit'),
-    path('carexit/<str:transport_number>/mark-exited/', mark_vehicle_exited_view, name='carexit_mark_exited'),
+    # path('carexit/', car_exit_list_view, name='carexit'),
+    # path('carexit/<str:transport_number>/mark-exited/', mark_vehicle_exited_view, name='carexit_mark_exited'),
     # Warehouse Delivery
     path('warehouse-delivery/', warehouse_delivery_list_view, name='warehouse_delivery'),
     path('warehouse-delivery/<str:transport_number>/', warehouse_delivery_detail_view, name='warehouse_delivery_detail'),

@@ -386,7 +386,7 @@ def car_entrance_list_view(request):
     """صفحه لیست ورود خودروها مخصوص نگهبان - حمل‌هایی که وضعیت آنها یا سفارش خرید آنها "در انتظار ورود خودرو" است."""
     audit_logger.info("مشاهده صفحه ورود خودرو (نگهبان)")
     
-    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
+    if not user_has_task(request.user, TaskChoices.SUPPLY_CAR_ENTRANCE.value):
         audit_logger.activity("تلاش برای دسترسی به صفحه ورود خودرو بدون دسترسی")
         messages.error(request, 'شما دسترسی به این بخش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -486,7 +486,7 @@ def register_driver_for_transport_view(request, transport_number):
     """فرم ثبت اطلاعات راننده و پلاک برای یک حمل؛ پس از ثبت، وضعیت به "در انتظار تخلیه" تغییر می‌یابد."""
     audit_logger.info(f"دسترسی به فرم ثبت راننده برای حمل {transport_number}")
     
-    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
+    if not user_has_task(request.user, TaskChoices.SUPPLY_CAR_ENTRANCE.value):
         audit_logger.activity(f"تلاش برای ثبت راننده بدون دسترسی - حمل {transport_number}")
         messages.error(request, 'شما دسترسی به ثبت راننده را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -916,82 +916,82 @@ class CarExitTable(TransportTable):
         fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
 
 
-@login_required
-def car_exit_list_view(request):
-    """صفحه لیست خودروهای در انتظار تخلیه مخصوص نگهبان - خودروهایی که وارد شده‌اند و در حال فرآیند تخلیه هستند."""
-    audit_logger.info("مشاهده صفحه خودروهای در انتظار تخلیه (نگهبان)")
+# @login_required
+# def car_exit_list_view(request):
+#     """صفحه لیست خودروهای در انتظار تخلیه مخصوص نگهبان - خودروهایی که وارد شده‌اند و در حال فرآیند تخلیه هستند."""
+#     audit_logger.info("مشاهده صفحه خودروهای در انتظار تخلیه (نگهبان)")
     
-    if not user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_DRIVER.value):
-        audit_logger.activity("تلاش برای دسترسی به صفحه خروج خودرو بدون دسترسی")
-        messages.error(request, 'شما دسترسی به این بخش را ندارید.')
-        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+#     if not user_has_task(request.user, TaskChoices.SUPPLY_CAR_ENTRANCE.value):
+#         audit_logger.activity("تلاش برای دسترسی به صفحه خروج خودرو بدون دسترسی")
+#         messages.error(request, 'شما دسترسی به این بخش را ندارید.')
+#         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
-    # Get field access permissions
-    accessible_transport_fields = get_accessible_purchase_transport_fields(request.user)
-    accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_carentrance(request.user)
-    accessible_raw_material_fields = get_accessible_raw_material_fields_for_carentrance(request.user)
-    accessible_person_fields = get_accessible_person_fields_for_carentrance(request.user)
+#     # Get field access permissions
+#     accessible_transport_fields = get_accessible_purchase_transport_fields(request.user)
+#     accessible_po_fields = get_accessible_procurement_purchase_order_fields_for_carentrance(request.user)
+#     accessible_raw_material_fields = get_accessible_raw_material_fields_for_carentrance(request.user)
+#     accessible_person_fields = get_accessible_person_fields_for_carentrance(request.user)
     
-    try:
-        # نمایش فقط حمل‌هایی که در وضعیت "در انتظار تخلیه" هستند
-        # این حمل‌ها پس از ثبت ورود خودرو وارد این لیست می‌شوند
-        # باید جهت ورودی داشته باشند (direction='inbound' یا transport_type='inbound')
-        transports = Transport.objects.filter(
-            status=Transport.STATUS_AWAITING_UNLOADING
-        ).filter(
-            Q(direction='inbound') | Q(transport_type='inbound')
-        ).select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
+#     try:
+#         # نمایش فقط حمل‌هایی که در وضعیت "در انتظار تخلیه" هستند
+#         # این حمل‌ها پس از ثبت ورود خودرو وارد این لیست می‌شوند
+#         # باید جهت ورودی داشته باشند (direction='inbound' یا transport_type='inbound')
+#         transports = Transport.objects.filter(
+#             status=Transport.STATUS_AWAITING_UNLOADING
+#         ).filter(
+#             Q(direction='inbound') | Q(transport_type='inbound')
+#         ).select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
         
-        bug_logger.debug(f"تعداد حمل‌های در انتظار تخلیه: {transports.count()}")
+#         bug_logger.debug(f"تعداد حمل‌های در انتظار تخلیه: {transports.count()}")
         
-        table = CarExitTable(transports, prefix='exit-', accessible_fields=accessible_transport_fields)
-        RequestConfig(request, paginate={'per_page': 20}).configure(table)
+#         table = CarExitTable(transports, prefix='exit-', accessible_fields=accessible_transport_fields)
+#         RequestConfig(request, paginate={'per_page': 20}).configure(table)
         
-        context = {
-            'table': table,
-            'accessible_transport_fields': accessible_transport_fields,
-            'accessible_po_fields': accessible_po_fields,
-            'accessible_raw_material_fields': accessible_raw_material_fields,
-            'accessible_person_fields': accessible_person_fields,
-        }
-        return render(request, 'car_exit_list.html', context)
-    except Exception as e:
-        bug_logger.error(f"Car exit list error: {e}", exc_info=True)
-        messages.error(request, 'خطا در بارگذاری لیست خودروهای در انتظار تخلیه.')
-        return render(request, 'car_exit_list.html', {
-            'table': CarExitTable([], prefix='exit-'),
-            'accessible_transport_fields': accessible_transport_fields,
-            'accessible_po_fields': accessible_po_fields,
-            'accessible_raw_material_fields': accessible_raw_material_fields,
-            'accessible_person_fields': accessible_person_fields,
-        })
+#         context = {
+#             'table': table,
+#             'accessible_transport_fields': accessible_transport_fields,
+#             'accessible_po_fields': accessible_po_fields,
+#             'accessible_raw_material_fields': accessible_raw_material_fields,
+#             'accessible_person_fields': accessible_person_fields,
+#         }
+#         return render(request, 'car_exit_list.html', context)
+#     except Exception as e:
+#         bug_logger.error(f"Car exit list error: {e}", exc_info=True)
+#         messages.error(request, 'خطا در بارگذاری لیست خودروهای در انتظار تخلیه.')
+#         return render(request, 'car_exit_list.html', {
+#             'table': CarExitTable([], prefix='exit-'),
+#             'accessible_transport_fields': accessible_transport_fields,
+#             'accessible_po_fields': accessible_po_fields,
+#             'accessible_raw_material_fields': accessible_raw_material_fields,
+#             'accessible_person_fields': accessible_person_fields,
+#         })
 
 
-@login_required
-def mark_vehicle_exited_view(request, transport_number):
-    """ثبت خروج خودرو از کارخانه - فقط برای حمل‌های تکمیل شده"""
-    audit_logger.info(f"ثبت خروج خودرو برای حمل {transport_number}")
-    pt = get_object_or_404(Transport, transport_number=transport_number)
+# @login_required
+# def mark_vehicle_exited_view(request, transport_number):
+#     """ثبت خروج خودرو از کارخانه - فقط برای حمل‌های تکمیل شده"""
+#     audit_logger.info(f"ثبت خروج خودرو برای حمل {transport_number}")
+#     pt = get_object_or_404(Transport, transport_number=transport_number)
     
-    # فقط حمل‌های تکمیل شده می‌توانند خارج شوند
-    if pt.status != Transport.STATUS_COMPLETED:
-        audit_logger.activity(f"تلاش برای خروج خودرو با وضعیت نامعتبر - حمل {transport_number}: وضعیت {pt.status}")
-        messages.error(request, 'این خودرو هنوز آماده خروج نیست. باید ابتدا فرآیند تحویل انبار تکمیل شود.')
-        return redirect(reverse('supply:carexit'))
+#     # فقط حمل‌های تکمیل شده می‌توانند خارج شوند
+#     if pt.status != Transport.STATUS_COMPLETED:
+#         audit_logger.activity(f"تلاش برای خروج خودرو با وضعیت نامعتبر - حمل {transport_number}: وضعیت {pt.status}")
+#         messages.error(request, 'این خودرو هنوز آماده خروج نیست. باید ابتدا فرآیند تحویل انبار تکمیل شود.')
+#         return redirect(reverse('supply:carexit'))
     
-    try:
-        with transaction.atomic():
-            # ثبت زمان خروج
-            today_jalali = jdatetime.date.today()
-            pt.delivery_date = today_jalali  # استفاده از delivery_date برای ثبت زمان خروج نهایی
-            pt.save(update_fields=['delivery_date'])
+#     try:
+#         with transaction.atomic():
+#             # ثبت زمان خروج
+#             today_jalali = jdatetime.date.today()
+#             pt.delivery_date = today_jalali  # استفاده از delivery_date برای ثبت زمان خروج نهایی
+#             pt.save(update_fields=['delivery_date'])
             
-            bug_logger.info(f"زمان خروج خودرو برای حمل {transport_number} ثبت شد")
-            audit_logger.info(f"خروج خودرو ثبت شد - حمل: {transport_number} - راننده: {pt.driver.name if pt.driver else 'نامشخص'} - پلاک: {pt.plate_number or 'ثبت نشده'}")
+#             bug_logger.info(f"زمان خروج خودرو برای حمل {transport_number} ثبت شد")
+#             audit_logger.info(f"خروج خودرو ثبت شد - حمل: {transport_number} - راننده: {pt.driver.name if pt.driver else 'نامشخص'} - پلاک: {pt.plate_number or 'ثبت نشده'}")
             
-        messages.success(request, f'خروج خودرو با شماره حمل {transport_number} ثبت شد.')
-    except Exception as e:
-        bug_logger.error(f"خطا در ثبت خروج خودرو برای حمل {transport_number}: {e}")
-        messages.error(request, 'خطا در ثبت خروج خودرو.')
+#         messages.success(request, f'خروج خودرو با شماره حمل {transport_number} ثبت شد.')
+#     except Exception as e:
+#         bug_logger.error(f"خطا در ثبت خروج خودرو برای حمل {transport_number}: {e}")
+#         messages.error(request, 'خطا در ثبت خروج خودرو.')
     
-    return redirect(reverse('supply:carexit'))
+#     return redirect(reverse('supply:carexit'))

@@ -88,7 +88,7 @@ def product_price_list_view(request):
     audit_logger.info(f"درخواست مشاهده لیست قیمت‌گذاری‌های محصولات توسط کاربر {request.user.username}")
     
     # بررسی دسترسی TaskPermission
-    if not user_has_task(request.user, TaskChoices.SALES_SET_PRODUCT_PRICE.value):
+    if not user_has_task(request.user, TaskChoices.SALES_PRODUCT_PRICE_LIST.value):
         audit_logger.activity("تلاش برای مشاهده لیست قیمت‌گذاری‌ها بدون دسترسی")
         messages.error(request, 'شما دسترسی به مشاهده لیست قیمت‌گذاری‌ها ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')

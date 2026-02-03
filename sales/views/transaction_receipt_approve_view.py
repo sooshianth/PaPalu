@@ -50,7 +50,7 @@ def approve_transaction_receipt_list_view(request):
     """
     audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار تأیید حسابداری")
     
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):  # TODO: باید task مناسب اضافه شود
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_TRANSACTION.value):  # TODO: باید task مناسب اضافه شود
         audit_logger.activity("تلاش برای دسترسی به لیست تأیید تراکنش فروش بدون دسترسی")
         messages.error(request, 'شما دسترسی به تأیید تراکنش فروش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -151,7 +151,7 @@ def approve_transaction_receipt_detail_view(request, order_number):
     """
     audit_logger.info(f"درخواست مشاهده جزئیات تأیید تراکنش سفارش {order_number}")
     
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):  # TODO: باید task مناسب اضافه شود
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_TRANSACTION.value):  # TODO: باید task مناسب اضافه شود
         audit_logger.activity(f"تلاش برای دسترسی به جزئیات تأیید تراکنش سفارش {order_number} بدون دسترسی")
         messages.error(request, 'شما دسترسی به تأیید تراکنش فروش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')

@@ -150,7 +150,7 @@ def invoice_list_view(request):
     
     # بررسی TaskPermission - باید یک Task مناسب برای فاکتور تعریف شود
     # برای اکنون، از همان Task پیش فاکتور استفاده می‌کنیم
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA_PRICE.value):
+    if not user_has_task(request.user, TaskChoices.SALES_ISSUE_INVOICE.value):
         audit_logger.activity("تلاش برای مشاهده لیست فاکتورها بدون دسترسی")
         messages.error(request, 'شما دسترسی به مشاهده لیست فاکتورها ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -189,7 +189,7 @@ def invoice_create_view(request):
     audit_logger.info("درخواست ایجاد فاکتور جدید")
     
     # بررسی TaskPermission
-    if not user_has_task(request.user, TaskChoices.SALES_ISSUE_PROFORMA.value):
+    if not user_has_task(request.user, TaskChoices.SALES_ISSUE_INVOICE.value):
         audit_logger.activity("تلاش برای ایجاد فاکتور بدون دسترسی")
         messages.error(request, 'شما دسترسی به ایجاد فاکتور ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -240,7 +240,7 @@ def invoice_detail_view(request, invoice_id):
     """
     audit_logger.info(f"درخواست مشاهده جزئیات فاکتور {invoice_id}")
     
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA_PRICE.value):
+    if not user_has_task(request.user, TaskChoices.SALES_ISSUE_INVOICE.value):
         audit_logger.activity(f"تلاش برای مشاهده جزئیات فاکتور {invoice_id} بدون دسترسی")
         messages.error(request, 'شما دسترسی به مشاهده جزئیات فاکتور ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -441,7 +441,7 @@ def invoice_download_pdf(request, invoice_id):
     audit_logger.info(f"درخواست دانلود PDF فاکتور {invoice_id}")
     
     # بررسی TaskPermission
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA_PRICE.value):
+    if not user_has_task(request.user, TaskChoices.SALES_ISSUE_INVOICE.value):
         audit_logger.activity(f"تلاش برای دانلود PDF فاکتور {invoice_id} بدون دسترسی")
         messages.error(request, 'شما دسترسی به دانلود PDF فاکتور ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
