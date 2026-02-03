@@ -69,6 +69,15 @@
         right: 0;
         background-color: white;
         border-left: 2px solid #e8eef5;
+        z-index: 5;
+    }
+    
+    /* سطرهای گروه مدل — ستون اول */
+    .model-group-row td:first-child {
+        position: sticky;
+        right: 0;
+        z-index: 6;
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%) !important;
     }
     
     tbody tr:hover td {
@@ -240,6 +249,51 @@
         border-right: 1px solid #dee2e6;
     }
 
+    /* سطرهای مدل — گروه‌بندی بصری */
+    .model-group-row {
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%) !important;
+    }
+    .model-group-row td {
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%) !important;
+        color: white !important;
+        font-weight: 700 !important;
+        font-size: 1rem !important;
+        padding: 0.9rem 1rem !important;
+        border-bottom: 2px solid #1e5a3a !important;
+    }
+    .model-group-row:hover td {
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%) !important;
+    }
+    
+    /* سطرهای فیلد — تو رفتگی برای نمایش سلسله‌مراتب */
+    .field-row td:first-child {
+        padding-right: 2.5rem !important;
+        font-size: 0.9rem;
+        color: #495057;
+    }
+    .field-row:hover td {
+        background: linear-gradient(90deg, #e8f4f0 0%, #f0f5f9 100%) !important;
+    }
+    .field-row:hover td:first-child {
+        background: linear-gradient(90deg, #d4edda 0%, #e8f4f0 100%) !important;
+    }
+    
+    /* ستون‌های مجوز */
+    .perm-col {
+        min-width: 100px;
+        text-align: center;
+    }
+    .perm-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        font-size: 0.85rem;
+        padding: 0.6rem 0.4rem !important;
+    }
+    .access-type-subheader {
+        font-size: 0.7rem;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
     .managed-fields-actions {
         display: flex;
         flex-wrap: wrap;
@@ -318,86 +372,81 @@
 <div class="table-container">
     <table id="permissionsTable">
         <thead>
-            <!-- Row 1: Model names -->
+            <!-- ردیف ۱: نام مجوزها + دکمه افزودن مجوز جدید -->
             <tr>
-                <th style="font-size: 0.875rem; color: #5a6c7d;">نام مجوز ←</th>
-                {% for model in model_fields %}
-                <th colspan="{{ model.fields|length|add:model.fields|length }}" class="model-header">
-                    {{ model.display_name }}
+                <th style="font-size: 0.875rem; color: #5a6c7d;">مدل / فیلد ←</th>
+                <!-- ستون افزودن مجوز جدید -->
+                <th colspan="2" class="perm-header" style="background: linear-gradient(135deg, #f0f5f9 0%, #e8eef5 100%);">
+                    <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                        <input type="text" id="newPermName" placeholder="نام مجوز جدید..." 
+                               style="width: 120px; padding: 0.4rem 0.6rem; border: 2px solid #e8eef5; border-radius: 8px; font-size: 0.85rem; font-family: 'Vazirmatn', 'Tahoma', sans-serif;" />
+                        <button class="add-btn" id="addBtn" title="افزودن مجوز جدید" style="padding: 0.4rem 0.7rem; font-size: 1.1rem;">+</button>
+                    </div>
+                </th>
+                {% for perm in field_permissions %}
+                <th colspan="2" class="perm-header perm-col">
+                    <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; flex-wrap: wrap;">
+                        <span>{{ perm.name|escape }}</span>
+                        <button class="delete-btn" data-id="{{ perm.id }}" data-name="{{ perm.name|escape }}" 
+                                style="padding: 0.25rem 0.5rem; font-size: 0.7rem; margin: 0;">حذف</button>
+                    </div>
                 </th>
                 {% endfor %}
             </tr>
             
-            <!-- Row 2: Field names -->
+            <!-- ردیف ۲: نوع دسترسی (مشاهده / ویرایش) -->
             <tr>
                 <th></th>
-                {% for model in model_fields %}
-                    {% for field in model.fields %}
-                    <th colspan="2" class="field-header field-group" title="{{ field.label }}">
-                        {{ field.label }}
-                    </th>
-                    {% endfor %}
-                {% endfor %}
-            </tr>
-            
-            <!-- Row 3: Access types (view/edit) -->
-            <tr>
-                <th></th>
-                {% for model in model_fields %}
-                    {% for field in model.fields %}
-                    <th class="access-type-header">مشاهده</th>
-                    <th class="access-type-header field-group">ویرایش</th>
-                    {% endfor %}
+                <th class="access-type-subheader">مشاهده</th>
+                <th class="access-type-subheader">ویرایش</th>
+                {% for perm in field_permissions %}
+                <th class="access-type-subheader">مشاهده</th>
+                <th class="access-type-subheader">ویرایش</th>
                 {% endfor %}
             </tr>
         </thead>
         <tbody>
-            <!-- New permission row -->
-            <tr class="new-row">
-                <td>
-                    <div style="display: flex; gap: 0.75rem; align-items: center;">
-                        <input type="text" id="newPermName" placeholder="نام مجوز جدید را وارد کنید..." />
-                        <button class="add-btn" id="addBtn" title="افزودن مجوز جدید">+</button>
-                    </div>
-                </td>
-                {% for model in model_fields %}
-                    {% for field in model.fields %}
+            {% for model in model_fields %}
+                <!-- سطر گروه مدل -->
+                <tr class="model-group-row" data-model-id="{{ model.content_type_id }}">
+                    <td colspan="{{ field_permissions|length|add:field_permissions|length|add:3 }}">
+                        <strong>{{ model.verbose_name }}</strong> 
+                        <span style="opacity: 0.8; font-weight: 500; font-size: 0.9rem;">( {{ model.display_name }} )</span>
+                    </td>
+                </tr>
+                
+                <!-- سطرهای فیلدهای این مدل -->
+                {% for field in model.fields %}
+                <tr class="field-row" data-ct-id="{{ field.content_type_id }}" data-field="{{ field.name }}">
+                    <td>{{ field.label }}</td>
+                    <!-- ستون خالی برای "افزودن مجوز جدید" -->
                     <td></td>
                     <td></td>
+                    <!-- ستون‌های مجوزها -->
+                    {% for perm in field_permissions %}
+                    <td class="checkbox-cell">
+                        <input type="checkbox"
+                               data-perm-id="{{ perm.id }}"
+                               data-ct-id="{{ field.content_type_id }}"
+                               data-field="{{ field.name }}"
+                               data-access="view">
+                    </td>
+                    <td class="checkbox-cell">
+                        <input type="checkbox"
+                               data-perm-id="{{ perm.id }}"
+                               data-ct-id="{{ field.content_type_id }}"
+                               data-field="{{ field.name }}"
+                               data-access="edit">
+                    </td>
                     {% endfor %}
+                </tr>
                 {% endfor %}
-            </tr>
-            
-            <!-- Existing permissions -->
-            {% for perm in field_permissions %}
-            <tr data-id="{{ perm.id }}">
-                <td>
-                    <div class="perm-name-cell">
-                        <span>{{ perm.name|escape }}</span>
-                        <button class="delete-btn" data-id="{{ perm.id }}" data-name="{{ perm.name|escape }}">حذف</button>
-                    </div>
-                </td>
-                {% for model in model_fields %}
-                    {% for field in model.fields %}
-                        <!-- View checkbox -->
-                        <td class="checkbox-cell">
-                            <input type="checkbox" 
-                                   data-perm-id="{{ perm.id }}" 
-                                   data-ct-id="{{ field.content_type_id }}"
-                                   data-field="{{ field.name }}"
-                                   data-access="view">
-                        </td>
-                        <!-- Edit checkbox -->
-                        <td class="checkbox-cell field-group">
-                            <input type="checkbox" 
-                                   data-perm-id="{{ perm.id }}" 
-                                   data-ct-id="{{ field.content_type_id }}"
-                                   data-field="{{ field.name }}"
-                                   data-access="edit">
-                        </td>
-                    {% endfor %}
-                {% endfor %}
-            </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="3" style="text-align: center; padding: 2rem; color: #6c757d;">
+                        هنوز فیلدی برای مدیریت اضافه نشده است. از بالا یک مدل و فیلد انتخاب کنید.
+                    </td>
+                </tr>
             {% endfor %}
         </tbody>
     </table>
@@ -529,26 +578,22 @@
         }, 3500);
     }
     
+    /** علامت‌گذاری تغییرات برای یک مجوز — در ساختار جدید نیازی به علامت‌گذاری سطر نداریم، چون مجوز در ستون است */
     function markPermChanged(permId) {
-        const row = document.querySelector(`tr[data-id="${permId}"]`);
-        if (row) {
-            row.classList.add('perm-changed');
-        }
+        // می‌توانیم هدر آن مجوز را هایلایت کنیم (اختیاری)
+        const permHeaders = document.querySelectorAll(`th[data-perm-id="${permId}"]`);
+        permHeaders.forEach(th => th.style.background = 'linear-gradient(135deg, #fff3cd 0%, #ffeeba 100%)');
     }
     
     function unmarkPermChanged(permId) {
-        const row = document.querySelector(`tr[data-id="${permId}"]`);
-        if (row) {
-            row.classList.remove('perm-changed');
-        }
+        const permHeaders = document.querySelectorAll(`th[data-perm-id="${permId}"]`);
+        permHeaders.forEach(th => th.style.background = '');
     }
     
-    function getRowState(permId) {
-        const row = document.querySelector(`tr[data-id="${permId}"]`);
-        if (!row) return [];
-        
+    /** جمع‌آوری همه چک‌باکس‌های فعال برای یک مجوز خاص از همه سطرها */
+    function getPermState(permId) {
         const choices = [];
-        row.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+        document.querySelectorAll(`input[type="checkbox"][data-perm-id="${permId}"]:checked`).forEach(cb => {
             choices.push({
                 content_type_id: parseInt(cb.dataset.ctId),
                 field_name: cb.dataset.field,
@@ -556,27 +601,29 @@
                 allowed: true
             });
         });
-        
         return choices;
     }
     
     function checkIfChanged(permId) {
-        const current = JSON.stringify(getRowState(permId));
+        const current = JSON.stringify(getPermState(permId));
         const original = JSON.stringify(originalStates.get(permId) || []);
         return current !== original;
     }
     
-    // Save changes
+    // Save changes — برای هر مجوز یک‌بار
     saveBtn.addEventListener('click', async () => {
         const data = [];
         
-        document.querySelectorAll('tbody tr:not(.new-row)').forEach(row => {
-            const permId = parseInt(row.dataset.id);
-            const choices = getRowState(permId);
-            
+        // لیست یکتای مجوزها
+        const permIds = new Set();
+        document.querySelectorAll('input[type="checkbox"][data-perm-id]').forEach(cb => {
+            permIds.add(parseInt(cb.dataset.permId));
+        });
+        
+        permIds.forEach(permId => {
             data.push({
                 id: permId,
-                choices: choices
+                choices: getPermState(permId)
             });
         });
         
@@ -595,10 +642,10 @@
             if (result.status === 'success') {
                 showMessage('تغییرات با موفقیت ذخیره شد!', 'success');
                 
-                // Update original states
-                data.forEach(item => {
-                    originalStates.set(item.id, item.choices);
-                    unmarkPermChanged(item.id);
+                // به‌روزرسانی حالت اولیه
+                permIds.forEach(permId => {
+                    originalStates.set(permId, getPermState(permId));
+                    unmarkPermChanged(permId);
                 });
             } else {
                 showMessage('خطا: ' + result.message, 'error');
@@ -702,34 +749,35 @@
         });
     });
     
-    // Initialize checkboxes from permFieldMap and set up change listeners
-    document.querySelectorAll('tbody tr:not(.new-row)').forEach(row => {
-        const permId = parseInt(row.dataset.id);
+    // مقداردهی اولیه چک‌باکس‌ها و اضافه کردن listener
+    const permIds = new Set();
+    document.querySelectorAll('input[type="checkbox"][data-perm-id]').forEach(checkbox => {
+        const permId = parseInt(checkbox.dataset.permId);
+        permIds.add(permId);
+        
+        const ctId = checkbox.dataset.ctId;
+        const field = checkbox.dataset.field;
+        const access = checkbox.dataset.access;
+        const key = `${ctId}_${field}_${access}`;
+        
         const permChoices = permFieldMap[String(permId)] || {};
+        if (key in permChoices) {
+            checkbox.checked = true;
+        }
         
-        // Set checkbox states based on permFieldMap
-        row.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-            const ctId = checkbox.dataset.ctId;
-            const field = checkbox.dataset.field;
-            const access = checkbox.dataset.access;
-            const key = `${ctId}_${field}_${access}`;
-            
-            if (key in permChoices) {
-                checkbox.checked = true;
+        // Add change listener
+        checkbox.addEventListener('change', function() {
+            if (checkIfChanged(permId)) {
+                markPermChanged(permId);
+            } else {
+                unmarkPermChanged(permId);
             }
-            
-            // Add change listener
-            checkbox.addEventListener('change', function() {
-                if (checkIfChanged(permId)) {
-                    markPermChanged(permId);
-                } else {
-                    unmarkPermChanged(permId);
-                }
-            });
         });
-        
-        // Save original state
-        originalStates.set(permId, getRowState(permId));
+    });
+    
+    // ذخیره حالت اولیه
+    permIds.forEach(permId => {
+        originalStates.set(permId, getPermState(permId));
     });
     
     // Make cell clickable
