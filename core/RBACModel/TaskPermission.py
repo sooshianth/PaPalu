@@ -64,6 +64,7 @@ class TaskChoices(models.TextChoices):
     SUPPLY_APPROVE_PROFORMA = 'supply.approve_proforma', 'تایید پیش فاکتور تامین'
     SUPPLY_APPROVE_FREIGHT_PAYMENT = 'supply.approve_freight_payment', 'تایید پرداخت کرایه'
     SUPPLY_UPLOAD_PAYMENT_DOCUMENTS = 'supply.upload_payment_documents', 'بارگذاری اسناد پرداخت کرایه'
+    SUPPLY_SETTLEMENT = 'supply.settlement', 'تسویه سفارش خرید'
     SUPPLY_APPROVE_SETTLEMENT = 'supply.approve_settlement', 'تایید تسویه کامل'
     SUPPLY_PREPAY_PROFORMA = 'supply.prepay_proforma', 'پرداخت پیش فاکتور خرید'
     

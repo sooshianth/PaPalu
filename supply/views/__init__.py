@@ -79,6 +79,18 @@ from .logistic_confirmation_views import (
     rejected_transport_detail_view,
 )
 
+# Supply Settlement Views
+from .supply_settlement_view import (
+    supply_settlement_list_view,
+    supply_settlement_detail_view,
+    skip_supply_settlement_view,
+)
+
+# Supply Settlement Approval Views
+from .supply_settlement_approval_view import (
+    supply_settlement_approval_list_view,
+    supply_settlement_approval_detail_view,
+)
 
 
 __all__ = [
@@ -135,6 +147,12 @@ __all__ = [
     'logistic_confirmation_detail_view',
     'rejected_transports_list_view',
     'rejected_transport_detail_view',
+    # Supply Settlement Views
+    'supply_settlement_list_view',
+    'supply_settlement_detail_view',
+    'skip_supply_settlement_view',
+    'supply_settlement_approval_list_view',
+    'supply_settlement_approval_detail_view',
 
 ]
 

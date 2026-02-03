@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+{% load static %}
+{% load number_filters %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .info-card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid var(--gray-300);
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 1.1rem;
+    }
+    
+    .info-card-body {
+        padding: 1.5rem;
+    }
+    
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-item strong {
+        display: block;
+        color: var(--gray-600);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-item span {
+        color: var(--text-dark);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .info-item .positive {
+        color: var(--primary-green);
+        font-weight: 600;
+    }
+    
+    .info-item .negative {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+    
+    .modern-table thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .modern-table th {
+        padding: 0.75rem;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--gray-300);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table td {
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--text-dark);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .modern-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+    }
+    
+    .btn-primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .btn-secondary {
+        background: var(--gray-600);
+        color: white;
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+        background: var(--gray-800);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        border-right: 4px solid #dc3545;
+        font-weight: 500;
+        margin-top: 1rem;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        border-right: 4px solid #ffc107;
+        font-weight: 500;
+        margin-top: 1rem;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .badge-success {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .badge-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .badge-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .code-badge {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 6px;
+        background: var(--gray-100);
+        color: var(--gray-800);
+        font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 0.85rem;
+    }
+    
+    .settlement-status {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .settlement-status.completed {
+        background-color: var(--light-green);
+        color: var(--dark-green);
+    }
+    
+    .settlement-status.pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .allocation-section {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--gray-200);
+    }
+    
+    .transport-section {
+        margin-top: 0.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+    
+    .empty-message {
+        text-align: center;
+        color: var(--gray-600);
+        padding: 2rem;
+        font-size: 1rem;
+    }
+    
+    .amount-in-words {
+        background: #e8f5e9;
+        border-right: 4px solid var(--primary-green);
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+        font-size: 0.95rem;
+        color: var(--gray-700);
+        font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+        .info-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+    <a href="{% url 'supply:supply_settlement_approval_list' %}" class="btn-secondary">بازگشت به لیست</a>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- اطلاعات سفارش -->
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات سفارش خرید
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>شماره سفارش:</strong>
+                <span class="code-badge">{{ order.order_number }}</span>
+            </div>
+            <div class="info-item">
+                <strong>تأمین‌کننده:</strong>
+                <span>{{ order.customer.name|default:"-" }}</span>
+            </div>
+            <div class="info-item">
+                <strong>وضعیت:</strong>
+                <span>{{ order.get_status_display|default:"-" }}</span>
+            </div>
+        </div>
+        <div class="info-row">
+            <div class="info-item">
+                <strong>وزن کل سفارش:</strong>
+                <span>{{ order_weight|persian_number:2 }} کیلوگرم</span>
+            </div>
+            <div class="info-item">
+                <strong>وزن تحویلی:</strong>
+                <span>{{ delivered_weight|persian_number:2 }} کیلوگرم</span>
+            </div>
+            <div class="info-item">
+                <strong>اختلاف وزن:</strong>
+                <span class="{% if weight_difference > 0 %}positive{% elif weight_difference < 0 %}negative{% endif %}">
+                    {{ weight_difference|persian_number:2 }} کیلوگرم
+                </span>
+            </div>
+            <div class="info-item">
+                <strong>مبلغ اختلاف:</strong>
+                <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
+                    {{ difference_amount|rials_to_tomans }} تومان
+                </span>
+                <div class="amount-in-words" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                    {{ difference_amount|rials_to_tomans|number_to_words_persian }} تومان
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- وضعیت تسویه‌ها -->
+<div class="info-card">
+    <div class="info-card-header">
+        وضعیت تسویه
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>تسویه کسری و سرک:</strong>
+                <span class="settlement-status {% if weight_discrepancy_completed %}completed{% else %}pending{% endif %}">
+                    {% if weight_discrepancy_completed %}✓ تکمیل شده{% else %}در انتظار{% endif %}
+                </span>
+            </div>
+        </div>
+        {% if weight_discrepancy_completed %}
+        <div class="alert alert-success">
+            ✓ تسویه کامل شده است. می‌توانید تسویه کامل را تایید کنید.
+        </div>
+        {% else %}
+        <div class="alert alert-warning">
+            ⚠️ تسویه هنوز کامل نشده است. لطفاً قبل از تایید تسویه کامل، تسویه را بررسی کنید.
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- اطلاعات تراکنش‌های کسری و سرک -->
+{% if weight_discrepancy_transactions %}
+<div class="info-card">
+    <div class="info-card-header">
+        تراکنش‌های کسری و سرک
+    </div>
+    <div class="info-card-body">
+        <div style="overflow-x: auto;">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>شماره سند</th>
+                        <th>نوع (کسری/سرک)</th>
+                        <th>نوع پرداخت</th>
+                        <th>مبلغ</th>
+                        <th>تاریخ سررسید</th>
+                        <th>شماره پیگیری</th>
+                        <th>پیوست</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in weight_discrepancy_transactions %}
+                    <tr>
+                        <td>{{ transaction.accounting_document_number|default:"-" }}</td>
+                        <td>
+                            {% if transaction.discrepancy_type == 'shortage' %}
+                                <span class="badge badge-danger">کسری</span>
+                            {% elif transaction.discrepancy_type == 'surplus' %}
+                                <span class="badge badge-success">سرک</span>
+                            {% else %}
+                                <span class="badge badge-info">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
+                        </td>
+                        <td><strong>{{ transaction.document_amount|rials_to_tomans }}</strong> تومان</td>
+                        <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
+                        <td>{{ transaction.tracking_number|default:"-" }}</td>
+                        <td>
+                            {% if transaction.document_attachment %}
+                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--gray-200);">
+            <strong>جمع مبالغ: {{ settled_weight_discrepancy|rials_to_tomans }} تومان</strong>
+            <div class="amount-in-words" style="margin-top: 0.5rem;">
+                {{ settled_weight_discrepancy|rials_to_tomans|number_to_words_persian }} تومان
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- اطلاعات تأمین‌کننده -->
+{% if supplier_info %}
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات تأمین‌کننده
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>نام شخص:</strong>
+                <span>{{ supplier_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شناسه ملی/کد ملی شخص:</strong>
+                <span>{{ supplier_info.national_id }}</span>
+            </div>
+            <div class="info-item">
+                <strong>نوع شخص:</strong>
+                <span>{{ supplier_info.type }}</span>
+            </div>
+            <div class="info-item">
+                <strong>نوع (حقوقی/حقیقی):</strong>
+                <span>{{ supplier_info.nature }}</span>
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <strong>کد شخص (حسابداری):</strong>
+                <span>{{ supplier_info.accounting_code }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شماره ثبت شرکت:</strong>
+                <span>{{ supplier_info.registration_number }}</span>
+            </div>
+        </div>
+        
+        {% if supplier_info.bank_accounts %}
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--gray-200);">
+            <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-800);">حساب‌های بانکی</h4>
+            <div class="info-row">
+                {% for account in supplier_info.bank_accounts %}
+                <div class="info-item">
+                    <strong>{{ account.bank_name|default:"بانک" }}:</strong>
+                    <span style="font-size: 0.9rem;">
+                        شماره حساب: {{ account.account_number|default:"-" }}<br>
+                        شماره شبا: IR{{ account.shaba_number|default:"-" }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- تخصیص‌ها و حمل‌ها -->
+<div class="info-card">
+    <div class="info-card-header">
+        تخصیص‌ها و حمل‌ها
+    </div>
+    <div class="info-card-body">
+        {% if allocations_with_transports %}
+            {% for item in allocations_with_transports %}
+                <div class="allocation-section">
+                    <div style="margin-bottom: 0.5rem;">
+                        <strong>شماره تخصیص:</strong>
+                        <span class="code-badge">{{ item.allocation.allocation_number }}</span>
+                        <span style="margin-right: 1rem;">وضعیت: {{ item.allocation.get_allocation_status_display }}</span>
+                    </div>
+                    
+                    {% if item.transports %}
+                        <div class="transport-section">
+                            <table class="modern-table">
+                                <thead>
+                                    <tr>
+                                        <th>شماره بارنامه</th>
+                                        <th>راننده</th>
+                                        <th>وضعیت</th>
+                                        <th>وزن خالص (کیلوگرم)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transport in item.transports %}
+                                        <tr>
+                                            <td><span class="code-badge">{{ transport.waybill_number }}</span></td>
+                                            <td>{{ transport.driver.name|default:"-" }}</td>
+                                            <td>{{ transport.get_status_display|default:"-" }}</td>
+                                            <td>{{ transport.net_weight|persian_number:3|default:"-" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p style="color: var(--gray-600); font-size: 0.9rem;">هیچ حمل‌ی برای این تخصیص ثبت نشده است.</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="empty-message">هیچ تخصیصی برای این سفارش ثبت نشده است.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- فرم تایید تسویه کامل -->
+<div class="info-card">
+    <div class="info-card-header">
+        تایید تسویه کامل
+    </div>
+    <div class="info-card-body">
+        <form method="post" onsubmit="return confirm('آیا از تایید تسویه کامل این سفارش اطمینان دارید؟ این عمل غیرقابل بازگشت است.');">
+            {% csrf_token %}
+            
+            {% if weight_discrepancy_completed %}
+            <div class="alert alert-success">
+                ✓ تسویه کامل شده است. می‌توانید تسویه کامل را تایید کنید.
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">
+                    تایید تسویه کامل و تکمیل سفارش
+                </button>
+                <a href="{% url 'supply:supply_settlement_approval_list' %}" class="btn btn-secondary">
+                    بازگشت به لیست
+                </a>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                ⚠️ تسویه هنوز کامل نشده است. لطفاً قبل از تایید تسویه کامل، تسویه را بررسی کنید.
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary" disabled>
+                    تایید تسویه کامل و تکمیل سفارش (غیرفعال)
+                </button>
+                <a href="{% url 'supply:supply_settlement_approval_list' %}" class="btn btn-secondary">
+                    بازگشت به لیست
+                </a>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% endblock %}
