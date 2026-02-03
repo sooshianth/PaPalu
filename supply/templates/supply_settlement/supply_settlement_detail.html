@@ -1,0 +1,895 @@
+{% extends "base.html" %}
+{% load static %}
+{% load number_filters %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .page-header h2 {
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 600;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+    }
+    
+    .info-card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid var(--gray-300);
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 1.1rem;
+    }
+    
+    .info-card-body {
+        padding: 1.5rem;
+    }
+    
+    .info-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .info-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .info-item strong {
+        display: block;
+        color: var(--gray-600);
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-item span {
+        color: var(--text-dark);
+        font-size: 1rem;
+        font-weight: 500;
+    }
+    
+    .info-item .positive {
+        color: var(--primary-green);
+        font-weight: 600;
+    }
+    
+    .info-item .negative {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .progress-bar {
+        width: 100%;
+        height: 35px;
+        background-color: var(--gray-200);
+        border-radius: 18px;
+        overflow: hidden;
+        margin: 1.5rem 0;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary-green), var(--dark-green));
+        transition: width 0.5s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    
+    .modern-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+    }
+    
+    .modern-table thead {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    }
+    
+    .modern-table th {
+        padding: 0.75rem;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--gray-300);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table td {
+        padding: 0.75rem;
+        text-align: right;
+        border-bottom: 1px solid var(--gray-200);
+        color: var(--text-dark);
+        font-size: 0.9rem;
+    }
+    
+    .modern-table tbody tr {
+        transition: background-color 0.2s;
+    }
+    
+    .modern-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    
+    .form-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-section-header {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        padding: 1rem 1.5rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+    
+    .form-section-body {
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-group input,
+    .form-group select {
+        padding: 0.75rem;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        font-family: inherit;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+    }
+    
+    .form-group input:disabled,
+    .form-group select:disabled {
+        background-color: var(--gray-200);
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    
+    .form-group input[type="file"] {
+        padding: 0.5rem;
+    }
+    
+    .errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0.5rem 0 0 0;
+    }
+    
+    .errorlist li {
+        color: #dc3545;
+        font-size: 0.85rem;
+        padding: 0.25rem 0;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+    
+    .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+    }
+    
+    .btn-secondary {
+        background: var(--gray-600);
+        color: white;
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+        background: var(--gray-800);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+    }
+    
+    .alert {
+        border-radius: 8px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        border: none;
+    }
+    
+    .alert-success {
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--dark-green) 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .alert-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        border-right: 4px solid #ffc107;
+        font-weight: 500;
+        margin-top: 1rem;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .badge-info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .total-amount {
+        background: var(--light-green);
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--dark-green);
+    }
+    
+    .empty-message {
+        text-align: center;
+        color: var(--gray-600);
+        padding: 2rem;
+        font-size: 1rem;
+    }
+    
+    .amount-in-words {
+        background: #e8f5e9;
+        border-right: 4px solid var(--primary-green);
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        margin-top: 0.5rem;
+        font-size: 0.95rem;
+        color: var(--gray-700);
+        font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .info-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .btn-group {
+            flex-direction: column;
+        }
+        
+        .btn {
+            width: 100%;
+        }
+        
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>{{ page_title }}</h2>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+        {% if has_no_difference %}
+        <form method="post" action="{% url 'supply:skip_supply_settlement' order.order_number %}" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary" onclick="return confirm('آیا مطمئن هستید که می‌خواهید تسویه این سفارش را به اتمام برسانید و آن را به مرحله «در انتظار تایید تسویه کامل» منتقل کنید؟');">
+                ✓ اتمام تسویه
+            </button>
+        </form>
+        {% endif %}
+        <a href="{% url 'supply:supply_settlement_list' %}" class="btn btn-secondary">بازگشت به لیست</a>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- اطلاعات سفارش -->
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات سفارش خرید
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>شناسه سفارش:</strong>
+                <span>{{ order.order_number }}</span>
+            </div>
+            <div class="info-item">
+                <strong>وزن کل سفارش:</strong>
+                <span>{{ order_weight|persian_number:2 }} کیلوگرم</span>
+            </div>
+            <div class="info-item">
+                <strong>وزن تحویلی:</strong>
+                <span>{{ delivered_weight|persian_number:2 }} کیلوگرم</span>
+            </div>
+            <div class="info-item">
+                <strong>مبلغ اختلاف کل:</strong>
+                <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
+                    {{ difference_amount|rials_to_tomans }} تومان
+                </span>
+            </div>
+        </div>
+        
+        <!-- نمایش مبلغ به حروف -->
+        {% if difference_amount %}
+        <div class="amount-in-words">
+            <strong>مبلغ به حروف:</strong> {{ difference_amount|rials_to_tomans|number_to_words_persian }} تومان
+        </div>
+        {% endif %}
+        
+        <!-- جدول جزئیات اختلاف هر ماده اولیه -->
+        {% if material_discrepancies %}
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--gray-200);">
+            <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-800);">جزئیات اختلاف برای هر ماده اولیه</h4>
+            <div style="overflow-x: auto;">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>نام ماده اولیه</th>
+                            <th>وزن تخصیص یافته (کیلوگرم)</th>
+                            <th>وزن تحویلی (کیلوگرم)</th>
+                            <th>اختلاف وزن (کیلوگرم)</th>
+                            <th>فی (تومان/کیلوگرم)</th>
+                            <th>مبلغ اختلاف (تومان)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for discrepancy in material_discrepancies %}
+                        <tr>
+                            <td><strong>{{ discrepancy.material_name }}</strong></td>
+                            <td>{{ discrepancy.allocated_weight|persian_number:2 }}</td>
+                            <td>{{ discrepancy.delivered_weight|persian_number:2 }}</td>
+                            <td class="{% if discrepancy.weight_difference > 0 %}positive{% elif discrepancy.weight_difference < 0 %}negative{% endif %}">
+                                {{ discrepancy.weight_difference|persian_number:2 }}
+                            </td>
+                            <td>{{ discrepancy.unit_price|rials_to_tomans }}</td>
+                            <td class="{% if discrepancy.difference_amount > 0 %}positive{% elif discrepancy.difference_amount < 0 %}negative{% endif %}">
+                                <strong>{{ discrepancy.difference_amount|rials_to_tomans }}</strong>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- نوار پیشرفت -->
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {% widthratio settled_amount difference_amount|add:'0.01' 100 %}%;">
+                {% if settlement_completed %}
+                    تسویه کامل شد
+                {% else %}
+                    {{ settled_amount|rials_to_tomans }} از {{ difference_amount|rials_to_tomans }} تومان
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <strong>مبلغ تسویه شده:</strong>
+                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|rials_to_tomans }} تومان</span>
+                <div class="amount-in-words" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                    {{ settled_amount|rials_to_tomans|number_to_words_persian }} تومان
+                </div>
+            </div>
+            <div class="info-item">
+                <strong>مانده تسویه:</strong>
+                <span class="{% if remaining_amount > 0 %}negative{% else %}positive{% endif %}">
+                    {{ remaining_amount|rials_to_tomans }} تومان
+                </span>
+                {% if remaining_amount > 0 %}
+                <div class="amount-in-words" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem;">
+                    {{ remaining_amount|rials_to_tomans|number_to_words_persian }} تومان
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        {% if has_no_difference %}
+        <div class="alert alert-info">
+            <strong>ℹ️ توجه:</strong> مبلغ اختلاف صفر است. نیازی به ثبت تراکنش نیست. می‌توانید با استفاده از دکمه "اتمام تسویه" در بالای صفحه، تسویه را به اتمام برسانید.
+        </div>
+        {% elif remaining_amount > 0 and not settlement_completed %}
+        <div class="alert-warning">
+            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|rials_to_tomans }} تومان ({{ remaining_amount|rials_to_tomans|number_to_words_persian }} تومان) باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
+        </div>
+        {% elif settlement_completed %}
+        <div class="alert-success">
+            ✓ تسویه کامل شده است!
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- اطلاعات تأمین‌کننده -->
+{% if supplier_info %}
+<div class="info-card">
+    <div class="info-card-header">
+        اطلاعات تأمین‌کننده (فقط نمایش)
+    </div>
+    <div class="info-card-body">
+        <div class="info-row">
+            <div class="info-item">
+                <strong>نام شخص:</strong>
+                <span>{{ supplier_info.name }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شناسه ملی/کد ملی شخص:</strong>
+                <span>{{ supplier_info.national_id }}</span>
+            </div>
+            <div class="info-item">
+                <strong>نوع شخص:</strong>
+                <span>{{ supplier_info.type }}</span>
+            </div>
+            <div class="info-item">
+                <strong>نوع (حقوقی/حقیقی):</strong>
+                <span>{{ supplier_info.nature }}</span>
+            </div>
+        </div>
+        
+        <div class="info-row">
+            <div class="info-item">
+                <strong>کد شخص (حسابداری):</strong>
+                <span>{{ supplier_info.accounting_code }}</span>
+            </div>
+            <div class="info-item">
+                <strong>شماره ثبت شرکت:</strong>
+                <span>{{ supplier_info.registration_number }}</span>
+            </div>
+        </div>
+        
+        {% if supplier_info.bank_accounts %}
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid var(--gray-200);">
+            <h4 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: var(--gray-800);">حساب‌های بانکی</h4>
+            <div class="info-row">
+                {% for account in supplier_info.bank_accounts %}
+                <div class="info-item">
+                    <strong>{{ account.bank_name|default:"بانک" }}:</strong>
+                    <span style="font-size: 0.9rem;">
+                        شماره حساب: {{ account.account_number|default:"-" }}<br>
+                        شماره شبا: IR{{ account.shaba_number|default:"-" }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+
+<!-- فرم ثبت تراکنش -->
+{% if not settlement_completed and not has_no_difference %}
+<div class="form-section">
+    <div class="form-section-header">
+        ثبت تراکنش جدید
+    </div>
+    <div class="form-section-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="{{ form.discrepancy_type.id_for_label }}">{{ form.discrepancy_type.label }}</label>
+                    {{ form.discrepancy_type }}
+                    <small style="color: var(--gray-600); font-size: 0.85rem; display: block; margin-top: 0.25rem;">
+                        این فیلد به صورت خودکار بر اساس مبلغ اختلاف تنظیم می‌شود و قابل تغییر نیست.
+                    </small>
+                    {{ form.discrepancy_type.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.payment_type.id_for_label }}">{{ form.payment_type.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.payment_type }}
+                    {{ form.payment_type.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.document_amount.id_for_label }}">{{ form.document_amount.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.document_amount }}
+                    {{ form.document_amount.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.due_date.id_for_label }}">{{ form.due_date.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.due_date }}
+                    {{ form.due_date.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.source_account.id_for_label }}">{{ form.source_account.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.source_account }}
+                    {{ form.source_account.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.accounting_document_number.id_for_label }}">{{ form.accounting_document_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.accounting_document_number }}
+                    {{ form.accounting_document_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.tracking_number.id_for_label }}">{{ form.tracking_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.tracking_number }}
+                    {{ form.tracking_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.source_bank.id_for_label }}">{{ form.source_bank.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.source_bank }}
+                    {{ form.source_bank.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.approval_account_number.id_for_label }}">{{ form.approval_account_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.approval_account_number }}
+                    {{ form.approval_account_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.shaba_number.id_for_label }}">{{ form.shaba_number.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.shaba_number }}
+                    {{ form.shaba_number.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.inquiry_name.id_for_label }}">{{ form.inquiry_name.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.inquiry_name }}
+                    {{ form.inquiry_name.errors }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.transfer_time.id_for_label }}">{{ form.transfer_time.label }} <span style="color: #dc3545;">*</span></label>
+                    {{ form.transfer_time }}
+                    {{ form.transfer_time.errors }}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.document_attachment.id_for_label }}">{{ form.document_attachment.label }} <span style="color: #dc3545;">*</span></label>
+                {{ form.document_attachment }}
+                {{ form.document_attachment.errors }}
+            </div>
+            
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">ثبت تراکنش</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-success">
+    تسویه این سفارش به طور کامل انجام شده است.
+</div>
+{% endif %}
+
+<!-- لیست تراکنش‌های ثبت شده -->
+{% if transactions %}
+<div class="info-card">
+    <div class="info-card-header">
+        تراکنش‌های ثبت شده
+    </div>
+    <div class="info-card-body">
+        <div style="overflow-x: auto;">
+            <table class="modern-table">
+                <thead>
+                    <tr>
+                        <th>شماره سند</th>
+                        <th>نوع تسویه (کسری/سرک)</th>
+                        <th>نوع تسویه</th>
+                        <th>مبلغ</th>
+                        <th>تاریخ سررسید</th>
+                        <th>شماره پیگیری</th>
+                        <th>پیوست</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.accounting_document_number|default:"-" }}</td>
+                        <td>
+                            {% if transaction.discrepancy_type == 'shortage' %}
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 6px; background-color: #f8d7da; color: #721c24; font-weight: 600; font-size: 0.85rem;">کسری</span>
+                            {% elif transaction.discrepancy_type == 'surplus' %}
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 6px; background-color: var(--light-green); color: var(--dark-green); font-weight: 600; font-size: 0.85rem;">سرک</span>
+                            {% else %}
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 6px; background-color: var(--gray-200); color: var(--gray-600); font-weight: 600; font-size: 0.85rem;">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
+                        </td>
+                        <td><strong>{{ transaction.document_amount|rials_to_tomans }}</strong> تومان</td>
+                        <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
+                        <td>{{ transaction.tracking_number|default:"-" }}</td>
+                        <td>
+                            {% if transaction.document_attachment %}
+                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
+                            {% else %}
+                            -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="total-amount">
+            جمع مبالغ تراکنش‌ها: {{ settled_amount|rials_to_tomans }} تومان ({{ settled_amount|rials_to_tomans|number_to_words_persian }} تومان)
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="info-card">
+    <div class="info-card-header">
+        تراکنش‌های ثبت شده
+    </div>
+    <div class="info-card-body">
+        <p class="empty-message">هنوز تراکنشی ثبت نشده است.</p>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Custom Jalali Datepicker Component -->
+{% include "components/jalali_datepicker.html" %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // راه‌اندازی Custom Jalali Datepicker با تاخیر
+    setTimeout(initializeDatePickers, 200);
+});
+
+// Moved to global scope to avoid ReferenceError
+function initializeDatePickers() {
+    // راه‌اندازی برای فیلد due_date (تاریخ سررسید) - فقط تاریخ
+    initializeDatePicker('id_due_date', 'due_date', false);
+    
+    // راه‌اندازی برای فیلد transfer_time (ساعت واریز) - تاریخ و زمان
+    initializeDatePicker('id_transfer_time', 'transfer_time', true);
+}
+
+function initializeDatePicker(inputId, fieldName, enableTime) {
+    const dateInput = document.getElementById(inputId);
+    
+    if (!dateInput) {
+        console.log(`Input ${inputId} not found`);
+        return;
+    }
+    
+    // جلوگیری از راه‌اندازی مجدد
+    if (dateInput.hasAttribute('data-jdp-initialized')) {
+        console.log(`Datepicker already initialized for ${inputId}`);
+        return;
+    }
+    
+    // ذخیره نام اصلی قبل از حذف
+    const originalName = dateInput.name || fieldName;
+    
+    // 1. تبدیل type='date' یا 'datetime-local' به text (اگر باشد)
+    if (dateInput.type === 'date' || dateInput.type === 'datetime-local') {
+        dateInput.type = 'text';
+    }
+    
+    // 2. ایجاد فیلد مخفی برای ارسال مقدار اصلی (میلادی) به سرور
+    const hiddenInput = document.createElement('input');
+    hiddenInput.type = 'hidden';
+    hiddenInput.name = originalName; // نام اصلی به فیلد مخفی داده می‌شود
+    hiddenInput.id = 'hidden_' + dateInput.id;
+    
+    // 3. حذف نام از فیلد نمایشی تا به سرور ارسال نشود
+    dateInput.removeAttribute('name');
+    const originalId = dateInput.id;
+    dateInput.id = 'visual_' + originalId;
+    
+    // 4. اضافه کردن کلاس برای استایل دهی
+    dateInput.classList.add('form-control'); // اطمینان از استایل
+    
+    // 5. قرار دادن فیلد مخفی کنار فیلد نمایشی
+    dateInput.parentNode.appendChild(hiddenInput);
+    
+    // 6. راه‌اندازی کامپوننت با یا بدون پشتیبانی از ساعت
+    JalaliDatepicker.init('#' + dateInput.id, { time: enableTime });
+    
+    // 7. تنظیم مقدار اولیه hiddenInput (اگر وجود دارد)
+    setTimeout(function() {
+        const gdate = dateInput.getAttribute('data-gdate');
+        if (gdate) {
+            // Parse تاریخ میلادی از data-gdate
+            const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+            if (parts.length >= 3) {
+                const gy = parseInt(parts[0]);
+                const gm = parseInt(parts[1]);
+                const gd = parseInt(parts[2]);
+                const gh = parts.length >= 4 ? parseInt(parts[3]) : 0;
+                const gi = parts.length >= 5 ? parseInt(parts[4]) : 0;
+                
+                if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+                    // استفاده از منطق تبدیل ساده (مشابه Jalaali.toJalaali)
+                    const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+                    const gy2 = (gm > 2) ? (gy + 1) : gy;
+                    let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+                    let jy = -1595 + (33 * Math.floor(days / 12053));
+                    days %= 12053;
+                    jy += 4 * Math.floor(days / 1461);
+                    days %= 1461;
+                    if (days > 365) {
+                        jy += Math.floor((days - 1) / 365);
+                        days = (days - 1) % 365;
+                    }
+                    let jm, jd;
+                    if (days < 186) {
+                        jm = 1 + Math.floor(days / 31);
+                        jd = 1 + (days % 31);
+                    } else {
+                        jm = 7 + Math.floor((days - 186) / 30);
+                        jd = 1 + ((days - 186) % 30);
+                    }
+                    
+                    // فرمت: YYYY-MM-DD HH:MM:SS (شمسی) یا YYYY-MM-DD (شمسی)
+                    let jalaliDateStr;
+                    if (enableTime) {
+                        jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')} ${String(gh).padStart(2, '0')}:${String(gi).padStart(2, '0')}:00`;
+                    } else {
+                        jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
+                    }
+                    hiddenInput.value = jalaliDateStr;
+                    console.log('Initial value converted - Gregorian:', gdate, 'Jalali:', jalaliDateStr);
+                }
+            }
+        } else if (dateInput.value) {
+            // اگر data-gdate وجود ندارد اما value وجود دارد، بررسی کن که آیا میلادی است یا شمسی
+            const valueParts = dateInput.value.trim().split(/[-/]/);
+            if (valueParts.length === 3) {
+                const year = parseInt(valueParts[0]);
+                if (year > 1900 && year < 2100) {
+                    // احتمالاً میلادی است
+                    hiddenInput.value = dateInput.value;
+                }
+            }
+        }
+    }, 300);
+    
+    // 8. گوش دادن به تغییرات برای آپدیت فیلد مخفی
+    // jDateField/jDateTimeField انتظار دارد تاریخ شمسی به فرمت YYYY-MM-DD [HH:MM:SS] دریافت کند
+    dateInput.addEventListener('jdp:change', function (e) {
+        // ساخت تاریخ شمسی به فرمت مورد نیاز
+        const jy = e.detail.year;
+        const jm = String(e.detail.month).padStart(2, '0');
+        const jd = String(e.detail.day).padStart(2, '0');
+        
+        let jalaliDateStr;
+        if (enableTime) {
+            const hh = String(e.detail.hour || 0).padStart(2, '0');
+            const mm = String(e.detail.minute || 0).padStart(2, '0');
+            const ss = '00';
+            // فرمت: YYYY-MM-DD HH:MM:SS (شمسی)
+            jalaliDateStr = `${jy}-${jm}-${jd} ${hh}:${mm}:${ss}`;
+        } else {
+            // فرمت: YYYY-MM-DD (شمسی)
+            jalaliDateStr = `${jy}-${jm}-${jd}`;
+        }
+        hiddenInput.value = jalaliDateStr;
+        
+        console.log('Date changed - Jalali:', jalaliDateStr, 'Gregorian:', e.detail.gregorian);
+    });
+    
+    dateInput.setAttribute('data-jdp-initialized', 'true');
+    console.log(`Custom Jalali Datepicker initialized for ${fieldName} (time: ${enableTime})`);
+}
+</script>
+{% endblock %}

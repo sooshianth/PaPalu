@@ -59,6 +59,12 @@ from .views import (
     logistic_confirmation_detail_view,
     rejected_transports_list_view,
     rejected_transport_detail_view,
+    # Supply Settlement Views
+    supply_settlement_list_view,
+    supply_settlement_detail_view,
+    skip_supply_settlement_view,
+    supply_settlement_approval_list_view,
+    supply_settlement_approval_detail_view,
 
 )
 
@@ -118,5 +124,11 @@ urlpatterns = [
     path('logistic-confirmation/<str:transport_number>/', logistic_confirmation_detail_view, name='logistic_confirmation_detail'),
     path('rejected-transports/', rejected_transports_list_view, name='rejected_transports_list'),
     path('rejected-transports/<str:transport_number>/', rejected_transport_detail_view, name='rejected_transport_detail'),
+    # Supply Settlement
+    path('supply-settlement/', supply_settlement_list_view, name='supply_settlement_list'),
+    path('supply-settlement/<str:order_number>/', supply_settlement_detail_view, name='supply_settlement_detail'),
+    path('supply-settlement/<str:order_number>/skip/', skip_supply_settlement_view, name='skip_supply_settlement'),
+    path('supply-settlement-approval/', supply_settlement_approval_list_view, name='supply_settlement_approval_list'),
+    path('supply-settlement-approval/<str:order_number>/', supply_settlement_approval_detail_view, name='supply_settlement_approval_detail'),
 
 ]

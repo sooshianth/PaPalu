@@ -40,6 +40,7 @@ class Order(models.Model):
         ('awaiting_delivery', 'در انتظار تحویل بار'),
         ('awaiting_wh_reconciliation', 'در انتظار تطبیق اطلاعات انبار'),
         ('awaiting_final_settlement', 'در انتظار تسویه نهایی'),
+        ('pending_supply_settlement_approval', 'در انتظار تایید تسویه کامل خرید'),
         ('completed', 'تکمیل سفارش'),
         # وضعیت‌های مشترک
         ('cancelled', 'لغو شده'),
