@@ -60,8 +60,8 @@ from .car_entrance_views import (
     car_entrance_list_view,
     register_driver_for_transport_view,
     driver_lookup_api,
-    car_exit_list_view,
-    mark_vehicle_exited_view,
+    # car_exit_list_view,
+    # mark_vehicle_exited_view,
 )
 
 # Warehouse Delivery Views

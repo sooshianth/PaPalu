@@ -35,7 +35,7 @@ def approve_allocation_list_view(request):
     """
     audit_logger.info("درخواست مشاهده لیست سفارش‌های در انتظار تأیید تخصیص")
     
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):  # TODO: باید task مناسب اضافه شود
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_ALLOCATION.value):  # TODO: باید task مناسب اضافه شود
         audit_logger.activity("تلاش برای دسترسی به لیست تأیید تخصیص بدون دسترسی")
         messages.error(request, 'شما دسترسی به تأیید تخصیص را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -148,7 +148,7 @@ def approve_allocation_detail_view(request, order_number):
     """
     audit_logger.info(f"درخواست مشاهده جزئیات تأیید تخصیص سفارش {order_number}")
     
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):  # TODO: باید task مناسب اضافه شود
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_ALLOCATION.value):  # TODO: باید task مناسب اضافه شود
         audit_logger.activity(f"تلاش برای دسترسی به جزئیات تأیید تخصیص سفارش {order_number} بدون دسترسی")
         messages.error(request, 'شما دسترسی به تأیید تخصیص را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -236,7 +236,7 @@ def approve_allocation_inquiry_view(request, order_number, allocation_number):
     """
     audit_logger.info(f"درخواست تأیید استعلام تخصیص {allocation_number} برای سفارش {order_number}")
     
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):  # TODO: باید task مناسب اضافه شود
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_ALLOCATION.value):  # TODO: باید task مناسب اضافه شود
         audit_logger.activity(f"تلاش برای تأیید استعلام تخصیص {allocation_number} بدون دسترسی")
         messages.error(request, 'شما دسترسی به تأیید تخصیص را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -325,7 +325,7 @@ def reject_allocations_view(request, order_number):
     """
     audit_logger.info(f"درخواست رد تخصیص‌های سفارش {order_number}")
     
-    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_PROFORMA.value):
+    if not user_has_task(request.user, TaskChoices.SALES_APPROVE_ALLOCATION.value):
         audit_logger.activity(f"تلاش برای رد تخصیص‌های سفارش {order_number} بدون دسترسی")
         messages.error(request, 'شما دسترسی به رد تخصیص را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
