@@ -86,6 +86,7 @@ MIDDLEWARE = [
     'config.middleware.SecurityLoggingMiddleware',
     'config.middleware.LoginAttemptMiddleware',
     'config.middleware.AdminSessionManagementMiddleware',
+    'config.middleware.ExceptionLoggingMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

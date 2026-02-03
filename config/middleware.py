@@ -12,12 +12,14 @@ from core.logging_filters import set_log_context
 from time import time
 import logging
 import json
+import traceback
 from core.logging_levels import *  # Import custom log levels (ACTIVITY, ALERT, BREACH)
 
 # ایجاد لاگر برای middleware امنیتی
 security_logger = logging.getLogger('security')
 auth_logger = logging.getLogger('authentication')
 logger = logging.getLogger('core.middleware')
+bug_logger = logging.getLogger('bugs')
 
 
 class SessionTimeoutMiddleware:
@@ -495,4 +497,20 @@ class AdminSessionManagementMiddleware(MiddlewareMixin):
                     logger.warning(f"تلاش دسترسی غیرمجاز به پنل ادمین توسط کاربر {request.user.username}")
                     return HttpResponseForbidden("دسترسی مجاز نیست - شما با شماره ادمین وارد نشده‌اید")
         
+        return None
+
+
+class ExceptionLoggingMiddleware(MiddlewareMixin):
+    """
+    لاگ کردن traceback کامل خطاهای 500 در فایل لاگ تا بدون DEBUG هم بتوان علت خطا را دید.
+    """
+    def process_exception(self, request, exception):
+        tb = traceback.format_exc()
+        bug_logger.error(
+            "خطای سرور (500) برای مسیر %s:\n%s\n%s",
+            request.path,
+            type(exception).__name__,
+            tb,
+            exc_info=False,
+        )
         return None
