@@ -219,7 +219,7 @@
 </div>
 
 {% block module_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{% static 'vendor/chart.js-3.7.1/chart.min.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Activity filter functionality

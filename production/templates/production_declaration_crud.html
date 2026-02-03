@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load number_filters %}
 {% block title %}{% if is_create %}ایجاد{% else %}ویرایش{% endif %} برنامه تولید | سیمرغ افزار{% endblock %}
 
@@ -1236,8 +1237,8 @@
 
 {% block extra_js %}
 <!-- jQuery (needed for other functionality) -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
+<script src="{% static 'vendor/jquery-3.6.0/jquery.min.js' %}"></script>
+<script src="{% static 'vendor/decimal.js-10.4.3/decimal.min.js' %}"></script>
 
 <script>
 // Permission variables for frontend

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load number_filters %}
 {% block title %}برنامه تولید | ثبت{% endblock %}
 
@@ -1503,7 +1504,7 @@ if (productFlowStatusData) {
 	});
 </script>
 <!-- jQuery (needed for other functionality) -->
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="{% static 'vendor/jquery-3.7.1/jquery.min.js' %}"></script>
 <script>
 	// Jalali helpers are initialized per-tab by initJalaliPickers()
 </script>

@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% load render_table from django_tables2 %}
 {% block title %}تعریف مواد اولیه{% endblock %}
 
@@ -1522,8 +1523,8 @@
 
 {% block extra_js %}
 <!-- jQuery (needed for Persian Datepicker) -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="{% static 'vendor/jquery-3.7.1/jquery.min.js' %}" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <!-- Persian Date core + Datepicker JS -->
-<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+<script src="{% static 'vendor/persian-date-1.1.0/persian-date.min.js' %}"></script>
+<script src="{% static 'vendor/persian-datepicker-1.2.0/js/persian-datepicker.min.js' %}"></script>
 {% endblock %}

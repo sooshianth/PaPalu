@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load static %}
 {% block title %}ایجاد شخص تامین کننده{% endblock %}
 
 {% block extra_css %}
@@ -19,7 +20,7 @@
   .required-marker{color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px}
   .submit-row{margin-top:8px;display:flex;gap:10px}
 </style>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+<link rel="stylesheet" href="{% static 'vendor/datatables-1.13.8/css/jquery.dataTables.min.css' %}"/>
 <!-- Custom Jalali Datepicker Component -->
 {% include "components/jalali_datepicker.html" %}
 {% endblock %}
@@ -342,7 +343,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+<script src="{% static 'vendor/jquery-3.7.1/jquery.min.js' %}" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 <script>
   (function() {
     function initJalali() {

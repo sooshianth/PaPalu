@@ -1,0 +1,42 @@
+/* Vazirmatn Font - Locally hosted version */
+/* Based on Google Fonts Vazirmatn:wght@300;400;500;700 */
+
+/* vazirmatn-300 - latin */
+@font-face {
+  font-display: swap;
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-weight: 300;
+  src: url('../fonts/Vazirmatn[wght].woff2') format('woff2-variations');
+  font-named-instance: 'Light';
+}
+
+/* vazirmatn-400 - latin */
+@font-face {
+  font-display: swap;
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-weight: 400;
+  src: url('../fonts/Vazirmatn[wght].woff2') format('woff2-variations');
+  font-named-instance: 'Regular';
+}
+
+/* vazirmatn-500 - latin */
+@font-face {
+  font-display: swap;
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-weight: 500;
+  src: url('../fonts/Vazirmatn[wght].woff2') format('woff2-variations');
+  font-named-instance: 'Medium';
+}
+
+/* vazirmatn-700 - latin */
+@font-face {
+  font-display: swap;
+  font-family: 'Vazirmatn';
+  font-style: normal;
+  font-weight: 700;
+  src: url('../fonts/Vazirmatn[wght].woff2') format('woff2-variations');
+  font-named-instance: 'Bold';
+}

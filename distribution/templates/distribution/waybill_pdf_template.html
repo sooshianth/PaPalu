@@ -1,5 +1,6 @@
-{% load number_filters %}
 <!DOCTYPE html>
+{% load static %}
+{% load number_filters %}
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
@@ -8,13 +9,13 @@
     <style>
         @font-face {
             font-family: 'Vazir';
-            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Regular.ttf') format('truetype');
+            src: url('{% static 'vendor/vazir-font-30.1.0/Vazir-Regular.ttf' %}') format('truetype');
             font-weight: normal;
             font-style: normal;
         }
         @font-face {
             font-family: 'Vazir';
-            src: url('https://cdn.jsdelivr.net/gh/rastikerdar/vazir-font@v30.1.0/dist/Vazir-Bold.ttf') format('truetype');
+            src: url('{% static 'vendor/vazir-font-30.1.0/Vazir-Bold.ttf' %}') format('truetype');
             font-weight: bold;
             font-style: normal;
         }
