@@ -240,7 +240,17 @@ class Transport(models.Model):
         validators=[MinValueValidator(0)],
         null=True,
         blank=True,
-        help_text='وزن بارنامه'
+        help_text='وزن خالص (بار) ثبت شده روی بارنامه'
+    )
+    
+    waybill_gross_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن پر بارنامه',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن پر (ناخالص) ثبت شده روی بارنامه - برای مقایسه با وزن پر باسکول کارخانه'
     )
     
     # فیلدهای مالی

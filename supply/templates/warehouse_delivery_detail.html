@@ -390,6 +390,158 @@
         margin-bottom: 25px;
     }
 
+    /* استایل‌های پاپ‌آپ مقایسه وزن */
+    .weight-popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(3px);
+        animation: fadeIn 0.25s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+        from { transform: translateY(30px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
+    .weight-popup-modal {
+        background: white;
+        border-radius: 16px;
+        padding: 30px 35px;
+        max-width: 440px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.3s ease;
+        direction: rtl;
+    }
+
+    .weight-popup-icon {
+        margin-bottom: 15px;
+    }
+
+    .weight-popup-icon svg {
+        width: 56px;
+        height: 56px;
+    }
+
+    .weight-popup-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0 0 20px 0;
+    }
+
+    .weight-popup-body {
+        margin-bottom: 20px;
+    }
+
+    .weight-popup-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        margin-bottom: 16px;
+    }
+
+    .weight-popup-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f8f9fa;
+    }
+
+    .weight-popup-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        margin-bottom: 6px;
+    }
+
+    .weight-popup-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--gray-800);
+    }
+
+    .weight-popup-diff-box {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px;
+        border-radius: 10px;
+        margin-bottom: 14px;
+        font-size: 1.1rem;
+    }
+
+    .weight-popup-diff-label {
+        font-weight: 500;
+    }
+
+    .weight-popup-diff-value {
+        font-weight: 800;
+        font-size: 1.25rem;
+    }
+
+    .weight-popup-message {
+        font-size: 0.9rem;
+        font-weight: 600;
+        padding: 10px 14px;
+        border-radius: 8px;
+        line-height: 1.6;
+    }
+
+    .weight-popup-btn {
+        margin-top: 8px;
+        padding: 12px 40px;
+        border-radius: 10px;
+        border: none;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: white;
+        min-width: 180px;
+    }
+
+    .weight-popup-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* سطوح رنگی پاپ‌آپ */
+    .weight-popup-modal.level-ok .weight-popup-title { color: #2e7d32; }
+    .weight-popup-modal.level-ok .weight-popup-diff-box { background: #e8f5e9; color: #2e7d32; }
+    .weight-popup-modal.level-ok .weight-popup-message { background: #e8f5e9; color: #2e7d32; }
+    .weight-popup-modal.level-ok .weight-popup-btn { background: #4caf50; }
+    .weight-popup-modal.level-ok .weight-popup-btn:hover { background: #388e3c; }
+
+    .weight-popup-modal.level-caution .weight-popup-title { color: #e65100; }
+    .weight-popup-modal.level-caution .weight-popup-diff-box { background: #fff3e0; color: #e65100; }
+    .weight-popup-modal.level-caution .weight-popup-message { background: #fff3e0; color: #e65100; }
+    .weight-popup-modal.level-caution .weight-popup-btn { background: #ff9800; }
+    .weight-popup-modal.level-caution .weight-popup-btn:hover { background: #f57c00; }
+
+    .weight-popup-modal.level-danger .weight-popup-title { color: #c62828; }
+    .weight-popup-modal.level-danger .weight-popup-diff-box { background: #ffebee; color: #c62828; }
+    .weight-popup-modal.level-danger .weight-popup-message { background: #ffebee; color: #c62828; }
+    .weight-popup-modal.level-danger .weight-popup-btn { background: #f44336; }
+    .weight-popup-modal.level-danger .weight-popup-btn:hover { background: #d32f2f; }
+    .weight-popup-modal.level-danger { border: 3px solid #f44336; }
+
     /* استایل برای جدول مقایسه وزن‌ها */
     .comparison-table {
         width: 100%;
@@ -534,6 +686,15 @@
         .initial-weight-box {
             padding: 15px;
         }
+        
+        .weight-popup-modal {
+            padding: 22px 20px;
+            max-width: 360px;
+        }
+        
+        .weight-popup-row {
+            gap: 10px;
+        }
     }
     
     @media (max-width: 480px) {
@@ -625,6 +786,12 @@
             <span class="readonly-info-value">{% if accessible_transport_fields.waybill_weight %}{{ pt.waybill_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</span>
         </div>
         {% endif %}
+        {% if pt.waybill_gross_weight %}
+        <div class="readonly-info-item">
+            <span class="readonly-info-label">وزن پر بارنامه:</span>
+            <span class="readonly-info-value">{{ pt.waybill_gross_weight|persian_number:3 }} کیلوگرم</span>
+        </div>
+        {% endif %}
         {% if pt.gross_weight %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">وزن پر:</span>
@@ -671,15 +838,47 @@
                 <!-- وزن پر اولیه -->
                 <div class="initial-weight-box">
                     <div class="form-group">
-                        <label for="initial_gross_weight" class="form-label required">وزن پر اولیه (کیلوگرم)</label>
+                        <label for="initial_gross_weight" class="form-label required">وزن پر باسکول (کیلوگرم)</label>
                         <input type="number" class="form-control" id="initial_gross_weight" 
                                name="initial_gross_weight" step="0.001" 
-                               placeholder="وزن خودرو با بار کامل" 
+                               placeholder="وزن خودرو با بار کامل (باسکول کارخانه)" 
                                value="{{ pt.gross_weight|default:'' }}"
                                {% if read_only %}readonly{% endif %} required>
-                        <small class="text-muted" style="display: block; margin-top: 5px;">وزن خودرو با بار کامل قبل از شروع تخلیه</small>
+                        <small class="text-muted" style="display: block; margin-top: 5px;">وزن خودرو با بار کامل اندازه‌گیری شده با باسکول کارخانه</small>
                     </div>
                 </div>
+
+                <!-- مدال پاپ‌آپ مقایسه وزن پر بارنامه با وزن پر باسکول -->
+                {% if pt.waybill_gross_weight %}
+                <div id="weight-popup-overlay" class="weight-popup-overlay" style="display:none;">
+                    <div class="weight-popup-modal" id="weight-popup-modal">
+                        <div class="weight-popup-icon" id="popup-icon-container">
+                            <!-- آیکون بر اساس سطح هشدار تغییر می‌کند -->
+                        </div>
+                        <h4 class="weight-popup-title" id="popup-title">مقایسه وزن پر</h4>
+                        <div class="weight-popup-body">
+                            <div class="weight-popup-row">
+                                <div class="weight-popup-cell">
+                                    <span class="weight-popup-label">وزن پر بارنامه</span>
+                                    <span class="weight-popup-value" id="popup-waybill">{{ pt.waybill_gross_weight|persian_number:3 }} kg</span>
+                                </div>
+                                <div class="weight-popup-cell">
+                                    <span class="weight-popup-label">وزن پر باسکول</span>
+                                    <span class="weight-popup-value" id="popup-scale">—</span>
+                                </div>
+                            </div>
+                            <div class="weight-popup-diff-box" id="popup-diff-box">
+                                <span class="weight-popup-diff-label">اختلاف:</span>
+                                <span class="weight-popup-diff-value" id="popup-diff">—</span>
+                            </div>
+                            <div class="weight-popup-message" id="popup-message"></div>
+                        </div>
+                        <button type="button" class="weight-popup-btn" id="popup-acknowledge-btn" onclick="closeWeightPopup()">
+                            متوجه شدم
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
 
                 <!-- مراحل تخلیه -->
                 <div id="unloading-stages-container">
@@ -967,6 +1166,90 @@
         const stagesList = document.getElementById('stages-list');
         const addStageBtn = document.getElementById('add-stage-btn');
         const submitBtn = document.getElementById('submitBtn');
+
+        // ==========================================
+        //  پاپ‌آپ مقایسه وزن پر بارنامه با وزن پر باسکول
+        // ==========================================
+        const waybillGrossWeight = {{ pt.waybill_gross_weight|default:"0" }};
+        let weightPopupShown = false;  // برای جلوگیری از نمایش مکرر
+
+        window.closeWeightPopup = function() {
+            const overlay = document.getElementById('weight-popup-overlay');
+            if (overlay) overlay.style.display = 'none';
+        };
+
+        function showWeightPopup(scaleWeight) {
+            if (waybillGrossWeight <= 0 || !scaleWeight || scaleWeight <= 0) return;
+
+            const overlay = document.getElementById('weight-popup-overlay');
+            const modal = document.getElementById('weight-popup-modal');
+            if (!overlay || !modal) return;
+
+            const difference = scaleWeight - waybillGrossWeight;
+            const absDifference = Math.abs(difference);
+
+            // آپدیت مقادیر
+            const scaleEl = document.getElementById('popup-scale');
+            const diffEl = document.getElementById('popup-diff');
+            const messageEl = document.getElementById('popup-message');
+            const titleEl = document.getElementById('popup-title');
+            const iconContainer = document.getElementById('popup-icon-container');
+
+            if (scaleEl) scaleEl.textContent = persianNumber(scaleWeight.toFixed(0)) + ' kg';
+
+            const sign = difference > 0 ? '+' : (difference < 0 ? '-' : '');
+            if (diffEl) diffEl.textContent = sign + persianNumber(absDifference.toFixed(0)) + ' کیلوگرم';
+
+            // حذف کلاس‌های قبلی
+            modal.classList.remove('level-ok', 'level-caution', 'level-danger');
+
+            // آستانه‌های کیلوگرمی
+            if (absDifference <= 300) {
+                // عادی - کمتر از ۳۰۰ کیلو
+                modal.classList.add('level-ok');
+                if (titleEl) titleEl.textContent = 'مقایسه وزن پر';
+                if (iconContainer) iconContainer.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="#4caf50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                if (messageEl) messageEl.textContent = 'اختلاف وزن در محدوده عادی است (' + persianNumber(absDifference.toFixed(0)) + ' کیلوگرم).';
+            } else if (absDifference <= 1000) {
+                // هشدار - ۳۰۰ تا ۱۰۰۰ کیلو
+                modal.classList.add('level-caution');
+                if (titleEl) titleEl.textContent = 'توجه! اختلاف وزن';
+                if (iconContainer) iconContainer.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 9V13M12 17H12.01M4.93 19H19.07C20.14 19 20.82 17.87 20.28 16.94L13.21 4.32C12.67 3.39 11.33 3.39 10.79 4.32L3.72 16.94C3.18 17.87 3.86 19 4.93 19Z" stroke="#ff9800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                if (messageEl) {
+                    if (difference < 0) {
+                        messageEl.textContent = 'وزن پر باسکول ' + persianNumber(absDifference.toFixed(0)) + ' کیلوگرم کمتر از وزن پر بارنامه است. لطفاً دقت کنید.';
+                    } else {
+                        messageEl.textContent = 'وزن پر باسکول ' + persianNumber(absDifference.toFixed(0)) + ' کیلوگرم بیشتر از وزن پر بارنامه است. لطفاً دقت کنید.';
+                    }
+                }
+            } else {
+                // خطر - بیش از ۱۰۰۰ کیلو
+                modal.classList.add('level-danger');
+                if (titleEl) titleEl.textContent = 'اختلاف وزن مشکوک!';
+                if (iconContainer) iconContainer.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 9V13M12 17H12.01M4.93 19H19.07C20.14 19 20.82 17.87 20.28 16.94L13.21 4.32C12.67 3.39 11.33 3.39 10.79 4.32L3.72 16.94C3.18 17.87 3.86 19 4.93 19Z" stroke="#f44336" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+                if (messageEl) {
+                    if (difference < 0) {
+                        messageEl.textContent = 'وزن پر باسکول ' + persianNumber(absDifference.toFixed(0)) + ' کیلوگرم کمتر از وزن پر بارنامه است! احتمال کسری بار وجود دارد!';
+                    } else {
+                        messageEl.textContent = 'وزن پر باسکول ' + persianNumber(absDifference.toFixed(0)) + ' کیلوگرم بیشتر از وزن پر بارنامه است! لطفاً بررسی کنید!';
+                    }
+                }
+            }
+
+            // نمایش پاپ‌آپ
+            overlay.style.display = 'flex';
+            weightPopupShown = true;
+        }
+
+        // نمایش پاپ‌آپ وقتی کاربر از فیلد وزن پر خارج می‌شود (blur)
+        if (initialGrossInput && waybillGrossWeight > 0) {
+            initialGrossInput.addEventListener('blur', function() {
+                const val = parseFloat(this.value) || 0;
+                if (val > 0) {
+                    showWeightPopup(val);
+                }
+            });
+        }
 
         // Summary displays
         const summaryGross = document.getElementById('summary-gross-weight');

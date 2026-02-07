@@ -591,6 +591,32 @@ def warehouse_delivery_detail_view(request, transport_number):
                         messages.error(request, 'حداقل یک مرحله تخلیه باید ثبت شود.')
                         return redirect(request.path)
                     
+                    # بررسی و لاگ مقایسه وزن پر بارنامه با وزن پر باسکول
+                    if pt.waybill_gross_weight and gross:
+                        waybill_gross = float(pt.waybill_gross_weight)
+                        scale_gross = float(gross)
+                        if waybill_gross > 0:
+                            weight_diff = abs(scale_gross - waybill_gross)
+                            if weight_diff > 1000:
+                                audit_logger.activity(
+                                    f"اختلاف مشکوک وزن پر - حمل: {transport_number} | "
+                                    f"وزن پر بارنامه: {waybill_gross} kg | "
+                                    f"وزن پر باسکول: {scale_gross} kg | "
+                                    f"اختلاف: {weight_diff:.0f} kg | "
+                                    f"کاربر: {request.user.username}"
+                                )
+                                bug_logger.warning(
+                                    f"اختلاف مشکوک وزن پر در حمل {transport_number}: "
+                                    f"بارنامه={waybill_gross}kg, باسکول={scale_gross}kg, "
+                                    f"اختلاف={weight_diff:.0f}kg"
+                                )
+                            elif weight_diff > 300:
+                                bug_logger.info(
+                                    f"اختلاف وزن پر در حمل {transport_number}: "
+                                    f"بارنامه={waybill_gross}kg, باسکول={scale_gross}kg, "
+                                    f"اختلاف={weight_diff:.0f}kg"
+                                )
+                    
                     # محاسبه وزن‌های خالص هر محصول و وزن خالی نهایی
                     item_weights = {}
                     item_warehouses = {}  # نگهداری انبار مقصد برای هر ماده اولیه

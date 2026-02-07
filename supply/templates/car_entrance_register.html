@@ -505,6 +505,15 @@
                         <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">وزن بارنامه به کیلوگرم</small>
                     </div>
                     {% endif %}
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">{{ form.waybill_gross_weight.label }}</label>
+                        {{ form.waybill_gross_weight }}
+                        {% if form.waybill_gross_weight.errors %}
+                            <div class="text-danger">{{ form.waybill_gross_weight.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">وزن پر (ناخالص) روی بارنامه</small>
+                    </div>
                     
                     {% if accessible_transport_fields.waybill_date %}
                     <div class="col-md-6 mb-3">

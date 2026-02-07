@@ -61,6 +61,7 @@ def get_accessible_purchase_transport_fields(user):
             'tare_weight': True,
             'net_weight': True,
             'waybill_weight': True,
+            'waybill_gross_weight': True,
             'waybill_number': True,
             'waybill_date': True,
             'bill_of_lading_file': True,
@@ -92,6 +93,7 @@ def get_accessible_purchase_transport_fields(user):
         'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'view'),
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'view'),
         'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'view'),
+        'waybill_gross_weight': user_can_access_field(user, Transport, 'waybill_gross_weight', 'view'),
         'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'view'),
         'waybill_date': user_can_access_field(user, Transport, 'waybill_date', 'view'),
         'bill_of_lading_file': user_can_access_field(user, Transport, 'bill_of_lading_file', 'view'),
@@ -127,6 +129,7 @@ def get_accessible_purchase_transport_fields_edit(user):
         'tare_weight': user_can_access_field(user, Transport, 'tare_weight', 'edit'),
         'net_weight': user_can_access_field(user, Transport, 'net_weight', 'edit'),
         'waybill_weight': user_can_access_field(user, Transport, 'waybill_weight', 'edit'),
+        'waybill_gross_weight': user_can_access_field(user, Transport, 'waybill_gross_weight', 'edit'),
         'waybill_number': user_can_access_field(user, Transport, 'waybill_number', 'edit'),
         'waybill_date': user_can_access_field(user, Transport, 'waybill_date', 'edit'),
         'bill_of_lading_file': user_can_access_field(user, Transport, 'bill_of_lading_file', 'edit'),
@@ -239,6 +242,19 @@ class CarEntranceDriverForm(forms.Form):
             'step': '0.001',
             'min': '0'
         })
+    )
+    waybill_gross_weight = forms.DecimalField(
+        label='وزن پر بارنامه (کیلوگرم)',
+        required=True,
+        max_digits=15,
+        decimal_places=3,
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'placeholder': '0.000',
+            'step': '0.001',
+            'min': '0'
+        }),
+        help_text='وزن پر (ناخالص) که روی بارنامه ثبت شده - برای مقایسه با باسکول کارخانه'
     )
     waybill_date = forms.DateField(
         label='تاریخ بارنامه',
@@ -571,9 +587,13 @@ def register_driver_for_transport_view(request, transport_number):
                     pt.driver = driver
                     pt.plate_number = data.get('plate_number')
                     
-                    # ثبت وزن بارنامه
+                    # ثبت وزن بارنامه (خالص)
                     if data.get('waybill_weight'):
                         pt.waybill_weight = data.get('waybill_weight')
+                    
+                    # ثبت وزن پر بارنامه (ناخالص)
+                    if data.get('waybill_gross_weight'):
+                        pt.waybill_gross_weight = data.get('waybill_gross_weight')
                     
                     # ثبت تاریخ بارنامه
                     if data.get('waybill_date'):
@@ -689,6 +709,10 @@ def register_driver_for_transport_view(request, transport_number):
         # پیش‌پر کردن وزن بارنامه
         if pt.waybill_weight:
             initial['waybill_weight'] = pt.waybill_weight
+        
+        # پیش‌پر کردن وزن پر بارنامه
+        if pt.waybill_gross_weight:
+            initial['waybill_gross_weight'] = pt.waybill_gross_weight
         
         if pt.driver:
             initial['phone'] = pt.driver.phone_number
