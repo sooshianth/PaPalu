@@ -54,6 +54,7 @@ class TaskChoices(models.TextChoices):
     SUPPLY_VIEW_REJECTED_TRANSPORTS = 'supply.view_rejected_transports', 'مشاهده حمل‌های ارجاع به مدیریت'
     SUPPLY_UPLOAD_FREIGHT_PAYMENT_DOCS = 'supply.upload_freight_payment_docs', 'بارگذاری اسناد پرداخت کرایه'
     SUPPLY_SETTLEMENT = 'supply.settlement', 'تسویه سفارش خرید'
+    SUPPLY_APPROVE_SETTLEMENT = 'supply.approve_settlement', 'تایید تسویه کامل خرید'
 
     # SUPPLY_REGISTER_SYSTEM_WAYBILL = 'supply.register_system_waybill', 'ثبت سیستمی اطلاعات بارنامه'
     # SUPPLY_REGISTER_GROSS_WEIGHT = 'supply.register_gross_weight', 'ثبت وزن پر'
@@ -62,7 +63,6 @@ class TaskChoices(models.TextChoices):
     # SUPPLY_APPROVE_PROFORMA = 'supply.approve_proforma', 'تایید پیش فاکتور تامین'
     # SUPPLY_APPROVE_FREIGHT_PAYMENT = 'supply.approve_freight_payment', 'تایید پرداخت کرایه'
     # SUPPLY_UPLOAD_PAYMENT_DOCUMENTS = 'supply.upload_payment_documents', 'بارگذاری اسناد پرداخت کرایه'
-    # SUPPLY_APPROVE_SETTLEMENT = 'supply.approve_settlement', 'تایید تسویه کامل'
     
     # Production (تولید)
     PRODUCTION_SUBMIT_REPORT = 'production.submit_report', 'اظهار تولید'
