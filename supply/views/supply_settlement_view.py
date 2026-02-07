@@ -240,17 +240,17 @@ def supply_settlement_detail_view(request, order_number):
     difference_amount = total_difference_amount
     
     # دریافت یا ایجاد Settlement با نوع کسری و سرک
-    # در تأمین: ما مشتری هستیم و تأمین‌کننده فروشنده است
-    # اگر سرک باشد (مثبت): تأمین‌کننده باید به ما پول بزند -> debtor: supplier
-    # اگر کسری باشد (منفی): ما باید به تأمین‌کننده پول بزنیم -> debtor: company
+    # در تأمین (خرید): ما خریدار هستیم و تأمین‌کننده فروشنده است
+    # اگر سرک باشد (مثبت = بیشتر تحویل شده): ما باید مابه‌التفاوت را بزنیم -> debtor: company (ما بدهکار)
+    # اگر کسری باشد (منفی = کمتر تحویل شده): تأمین‌کننده باید مابه‌التفاوت را برگرداند -> debtor: supplier (تأمین‌کننده بدهکار)
     supplier = order.customer  # در سفارش خرید، customer همان تأمین‌کننده است
     
     settlement, created = Settlement.objects.get_or_create(
         order=order,
         settlement_type='weight_discrepancy',
         defaults={
-            'debtor_person': supplier if difference_amount > 0 else None,  # اگر سرک: تأمین‌کننده بدهکار
-            'creditor_person': None if difference_amount > 0 else supplier,  # اگر کسری: تأمین‌کننده بستانکار
+            'debtor_person': None if difference_amount > 0 else supplier,  # اگر کسری: تأمین‌کننده بدهکار (کمتر تحویل داده)
+            'creditor_person': supplier if difference_amount > 0 else None,  # اگر سرک: تأمین‌کننده بستانکار (بیشتر تحویل داده)
             'original_document_amount': difference_amount,
             'settled_amount': Decimal('0'),
             'settlement_status': 'pending',
@@ -314,12 +314,12 @@ def supply_settlement_detail_view(request, order_number):
                     transaction_doc.settlement = settlement
                     
                     # تنظیم discrepancy_type بر اساس difference_amount
-                    # در تأمین: سرک یعنی ما باید دریافت کنیم (مثبت)
-                    # کسری یعنی ما باید پرداخت کنیم (منفی)
+                    # در تأمین (خرید): سرک یعنی بیشتر تحویل شده → ما باید پرداخت کنیم
+                    # کسری یعنی کمتر تحویل شده → تأمین‌کننده باید پرداخت کند
                     if difference_amount > 0:
-                        transaction_doc.discrepancy_type = 'surplus'  # سرک - تأمین‌کننده پرداخت می‌کند
+                        transaction_doc.discrepancy_type = 'surplus'  # سرک - ما پرداخت می‌کنیم (بابت جنس اضافه)
                     elif difference_amount < 0:
-                        transaction_doc.discrepancy_type = 'shortage'  # کسری - ما پرداخت می‌کنیم
+                        transaction_doc.discrepancy_type = 'shortage'  # کسری - تأمین‌کننده پرداخت می‌کند (بابت جنس کم)
                     
                     # تولید شماره سند حسابداری
                     if not transaction_doc.accounting_document_number:
@@ -463,12 +463,14 @@ def skip_supply_settlement_view(request, order_number):
             order.save(update_fields=['status'])
             
             # به‌روزرسانی Settlement (اگر وجود دارد)
+            # در skip اختلاف صفر است پس بدهکار/بستانکار معنا ندارد
             supplier = order.customer
             settlement, created = Settlement.objects.get_or_create(
                 order=order,
                 settlement_type='weight_discrepancy',
                 defaults={
-                    'debtor_person': supplier,
+                    'debtor_person': None,  # اختلاف صفر - بدهکاری وجود ندارد
+                    'creditor_person': None,  # اختلاف صفر - بستانکاری وجود ندارد
                     'original_document_amount': Decimal('0'),
                     'settled_amount': Decimal('0'),
                     'settlement_status': 'completed',

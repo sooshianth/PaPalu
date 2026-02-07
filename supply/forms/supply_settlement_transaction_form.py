@@ -9,9 +9,9 @@ class SupplySettlementTransactionForm(forms.ModelForm):
     """
     فرم ثبت تراکنش برای تسویه سفارش خرید (تأمین)
     
-    تفاوت با فروش:
-    - در تأمین، سرک یعنی تأمین‌کننده باید به ما پول بزند (ما بستانکار)
-    - در تأمین، کسری یعنی ما باید به تأمین‌کننده پول بزنیم (ما بدهکار)
+    تفاوت با فروش (جهت پرداخت معکوس است):
+    - در تأمین، سرک یعنی تأمین‌کننده بیشتر تحویل داده → ما باید مابه‌التفاوت را به تأمین‌کننده بزنیم (ما بدهکار)
+    - در تأمین، کسری یعنی تأمین‌کننده کمتر تحویل داده → تأمین‌کننده باید مابه‌التفاوت را به ما برگرداند (تأمین‌کننده بدهکار)
     
     فیلدهای اجباری:
         - payment_type: نوع تسویه (نقدی بازارگاه، بانکی، چک)
@@ -117,9 +117,9 @@ class SupplySettlementTransactionForm(forms.ModelForm):
         discrepancy_type_value = None
         if difference_amount is not None:
             if difference_amount > 0:
-                discrepancy_type_value = 'surplus'  # سرک - تأمین‌کننده پرداخت می‌کند
+                discrepancy_type_value = 'surplus'  # سرک - بیشتر تحویل شده - ما پرداخت می‌کنیم
             elif difference_amount < 0:
-                discrepancy_type_value = 'shortage'  # کسری - ما پرداخت می‌کنیم
+                discrepancy_type_value = 'shortage'  # کسری - کمتر تحویل شده - تأمین‌کننده پرداخت می‌کند
         
         if discrepancy_type_value:
             self.fields['discrepancy_type'].initial = discrepancy_type_value
@@ -137,26 +137,28 @@ class SupplySettlementTransactionForm(forms.ModelForm):
         is_shortage = difference_amount and difference_amount < 0
         
         # فیلتر کردن حساب‌های بانکی بر اساس نوع تسویه
-        # در تأمین، منطق عکس است نسبت به فروش
+        # در تأمین (خرید)، جهت پرداخت عکس فروش است:
+        # سرک = بیشتر تحویل شده → ما باید پول بزنیم
+        # کسری = کمتر تحویل شده → تأمین‌کننده باید پول بزند
         if is_surplus:
-            # سرک: تأمین‌کننده باید پول بزند - حساب مبدا از حساب‌های تأمین‌کننده
-            if supplier:
-                supplier_financial_banking = FinancialBanking.objects.filter(person=supplier).first()
-                if supplier_financial_banking:
+            # سرک: ما باید پول بزنیم (بابت جنس اضافه‌ای که گرفتیم) - حساب مبدا از حساب‌های تامین نهاده سیمرغ
+            if company:
+                company_financial_banking = FinancialBanking.objects.filter(person=company).first()
+                if company_financial_banking:
                     self.fields['source_account'].queryset = BankAccount.objects.filter(
-                        financial_banking=supplier_financial_banking
+                        financial_banking=company_financial_banking
                     )
                 else:
                     self.fields['source_account'].queryset = BankAccount.objects.none()
             else:
                 self.fields['source_account'].queryset = BankAccount.objects.none()
         elif is_shortage:
-            # کسری: ما باید پول بزنیم - حساب مبدا از حساب‌های تامین نهاده سیمرغ
-            if company:
-                company_financial_banking = FinancialBanking.objects.filter(person=company).first()
-                if company_financial_banking:
+            # کسری: تأمین‌کننده باید پول بزند (بابت جنسی که کم تحویل داده) - حساب مبدا از حساب‌های تأمین‌کننده
+            if supplier:
+                supplier_financial_banking = FinancialBanking.objects.filter(person=supplier).first()
+                if supplier_financial_banking:
                     self.fields['source_account'].queryset = BankAccount.objects.filter(
-                        financial_banking=company_financial_banking
+                        financial_banking=supplier_financial_banking
                     )
                 else:
                     self.fields['source_account'].queryset = BankAccount.objects.none()
@@ -192,11 +194,13 @@ class SupplySettlementTransactionForm(forms.ModelForm):
         self.fields['document_amount'].label = 'مبلغ سند'
         self.fields['due_date'].label = 'تاریخ سررسید'
         if is_surplus:
-            self.fields['source_account'].label = 'حساب مبدا (حساب تأمین‌کننده)'
-            self.fields['approval_account_number'].label = 'شماره حساب (حساب تامین نهاده سیمرغ)'
-        elif is_shortage:
+            # سرک: ما پول می‌زنیم → مبدا = حساب شرکت، مقصد = حساب تأمین‌کننده
             self.fields['source_account'].label = 'حساب مبدا (حساب تامین نهاده سیمرغ)'
             self.fields['approval_account_number'].label = 'شماره حساب (حساب تأمین‌کننده)'
+        elif is_shortage:
+            # کسری: تأمین‌کننده پول می‌زند → مبدا = حساب تأمین‌کننده، مقصد = حساب شرکت
+            self.fields['source_account'].label = 'حساب مبدا (حساب تأمین‌کننده)'
+            self.fields['approval_account_number'].label = 'شماره حساب (حساب تامین نهاده سیمرغ)'
         else:
             self.fields['source_account'].label = 'حساب مبدا'
             self.fields['approval_account_number'].label = 'شماره حساب'
