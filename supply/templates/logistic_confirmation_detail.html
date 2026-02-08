@@ -258,12 +258,12 @@
         <div style="flex: 1;">
             <h3 style="color: #c62828; margin: 0 0 10px 0; font-size: 1.3rem;">⚠️ هشدار: اختلاف وزن بیش از حد مجاز!</h3>
             <p style="color: #721c24; margin: 0; font-size: 1rem; line-height: 1.6;">
-                <strong>اختلاف وزن بارنامه و وزن خالص:</strong> {{ weight_discrepancy|persian_number:3|default:"—" }} کیلوگرم 
+                <strong>اختلاف وزن بارنامه و وزن پر:</strong> {{ weight_discrepancy|persian_number:3|default:"—" }} کیلوگرم 
                 (<strong style="color: #c62828;">{{ weight_discrepancy_percent|persian_number:2|default:"—" }}%</strong>)
                 <br>
                 <strong>وزن بارنامه:</strong> {{ transport.waybill_weight|persian_number:3|default:"—" }} کیلوگرم
                 <br>
-                <strong>وزن خالص:</strong> {{ transport.net_weight|persian_number:3|default:"—" }} کیلوگرم
+                <strong>وزن پر:</strong> {{ transport.gross_weight|persian_number:3|default:"—" }} کیلوگرم
                 <br>
                 <span style="font-weight: 600;">اختلاف بیش از 5% است. لطفاً قبل از تایید، این مورد را بررسی کنید.</span>
             </p>

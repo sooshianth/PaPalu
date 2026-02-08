@@ -255,6 +255,175 @@
         background: linear-gradient(90deg, #fff3cd 0%, #ffeeba 100%) !important;
         border-right: 4px solid #ffc107;
     }
+    
+    /* Collapsible checkbox styles for task permissions */
+    .task-perm-wrapper {
+        border: 2px solid #e8eef5;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: border-color 0.3s ease;
+    }
+    
+    .task-perm-wrapper:hover {
+        border-color: #c5d5e4;
+    }
+    
+    .task-perm-wrapper.open {
+        border-color: #2d7a4f;
+    }
+    
+    .task-perm-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        background: linear-gradient(135deg, #f8f9fa 0%, #eef2f7 100%);
+        cursor: pointer;
+        user-select: none;
+        transition: background 0.2s ease;
+    }
+    
+    .task-perm-toggle:hover {
+        background: linear-gradient(135deg, #eef2f7 0%, #e3e9f0 100%);
+    }
+    
+    .task-perm-toggle-info {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .task-perm-toggle-arrow {
+        font-size: 0.75rem;
+        color: #5a6c7d;
+        transition: transform 0.3s ease;
+        display: inline-block;
+    }
+    
+    .task-perm-wrapper.open .task-perm-toggle-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .task-perm-toggle-text {
+        font-size: 0.9rem;
+        color: #5a6c7d;
+        font-weight: 500;
+    }
+    
+    .task-perm-badge {
+        background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        min-width: 24px;
+        text-align: center;
+    }
+    
+    .task-perm-badge.empty {
+        background: linear-gradient(135deg, #adb5bd 0%, #868e96 100%);
+    }
+    
+    .task-perm-body {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s ease;
+    }
+    
+    .task-perm-wrapper.open .task-perm-body {
+        max-height: 400px;
+    }
+    
+    .task-perm-body-inner {
+        padding: 0.75rem 1rem 1rem;
+        background-color: #f8f9fa;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .task-perm-checkbox-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+    }
+    
+    .task-perm-item {
+        display: flex;
+        align-items: center;
+        padding: 0.45rem 0.75rem;
+        background-color: white;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .task-perm-item:hover {
+        background-color: #e8f5e9;
+        transform: translateX(-3px);
+    }
+    
+    .task-perm-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-left: 0.75rem;
+        cursor: pointer;
+        accent-color: #2d7a4f;
+        flex-shrink: 0;
+    }
+    
+    .task-perm-item label {
+        cursor: pointer;
+        flex: 1;
+        margin: 0;
+        font-size: 0.88rem;
+        color: #2c3e50;
+        user-select: none;
+    }
+    
+    .task-perm-item input[type="checkbox"]:checked + label {
+        font-weight: 600;
+        color: #2d7a4f;
+    }
+    
+    .checkbox-controls {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 0.6rem;
+        padding-bottom: 0.6rem;
+        border-bottom: 1px solid #e8eef5;
+    }
+    
+    .select-all-btn, .deselect-all-btn {
+        border: none;
+        padding: 0.35rem 0.7rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.75rem;
+        transition: all 0.3s ease;
+        font-family: 'Vazirmatn', 'Tahoma', sans-serif;
+        font-weight: 600;
+    }
+    
+    .select-all-btn {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        color: white;
+    }
+    
+    .select-all-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(108, 117, 125, 0.3);
+    }
+    
+    .deselect-all-btn {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        color: white;
+    }
+    
+    .deselect-all-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 6px rgba(220, 53, 69, 0.3);
+    }
 </style>
 {% endblock %}
 
@@ -275,9 +444,9 @@
         <thead>
             <tr>
                 <th style="width: 20%;">نام نقش</th>
-                <th style="width: 25%;">مجوز وظیفه</th>
+                <th style="width: 25%;">مجوزهای وظیفه</th>
                 <th style="width: 25%;">مجوز فیلد</th>
-                <th style="width: 30%;">توضیحات (در زمان ایجاد تنظیم می‌شود)</th>
+                <th style="width: 30%;">توضیحات</th>
             </tr>
         </thead>
         <tbody>
@@ -290,12 +459,31 @@
                     </div>
                 </td>
                 <td>
-                    <select id="newRoleTaskPerm">
-                        <option value="">-- بدون مجوز --</option>
-                        {% for tp in task_permissions %}
-                        <option value="{{ tp.id }}">{{ tp.name|escape }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="task-perm-wrapper" id="newRoleWrapper">
+                        <div class="task-perm-toggle" onclick="togglePermPanel(this)">
+                            <div class="task-perm-toggle-info">
+                                <span class="task-perm-toggle-arrow">&#9654;</span>
+                                <span class="task-perm-toggle-text">انتخاب مجوزها</span>
+                            </div>
+                            <span class="task-perm-badge empty" data-badge="new">0</span>
+                        </div>
+                        <div class="task-perm-body">
+                            <div class="task-perm-body-inner">
+                                <div class="checkbox-controls">
+                                    <button class="select-all-btn" onclick="selectAllNew(event)">انتخاب همه</button>
+                                    <button class="deselect-all-btn" onclick="deselectAllNew(event)">حذف همه</button>
+                                </div>
+                                <div class="task-perm-checkbox-group" id="newRoleTaskPermCheckboxes">
+                                    {% for tp in task_permissions %}
+                                    <div class="task-perm-item">
+                                        <input type="checkbox" id="new_tp_{{ tp.id }}" value="{{ tp.id }}" onchange="updateBadge('new')" />
+                                        <label for="new_tp_{{ tp.id }}">{{ tp.name|escape }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </td>
                 <td>
                     <select id="newRoleFieldPerm">
@@ -320,14 +508,31 @@
                     </div>
                 </td>
                 <td>
-                    <select class="task-perm-select" data-role-id="{{ role.id }}">
-                        <option value="">-- بدون مجوز --</option>
-                        {% for tp in task_permissions %}
-                        <option value="{{ tp.id }}" {% if role.task_permission and role.task_permission.id == tp.id %}selected{% endif %}>
-                            {{ tp.name|escape }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <div class="task-perm-wrapper" data-wrapper-role="{{ role.id }}">
+                        <div class="task-perm-toggle" onclick="togglePermPanel(this)">
+                            <div class="task-perm-toggle-info">
+                                <span class="task-perm-toggle-arrow">&#9654;</span>
+                                <span class="task-perm-toggle-text">مجوزهای وظیفه</span>
+                            </div>
+                            <span class="task-perm-badge" data-badge="role_{{ role.id }}">{{ role.task_permissions.count }}</span>
+                        </div>
+                        <div class="task-perm-body">
+                            <div class="task-perm-body-inner">
+                                <div class="checkbox-controls">
+                                    <button class="select-all-btn" onclick="selectAllRole(event, {{ role.id }})">انتخاب همه</button>
+                                    <button class="deselect-all-btn" onclick="deselectAllRole(event, {{ role.id }})">حذف همه</button>
+                                </div>
+                                <div class="task-perm-checkbox-group" data-role-id="{{ role.id }}">
+                                    {% for tp in task_permissions %}
+                                    <div class="task-perm-item">
+                                        <input type="checkbox" class="role-task-checkbox" id="role_{{ role.id }}_tp_{{ tp.id }}" value="{{ tp.id }}" data-role-id="{{ role.id }}" {% if tp.role and tp.role.id == role.id %}checked{% endif %} onchange="updateBadge('role_{{ role.id }}')" />
+                                        <label for="role_{{ role.id }}_tp_{{ tp.id }}">{{ tp.name|escape }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </td>
                 <td>
                     <select class="field-perm-select" data-role-id="{{ role.id }}">
@@ -363,13 +568,85 @@
     const addBtn = document.getElementById('addBtn');
     const saveBtn = document.getElementById('saveBtn');
     const newRoleName = document.getElementById('newRoleName');
-    const newRoleTaskPerm = document.getElementById('newRoleTaskPerm');
     const newRoleFieldPerm = document.getElementById('newRoleFieldPerm');
     const newRoleDescription = document.getElementById('newRoleDescription');
     const messageDiv = document.getElementById('message');
     
     // Track changes
-    const changes = new Map(); // roleId -> {task_permission_id, field_permission_id, description}
+    const changes = new Map(); // roleId -> {task_permission_ids, field_permission_id, description}
+    
+    // Toggle collapsible panel
+    function togglePermPanel(toggleEl) {
+        const wrapper = toggleEl.closest('.task-perm-wrapper');
+        wrapper.classList.toggle('open');
+    }
+    
+    // Update badge count
+    function updateBadge(badgeKey) {
+        const badge = document.querySelector(`[data-badge="${badgeKey}"]`);
+        if (!badge) return;
+        
+        let count;
+        if (badgeKey === 'new') {
+            count = document.querySelectorAll('#newRoleTaskPermCheckboxes input[type="checkbox"]:checked').length;
+        } else {
+            const roleId = badgeKey.replace('role_', '');
+            count = document.querySelectorAll(`.role-task-checkbox[data-role-id="${roleId}"]:checked`).length;
+        }
+        
+        badge.textContent = count;
+        badge.classList.toggle('empty', count === 0);
+    }
+    
+    // Helper functions for select all / deselect all
+    function selectAllNew(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const checkboxes = document.querySelectorAll('#newRoleTaskPermCheckboxes input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = true);
+        updateBadge('new');
+    }
+    
+    function deselectAllNew(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        const checkboxes = document.querySelectorAll('#newRoleTaskPermCheckboxes input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        updateBadge('new');
+    }
+    
+    function selectAllRole(event, roleId) {
+        event.preventDefault();
+        event.stopPropagation();
+        const checkboxes = document.querySelectorAll(`.role-task-checkbox[data-role-id="${roleId}"]`);
+        checkboxes.forEach(cb => cb.checked = true);
+        updateBadge('role_' + roleId);
+        // Trigger change event to track changes
+        if (checkboxes.length > 0) {
+            checkboxes[0].dispatchEvent(new Event('change'));
+        }
+    }
+    
+    function deselectAllRole(event, roleId) {
+        event.preventDefault();
+        event.stopPropagation();
+        const checkboxes = document.querySelectorAll(`.role-task-checkbox[data-role-id="${roleId}"]`);
+        checkboxes.forEach(cb => cb.checked = false);
+        updateBadge('role_' + roleId);
+        // Trigger change event to track changes
+        if (checkboxes.length > 0) {
+            checkboxes[0].dispatchEvent(new Event('change'));
+        }
+    }
+    
+    // Initialize badges on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateBadge('new');
+        document.querySelectorAll('[data-wrapper-role]').forEach(wrapper => {
+            const roleId = wrapper.dataset.wrapperRole;
+            updateBadge('role_' + roleId);
+        });
+    });
     
     function showMessage(text, type = 'success') {
         messageDiv.textContent = text;
@@ -397,7 +674,8 @@
     // Add new role
     addBtn.addEventListener('click', async () => {
         const name = newRoleName.value.trim();
-        const taskPermId = newRoleTaskPerm.value;
+        const selectedCheckboxes = document.querySelectorAll('#newRoleTaskPermCheckboxes input[type="checkbox"]:checked');
+        const selectedTaskPerms = Array.from(selectedCheckboxes).map(cb => cb.value);
         const fieldPermId = newRoleFieldPerm.value;
         const description = newRoleDescription.value.trim();
         
@@ -428,7 +706,7 @@
                 },
                 body: JSON.stringify({
                     name: name,
-                    task_permission_id: taskPermId || null,
+                    task_permission_ids: selectedTaskPerms,
                     field_permission_id: fieldPermId || null,
                     description: description
                 })
@@ -459,19 +737,20 @@
     // Initialize add button state
     addBtn.disabled = true;
     
-    // Handle task permission dropdown changes - track but don't save
-    document.querySelectorAll('.task-perm-select').forEach(select => {
-        const roleId = select.dataset.roleId;
-        const originalValue = select.value;
-        
-        select.addEventListener('change', function() {
-            const newValue = this.value;
+    // Handle task permission checkbox changes - track but don't save
+    document.querySelectorAll('.role-task-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const roleId = this.dataset.roleId;
+            const allCheckboxes = document.querySelectorAll(`.role-task-checkbox[data-role-id="${roleId}"]`);
+            const selectedValues = Array.from(allCheckboxes)
+                .filter(cb => cb.checked)
+                .map(cb => cb.value);
             
             if (!changes.has(roleId)) {
                 changes.set(roleId, {});
             }
             
-            changes.get(roleId).task_permission_id = newValue;
+            changes.get(roleId).task_permission_ids = selectedValues;
             markRowChanged(roleId);
         });
     });
@@ -555,7 +834,7 @@
                     },
                     body: JSON.stringify({
                         id: parseInt(roleId),
-                        task_permission_id: changeData.task_permission_id,
+                        task_permission_ids: changeData.task_permission_ids,
                         field_permission_id: changeData.field_permission_id,
                         description: changeData.description
                     })

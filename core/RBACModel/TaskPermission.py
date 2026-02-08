@@ -121,6 +121,7 @@ TaskChoices.CATEGORY_ORDER = [
 class TaskPermission(models.Model):
     name = models.CharField(max_length=100, unique=True)
     tasks = models.JSONField(default=list)
+    role = models.ForeignKey('Role', on_delete=models.CASCADE, related_name='task_permissions', null=True, blank=True)
 
     class Meta:
         verbose_name = 'RBAC | مجوز دسترسی تسک'

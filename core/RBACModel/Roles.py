@@ -7,7 +7,6 @@ from .FieldPermission import FieldPermission
 
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
-    task_permission = models.ForeignKey(TaskPermission, on_delete=models.SET_NULL, null=True, blank=True)
     field_permission = models.ForeignKey(FieldPermission, on_delete=models.SET_NULL, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     users = models.ManyToManyField(User, related_name='roles', blank=True)
@@ -18,6 +17,16 @@ class Role(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def get_all_tasks(self):
+        """
+        تمام task های مرتبط با این نقش را از تمام TaskPermission های آن برمی‌گرداند
+        """
+        all_tasks = []
+        for task_perm in self.task_permissions.all():
+            if task_perm.tasks:
+                all_tasks.extend(task_perm.tasks)
+        return list(set(all_tasks))  # حذف موارد تکراری
 
 
 class UserTaskPermission(models.Model):
@@ -67,10 +76,11 @@ def user_has_task(user, task_code):
     if user.is_superuser:
         return True
     
-    # Check roles
+    # Check roles - now checking all task_permissions for each role
     for role in user.roles.all():
-        if role.task_permission and role.task_permission.tasks and task_code in role.task_permission.tasks:
-            return True
+        for task_perm in role.task_permissions.all():
+            if task_perm.tasks and task_code in task_perm.tasks:
+                return True
     
     # Check user's own task permission
     try:

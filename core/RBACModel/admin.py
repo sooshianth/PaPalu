@@ -41,11 +41,11 @@ class TaskPermissionAdmin(admin.ModelAdmin):
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'task_permission', 'field_permission', 'description']
+    list_display = ['name', 'field_permission', 'description']
     list_filter = ['name']
     filter_horizontal = ['users']
     search_fields = ['name', 'description']
-    autocomplete_fields = ['task_permission', 'field_permission']
+    autocomplete_fields = ['field_permission']
 
 
 @admin.register(UserTaskPermission)

@@ -11,7 +11,7 @@ def roles_view(request):
     """View for managing Roles"""
     from core.RBACModel import Role, FieldPermission
     
-    roles = Role.objects.all().select_related('task_permission', 'field_permission').order_by('name')
+    roles = Role.objects.all().prefetch_related('task_permissions', 'field_permission').order_by('name')
     task_permissions = TaskPermission.objects.all().order_by('name')
     field_permissions = FieldPermission.objects.all().order_by('name')
     
@@ -34,7 +34,7 @@ def add_role(request):
         data = json.loads(request.body)
         name = data.get('name', '').strip()
         description = data.get('description', '').strip()
-        task_permission_id = data.get('task_permission_id')
+        task_permission_ids = data.get('task_permission_ids', [])  # حالا آرایه‌ای از IDها می‌گیریم
         field_permission_id = data.get('field_permission_id')
         
         # Validate name
@@ -51,14 +51,6 @@ def add_role(request):
         if Role.objects.filter(name=name).exists():
             return JsonResponse({'status': 'error', 'message': 'Name already exists'}, status=400)
         
-        # Validate task permission
-        task_permission = None
-        if task_permission_id:
-            try:
-                task_permission = TaskPermission.objects.get(id=int(task_permission_id))
-            except (TaskPermission.DoesNotExist, ValueError):
-                return JsonResponse({'status': 'error', 'message': 'Invalid task permission'}, status=400)
-        
         # Validate field permission
         field_permission = None
         if field_permission_id:
@@ -69,10 +61,19 @@ def add_role(request):
         
         role = Role.objects.create(
             name=name,
-            task_permission=task_permission,
             field_permission=field_permission,
             description=description if description else None
         )
+        
+        # اضافه کردن TaskPermission ها به Role
+        if task_permission_ids and isinstance(task_permission_ids, list):
+            for tp_id in task_permission_ids:
+                try:
+                    task_perm = TaskPermission.objects.get(id=int(tp_id))
+                    task_perm.role = role
+                    task_perm.save()
+                except (TaskPermission.DoesNotExist, ValueError):
+                    pass  # در صورت نامعتبر بودن، نادیده می‌گیریم
         
         return JsonResponse({
             'status': 'success',
@@ -95,7 +96,7 @@ def update_role(request):
     try:
         data = json.loads(request.body)
         role_id = data.get('id')
-        task_permission_id = data.get('task_permission_id')
+        task_permission_ids = data.get('task_permission_ids')  # حالا آرایه‌ای از IDها می‌گیریم
         field_permission_id = data.get('field_permission_id')
         description = data.get('description', '').strip()
         
@@ -108,16 +109,21 @@ def update_role(request):
         except Role.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Role not found'}, status=404)
         
-        # Update task permission if provided
-        if task_permission_id is not None:
-            if task_permission_id == '':
-                role.task_permission = None
-            else:
-                try:
-                    task_permission = TaskPermission.objects.get(id=int(task_permission_id))
-                    role.task_permission = task_permission
-                except (TaskPermission.DoesNotExist, ValueError):
-                    return JsonResponse({'status': 'error', 'message': 'Invalid task permission'}, status=400)
+        # Update task permissions if provided
+        if task_permission_ids is not None:
+            # ابتدا تمام TaskPermission های قبلی این Role را پاک می‌کنیم
+            TaskPermission.objects.filter(role=role).update(role=None)
+            
+            # حالا TaskPermission های جدید را اضافه می‌کنیم
+            if isinstance(task_permission_ids, list):
+                for tp_id in task_permission_ids:
+                    if tp_id:  # اگر خالی نباشد
+                        try:
+                            task_perm = TaskPermission.objects.get(id=int(tp_id))
+                            task_perm.role = role
+                            task_perm.save()
+                        except (TaskPermission.DoesNotExist, ValueError):
+                            pass  # در صورت نامعتبر بودن، نادیده می‌گیریم
         
         # Update field permission if provided
         if field_permission_id is not None:
