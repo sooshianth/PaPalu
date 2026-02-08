@@ -7,7 +7,6 @@ from .FieldPermission import FieldPermission
 
 class Role(models.Model):
     name = models.CharField(max_length=50, unique=True)
-    field_permission = models.ForeignKey(FieldPermission, on_delete=models.SET_NULL, null=True, blank=True)
     description = models.TextField(blank=True, null=True)
     users = models.ManyToManyField(User, related_name='roles', blank=True)
 
@@ -136,10 +135,10 @@ def user_has_field_access(user, model_instance, field_name, access_type='view'):
     except AttributeError:
         pass
     
-    # Check roles
+    # Check roles - all field_permissions of each role
     for role in user.roles.all():
-        if role.field_permission:
-            field_choices = role.field_permission.field_choices.filter(
+        for field_perm in role.field_permissions.all():
+            field_choices = field_perm.field_choices.filter(
                 content_type=content_type,
                 field_name=field_name,
                 access_type=access_type
@@ -195,10 +194,10 @@ def get_accessible_fields(user, model_class, access_type='view'):
     except AttributeError:
         pass
     
-    # Check roles
+    # Check roles - all field_permissions of each role
     for role in user.roles.all():
-        if role.field_permission:
-            field_choices = role.field_permission.field_choices.filter(
+        for field_perm in role.field_permissions.all():
+            field_choices = field_perm.field_choices.filter(
                 content_type=content_type,
                 access_type=access_type
             )
@@ -265,13 +264,13 @@ def user_can_access_field(user, model_class, field_name, access_type='view'):
     except AttributeError:
         pass
     
-    # Check roles
+    # Check roles - all field_permissions of each role
     for role in user.roles.all():
-        if role.field_permission:
+        for field_perm in role.field_permissions.all():
             has_any_field_permission = True
             
             # بررسی آیا قانونی برای این access_type وجود دارد
-            field_choices = role.field_permission.field_choices.filter(
+            field_choices = field_perm.field_choices.filter(
                 content_type=content_type,
                 field_name=field_name,
                 access_type=access_type

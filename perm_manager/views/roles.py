@@ -11,7 +11,7 @@ def roles_view(request):
     """View for managing Roles"""
     from core.RBACModel import Role, FieldPermission
     
-    roles = Role.objects.all().prefetch_related('task_permissions', 'field_permission').order_by('name')
+    roles = Role.objects.all().prefetch_related('task_permissions', 'field_permissions').order_by('name')
     task_permissions = TaskPermission.objects.all().order_by('name')
     field_permissions = FieldPermission.objects.all().order_by('name')
     
@@ -34,8 +34,8 @@ def add_role(request):
         data = json.loads(request.body)
         name = data.get('name', '').strip()
         description = data.get('description', '').strip()
-        task_permission_ids = data.get('task_permission_ids', [])  # حالا آرایه‌ای از IDها می‌گیریم
-        field_permission_id = data.get('field_permission_id')
+        task_permission_ids = data.get('task_permission_ids', [])
+        field_permission_ids = data.get('field_permission_ids', [])
         
         # Validate name
         if not name:
@@ -51,17 +51,8 @@ def add_role(request):
         if Role.objects.filter(name=name).exists():
             return JsonResponse({'status': 'error', 'message': 'Name already exists'}, status=400)
         
-        # Validate field permission
-        field_permission = None
-        if field_permission_id:
-            try:
-                field_permission = FieldPermission.objects.get(id=int(field_permission_id))
-            except (FieldPermission.DoesNotExist, ValueError):
-                return JsonResponse({'status': 'error', 'message': 'Invalid field permission'}, status=400)
-        
         role = Role.objects.create(
             name=name,
-            field_permission=field_permission,
             description=description if description else None
         )
         
@@ -73,7 +64,17 @@ def add_role(request):
                     task_perm.role = role
                     task_perm.save()
                 except (TaskPermission.DoesNotExist, ValueError):
-                    pass  # در صورت نامعتبر بودن، نادیده می‌گیریم
+                    pass
+        
+        # اضافه کردن FieldPermission ها به Role
+        if field_permission_ids and isinstance(field_permission_ids, list):
+            for fp_id in field_permission_ids:
+                try:
+                    field_perm = FieldPermission.objects.get(id=int(fp_id))
+                    field_perm.role = role
+                    field_perm.save()
+                except (FieldPermission.DoesNotExist, ValueError):
+                    pass
         
         return JsonResponse({
             'status': 'success',
@@ -96,8 +97,8 @@ def update_role(request):
     try:
         data = json.loads(request.body)
         role_id = data.get('id')
-        task_permission_ids = data.get('task_permission_ids')  # حالا آرایه‌ای از IDها می‌گیریم
-        field_permission_id = data.get('field_permission_id')
+        task_permission_ids = data.get('task_permission_ids')
+        field_permission_ids = data.get('field_permission_ids')
         description = data.get('description', '').strip()
         
         # Validate ID
@@ -111,30 +112,29 @@ def update_role(request):
         
         # Update task permissions if provided
         if task_permission_ids is not None:
-            # ابتدا تمام TaskPermission های قبلی این Role را پاک می‌کنیم
             TaskPermission.objects.filter(role=role).update(role=None)
-            
-            # حالا TaskPermission های جدید را اضافه می‌کنیم
             if isinstance(task_permission_ids, list):
                 for tp_id in task_permission_ids:
-                    if tp_id:  # اگر خالی نباشد
+                    if tp_id:
                         try:
                             task_perm = TaskPermission.objects.get(id=int(tp_id))
                             task_perm.role = role
                             task_perm.save()
                         except (TaskPermission.DoesNotExist, ValueError):
-                            pass  # در صورت نامعتبر بودن، نادیده می‌گیریم
+                            pass
         
-        # Update field permission if provided
-        if field_permission_id is not None:
-            if field_permission_id == '':
-                role.field_permission = None
-            else:
-                try:
-                    field_permission = FieldPermission.objects.get(id=int(field_permission_id))
-                    role.field_permission = field_permission
-                except (FieldPermission.DoesNotExist, ValueError):
-                    return JsonResponse({'status': 'error', 'message': 'Invalid field permission'}, status=400)
+        # Update field permissions if provided
+        if field_permission_ids is not None:
+            FieldPermission.objects.filter(role=role).update(role=None)
+            if isinstance(field_permission_ids, list):
+                for fp_id in field_permission_ids:
+                    if fp_id:
+                        try:
+                            field_perm = FieldPermission.objects.get(id=int(fp_id))
+                            field_perm.role = role
+                            field_perm.save()
+                        except (FieldPermission.DoesNotExist, ValueError):
+                            pass
         
         # Update description if provided
         if 'description' in data:

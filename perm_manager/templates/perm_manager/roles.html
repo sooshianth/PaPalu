@@ -486,12 +486,31 @@
                     </div>
                 </td>
                 <td>
-                    <select id="newRoleFieldPerm">
-                        <option value="">-- بدون مجوز --</option>
-                        {% for fp in field_permissions %}
-                        <option value="{{ fp.id }}">{{ fp.name|escape }}</option>
-                        {% endfor %}
-                    </select>
+                    <div class="task-perm-wrapper" id="newRoleFieldPermWrapper">
+                        <div class="task-perm-toggle" onclick="togglePermPanel(this)">
+                            <div class="task-perm-toggle-info">
+                                <span class="task-perm-toggle-arrow">&#9654;</span>
+                                <span class="task-perm-toggle-text">مجوزهای فیلد</span>
+                            </div>
+                            <span class="task-perm-badge empty" data-badge="fp_new">0</span>
+                        </div>
+                        <div class="task-perm-body">
+                            <div class="task-perm-body-inner">
+                                <div class="checkbox-controls">
+                                    <button class="select-all-btn" onclick="selectAllNewFieldPerm(event)">انتخاب همه</button>
+                                    <button class="deselect-all-btn" onclick="deselectAllNewFieldPerm(event)">حذف همه</button>
+                                </div>
+                                <div class="task-perm-checkbox-group" id="newRoleFieldPermCheckboxes">
+                                    {% for fp in field_permissions %}
+                                    <div class="task-perm-item">
+                                        <input type="checkbox" id="new_fp_{{ fp.id }}" value="{{ fp.id }}" onchange="updateFieldPermBadge('fp_new')" />
+                                        <label for="new_fp_{{ fp.id }}">{{ fp.name|escape }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </td>
                 <td>
                     <input type="text" id="newRoleDescription" placeholder="توضیحات اختیاری..." />
@@ -535,14 +554,31 @@
                     </div>
                 </td>
                 <td>
-                    <select class="field-perm-select" data-role-id="{{ role.id }}">
-                        <option value="">-- بدون مجوز --</option>
-                        {% for fp in field_permissions %}
-                        <option value="{{ fp.id }}" {% if role.field_permission and role.field_permission.id == fp.id %}selected{% endif %}>
-                            {{ fp.name|escape }}
-                        </option>
-                        {% endfor %}
-                    </select>
+                    <div class="task-perm-wrapper" data-wrapper-field-role="{{ role.id }}">
+                        <div class="task-perm-toggle" onclick="togglePermPanel(this)">
+                            <div class="task-perm-toggle-info">
+                                <span class="task-perm-toggle-arrow">&#9654;</span>
+                                <span class="task-perm-toggle-text">مجوزهای فیلد</span>
+                            </div>
+                            <span class="task-perm-badge" data-badge="fp_role_{{ role.id }}">{{ role.field_permissions.count }}</span>
+                        </div>
+                        <div class="task-perm-body">
+                            <div class="task-perm-body-inner">
+                                <div class="checkbox-controls">
+                                    <button class="select-all-btn" onclick="selectAllRoleFieldPerm(event, {{ role.id }})">انتخاب همه</button>
+                                    <button class="deselect-all-btn" onclick="deselectAllRoleFieldPerm(event, {{ role.id }})">حذف همه</button>
+                                </div>
+                                <div class="task-perm-checkbox-group" data-field-role-id="{{ role.id }}">
+                                    {% for fp in field_permissions %}
+                                    <div class="task-perm-item">
+                                        <input type="checkbox" class="role-field-perm-checkbox" id="role_{{ role.id }}_fp_{{ fp.id }}" value="{{ fp.id }}" data-role-id="{{ role.id }}" {% if fp.role and fp.role.id == role.id %}checked{% endif %} onchange="updateFieldPermBadge('fp_role_{{ role.id }}'); onFieldPermChange({{ role.id }})" />
+                                        <label for="role_{{ role.id }}_fp_{{ fp.id }}">{{ fp.name|escape }}</label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </td>
                 <td class="description-cell">
                     <div class="description-display">
@@ -568,12 +604,11 @@
     const addBtn = document.getElementById('addBtn');
     const saveBtn = document.getElementById('saveBtn');
     const newRoleName = document.getElementById('newRoleName');
-    const newRoleFieldPerm = document.getElementById('newRoleFieldPerm');
     const newRoleDescription = document.getElementById('newRoleDescription');
     const messageDiv = document.getElementById('message');
     
     // Track changes
-    const changes = new Map(); // roleId -> {task_permission_ids, field_permission_id, description}
+    const changes = new Map(); // roleId -> {task_permission_ids, field_permission_ids, description}
     
     // Toggle collapsible panel
     function togglePermPanel(toggleEl) {
@@ -581,7 +616,7 @@
         wrapper.classList.toggle('open');
     }
     
-    // Update badge count
+    // Update badge count (task permissions)
     function updateBadge(badgeKey) {
         const badge = document.querySelector(`[data-badge="${badgeKey}"]`);
         if (!badge) return;
@@ -596,6 +631,61 @@
         
         badge.textContent = count;
         badge.classList.toggle('empty', count === 0);
+    }
+    
+    // Update badge count (field permissions)
+    function updateFieldPermBadge(badgeKey) {
+        const badge = document.querySelector(`[data-badge="${badgeKey}"]`);
+        if (!badge) return;
+        
+        let count;
+        if (badgeKey === 'fp_new') {
+            count = document.querySelectorAll('#newRoleFieldPermCheckboxes input[type="checkbox"]:checked').length;
+        } else {
+            const roleId = badgeKey.replace('fp_role_', '');
+            count = document.querySelectorAll(`.role-field-perm-checkbox[data-role-id="${roleId}"]:checked`).length;
+        }
+        
+        badge.textContent = count;
+        badge.classList.toggle('empty', count === 0);
+    }
+    
+    function selectAllNewFieldPerm(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        document.querySelectorAll('#newRoleFieldPermCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = true);
+        updateFieldPermBadge('fp_new');
+    }
+    
+    function deselectAllNewFieldPerm(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        document.querySelectorAll('#newRoleFieldPermCheckboxes input[type="checkbox"]').forEach(cb => cb.checked = false);
+        updateFieldPermBadge('fp_new');
+    }
+    
+    function selectAllRoleFieldPerm(event, roleId) {
+        event.preventDefault();
+        event.stopPropagation();
+        document.querySelectorAll(`.role-field-perm-checkbox[data-role-id="${roleId}"]`).forEach(cb => cb.checked = true);
+        updateFieldPermBadge('fp_role_' + roleId);
+        onFieldPermChange(roleId);
+    }
+    
+    function deselectAllRoleFieldPerm(event, roleId) {
+        event.preventDefault();
+        event.stopPropagation();
+        document.querySelectorAll(`.role-field-perm-checkbox[data-role-id="${roleId}"]`).forEach(cb => cb.checked = false);
+        updateFieldPermBadge('fp_role_' + roleId);
+        onFieldPermChange(roleId);
+    }
+    
+    function onFieldPermChange(roleId) {
+        const checkboxes = document.querySelectorAll(`.role-field-perm-checkbox[data-role-id="${roleId}"]:checked`);
+        const selectedValues = Array.from(checkboxes).map(cb => cb.value);
+        if (!changes.has(String(roleId))) changes.set(String(roleId), {});
+        changes.get(String(roleId)).field_permission_ids = selectedValues;
+        markRowChanged(roleId);
     }
     
     // Helper functions for select all / deselect all
@@ -642,9 +732,14 @@
     // Initialize badges on page load
     document.addEventListener('DOMContentLoaded', function() {
         updateBadge('new');
+        updateFieldPermBadge('fp_new');
         document.querySelectorAll('[data-wrapper-role]').forEach(wrapper => {
             const roleId = wrapper.dataset.wrapperRole;
             updateBadge('role_' + roleId);
+        });
+        document.querySelectorAll('[data-wrapper-field-role]').forEach(wrapper => {
+            const roleId = wrapper.dataset.wrapperFieldRole;
+            updateFieldPermBadge('fp_role_' + roleId);
         });
     });
     
@@ -674,9 +769,8 @@
     // Add new role
     addBtn.addEventListener('click', async () => {
         const name = newRoleName.value.trim();
-        const selectedCheckboxes = document.querySelectorAll('#newRoleTaskPermCheckboxes input[type="checkbox"]:checked');
-        const selectedTaskPerms = Array.from(selectedCheckboxes).map(cb => cb.value);
-        const fieldPermId = newRoleFieldPerm.value;
+        const selectedTaskPerms = Array.from(document.querySelectorAll('#newRoleTaskPermCheckboxes input[type="checkbox"]:checked')).map(cb => cb.value);
+        const selectedFieldPerms = Array.from(document.querySelectorAll('#newRoleFieldPermCheckboxes input[type="checkbox"]:checked')).map(cb => cb.value);
         const description = newRoleDescription.value.trim();
         
         if (!name) {
@@ -707,7 +801,7 @@
                 body: JSON.stringify({
                     name: name,
                     task_permission_ids: selectedTaskPerms,
-                    field_permission_id: fieldPermId || null,
+                    field_permission_ids: selectedFieldPerms,
                     description: description
                 })
             });
@@ -755,20 +849,11 @@
         });
     });
     
-    // Handle field permission dropdown changes - track but don't save
-    document.querySelectorAll('.field-perm-select').forEach(select => {
-        const roleId = select.dataset.roleId;
-        const originalValue = select.value;
-        
-        select.addEventListener('change', function() {
-            const newValue = this.value;
-            
-            if (!changes.has(roleId)) {
-                changes.set(roleId, {});
-            }
-            
-            changes.get(roleId).field_permission_id = newValue;
-            markRowChanged(roleId);
+    // Handle field permission checkbox changes - track but don't save
+    document.querySelectorAll('.role-field-perm-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const roleId = this.dataset.roleId;
+            onFieldPermChange(parseInt(roleId));
         });
     });
     
@@ -832,12 +917,7 @@
                         'Content-Type': 'application/json',
                         'X-CSRFToken': csrfToken
                     },
-                    body: JSON.stringify({
-                        id: parseInt(roleId),
-                        task_permission_ids: changeData.task_permission_ids,
-                        field_permission_id: changeData.field_permission_id,
-                        description: changeData.description
-                    })
+                    body: JSON.stringify(Object.assign({ id: parseInt(roleId) }, changeData))
                 });
                 
                 const result = await response.json();

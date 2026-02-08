@@ -41,11 +41,10 @@ class TaskPermissionAdmin(admin.ModelAdmin):
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'field_permission', 'description']
+    list_display = ['name', 'description']
     list_filter = ['name']
     filter_horizontal = ['users']
     search_fields = ['name', 'description']
-    autocomplete_fields = ['field_permission']
 
 
 @admin.register(UserTaskPermission)
@@ -63,10 +62,12 @@ class FieldChoiceInline(admin.TabularInline):
 
 @admin.register(FieldPermission)
 class FieldPermissionAdmin(admin.ModelAdmin):
-    list_display = ['name', 'description', 'created_at', 'updated_at']
+    list_display = ['name', 'role', 'description', 'created_at', 'updated_at']
+    list_filter = ['role']
     search_fields = ['name', 'description']
     readonly_fields = ['created_at', 'updated_at']
     inlines = [FieldChoiceInline]
+    autocomplete_fields = ['role']
     
     fieldsets = (
         ('اطلاعات اصلی', {

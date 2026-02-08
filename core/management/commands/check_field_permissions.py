@@ -52,14 +52,15 @@ class Command(BaseCommand):
         
         self.stdout.write(self.style.SUCCESS('\n=== Roles and Field Permissions ===\n'))
         
-        roles = Role.objects.all()
+        roles = Role.objects.prefetch_related('field_permissions').all()
         for role in roles:
-            fp_name = role.field_permission.name if role.field_permission else None
+            fps = list(role.field_permissions.all())
+            fp_names = [fp.name for fp in fps]
             user_count = role.users.count()
             
-            if fp_name:
+            if fp_names:
                 self.stdout.write(self.style.SUCCESS(f'✓ Role: {role.name}'))
-                self.stdout.write(f'   FieldPermission: {fp_name}')
+                self.stdout.write(f'   FieldPermissions: {", ".join(fp_names)}')
                 self.stdout.write(f'   Users in role: {user_count}')
                 if user_count > 0:
                     users = ', '.join([u.username for u in role.users.all()[:5]])
@@ -96,12 +97,14 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING('⚠ User has NO UserFieldPermission'))
                 
                 # بررسی نقش‌های کاربر
-                user_roles = user.roles.all()
+                user_roles = user.roles.prefetch_related('field_permissions').all()
                 if user_roles.exists():
                     self.stdout.write(f'\n✓ User has {user_roles.count()} role(s):')
                     for role in user_roles:
-                        if role.field_permission:
-                            self.stdout.write(self.style.SUCCESS(f'   ✓ Role: {role.name} → FieldPermission: {role.field_permission.name}'))
+                        fps = list(role.field_permissions.all())
+                        if fps:
+                            fp_names = ', '.join(fp.name for fp in fps)
+                            self.stdout.write(self.style.SUCCESS(f'   ✓ Role: {role.name} → FieldPermissions: {fp_names}'))
                         else:
                             self.stdout.write(self.style.WARNING(f'   ⚠ Role: {role.name} → NO FieldPermission'))
                 else:
@@ -128,7 +131,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('\n=== Summary & Recommendations ===\n'))
         
         # بررسی کلی سیستم
-        roles_without_fp = Role.objects.filter(field_permission__isnull=True).count()
+        from django.db.models import Count
+        roles_without_fp = Role.objects.annotate(fp_count=Count('field_permissions')).filter(fp_count=0).count()
         users_with_ufp = UserFieldPermission.objects.count()
         
         self.stdout.write(f'Roles without FieldPermission: {roles_without_fp}')
@@ -137,8 +141,7 @@ class Command(BaseCommand):
         if fps.count() > 0:
             self.stdout.write(self.style.SUCCESS('\n✓ Field Permissions are defined'))
             
-            # اگر هیچ نقشی یا کاربری به FP متصل نیست
-            roles_with_fp = Role.objects.filter(field_permission__isnull=False).count()
+            roles_with_fp = Role.objects.annotate(fp_count=Count('field_permissions')).filter(fp_count__gt=0).count()
             if roles_with_fp == 0 and users_with_ufp == 0:
                 self.stdout.write(self.style.ERROR('\n✗ WARNING: No Role or User is connected to any FieldPermission!'))
                 self.stdout.write(self.style.WARNING('   → Field restrictions will NOT work!'))
