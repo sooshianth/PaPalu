@@ -440,13 +440,13 @@ def logistic_confirmation_detail_view(request, transport_number):
                     except Exception as fallback_err:
                         bug_logger.error(f"خطا در fallback method: {fallback_err}", exc_info=True)
             
-            # محاسبه اختلاف وزن بارنامه و وزن پر
+            # محاسبه اختلاف وزن بارنامه و وزن خالص
             weight_discrepancy = None
             weight_discrepancy_percent = None
             has_weight_discrepancy = False
             
-            if transport.waybill_weight and transport.gross_weight:
-                weight_discrepancy = abs(transport.gross_weight - transport.waybill_weight)
+            if transport.waybill_weight and transport.net_weight:
+                weight_discrepancy = abs(transport.net_weight - transport.waybill_weight)
                 if transport.waybill_weight > 0:
                     weight_discrepancy_percent = (weight_discrepancy / transport.waybill_weight) * 100
                     # اگر اختلاف بیشتر از 5% باشد
@@ -699,13 +699,13 @@ def rejected_transport_detail_view(request, transport_number):
                     except Exception as fallback_err:
                         bug_logger.error(f"خطا در fallback method: {fallback_err}", exc_info=True)
             
-            # محاسبه اختلاف وزن بارنامه و وزن پر
+            # محاسبه اختلاف وزن بارنامه و وزن خالص
             weight_discrepancy = None
             weight_discrepancy_percent = None
             has_weight_discrepancy = False
             
-            if transport.waybill_weight and transport.gross_weight:
-                weight_discrepancy = abs(transport.gross_weight - transport.waybill_weight)
+            if transport.waybill_weight and transport.net_weight:
+                weight_discrepancy = abs(transport.net_weight - transport.waybill_weight)
                 if transport.waybill_weight > 0:
                     weight_discrepancy_percent = (weight_discrepancy / transport.waybill_weight) * 100
                     if weight_discrepancy_percent > 5:

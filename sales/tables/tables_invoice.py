@@ -19,14 +19,11 @@ class InvoiceTable(tables.Table):
         if self.accessible_fields is None and user is not None:
             self.accessible_fields = self._get_accessible_fields(user)
         
-        # اضافه کردن ستون‌های غیرقابل دسترس به exclude قبل از super().__init__()
+        base_exclude = list(getattr(self.Meta, 'exclude', None) or [])
         if self.accessible_fields:
             exclude_columns = [col for col, access in self.accessible_fields.items() if not access]
-            if exclude_columns:
-                existing_exclude = list(getattr(self._meta, 'exclude', []) or [])
-                existing_exclude.extend(exclude_columns)
-                self._meta.exclude = tuple(existing_exclude)
-        
+            base_exclude = list(set(base_exclude) | set(exclude_columns))
+        kwargs['exclude'] = tuple(base_exclude)
         super().__init__(*args, **kwargs)
     
     def _get_accessible_fields(self, user):
