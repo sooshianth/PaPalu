@@ -6,9 +6,15 @@ from .FieldPermission import FieldPermission
 
 
 class Role(models.Model):
-    name = models.CharField(max_length=50, unique=True)
+    name = models.CharField(max_length=50)
     description = models.TextField(blank=True, null=True)
     users = models.ManyToManyField(User, related_name='roles', blank=True)
+    task_permissions = models.ManyToManyField(
+        TaskPermission,
+        related_name='roles',
+        blank=True,
+        verbose_name='مجوزهای وظیفه'
+    )
 
     class Meta:
         verbose_name = 'RBAC | نقش'

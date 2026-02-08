@@ -56,15 +56,16 @@ def add_role(request):
             description=description if description else None
         )
         
-        # اضافه کردن TaskPermission ها به Role
+        # اضافه کردن TaskPermission ها به Role (چند-به-چند؛ یک مجوز می‌تواند به چند نقش داده شود)
         if task_permission_ids and isinstance(task_permission_ids, list):
+            pks = []
             for tp_id in task_permission_ids:
                 try:
-                    task_perm = TaskPermission.objects.get(id=int(tp_id))
-                    task_perm.role = role
-                    task_perm.save()
-                except (TaskPermission.DoesNotExist, ValueError):
+                    pks.append(int(tp_id))
+                except (ValueError, TypeError):
                     pass
+            if pks:
+                role.task_permissions.set(TaskPermission.objects.filter(id__in=pks))
         
         # اضافه کردن FieldPermission ها به Role
         if field_permission_ids and isinstance(field_permission_ids, list):
@@ -110,18 +111,17 @@ def update_role(request):
         except Role.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Role not found'}, status=404)
         
-        # Update task permissions if provided
-        if task_permission_ids is not None:
-            TaskPermission.objects.filter(role=role).update(role=None)
-            if isinstance(task_permission_ids, list):
-                for tp_id in task_permission_ids:
-                    if tp_id:
-                        try:
-                            task_perm = TaskPermission.objects.get(id=int(tp_id))
-                            task_perm.role = role
-                            task_perm.save()
-                        except (TaskPermission.DoesNotExist, ValueError):
-                            pass
+        # به‌روزرسانی مجوزهای وظیفه (چند-به-چند؛ یک مجوز می‌تواند به چند نقش داده شود)
+        if task_permission_ids is not None and isinstance(task_permission_ids, list):
+            pks = []
+            for tp_id in task_permission_ids:
+                if tp_id is None or tp_id == '':
+                    continue
+                try:
+                    pks.append(int(tp_id))
+                except (ValueError, TypeError):
+                    pass
+            role.task_permissions.set(TaskPermission.objects.filter(id__in=pks))
         
         # Update field permissions if provided
         if field_permission_ids is not None:

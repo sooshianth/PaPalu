@@ -544,7 +544,7 @@
                                 <div class="task-perm-checkbox-group" data-role-id="{{ role.id }}">
                                     {% for tp in task_permissions %}
                                     <div class="task-perm-item">
-                                        <input type="checkbox" class="role-task-checkbox" id="role_{{ role.id }}_tp_{{ tp.id }}" value="{{ tp.id }}" data-role-id="{{ role.id }}" {% if tp.role and tp.role.id == role.id %}checked{% endif %} onchange="updateBadge('role_{{ role.id }}')" />
+                                        <input type="checkbox" class="role-task-checkbox" id="role_{{ role.id }}_tp_{{ tp.id }}" value="{{ tp.id }}" data-role-id="{{ role.id }}" {% if tp in role.task_permissions.all %}checked{% endif %} onchange="updateBadge('role_{{ role.id }}')" />
                                         <label for="role_{{ role.id }}_tp_{{ tp.id }}">{{ tp.name|escape }}</label>
                                     </div>
                                     {% endfor %}
@@ -710,11 +710,11 @@
         event.stopPropagation();
         const checkboxes = document.querySelectorAll(`.role-task-checkbox[data-role-id="${roleId}"]`);
         checkboxes.forEach(cb => cb.checked = true);
+        const selectedValues = Array.from(checkboxes).map(cb => cb.value);
+        if (!changes.has(String(roleId))) changes.set(String(roleId), {});
+        changes.get(String(roleId)).task_permission_ids = selectedValues;
         updateBadge('role_' + roleId);
-        // Trigger change event to track changes
-        if (checkboxes.length > 0) {
-            checkboxes[0].dispatchEvent(new Event('change'));
-        }
+        markRowChanged(roleId);
     }
     
     function deselectAllRole(event, roleId) {
@@ -845,6 +845,7 @@
             }
             
             changes.get(roleId).task_permission_ids = selectedValues;
+            updateBadge('role_' + roleId);
             markRowChanged(roleId);
         });
     });

@@ -119,9 +119,12 @@ TaskChoices.CATEGORY_ORDER = [
 
 
 class TaskPermission(models.Model):
+    """
+    یک مجموعه از تسک‌ها (نام + لیست کد تسک‌ها).
+    از طریق ManyToMany روی Role می‌تواند به چند نقش اختصاص داده شود.
+    """
     name = models.CharField(max_length=100, unique=True)
     tasks = models.JSONField(default=list)
-    role = models.ForeignKey('Role', on_delete=models.CASCADE, related_name='task_permissions', null=True, blank=True)
 
     class Meta:
         verbose_name = 'RBAC | مجوز دسترسی تسک'
