@@ -18,18 +18,17 @@ def convert_to_persian_numbers(text):
 
 
 def format_number_persian(number, decimal_places=0):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if number is None:
         return '-'
     try:
-        # تبدیل به float
-        num_float = float(number)
-        # فرمت با کاما
+        from decimal import Decimal
+        d = Decimal(str(number))
         if decimal_places > 0:
-            formatted = f"{num_float:,.{decimal_places}f}"
+            quantizer = Decimal(10) ** -decimal_places
+            formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         else:
-            formatted = f"{num_float:,.0f}"
-        # تبدیل به فارسی
+            formatted = f"{d.quantize(Decimal('1')):,.0f}"
         return convert_to_persian_numbers(formatted)
     except (ValueError, TypeError):
         return str(number)
@@ -345,12 +344,7 @@ class PendingSettlementOrderTable(tables.Table):
             for item in record.order_items.all():
                 weight_kg = item.get_weight_in_kg()
                 order_weight += Decimal(str(weight_kg))
-            
-            # تبدیل به float و فرمت کردن با اعداد فارسی
-            weight_value = float(order_weight)
-            weight_formatted = format_number_persian(weight_value, decimal_places=2)
-            
-            # نمایش وزن (حتی اگر صفر باشد)
+            weight_formatted = format_number_persian(order_weight, decimal_places=2)
             return format_html('<strong>{}</strong>', weight_formatted)
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
@@ -362,16 +356,12 @@ class PendingSettlementOrderTable(tables.Table):
             from core.TransportFolder.TransportModel import Transport
             from decimal import Decimal
             
-            # محاسبه مستقیم وزن تحویلی
             allocations = Allocation.objects.filter(order=record)
             transports = Transport.objects.filter(allocation__in=allocations)
             delivered_weight = sum(
                 Decimal(str(t.net_weight or 0)) for t in transports
             )
-            
-            # تبدیل به float و فرمت کردن با اعداد فارسی
-            weight_value = float(delivered_weight)
-            weight_formatted = format_number_persian(weight_value, decimal_places=2)
+            weight_formatted = format_number_persian(delivered_weight, decimal_places=2)
             
             # نمایش وزن (حتی اگر صفر باشد)
             return format_html('<strong>{}</strong>', weight_formatted)
@@ -418,14 +408,8 @@ class PendingSettlementOrderTable(tables.Table):
             else:
                 weighted_avg_price = Decimal('0')
             
-            # محاسبه مبلغ اختلاف
             difference_amount = weight_difference * weighted_avg_price
-            
-            # تبدیل به float و فرمت کردن با اعداد فارسی
-            amount_value = float(difference_amount)
-            amount_formatted = format_number_persian(amount_value, decimal_places=0)
-            
-            # نمایش با رنگ مناسب (حتی اگر صفر باشد)
+            amount_formatted = format_number_persian(difference_amount, decimal_places=0)
             if difference_amount > 0:
                 return format_html(
                     '<strong style="color: var(--primary-green);">+{}</strong>',
@@ -632,11 +616,7 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                         weight_kg = item.get_weight_in_kg()
                         order_weight += Decimal(str(weight_kg))
             
-            # تبدیل به float و فرمت کردن با اعداد فارسی
-            weight_value = float(order_weight)
-            weight_formatted = format_number_persian(weight_value, decimal_places=2)
-            
-            # نمایش وزن (حتی اگر صفر باشد)
+            weight_formatted = format_number_persian(order_weight, decimal_places=2)
             return format_html('<strong>{}</strong>', weight_formatted)
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
@@ -661,11 +641,7 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                         Decimal(str(t.net_weight or 0)) for t in transports
                     )
             
-            # تبدیل به float و فرمت کردن با اعداد فارسی
-            weight_value = float(delivered_weight)
-            weight_formatted = format_number_persian(weight_value, decimal_places=2)
-            
-            # نمایش وزن (حتی اگر صفر باشد)
+            weight_formatted = format_number_persian(delivered_weight, decimal_places=2)
             return format_html('<strong>{}</strong>', weight_formatted)
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
@@ -714,11 +690,7 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                     
                     difference_amount = weight_difference * weighted_avg_price
             
-            # تبدیل به float و فرمت کردن با اعداد فارسی
-            amount_value = float(difference_amount)
-            amount_formatted = format_number_persian(amount_value, decimal_places=0)
-            
-            # نمایش با رنگ مناسب (حتی اگر صفر باشد)
+            amount_formatted = format_number_persian(difference_amount, decimal_places=0)
             if difference_amount > 0:
                 return format_html(
                     '<strong style="color: var(--primary-green);">+{}</strong>',
@@ -760,10 +732,7 @@ class PendingSettlementApprovalOrderTable(tables.Table):
                     else:
                         settled_amount = Decimal('0')
             
-            # تبدیل به float و فرمت کردن با اعداد فارسی
-            amount_value = float(settled_amount)
-            amount_formatted = format_number_persian(amount_value, decimal_places=0)
-            
+            amount_formatted = format_number_persian(settled_amount, decimal_places=0)
             return format_html('<strong style="color: var(--dark-green);">{}</strong>', amount_formatted)
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))

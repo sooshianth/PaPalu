@@ -111,17 +111,19 @@ class UploadFarePaymentDocsTable(tables.Table):
         return '—'
     
     def render_net_weight(self, value):
-        """نمایش وزن خالص با فرمت عددی"""
-        if value:
-            formatted_value = '{:,.2f}'.format(float(value))
-            return format_html('<span dir="ltr">{}</span> کیلوگرم', formatted_value)
+        """نمایش وزن خالص با فرمت عددی (اعشار ثابت)"""
+        if value is not None and value != '':
+            from decimal import Decimal
+            d = Decimal(str(value)).quantize(Decimal('0.01'))
+            return format_html('<span dir="ltr">{:,.2f}</span> کیلوگرم', d)
         return '—'
     
     def render_freight_payment(self, value):
-        """نمایش کرایه پرداختی نهایی (جهت کنترل)"""
-        if value:
-            formatted_value = '{:,.0f}'.format(float(value))
-            return format_html('<span dir="ltr">{}</span> ریال', formatted_value)
+        """نمایش کرایه پرداختی نهایی (اعشار ثابت)"""
+        if value is not None and value != '':
+            from decimal import Decimal
+            d = Decimal(str(value)).quantize(Decimal('1'))
+            return format_html('<span dir="ltr">{:,.0f}</span> ریال', d)
         return '—'
     
     def render_status(self, record):

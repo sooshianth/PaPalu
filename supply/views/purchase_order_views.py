@@ -509,7 +509,7 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             # گرد کردن به 2 رقم اعشار برای مطابقت با محدودیت فیلد
             calculated_total = calculated_total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             cleaned_data['total_purchase_cost'] = calculated_total
-            if total_purchase_cost and abs(float(total_purchase_cost) - float(calculated_total)) > 0.01:
+            if total_purchase_cost and abs(Decimal(str(total_purchase_cost)) - calculated_total) > Decimal('0.01'):
                 # فقط هشدار می‌دهیم، مقدار را اصلاح می‌کنیم
                 pass
         

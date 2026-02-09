@@ -535,7 +535,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                         return redirect(request.path)
                     
                     try:
-                        gross = float(gross)
+                        from decimal import Decimal
+                        gross = Decimal(str(gross))
                     except (ValueError, TypeError):
                         messages.error(request, 'وزن پر اولیه نامعتبر است.')
                         return redirect(request.path)
@@ -573,8 +574,9 @@ def warehouse_delivery_detail_view(request, transport_number):
                             break
                         
                         try:
+                            from decimal import Decimal
                             item_id = int(item_id)
-                            weight = float(weight)
+                            weight = Decimal(str(weight))
                             warehouse_id = int(warehouse_id)
                             if weight > 0:
                                 unloading_stages.append({
@@ -593,8 +595,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                     
                     # بررسی و لاگ مقایسه وزن پر بارنامه با وزن پر باسکول
                     if pt.waybill_gross_weight and gross:
-                        waybill_gross = float(pt.waybill_gross_weight)
-                        scale_gross = float(gross)
+                        waybill_gross = Decimal(str(pt.waybill_gross_weight))
+                        scale_gross = gross
                         if waybill_gross > 0:
                             weight_diff = abs(scale_gross - waybill_gross)
                             if weight_diff > 1000:
@@ -619,8 +621,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                     
                     # محاسبه وزن‌های خالص هر محصول و وزن خالی نهایی
                     item_weights = {}
-                    item_warehouses = {}  # نگهداری انبار مقصد برای هر ماده اولیه
-                    current_weight = float(gross)
+                    item_warehouses = {}
+                    current_weight = gross
                     
                     for stage in unloading_stages:
                         item_id = stage['item_id']
@@ -653,9 +655,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                         
                         current_weight = weight_after_unloading
                     
-                    # وزن خالی نهایی = آخرین وزن ثبت شده
                     tare = current_weight
-                    net_weight = float(gross) - float(tare)
+                    net_weight = gross - tare
                     
                     # بررسی اینکه همه محصولات تخلیه شده‌اند
                     if items_qs:

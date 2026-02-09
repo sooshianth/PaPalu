@@ -470,8 +470,8 @@ def product_info_api(request, product_id):
         prices_list = []
         for price_info in valid_prices:
             # ساخت متن نمایشی برای هر قیمت
-            price_value = float(price_info.price)
-            price_display = f"{price_value:,.0f} ریال"
+            price_value = Decimal(str(price_info.price))
+            price_display = f"{price_value.quantize(Decimal('1')):,.0f} ریال"
             if price_info.condition:
                 condition_short = price_info.condition[:50] + ('...' if len(price_info.condition) > 50 else '')
                 price_display += f" - {condition_short}"

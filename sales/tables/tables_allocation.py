@@ -1,8 +1,10 @@
 import django_tables2 as tables
 from django.utils.html import format_html
 from django.urls import reverse
+from decimal import Decimal
 from core.OrderFolder.OrderModel import Order
 from core.helpers import check_field_access_prefer_edit
+from core.decimal_utils import to_decimal
 
 
 def convert_to_persian_numbers(text):
@@ -14,63 +16,47 @@ def convert_to_persian_numbers(text):
 
 
 def format_number_persian(number, decimal_places=0):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if number is None:
         return '-'
     try:
-        # تبدیل به float
-        num_float = float(number)
-        # فرمت با کاما
+        d = Decimal(str(number))
         if decimal_places > 0:
-            formatted = f"{num_float:,.{decimal_places}f}"
+            quantizer = Decimal(10) ** -decimal_places
+            formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         else:
-            formatted = f"{num_float:,.0f}"
-        # تبدیل به فارسی
+            formatted = f"{d.quantize(Decimal('1')):,.0f}"
         return convert_to_persian_numbers(formatted)
     except (ValueError, TypeError):
         return str(number)
 
 
 def calculate_order_total_quantity(order):
-    """
-    محاسبه مجموع مقدار محصولات سفارش (تبدیل به کیلوگرم)
-    """
-    total_quantity = 0
+    """محاسبه مجموع مقدار محصولات سفارش به کیلوگرم (اعشار ثابت)"""
+    total_quantity = Decimal('0')
     for item in order.order_items.all():
-        if item.weight_unit == 'kg':
-            total_quantity += float(item.quantity or 0)
-        elif item.weight_unit == 'ton':
-            total_quantity += float(item.quantity or 0) * 1000
-        elif item.weight_unit == 'bag' and item.bag_weight:
-            total_quantity += float(item.quantity or 0) * float(item.bag_weight)
-        elif item.weight_unit == 'piece':
-            total_quantity += float(item.quantity or 0)
+        w = item.get_weight_in_kg()
+        total_quantity += w
     return total_quantity
 
 
 def calculate_allocation_total_quantity(order):
-    """
-    محاسبه مجموع مقدار محصولات همه تخصیص‌های یک سفارش (تبدیل به کیلوگرم)
-    """
+    """محاسبه مجموع مقدار تخصیص‌ها به کیلوگرم (اعشار ثابت)"""
     from core.AllocationFolder.AllocationModel import Allocation
-    
-    total_quantity = 0
+    total_quantity = Decimal('0')
     allocations = Allocation.objects.filter(order=order)
-    
     for allocation in allocations:
         for product_info in allocation.product_infos.all():
-            quantity = float(product_info.quantity or 0)
+            quantity = to_decimal(product_info.quantity)
             unit = product_info.unit
-            
-            # تبدیل به کیلوگرم
             if unit == 'kg':
                 total_quantity += quantity
             elif unit == 'ton':
                 total_quantity += quantity * 1000
             elif unit == 'gr':
                 total_quantity += quantity / 1000
-            # برای سایر واحدها، همان مقدار را اضافه می‌کنیم
-    
+            else:
+                total_quantity += quantity
     return total_quantity
 
 
@@ -286,13 +272,12 @@ class AllocationTable(tables.Table):
         """نمایش وضعیت به صورت badge"""
         # استفاده از مقادیر annotate شده اگر موجود باشند
         if hasattr(record, 'order_total_quantity_kg') and hasattr(record, 'allocation_total_quantity_kg'):
-            order_total = float(record.order_total_quantity_kg or 0)
-            allocation_total = float(record.allocation_total_quantity_kg or 0)
+            order_total = to_decimal(record.order_total_quantity_kg)
+            allocation_total = to_decimal(record.allocation_total_quantity_kg)
         else:
-            # fallback: محاسبه دستی
             order_total = calculate_order_total_quantity(record)
             allocation_total = calculate_allocation_total_quantity(record)
-        is_complete = abs(order_total - allocation_total) < 0.001
+        is_complete = abs(order_total - allocation_total) < Decimal('0.001')
         
         if is_complete:
             return format_html(
@@ -307,13 +292,11 @@ class AllocationTable(tables.Table):
         """نمایش مقدار باقی مانده"""
         # استفاده از مقادیر annotate شده اگر موجود باشند
         if hasattr(record, 'order_total_quantity_kg') and hasattr(record, 'allocation_total_quantity_kg'):
-            order_total = float(record.order_total_quantity_kg or 0)
-            allocation_total = float(record.allocation_total_quantity_kg or 0)
+            order_total = to_decimal(record.order_total_quantity_kg)
+            allocation_total = to_decimal(record.allocation_total_quantity_kg)
         else:
-            # fallback: محاسبه دستی
             order_total = calculate_order_total_quantity(record)
             allocation_total = calculate_allocation_total_quantity(record)
-        
         remaining = order_total - allocation_total
         formatted_remaining = format_number_persian(remaining, decimal_places=2)
         return format_html('{}', formatted_remaining)
@@ -563,13 +546,12 @@ class ApproveAllocationTable(tables.Table):
         """نمایش وضعیت برابری"""
         # استفاده از مقادیر annotate شده اگر موجود باشند
         if hasattr(record, 'order_total_quantity_kg') and hasattr(record, 'allocation_total_quantity_kg'):
-            order_total = float(record.order_total_quantity_kg or 0)
-            allocation_total = float(record.allocation_total_quantity_kg or 0)
+            order_total = to_decimal(record.order_total_quantity_kg)
+            allocation_total = to_decimal(record.allocation_total_quantity_kg)
         else:
-            # fallback: محاسبه دستی
             order_total = calculate_order_total_quantity(record)
             allocation_total = calculate_allocation_total_quantity(record)
-        is_balanced = abs(order_total - allocation_total) < 0.001
+        is_balanced = abs(order_total - allocation_total) < Decimal('0.001')
         
         if is_balanced:
             return format_html(

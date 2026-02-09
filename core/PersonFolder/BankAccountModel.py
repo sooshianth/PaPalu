@@ -13,7 +13,7 @@ class BankAccount(models.Model):
     )
 
     account_number = models.CharField(
-        max_length=50,
+        max_length=100,
         verbose_name='شماره حساب بانکی',
         null=True,
         blank=True,

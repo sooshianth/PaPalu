@@ -1,4 +1,5 @@
 from django import template
+from decimal import Decimal, InvalidOperation
 
 register = template.Library()
 
@@ -11,39 +12,44 @@ def convert_to_persian_numbers(text):
     return str(text).translate(translation_table)
 
 
+def _to_decimal(value):
+    """تبدیل امن به Decimal برای نمایش بدون خطای ممیز شناور"""
+    if value is None:
+        return None
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (ValueError, InvalidOperation, TypeError):
+        return None
+
+
 @register.filter(name='persian_number')
 def persian_number(value, decimal_places=0):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if value is None:
         return '-'
-    try:
-        # تبدیل به float
-        num_float = float(value)
-        # فرمت با کاما
-        if decimal_places > 0:
-            formatted = f"{num_float:,.{decimal_places}f}"
-        else:
-            formatted = f"{num_float:,.0f}"
-        # تبدیل به فارسی
-        return convert_to_persian_numbers(formatted)
-    except (ValueError, TypeError):
+    d = _to_decimal(value)
+    if d is None:
         return str(value)
+    if decimal_places > 0:
+        quantizer = Decimal(10) ** -decimal_places
+        formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
+    else:
+        formatted = f"{d.quantize(Decimal('1')):,.0f}"
+    return convert_to_persian_numbers(formatted)
 
 
 @register.filter(name='rials_to_tomans')
 def rials_to_tomans(value):
-    """تبدیل ریال به تومان و فرمت با اعداد فارسی"""
+    """تبدیل ریال به تومان و فرمت با اعداد فارسی (اعشار ثابت)"""
     if value is None:
         return '-'
-    try:
-        # تبدیل به float و تقسیم بر 10
-        num_float = float(value) / 10
-        # فرمت با کاما
-        formatted = f"{num_float:,.0f}"
-        # تبدیل به فارسی
-        return convert_to_persian_numbers(formatted)
-    except (ValueError, TypeError):
+    d = _to_decimal(value)
+    if d is None:
         return str(value)
+    tomans = (d / Decimal('10')).quantize(Decimal('1'))
+    return convert_to_persian_numbers(f"{tomans:,.0f}")
 
 
 @register.filter(name='number_to_words_persian')
@@ -51,10 +57,11 @@ def number_to_words_persian(value):
     """تبدیل عدد به حروف فارسی"""
     if value is None:
         return ''
-    
+    d = _to_decimal(value)
+    if d is None:
+        return str(value)
     try:
-        # تبدیل به عدد صحیح (حذف اعشار)
-        num = int(float(value))
+        num = int(d.quantize(Decimal('1')))
         
         if num == 0:
             return 'صفر'

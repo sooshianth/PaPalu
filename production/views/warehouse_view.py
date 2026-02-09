@@ -28,15 +28,16 @@ def to_persian_digits(text):
 
 
 def persian_number_with_comma(value, decimal_places=2):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if value is None:
         return '-'
     try:
-        num_float = float(value)
+        d = Decimal(str(value))
         if decimal_places == 0:
-            formatted = f"{num_float:,.0f}"
+            formatted = f"{d.quantize(Decimal('1')):,.0f}"
         else:
-            formatted = f"{num_float:,.{decimal_places}f}"
+            quantizer = Decimal(10) ** -decimal_places
+            formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         return to_persian_digits(formatted)
     except (ValueError, TypeError):
         return str(value)
@@ -115,20 +116,16 @@ def warehouse_view(request):
             total_used = Decimal('0')
             items_data = []
             
-            capacity = float(warehouse.warehouse_capacity) if warehouse.warehouse_capacity else 0
-            
+            capacity = Decimal(str(warehouse.warehouse_capacity)) if warehouse.warehouse_capacity else Decimal('0')
             for inv_item in warehouse.inventory_items.all():
                 if inv_item.quantity:
                     total_used += Decimal(str(inv_item.quantity))
-                    
-                    # اطلاعات آیتم
                     item_name = str(inv_item.item) if inv_item.item else 'نامشخص'
                     item_type = 'rawmaterial' if inv_item.is_raw_material else 'product'
-                    quantity = float(inv_item.quantity)
+                    quantity = Decimal(str(inv_item.quantity))
                     unit = 'کیلوگرم'  # همه وزن‌ها به کیلوگرم نمایش داده می‌شوند
                     
-                    # محاسبه درصد این آیتم از کل ظرفیت
-                    item_percentage = (quantity / capacity * 100) if capacity > 0 else 0
+                    item_percentage = (quantity / capacity * 100) if capacity > 0 else Decimal('0')
                     
                     items_data.append({
                         'name': item_name,
@@ -138,12 +135,10 @@ def warehouse_view(request):
                         'percentage': item_percentage
                     })
             
-            # محاسبه درصد استفاده کل
-            used = float(total_used)
-            percentage = (used / capacity * 100) if capacity > 0 else 0
-            # محدود کردن درصد به حداکثر 100%
-            percentage = min(percentage, 100)
-            remaining = capacity - used if capacity > 0 else 0
+            used = total_used
+            percentage = (used / capacity * 100) if capacity > 0 else Decimal('0')
+            percentage = min(percentage, Decimal('100'))
+            remaining = capacity - used if capacity > 0 else Decimal('0')
             
             # فرمت کردن اعداد با کاما و تبدیل به فارسی
             capacity_formatted = persian_number_with_comma(capacity, 2)

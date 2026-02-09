@@ -232,14 +232,11 @@ class SettlementTransactionForm(forms.ModelForm):
         return amount
     
     def clean_approval_account_number(self):
-        """اعتبارسنجی شماره حساب"""
+        """اعتبارسنجی شماره حساب (بدون محدودیت طول)"""
         account_number = self.cleaned_data.get('approval_account_number')
         if account_number:
             # حذف فاصله‌ها و خط تیره
             account_number = account_number.replace(' ', '').replace('-', '').replace('_', '')
-            # بررسی طول
-            if len(account_number) != 16:
-                raise forms.ValidationError('شماره حساب باید 16 رقم باشد.')
             # بررسی عددی بودن
             if not account_number.isdigit():
                 raise forms.ValidationError('شماره حساب باید فقط شامل اعداد باشد.')

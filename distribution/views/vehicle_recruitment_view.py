@@ -451,7 +451,7 @@ def create_transport_view(request, allocation_number):
                 products_data.append({
                     'id': api.product.pk,
                     'name': api.product.name,
-                    'quantity': float(api.quantity) if api.quantity else 0,
+                    'quantity': str(api.quantity) if api.quantity else '0',
                     'unit': api.unit or '',
                 })
         
@@ -504,18 +504,17 @@ def create_transport_view(request, allocation_number):
         remaining_product_weights = {}
         for product_id, allocation_weight in allocation_product_weights.items():
             transport_weight = transport_product_weights.get(product_id, Decimal('0'))
-            remaining_product_weights[product_id] = float(allocation_weight - transport_weight)
-        
+            remaining_product_weights[product_id] = str(allocation_weight - transport_weight)
         return JsonResponse({
             'allocation_number': allocation.allocation_number,
             'order_number': allocation.order.order_number if allocation.order else '-',
             'delivery_info': delivery_info,
             'products': products_data,
             'weight_info': {
-                'total_allocation_weight': float(total_allocation_weight),
-                'total_transports_weight': float(total_transports_weight),
-                'remaining_weight': float(remaining_weight),
-                'remaining_product_weights': remaining_product_weights,  # وزن باقیمانده برای هر محصول
+                'total_allocation_weight': str(total_allocation_weight),
+                'total_transports_weight': str(total_transports_weight),
+                'remaining_weight': str(remaining_weight),
+                'remaining_product_weights': remaining_product_weights,
             }
         })
     

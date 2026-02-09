@@ -189,11 +189,10 @@ def approve_allocation_detail_view(request, order_number):
             # بررسی اینکه آیا استعلام تأیید شده است (وضعیت allocation باید 'pending_shipping' باشد)
             if allocation.allocation_status == 'pending_shipping':
                 is_inquired = True
-        
-        # محاسبه مقدار این تخصیص
-        allocation_quantity = 0
+        from decimal import Decimal
+        allocation_quantity = Decimal('0')
         for product_info in allocation.product_infos.all():
-            quantity = float(product_info.quantity or 0)
+            quantity = Decimal(str(product_info.quantity or 0))
             unit = product_info.unit
             if unit == 'kg':
                 allocation_quantity += quantity
@@ -201,7 +200,8 @@ def approve_allocation_detail_view(request, order_number):
                 allocation_quantity += quantity * 1000
             elif unit == 'gr':
                 allocation_quantity += quantity / 1000
-        
+            else:
+                allocation_quantity += quantity
         allocations_with_info.append({
             'allocation': allocation,
             'delivery_info': delivery_info,
@@ -209,8 +209,6 @@ def approve_allocation_detail_view(request, order_number):
             'quantity': allocation_quantity,
             'product_infos': allocation.product_infos.all(),
         })
-    
-    # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند
     all_inquired = all(item['is_inquired'] for item in allocations_with_info)
 
     context = {
@@ -486,11 +484,10 @@ def manage_allocations_detail_view(request, order_number):
             delivery_info = get_delivery_address_info(allocation.delivery_postal_code)
             if allocation.allocation_status == 'pending_shipping':
                 is_inquired = True
-        
-        # محاسبه مقدار این تخصیص
-        allocation_quantity = 0
+        from decimal import Decimal
+        allocation_quantity = Decimal('0')
         for product_info in allocation.product_infos.all():
-            quantity = float(product_info.quantity or 0)
+            quantity = Decimal(str(product_info.quantity or 0))
             unit = product_info.unit
             if unit == 'kg':
                 allocation_quantity += quantity
@@ -498,7 +495,8 @@ def manage_allocations_detail_view(request, order_number):
                 allocation_quantity += quantity * 1000
             elif unit == 'gr':
                 allocation_quantity += quantity / 1000
-        
+            else:
+                allocation_quantity += quantity
         allocations_with_info.append({
             'allocation': allocation,
             'delivery_info': delivery_info,
@@ -506,7 +504,6 @@ def manage_allocations_detail_view(request, order_number):
             'quantity': allocation_quantity,
             'product_infos': allocation.product_infos.all(),
         })
-    
     # بررسی اینکه آیا همه تخصیص‌ها استعلام شده‌اند (فقط تخصیص‌های رد نشده)
     non_rejected_allocations = [item for item in allocations_with_info if not item['allocation'].is_rejected]
     all_inquired = all(item['is_inquired'] for item in non_rejected_allocations) if non_rejected_allocations else False

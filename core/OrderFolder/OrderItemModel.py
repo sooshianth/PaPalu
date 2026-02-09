@@ -221,21 +221,21 @@ class OrderItem(models.Model):
     
     def get_weight_in_kg(self):
         """
-        محاسبه وزن کل به کیلوگرم (برای محاسبات یکپارچه)
+        محاسبه وزن کل به کیلوگرم (برای محاسبات یکپارچه).
+        مقدار برگشتی Decimal برای جلوگیری از خطای ممیز شناور.
         """
         if not self.quantity:
-            return 0
-        
+            return Decimal('0')
+        q = Decimal(str(self.quantity))
         if self.weight_unit == 'kg':
-            return float(self.quantity)
-        elif self.weight_unit == 'ton':
-            return float(self.quantity) * 1000
-        elif self.weight_unit == 'bag' and self.bag_weight:
-            return float(self.quantity) * float(self.bag_weight)
-        elif self.weight_unit == 'piece':
-            # برای عدد، وزن را همان تعداد در نظر می‌گیریم
-            return float(self.quantity)
-        return 0
+            return q
+        if self.weight_unit == 'ton':
+            return q * 1000
+        if self.weight_unit == 'bag' and self.bag_weight:
+            return q * Decimal(str(self.bag_weight))
+        if self.weight_unit == 'piece':
+            return q
+        return Decimal('0')
     
     def calculate_total(self):
         """
@@ -254,12 +254,9 @@ class OrderItem(models.Model):
         else:
             # برای سایر واحدها (kg, ton, bag)، ابتدا وزن را به کیلوگرم تبدیل می‌کنیم
             weight_in_kg = self.get_weight_in_kg()
-            
-            if weight_in_kg == 0:
+            if weight_in_kg == Decimal('0'):
                 return Decimal('0')
-            
-            # محاسبه subtotal: وزن به کیلوگرم * قیمت هر کیلوگرم
-            subtotal = Decimal(str(weight_in_kg)) * Decimal(str(self.unit_price))
+            subtotal = weight_in_kg * Decimal(str(self.unit_price))
         
         # محاسبه مالیات بر اساس درصد
         vat_percent = Decimal(str(self.vat_percent or 0))

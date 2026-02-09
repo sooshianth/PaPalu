@@ -338,7 +338,7 @@ class Transport(models.Model):
     
     # فیلدهای قدیمی برای سازگاری (deprecated - استفاده نکنید)
     driver_account_number = models.CharField(
-        max_length=50,
+        max_length=100,
         null=True,
         blank=True,
         verbose_name='شماره حساب راننده (قدیمی)',
@@ -354,7 +354,7 @@ class Transport(models.Model):
     )
     
     supplier_account_number = models.CharField(
-        max_length=50,
+        max_length=100,
         null=True,
         blank=True,
         verbose_name='شماره حساب تامین‌کننده (قدیمی)',

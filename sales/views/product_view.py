@@ -175,7 +175,8 @@ def create_product_view(request):
                         
                         if raw_material_id and percentage:
                             try:
-                                bom_items.append((int(raw_material_id), float(percentage)))
+                                from decimal import Decimal
+                                bom_items.append((int(raw_material_id), Decimal(percentage)))
                             except (ValueError, TypeError):
                                 pass
                     
@@ -237,7 +238,7 @@ def create_product_view(request):
                                         if prod_idx in production_bom_data:
                                             # بررسی اینکه مجموع درصدها برابر 100 باشد
                                             total_percentage = sum(percentage for _, percentage in production_bom_data[prod_idx])
-                                            if abs(total_percentage - 100.0) > 0.001:  # استفاده از tolerance برای مقایسه اعشاری
+                                            if abs(total_percentage - Decimal('100')) > Decimal('0.001'):
                                                 messages.error(request, f'مجموع درصدهای مواد اولیه در فرمول #{prod_idx + 1} باید برابر 100% باشد. مجموع فعلی: {total_percentage:.3f}%')
                                                 raise ValueError(f"مجموع درصدها برابر 100 نیست: {total_percentage}")
                                             

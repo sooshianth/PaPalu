@@ -2,8 +2,10 @@ import django_tables2 as tables
 from django.utils.html import format_html
 from django.urls import reverse
 from django.db.models import Sum
+from decimal import Decimal
 from core.OrderFolder.OrderModel import Order
 from core.helpers import check_field_access_prefer_edit
+from core.decimal_utils import to_decimal
 
 
 def to_persian_digits(text):
@@ -17,15 +19,12 @@ def to_persian_digits(text):
 
 
 def persian_number_with_comma(value):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی (برای مبالغ)"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (برای مبالغ، اعشار ثابت)"""
     if value is None:
         return '-'
-    try:
-        num_float = float(value)
-        formatted = f"{num_float:,.0f}"
-        return to_persian_digits(formatted)
-    except (ValueError, TypeError):
-        return str(value)
+    d = to_decimal(value)
+    formatted = f"{d.quantize(Decimal('1')):,.0f}"
+    return to_persian_digits(formatted)
 
 
 def has_rejected_transaction(record):
@@ -346,8 +345,8 @@ class TransactionReceiptOrderTable(tables.Table):
                     # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
                     # استفاده از prefetch_related برای transaction_documents
                     documents = settlement.transaction_documents.all()
-                    all_documents_total = sum(float(doc.document_amount or 0) for doc in documents)
-                    remaining = float(settlement.original_document_amount) - float(all_documents_total)
+                    all_documents_total = sum(to_decimal(doc.document_amount) for doc in documents)
+                    remaining = to_decimal(settlement.original_document_amount) - all_documents_total
                     formatted_amount = persian_number_with_comma(remaining)
                     return format_html('{} ریال', formatted_amount)
         except (AttributeError, IndexError):
@@ -356,7 +355,7 @@ class TransactionReceiptOrderTable(tables.Table):
                 settlement = Settlement.objects.filter(order=record).prefetch_related('transaction_documents').first()
                 if settlement and settlement.original_document_amount:
                     all_documents_total = settlement.transaction_documents.aggregate(total=Sum('document_amount'))['total'] or 0
-                    remaining = float(settlement.original_document_amount) - float(all_documents_total)
+                    remaining = to_decimal(settlement.original_document_amount) - to_decimal(all_documents_total)
                     formatted_amount = persian_number_with_comma(remaining)
                     return format_html('{} ریال', formatted_amount)
             except:

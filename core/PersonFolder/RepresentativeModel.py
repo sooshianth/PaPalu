@@ -11,8 +11,8 @@ class Representative(models.Model):
         related_name='representatives',
         verbose_name='شخص'
     )
-    name = models.CharField(max_length=100, verbose_name='نام نماینده')
-    position = models.CharField(max_length=100, verbose_name='سمت نماینده')
+    name = models.CharField(max_length=100, verbose_name='نام نماینده', null=True, blank=True)
+    position = models.CharField(max_length=100, verbose_name='سمت نماینده', null=True, blank=True)
     mobile_number = models.CharField(max_length=20, verbose_name='شماره موبایل نماینده', null=True, blank=True)
     phone_number = models.CharField(max_length=20, verbose_name='شماره ثابت نماینده', null=True, blank=True)
     confirmation_letter = models.FileField(

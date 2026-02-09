@@ -266,26 +266,20 @@ def warehouse_production_detail(request, program_id):
             
             for bom in bom_items:
                 # Calculate total consumption needed based on planned weight using percentage
-                planned_weight = float(program.planned_weight_ton) if program.planned_weight_ton else 0
-                percentage = float(bom.percentage) if bom.percentage else 0
-                
-                # percentage is 0-100, so divide by 100 to get fraction
-                total_consumption = (percentage / 100.0) * planned_weight if planned_weight > 0 else 0
-                
-                # Get actual consumption for this BOM
+                planned_weight = Decimal(str(program.planned_weight_ton)) if program.planned_weight_ton else Decimal('0')
+                percentage = Decimal(str(bom.percentage)) if bom.percentage else Decimal('0')
+                total_consumption = (percentage / Decimal('100')) * planned_weight if planned_weight > 0 else Decimal('0')
                 bom_id_str = str(bom.id)
                 actual_used = actual_consumption.get(bom_id_str, {})
-                
-                # Calculate total actual consumption
                 if isinstance(actual_used, dict):
-                    total_actual_consumption = sum(float(v) for v in actual_used.values() if isinstance(v, (int, float, str)))
+                    total_actual_consumption = sum(Decimal(str(v)) for v in actual_used.values() if isinstance(v, (int, float, str, Decimal)))
                 elif isinstance(actual_used, str):
                     try:
-                        total_actual_consumption = float(actual_used)
-                    except:
-                        total_actual_consumption = 0
+                        total_actual_consumption = Decimal(str(actual_used))
+                    except Exception:
+                        total_actual_consumption = Decimal('0')
                 else:
-                    total_actual_consumption = 0
+                    total_actual_consumption = Decimal('0')
                 
                 # Calculate total variance
                 total_variance = total_actual_consumption - total_consumption if total_consumption > 0 else 0
@@ -302,26 +296,21 @@ def warehouse_production_detail(request, program_id):
                     for dist_item in warehouse_dist:
                         if isinstance(dist_item, dict):
                             warehouse_id = str(dist_item.get('warehouse', ''))
-                            planned_amount = float(dist_item.get('amount', 0)) if dist_item.get('amount') else 0
-                            
-                            # Get actual consumption for this warehouse
-                            actual_amount = 0
+                            planned_amount = Decimal(str(dist_item.get('amount', 0) or 0))
+                            actual_amount = Decimal('0')
                             if isinstance(actual_used, dict):
-                                actual_amount = float(actual_used.get(warehouse_id, 0)) if actual_used.get(warehouse_id) else 0
-                            
-                            # Calculate variance for this warehouse
+                                actual_amount = Decimal(str(actual_used.get(warehouse_id, 0) or 0))
                             variance = actual_amount - planned_amount
-                            variance_percent = (variance / planned_amount * 100) if planned_amount > 0 else 0
-                            
+                            variance_percent = (variance / planned_amount * 100) if planned_amount > 0 else Decimal('0')
                             warehouse_obj = warehouses_dict.get(warehouse_id)
                             if warehouse_obj:
                                 warehouse_rows.append({
                                     'warehouse_id': warehouse_id,
                                     'warehouse_name': warehouse_obj.name,
-                                    'planned_amount': round(planned_amount, 3),
-                                    'actual_amount': round(actual_amount, 3),
-                                    'variance': round(variance, 3),
-                                    'variance_percent': round(variance_percent, 2)
+                                    'planned_amount': planned_amount.quantize(Decimal('0.001')),
+                                    'actual_amount': actual_amount.quantize(Decimal('0.001')),
+                                    'variance': variance.quantize(Decimal('0.001')),
+                                    'variance_percent': variance_percent.quantize(Decimal('0.01'))
                                 })
                 elif isinstance(actual_used, dict) and len(actual_used) > 0:
                     # No warehouse distribution but we have actual consumption per warehouse
@@ -330,17 +319,15 @@ def warehouse_production_detail(request, program_id):
                         if warehouse_id in ['global', 'none', None]:
                             continue
                         try:
-                            actual_amount_float = float(actual_amount) if actual_amount else 0
+                            actual_amount_dec = Decimal(str(actual_amount)) if actual_amount else Decimal('0')
                             warehouse_obj = warehouses_dict.get(str(warehouse_id))
                             if warehouse_obj:
-                                # We don't have per-warehouse planned amount, so we can't calculate variance
-                                # Just show actual consumption
                                 warehouse_rows.append({
                                     'warehouse_id': str(warehouse_id),
                                     'warehouse_name': warehouse_obj.name,
-                                    'planned_amount': None,  # Not available
-                                    'actual_amount': round(actual_amount_float, 3),
-                                    'variance': None,  # Can't calculate without planned
+                                    'planned_amount': None,
+                                    'actual_amount': actual_amount_dec.quantize(Decimal('0.001')),
+                                    'variance': None,
                                     'variance_percent': None
                                 })
                         except (ValueError, TypeError):
@@ -350,10 +337,10 @@ def warehouse_production_detail(request, program_id):
                     'id': bom.id,
                     'raw_material': bom.raw_material,
                     'planned_percentage': percentage,
-                    'total_consumption': round(total_consumption, 3),
-                    'total_actual_consumption': round(total_actual_consumption, 3),
-                    'total_variance': round(total_variance, 3),
-                    'total_variance_percent': round(total_variance_percent, 2),
+                    'total_consumption': total_consumption.quantize(Decimal('0.001')),
+                    'total_actual_consumption': total_actual_consumption.quantize(Decimal('0.001')),
+                    'total_variance': total_variance.quantize(Decimal('0.001')),
+                    'total_variance_percent': total_variance_percent.quantize(Decimal('0.01')),
                     'unit': bom.raw_material.primary_unit if bom.raw_material else '-',
                     'warehouse_rows': warehouse_rows,
                     'has_warehouse_details': len(warehouse_rows) > 0
@@ -651,7 +638,7 @@ def get_stock_entry_detail(request, entry_id):
             source_stocks_data.append({
                 'from_item': str(source.from_item) if source.from_item else '-',
                 'from_warehouse': source.from_warehouse.name if source.from_warehouse else '-',
-                'quantity': float(source.quantity) if source.quantity else 0,
+                'quantity': Decimal(str(source.quantity)) if source.quantity else Decimal('0'),
                 'unit': source.from_item.primary_unit if source.from_item and hasattr(source.from_item, 'primary_unit') else 'عدد'
             })
         
@@ -660,7 +647,7 @@ def get_stock_entry_detail(request, entry_id):
             target_stocks_data.append({
                 'to_item': str(target.to_item) if target.to_item else '-',
                 'to_warehouse': target.to_warehouse.name if target.to_warehouse else '-',
-                'quantity': float(target.quantity) if target.quantity else 0,
+                'quantity': Decimal(str(target.quantity)) if target.quantity else Decimal('0'),
                 'unit': target.to_item.primary_unit if target.to_item and hasattr(target.to_item, 'primary_unit') else 'عدد'
             })
         

@@ -158,11 +158,10 @@ class TransactionApprovalForm(forms.ModelForm):
         if self.document and self.document.document_amount:
             inquiry_amount = cleaned_data.get('inquiry_amount')
             if inquiry_amount:
-                document_amount = float(self.document.document_amount)
-                submitted_amount = float(inquiry_amount)
-                
-                # بررسی تطابق دقیق مبالغ
-                if abs(submitted_amount - document_amount) > 0.01:  # استفاده از tolerance برای اعداد اعشاری
+                from decimal import Decimal
+                document_amount = Decimal(str(self.document.document_amount))
+                submitted_amount = Decimal(str(inquiry_amount))
+                if abs(submitted_amount - document_amount) > Decimal('0.01'):
                     # فرمت کردن مبالغ برای نمایش در پیام خطا
                     document_amount_formatted = f"{document_amount:,.0f}"
                     submitted_amount_formatted = f"{submitted_amount:,.0f}"
@@ -183,11 +182,12 @@ class TransactionApprovalForm(forms.ModelForm):
                     # اگر در حال ویرایش هستیم، سند فعلی را از محاسبه حذف کنیم
                     existing_documents = existing_documents.exclude(pk=self.instance.pk)
                 
+                from decimal import Decimal
                 total_existing = existing_documents.aggregate(total=Sum('inquiry_amount'))['total'] or 0
-                total_with_new = float(total_existing) + float(inquiry_amount)
-                
-                if total_with_new > float(self.settlement.original_document_amount):
-                    remaining = float(self.settlement.original_document_amount) - float(total_existing)
+                total_with_new = Decimal(str(total_existing)) + Decimal(str(inquiry_amount))
+                orig = Decimal(str(self.settlement.original_document_amount))
+                if total_with_new > orig:
+                    remaining = orig - Decimal(str(total_existing))
                     raise forms.ValidationError({
                         'inquiry_amount': f'مجموع مبالغ استعلام ({total_with_new}) نمی‌تواند از مبلغ کل تسویه ({self.settlement.original_document_amount}) بیشتر باشد. باقیمانده: {remaining} ریال'
                     })

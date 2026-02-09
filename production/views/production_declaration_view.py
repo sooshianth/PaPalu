@@ -1473,7 +1473,7 @@ def production_program_crud_view(request, program_id=None):
                                     'warehouse_distribution_json': json.dumps(warehouse_dist_data),
                                     'warehouses': available_warehouses,
                                     'production_warehouses': production_warehouses,
-                                    'max_bom_error': float(program.max_bom_error) if program and program.max_bom_error else 5.0,
+                                    'max_bom_error': Decimal(str(program.max_bom_error)) if program and program.max_bom_error else Decimal('5'),
                                 }
                                 return render(request, 'production_declaration_crud.html', context)
                             
@@ -1529,7 +1529,7 @@ def production_program_crud_view(request, program_id=None):
                                         'warehouse_distribution_json': json.dumps(warehouse_dist_data),
                                         'warehouses': available_warehouses,
                                         'production_warehouses': production_warehouses,
-                                        'max_bom_error': float(program.max_bom_error) if program and program.max_bom_error else 5.0,
+                                        'max_bom_error': Decimal(str(program.max_bom_error)) if program and program.max_bom_error else Decimal('5'),
                                     }
                                     return render(request, 'production_declaration_crud.html', context)
                         
@@ -1940,7 +1940,7 @@ def production_program_crud_view(request, program_id=None):
             'program_status': program.status if program else 'draft',
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
-            'max_bom_error': float(program.max_bom_error) if program and program.max_bom_error else 5.0,
+            'max_bom_error': Decimal(str(program.max_bom_error)) if program and program.max_bom_error else Decimal('5'),
             'can_deny': can_deny,
             'can_revert': can_revert,
             'can_archive': can_archive,

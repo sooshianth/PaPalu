@@ -34,6 +34,29 @@ from sales.forms.customer_create_form import clean_empty_to_none
 from sales.tables.tables import CustomerTable
 
 
+def _format_form_errors_plain(form):
+    """تبدیل خطاهای فرم به متن ساده (بدون HTML)."""
+    parts = []
+    for field, errors in form.errors.items():
+        label = form.fields[field].label if field in form.fields else field.replace('_', ' ')
+        for e in errors:
+            parts.append(f"{label}: {str(e)}")
+    return "؛ ".join(parts)
+
+
+def _format_formset_form_errors_plain(form_err, form=None):
+    """تبدیل خطاهای یک فرم در formset به متن ساده."""
+    parts = []
+    for field, errors in form_err.items():
+        if form and field in form.fields:
+            label = form.fields[field].label
+        else:
+            label = field.replace('_', ' ')
+        for e in errors:
+            parts.append(f"{label}: {str(e)}")
+    return "؛ ".join(parts)
+
+
 @login_required
 def create_customer_view(request):
     """
@@ -1121,13 +1144,14 @@ def edit_customer_view(request, national_id):
             bug_logger.warning("فرم ویرایش مشتری معتبر نیست")
             if not form.is_valid():
                 bug_logger.error(f"خطای form: {form.errors}")
-                messages.error(request, f"خطای اطلاعات مشتری: {form.errors}")
+                messages.error(request, f"خطای اطلاعات مشتری: {_format_form_errors_plain(form)}")
             if not delivery_formset.is_valid():
                 bug_logger.error(f"خطای delivery_formset: {delivery_formset.errors}")
                 bug_logger.error(f"خطای delivery_formset non_form_errors: {delivery_formset.non_form_errors()}")
                 for i, form_err in enumerate(delivery_formset.errors):
                     if form_err:
-                        messages.error(request, f"خطای آدرس تحویل {i}: {form_err}")
+                        fs_form = delivery_formset.forms[i] if i < len(delivery_formset.forms) else None
+                        messages.error(request, f"خطای آدرس تحویل {i + 1}: {_format_formset_form_errors_plain(form_err, fs_form)}")
                 for err in delivery_formset.non_form_errors():
                     messages.error(request, f"خطای عمومی آدرس‌های تحویل: {err}")
             if not rep_formset.is_valid():

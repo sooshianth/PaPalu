@@ -247,7 +247,7 @@ class BankAccountForm(forms.Form):
     id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     
     account_number = forms.CharField(
-        max_length=50,
+        max_length=100,
         required=False,
         label='شماره حساب بانکی',
         widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})

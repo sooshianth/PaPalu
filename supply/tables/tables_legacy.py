@@ -8,6 +8,7 @@ from core.PersonFolder.PaymentPreferenceModel import PaymentPreference
 from core.PersonFolder.SocialNetworkModel import SocialNetwork
 from core.PersonFolder.AttachmentModel import Attachment
 from core.OrderFolder.OrderModel import Order
+from decimal import Decimal
 
 
 def convert_to_persian_numbers(text):
@@ -19,18 +20,17 @@ def convert_to_persian_numbers(text):
 
 
 def format_number_persian(number, decimal_places=0):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if number is None:
         return '-'
     try:
-        # تبدیل به float
-        num_float = float(number)
-        # فرمت با کاما
+        from decimal import Decimal
+        d = Decimal(str(number))
         if decimal_places > 0:
-            formatted = f"{num_float:,.{decimal_places}f}"
+            quantizer = Decimal(10) ** -decimal_places
+            formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         else:
-            formatted = f"{num_float:,.0f}"
-        # تبدیل به فارسی
+            formatted = f"{d.quantize(Decimal('1')):,.0f}"
         return convert_to_persian_numbers(formatted)
     except (ValueError, TypeError):
         return str(number)
@@ -2157,21 +2157,20 @@ class PendingSupplySettlementOrderTable(tables.Table):
     def render_order_weight(self, value, record):
         """رندر وزن سفارش"""
         if self.accessible_fields.get('order_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            return format_html('{:,.2f}', Decimal(str(value or 0)).quantize(Decimal('0.01')))
         return '-'
     
     def render_delivered_weight(self, value, record):
         """رندر وزن تحویلی"""
         if self.accessible_fields.get('delivered_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            return format_html('{:,.2f}', Decimal(str(value or 0)).quantize(Decimal('0.01')))
         return '-'
     
     def render_difference_amount(self, value, record):
         """رندر مبلغ اختلاف"""
         if self.accessible_fields.get('difference_amount', False):
-            amount = float(value or 0)
+            amount = Decimal(str(value or 0)).quantize(Decimal('1'))
             if amount > 0:
-                # سرک (مثبت) - سبز
                 return format_html(
                     '<span style="color: #28a745; font-weight: 600;">{:,.0f} ریال</span>',
                     amount
@@ -2270,21 +2269,20 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
     def render_order_weight(self, value, record):
         """رندر وزن سفارش"""
         if self.accessible_fields.get('order_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            return format_html('{:,.2f}', Decimal(str(value or 0)).quantize(Decimal('0.01')))
         return '-'
     
     def render_delivered_weight(self, value, record):
         """رندر وزن تحویلی"""
         if self.accessible_fields.get('delivered_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            return format_html('{:,.2f}', Decimal(str(value or 0)).quantize(Decimal('0.01')))
         return '-'
     
     def render_difference_amount(self, value, record):
         """رندر مبلغ اختلاف"""
         if self.accessible_fields.get('difference_amount', False):
-            amount = float(value or 0)
+            amount = Decimal(str(value or 0)).quantize(Decimal('1'))
             if amount > 0:
-                # سرک (مثبت) - سبز
                 return format_html(
                     '<span style="color: #28a745; font-weight: 600;">{:,.0f} ریال</span>',
                     amount
@@ -2304,7 +2302,7 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
         if self.accessible_fields.get('settled_amount', False):
             return format_html(
                 '<span style="color: #28a745; font-weight: 600;">{:,.0f} ریال</span>',
-                float(value or 0)
+                Decimal(str(value or 0)).quantize(Decimal('0.01'))
             )
         return '-'
     

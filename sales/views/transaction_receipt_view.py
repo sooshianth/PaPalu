@@ -31,13 +31,13 @@ def to_persian_digits(text):
 
 
 def persian_number_with_comma(value):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی (برای مبالغ)"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if value is None:
         return '-'
     try:
-        num_float = float(value)
-        formatted = f"{num_float:,.0f}"
-        return to_persian_digits(formatted)
+        from decimal import Decimal
+        d = Decimal(str(value)).quantize(Decimal('1'))
+        return to_persian_digits(f"{d:,.0f}")
     except (ValueError, TypeError):
         return str(value)
 
@@ -152,23 +152,21 @@ def transaction_receipt_upload_view(request, order_number):
                 # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
                 # باید دوباره query کنیم چون ممکن است در همین request تغییر کرده باشد
                 all_documents = settlement.transaction_documents.all()
+                from decimal import Decimal
                 all_documents_amount = all_documents.aggregate(total=Sum('document_amount'))['total'] or 0
-                remaining_amount = float(settlement.original_document_amount) - float(all_documents_amount)
-                
-                # محاسبه مجموع کل با سند جدید
-                total_with_new = float(all_documents_amount) + float(new_document_amount)
-                
-                # چک کردن اینکه مجموع کل با سند جدید از مبلغ کل بیشتر نشود
-                if total_with_new > float(settlement.original_document_amount):
+                orig = Decimal(str(settlement.original_document_amount))
+                total_existing = Decimal(str(all_documents_amount))
+                remaining_amount = orig - total_existing
+                total_with_new = total_existing + Decimal(str(new_document_amount))
+                if total_with_new > orig:
                     form.add_error(
                         'document_amount',
-                        f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({settlement.original_document_amount:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
+                        f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({orig:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
                     )
                     bug_logger.warning(
                         f"تلاش برای ثبت تراکنش با مبلغ {new_document_amount} که مجموع را به {total_with_new} می‌رساند (بیشتر از {settlement.original_document_amount}) برای سفارش {order_number}"
                     )
-                # چک کردن اینکه مبلغ جدید از باقیمانده بیشتر نباشد
-                elif float(new_document_amount) > remaining_amount:
+                elif Decimal(str(new_document_amount)) > remaining_amount:
                     form.add_error(
                         'document_amount',
                         f'مبلغ تراکنش ({new_document_amount:,.0f}) نمی‌تواند از مبلغ باقیمانده ({remaining_amount:,.0f}) بیشتر باشد.'
@@ -226,12 +224,11 @@ def transaction_receipt_upload_view(request, order_number):
     else:
         form = TransactionDocumentForm(customer=order.customer)
 
-    # محاسبه باقیمانده - باید از مجموع همه تراکنش‌ها (چه تایید شده و چه نشده) محاسبه شود
-    remaining_amount = 0
+    from decimal import Decimal
+    remaining_amount = Decimal('0')
     if settlement.original_document_amount:
-        # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
         all_documents_total = documents.aggregate(total=Sum('document_amount'))['total'] or 0
-        remaining_amount = float(settlement.original_document_amount) - float(all_documents_total)
+        remaining_amount = Decimal(str(settlement.original_document_amount)) - Decimal(str(all_documents_total))
     
     bug_logger.debug(f"نمایش صفحه ثبت رسید تراکنش سفارش {order_number}: {len(documents)} سند")
     
@@ -319,27 +316,23 @@ def transaction_receipt_edit_view(request, order_number, document_id):
             
             if settlement.original_document_amount:
                 # محاسبه مجموع همه تراکنش‌های موجود به جز سند فعلی
+                from decimal import Decimal
                 other_documents_amount = settlement.transaction_documents.exclude(id=document.id).aggregate(
                     total=Sum('document_amount')
                 )['total'] or 0
-                
-                # محاسبه باقیمانده = مبلغ کل - مجموع سایر اسناد
-                remaining_amount = float(settlement.original_document_amount) - float(other_documents_amount)
-                
-                # محاسبه مجموع کل با سند جدید
-                total_with_new = float(other_documents_amount) + float(new_document_amount)
-                
-                # چک کردن اینکه مجموع کل با سند جدید از مبلغ کل بیشتر نشود
-                if total_with_new > float(settlement.original_document_amount):
+                orig = Decimal(str(settlement.original_document_amount))
+                other_total = Decimal(str(other_documents_amount))
+                remaining_amount = orig - other_total
+                total_with_new = other_total + Decimal(str(new_document_amount))
+                if total_with_new > orig:
                     form.add_error(
                         'document_amount',
-                        f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({settlement.original_document_amount:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
+                        f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({orig:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
                     )
                     bug_logger.warning(
                         f"تلاش برای ویرایش تراکنش با مبلغ {new_document_amount} که مجموع را به {total_with_new} می‌رساند (بیشتر از {settlement.original_document_amount}) برای سفارش {order_number}"
                     )
-                # چک کردن اینکه مبلغ جدید از باقیمانده بیشتر نباشد
-                elif float(new_document_amount) > remaining_amount:
+                elif Decimal(str(new_document_amount)) > remaining_amount:
                     form.add_error(
                         'document_amount',
                         f'مبلغ تراکنش ({new_document_amount:,.0f}) نمی‌تواند از مبلغ باقیمانده ({remaining_amount:,.0f}) بیشتر باشد.'

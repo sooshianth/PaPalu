@@ -13,18 +13,17 @@ def convert_to_persian_numbers(text):
 
 @register.filter(name='persian_number')
 def persian_number(value, decimal_places=0):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if value is None:
         return '-'
     try:
-        # تبدیل به float
-        num_float = float(value)
-        # فرمت با کاما
+        from decimal import Decimal
+        d = Decimal(str(value))
         if decimal_places > 0:
-            formatted = f"{num_float:,.{decimal_places}f}"
+            quantizer = Decimal(10) ** -decimal_places
+            formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         else:
-            formatted = f"{num_float:,.0f}"
-        # تبدیل به فارسی
+            formatted = f"{d.quantize(Decimal('1')):,.0f}"
         return convert_to_persian_numbers(formatted)
     except (ValueError, TypeError):
         return str(value)

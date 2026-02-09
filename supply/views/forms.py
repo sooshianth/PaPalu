@@ -5,6 +5,7 @@
 from django import forms
 from django.forms import ModelForm, NumberInput, TextInput, Textarea
 from django.forms import inlineformset_factory
+from django.core.exceptions import ValidationError
 from django.forms import FileInput, URLInput, ClearableFileInput
 from jdatetime import date as jdate
 
@@ -358,6 +359,28 @@ class RepresentativeForm(ModelForm):
 			'confirmation_letter': ClearableFileInput(attrs={'class': 'form-control'}),
 		}
 
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		# در formset، فرم‌های خالی اضافی نباید اعتبارسنجی اجباری داشته باشند
+		self.fields['name'].required = False
+		self.fields['position'].required = False
+		self.fields['phone_number'].required = False
+
+	def clean(self):
+		data = super().clean()
+		name = (data.get('name') or '').strip()
+		position = (data.get('position') or '').strip()
+		mobile = (data.get('mobile_number') or '').strip()
+		phone = (data.get('phone_number') or '').strip()
+		letter = data.get('confirmation_letter')
+		# فرم اضافی کاملاً خالی: عبور (برای ذخیره بدون تغییر)
+		if not name and not position and not mobile and not phone and not letter:
+			return data
+		# فرم با داده: فقط شماره تلفن اجباری
+		if not phone:
+			raise ValidationError({'phone_number': 'این فیلد لازم است.'})
+		return data
+
 
 RepresentativeFormSet = inlineformset_factory(
 	Person,
@@ -419,9 +442,6 @@ class BankAccountForm(ModelForm):
 			# بررسی عددی بودن
 			if not account.isdigit():
 				raise forms.ValidationError('شماره حساب باید فقط شامل اعداد باشد.')
-			# بررسی طول معقول (معمولاً بین 10 تا 16 رقم)
-			if len(account) < 10 or len(account) > 20:
-				raise forms.ValidationError('شماره حساب باید بین 10 تا 20 رقم باشد.')
 			return account
 		return account
 

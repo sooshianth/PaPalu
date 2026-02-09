@@ -456,20 +456,9 @@ class Command(BaseCommand):
                     additional_charges=additional_charges,
                     bag_weight=bag_weight,
                 )
-                # محاسبه وزن به کیلوگرم
-                weight_kg = 0
-                if item.quantity:
-                    if item.weight_unit == 'kg':
-                        weight_kg = float(item.quantity)
-                    elif item.weight_unit == 'ton':
-                        weight_kg = float(item.quantity) * 1000
-                    elif item.weight_unit == 'bag' and item.bag_weight:
-                        weight_kg = float(item.quantity) * float(item.bag_weight)
-                    elif item.weight_unit == 'piece':
-                        weight_kg = float(item.quantity)
-                
+                weight_kg = item.get_weight_in_kg()
                 if weight_kg > 0:
-                    total_weight += Decimal(str(round(weight_kg, 2)))
+                    total_weight += weight_kg.quantize(Decimal('0.01'))
             
             # به‌روزرسانی وزن کل سفارش
             if total_weight > 0:

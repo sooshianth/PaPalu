@@ -1,6 +1,7 @@
 import django_tables2 as tables
 from django.utils.html import format_html
 from django.urls import reverse
+from decimal import Decimal
 from core.OrderFolder.OrderModel import Order
 
 
@@ -69,21 +70,23 @@ class PendingSupplySettlementOrderTable(tables.Table):
         return '-'
     
     def render_order_weight(self, value, record):
-        """رندر وزن سفارش"""
+        """رندر وزن سفارش (اعشار ثابت)"""
         if self.accessible_fields.get('order_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            return format_html('{:,.2f}', d)
         return '-'
     
     def render_delivered_weight(self, value, record):
-        """رندر وزن تحویلی"""
+        """رندر وزن تحویلی (اعشار ثابت)"""
         if self.accessible_fields.get('delivered_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            return format_html('{:,.2f}', d)
         return '-'
     
     def render_difference_amount(self, value, record):
-        """رندر مبلغ اختلاف"""
+        """رندر مبلغ اختلاف (اعشار ثابت)"""
         if self.accessible_fields.get('difference_amount', False):
-            amount = float(value or 0)
+            amount = Decimal(str(value or 0)).quantize(Decimal('1'))
             if amount > 0:
                 # سرک (مثبت) - سبز
                 return format_html(
@@ -182,21 +185,23 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
         return '-'
     
     def render_order_weight(self, value, record):
-        """رندر وزن سفارش"""
+        """رندر وزن سفارش (اعشار ثابت)"""
         if self.accessible_fields.get('order_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            return format_html('{:,.2f}', d)
         return '-'
     
     def render_delivered_weight(self, value, record):
-        """رندر وزن تحویلی"""
+        """رندر وزن تحویلی (اعشار ثابت)"""
         if self.accessible_fields.get('delivered_weight', False):
-            return format_html('{:,.2f}', float(value or 0))
+            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            return format_html('{:,.2f}', d)
         return '-'
     
     def render_difference_amount(self, value, record):
-        """رندر مبلغ اختلاف"""
+        """رندر مبلغ اختلاف (اعشار ثابت)"""
         if self.accessible_fields.get('difference_amount', False):
-            amount = float(value or 0)
+            amount = Decimal(str(value or 0)).quantize(Decimal('1'))
             if amount > 0:
                 # سرک (مثبت) - سبز
                 return format_html(
@@ -214,11 +219,12 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
         return '-'
     
     def render_settled_amount(self, value, record):
-        """رندر مبلغ تسویه شده"""
+        """رندر مبلغ تسویه شده (اعشار ثابت)"""
         if self.accessible_fields.get('settled_amount', False):
+            d = Decimal(str(value or 0)).quantize(Decimal('1'))
             return format_html(
                 '<span style="color: #28a745; font-weight: 600;">{:,.0f} ریال</span>',
-                float(value or 0)
+                d
             )
         return '-'
     

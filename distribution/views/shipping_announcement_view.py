@@ -19,6 +19,7 @@ from core.WarehouseFolder.InventoryItemModel import InventoryItem
 from core.ProductFolder import Product
 from django.contrib.contenttypes.models import ContentType
 from core.helpers import check_field_access_prefer_edit
+from decimal import Decimal
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -134,10 +135,10 @@ def shipping_announcement_list_view(request):
     for allocation in allocations:
         # محاسبه محصولات و مقادیر
         products_info = []
-        total_quantity_kg = 0
+        total_quantity_kg = Decimal('0')
         
         for product_info in allocation.product_infos.all():
-            quantity = float(product_info.quantity or 0)
+            quantity = Decimal(str(product_info.quantity or 0))
             unit = product_info.unit
             
             # تبدیل به کیلوگرم

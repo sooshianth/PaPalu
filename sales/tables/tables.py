@@ -20,18 +20,17 @@ def convert_to_persian_numbers(text):
 
 
 def format_number_persian(number, decimal_places=0):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
     if number is None:
         return '-'
     try:
-        # تبدیل به float
-        num_float = float(number)
-        # فرمت با کاما
+        from decimal import Decimal
+        d = Decimal(str(number))
         if decimal_places > 0:
-            formatted = f"{num_float:,.{decimal_places}f}"
+            quantizer = Decimal(10) ** -decimal_places
+            formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         else:
-            formatted = f"{num_float:,.0f}"
-        # تبدیل به فارسی
+            formatted = f"{d.quantize(Decimal('1')):,.0f}"
         return convert_to_persian_numbers(formatted)
     except (ValueError, TypeError):
         return str(number)
@@ -454,19 +453,16 @@ class OrderTable(tables.Table):
     
     def render_total_order_weight(self, value, record):
         """نمایش وزن کل سفارش"""
-        # استفاده از مقدار annotate شده اگر موجود باشد
+        from decimal import Decimal
         if value is not None:
-            total_weight = float(value)
+            total_weight = Decimal(str(value))
         else:
-            # fallback: محاسبه از اقلام
             try:
-                total_weight = 0
+                total_weight = Decimal('0')
                 for item in record.order_items.all():
-                    weight_kg = item.get_weight_in_kg()
-                    total_weight += weight_kg
-            except:
+                    total_weight += item.get_weight_in_kg()
+            except Exception:
                 return '-'
-        
         if total_weight > 0:
             # نمایش به صورت عدد با دو رقم اعشار و فرمت فارسی (همیشه کیلوگرم)
             kg_formatted = format_number_persian(total_weight, decimal_places=2)

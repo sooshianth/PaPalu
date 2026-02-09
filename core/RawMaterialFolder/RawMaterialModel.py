@@ -77,7 +77,7 @@ class RawMaterial(models.Model):
         max_digits=15,
         decimal_places=6,
         verbose_name="ضریب تبدیل واحد اصلی به فرعی (دیفالت)",
-        default=1.0,
+        default=1,
         help_text="مثال: 1 کیلوگرم = 1000 گرم",
         null=True,
         blank=True

@@ -28,6 +28,7 @@ from core.StockEntryFolder.SourceStockModel import SourceStock
 from core.StockEntryFolder.TargetStockModel import TargetStock
 from core.StockEntryFolder.StockEntryParentModel import StockEntryParent
 from core.ProductFolder.ProductModel import Product
+from decimal import Decimal
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
 import re
 
@@ -227,7 +228,8 @@ def register_loading_exit_view(request, waybill_number):
                         return redirect('distribution:loading_exit_list')
                     
                     try:
-                        empty_weight = float(empty_weight)
+                        from decimal import Decimal
+                        empty_weight = Decimal(str(empty_weight))
                     except (ValueError, TypeError):
                         messages.error(request, 'وزن خالی اولیه نامعتبر است.')
                         return redirect('distribution:loading_exit_list')
@@ -256,8 +258,9 @@ def register_loading_exit_view(request, waybill_number):
                             break
                         
                         try:
+                            from decimal import Decimal
                             product_info_id = int(product_info_id)
-                            weight = float(weight)
+                            weight = Decimal(str(weight))
                             origin_warehouse_id = int(origin_warehouse_id) if origin_warehouse_id else None
                             if weight > 0:
                                 loading_stages.append({
@@ -274,9 +277,8 @@ def register_loading_exit_view(request, waybill_number):
                         messages.error(request, 'حداقل یک مرحله بارگیری باید ثبت شود.')
                         return redirect('distribution:loading_exit_list')
                     
-                    # محاسبه وزن‌های خالص هر محصول و وزن پر نهایی
-                    product_info_data = {}  # {product_info_id: {'weight': net_weight, 'origin_warehouse_id': id}}
-                    current_weight = float(empty_weight)
+                    product_info_data = {}
+                    current_weight = empty_weight
                     
                     for stage in loading_stages:
                         product_info_id = stage['product_info_id']
@@ -313,9 +315,8 @@ def register_loading_exit_view(request, waybill_number):
                         }
                         current_weight = weight_after_loading
                     
-                    # وزن پر نهایی = آخرین وزن ثبت شده
                     gross_weight = current_weight
-                    net_weight = float(gross_weight) - float(empty_weight)
+                    net_weight = gross_weight - empty_weight
                     
                     # بررسی اینکه همه محصولات بارگیری شده‌اند
                     if product_infos_qs.exists():
@@ -958,9 +959,9 @@ def create_bank_account_ajax_view(request, waybill_number):
     if not account_number:
         return JsonResponse({'success': False, 'error': 'شماره حساب الزامی است'}, status=400)
     
-    # اعتبارسنجی شماره حساب (16 رقم)
-    if not re.match(r'^\d{16}$', account_number):
-        return JsonResponse({'success': False, 'error': 'شماره حساب باید دقیقاً 16 رقم باشد'}, status=400)
+    # اعتبارسنجی شماره حساب (فقط اعداد، بدون محدودیت طول)
+    if not re.match(r'^\d+$', account_number):
+        return JsonResponse({'success': False, 'error': 'شماره حساب باید فقط شامل اعداد باشد'}, status=400)
     
     if not bank_name:
         return JsonResponse({'success': False, 'error': 'نام بانک الزامی است'}, status=400)

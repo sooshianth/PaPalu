@@ -467,7 +467,7 @@ def invoice_download_pdf(request, invoice_id):
         # دریافت اطلاعات سفارش و اقلام
         order = invoice.order
         order_items = []
-        total_amount = 0
+        total_amount = Decimal('0')
         order_weight = Decimal('0')
         delivered_weight = Decimal('0')
         
@@ -481,9 +481,9 @@ def invoice_download_pdf(request, invoice_id):
                 
                 # محاسبه مجموع کل
                 if item.total_purchase_cost:
-                    total_amount += float(item.total_purchase_cost)
+                    total_amount += Decimal(str(item.total_purchase_cost))
                 elif item.quantity and item.unit_price:
-                    subtotal = float(item.quantity) * float(item.unit_price)
+                    subtotal = Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
                     total_amount += subtotal
             
             # محاسبه وزن تحویلی از Transport

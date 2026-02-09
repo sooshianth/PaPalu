@@ -37,7 +37,7 @@ def get_default_value(col_type, col_name):
     # Numeric fields
     if 'INT' in col_type_upper or 'REAL' in col_type_upper or 'FLOAT' in col_type_upper or 'NUMERIC' in col_type_upper or 'DECIMAL' in col_type_upper:
         if 'price' in col_name_lower or 'cost' in col_name_lower or 'amount' in col_name_lower:
-            return 0.0
+            return 0
         elif 'quantity' in col_name_lower or 'count' in col_name_lower:
             return 0
         else:

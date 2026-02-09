@@ -460,21 +460,16 @@ def logistic_confirmation_detail_view(request, transport_number):
             
             # ساخت لیست مواد اولیه با اطلاعات وزن
             material_weights = []
-            total_allocated = 0
-            total_net_weight = 0
-            materials_with_high_discrepancy = []  # لیست مواد اولیه با اختلاف بیشتر از 10%
-            has_material_weight_discrepancy = False  # آیا اختلاف وزن ماده اولیه وجود دارد؟
-            
+            from decimal import Decimal
+            total_allocated = Decimal('0')
+            total_net_weight = Decimal('0')
+            materials_with_high_discrepancy = []
+            has_material_weight_discrepancy = False
             for rmi in raw_material_infos:
-                # وزن تخصیص یافته برای این حمل
-                allocated = float(rmi.allocated_quantity) if rmi.allocated_quantity else 0
-                
-                # وزن خالص محاسبه شده از تخلیه
-                net_weight = float(rmi.net_weight) if rmi.net_weight else 0
+                allocated = Decimal(str(rmi.allocated_quantity)) if rmi.allocated_quantity else Decimal('0')
+                net_weight = Decimal(str(rmi.net_weight)) if rmi.net_weight else Decimal('0')
                 diff = net_weight - allocated
-                
-                # محاسبه درصد اختلاف
-                diff_percent = 0
+                diff_percent = Decimal('0')
                 if allocated > 0:
                     diff_percent = abs((diff / allocated) * 100)
                 
@@ -513,7 +508,7 @@ def logistic_confirmation_detail_view(request, transport_number):
                 'total_allocated': total_allocated,
                 'total_net_weight': total_net_weight,
                 'total_difference': total_difference,
-                'calculated_total_net_weight': float(calculated_total_net_weight),
+                'calculated_total_net_weight': Decimal(str(calculated_total_net_weight)) if calculated_total_net_weight is not None else Decimal('0'),
                 'materials_with_high_discrepancy': materials_with_high_discrepancy,  # مواد اولیه با اختلاف بیشتر از 10%
                 'has_material_weight_discrepancy': has_material_weight_discrepancy,  # آیا اختلاف وزن ماده اولیه وجود دارد؟
                 'accessible_transport_fields': accessible_transport_fields_view,

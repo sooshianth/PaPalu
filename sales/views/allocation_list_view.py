@@ -24,6 +24,7 @@ from sales.forms.allocation_create_form import CreateAllocationForm, AllocationP
 from sales.forms.customer_create_form import DeliveryAddressForm
 from sales.tables.tables_allocation import AllocationTable
 from core.ProductFolder.ProductModel import Product
+from decimal import Decimal
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -76,109 +77,69 @@ def get_delivery_address_info(postal_code):
 
 
 def calculate_order_total_quantity(order):
-    """
-    محاسبه مجموع مقدار محصولات سفارش (تبدیل به کیلوگرم)
-    """
-    total_quantity = 0
+    """محاسبه مجموع مقدار محصولات سفارش به کیلوگرم (اعشار ثابت)"""
+    total_quantity = Decimal('0')
     for item in order.order_items.all():
-        if item.weight_unit == 'kg':
-            total_quantity += float(item.quantity or 0)
-        elif item.weight_unit == 'ton':
-            total_quantity += float(item.quantity or 0) * 1000
-        elif item.weight_unit == 'bag' and item.bag_weight:
-            total_quantity += float(item.quantity or 0) * float(item.bag_weight)
-        elif item.weight_unit == 'piece':
-            total_quantity += float(item.quantity or 0)
+        total_quantity += item.get_weight_in_kg()
     bug_logger.debug(f"مقدار کل سفارش {order.order_number} محاسبه شد: {total_quantity} کیلوگرم")
     return total_quantity
 
 
 def calculate_allocation_total_quantity(order):
-    """
-    محاسبه مجموع مقدار محصولات همه تخصیص‌های یک سفارش (تبدیل به کیلوگرم)
-    """
-    total_quantity = 0
+    """محاسبه مجموع مقدار تخصیص‌ها به کیلوگرم (اعشار ثابت)"""
+    total_quantity = Decimal('0')
     allocations = Allocation.objects.filter(order=order)
-    
     for allocation in allocations:
         for product_info in allocation.product_infos.all():
-            quantity = float(product_info.quantity or 0)
+            quantity = Decimal(str(product_info.quantity or 0))
             unit = product_info.unit
-            
-            # تبدیل به کیلوگرم
             if unit == 'kg':
                 total_quantity += quantity
             elif unit == 'ton':
                 total_quantity += quantity * 1000
             elif unit == 'gr':
                 total_quantity += quantity / 1000
-            # برای سایر واحدها، همان مقدار را اضافه می‌کنیم
-    
+            else:
+                total_quantity += quantity
     bug_logger.debug(f"مقدار کل تخصیص‌های سفارش {order.order_number} محاسبه شد: {total_quantity} کیلوگرم")
     return total_quantity
 
 
 def calculate_formset_total_quantity(formset):
-    """
-    محاسبه مجموع مقدار محصولات از formset (تبدیل به کیلوگرم)
-    برای validation قبل از ذخیره
-    این تابع باید بعد از formset.is_valid() صدا زده شود
-    """
-    total_quantity = 0
-    
+    """محاسبه مجموع مقدار از formset به کیلوگرم (اعشار ثابت)"""
+    total_quantity = Decimal('0')
     for form in formset.forms:
-        # بررسی اینکه فرم حذف نشده باشد و cleaned_data داشته باشد
         if hasattr(form, 'cleaned_data') and form.cleaned_data and not form.cleaned_data.get('DELETE', False):
             quantity = form.cleaned_data.get('quantity', 0) or 0
             unit = form.cleaned_data.get('unit', '')
-            
             if quantity and unit:
                 try:
-                    quantity = float(quantity)
-                    
-                    # تبدیل به کیلوگرم
+                    q = Decimal(str(quantity))
                     if unit == 'kg':
-                        total_quantity += quantity
+                        total_quantity += q
                     elif unit == 'ton':
-                        total_quantity += quantity * 1000
+                        total_quantity += q * 1000
                     elif unit == 'gr':
-                        total_quantity += quantity / 1000
-                    # برای سایر واحدها (m3, ltr, cc)، همان مقدار را اضافه می‌کنیم
+                        total_quantity += q / 1000
                     else:
-                        total_quantity += quantity
+                        total_quantity += q
                 except (ValueError, TypeError):
-                    # در صورت خطا در تبدیل، مقدار را نادیده می‌گیریم
                     pass
-    
     return total_quantity
 
 
 def calculate_order_product_quantities(order):
-    """
-    محاسبه مقدار هر محصول در سفارش (کیلوگرم)
-    خروجی: دیکشنری {product_id: quantity}
-    """
+    """محاسبه مقدار هر محصول در سفارش به کیلوگرم (اعشار ثابت). خروجی: {product_id: quantity}"""
     product_quantities = {}
     for item in order.order_items.all():
         if not item.product_id:
             continue
-            
-        quantity = 0
-        if item.weight_unit == 'kg':
-            quantity = float(item.quantity or 0)
-        elif item.weight_unit == 'ton':
-            quantity = float(item.quantity or 0) * 1000
-        elif item.weight_unit == 'bag' and item.bag_weight:
-            quantity = float(item.quantity or 0) * float(item.bag_weight)
-        elif item.weight_unit == 'piece':
-            quantity = float(item.quantity or 0)
-            
+        quantity = item.get_weight_in_kg()
         product_id = item.product_id
         if product_id in product_quantities:
             product_quantities[product_id] += quantity
         else:
             product_quantities[product_id] = quantity
-            
     return product_quantities
 
 
@@ -199,12 +160,8 @@ def calculate_existing_allocation_product_quantities(order, exclude_allocation_i
         for product_info in allocation.product_infos.all():
             if not product_info.product_id:
                 continue
-                
-            quantity = float(product_info.quantity or 0)
+            quantity = Decimal(str(product_info.quantity or 0))
             unit = product_info.unit
-            
-            # تبدیل به کیلوگرم
-            kg_quantity = 0
             if unit == 'kg':
                 kg_quantity = quantity
             elif unit == 'ton':
@@ -213,13 +170,11 @@ def calculate_existing_allocation_product_quantities(order, exclude_allocation_i
                 kg_quantity = quantity / 1000
             else:
                 kg_quantity = quantity
-                
             product_id = product_info.product_id
             if product_id in product_quantities:
                 product_quantities[product_id] += kg_quantity
             else:
                 product_quantities[product_id] = kg_quantity
-                
     return product_quantities
 
 
@@ -239,20 +194,15 @@ def calculate_formset_product_quantities(formset):
             
             if product and quantity and unit:
                 try:
-                    quantity = float(quantity)
-                    
-                    # تبدیل به کیلوگرم
-                    kg_quantity = 0
+                    q = Decimal(str(quantity))
                     if unit == 'kg':
-                        kg_quantity = quantity
+                        kg_quantity = q
                     elif unit == 'ton':
-                        kg_quantity = quantity * 1000
+                        kg_quantity = q * 1000
                     elif unit == 'gr':
-                        kg_quantity = quantity / 1000
-                    # برای سایر واحدها (m3, ltr, cc)، همان مقدار را اضافه می‌کنیم
+                        kg_quantity = q / 1000
                     else:
-                        kg_quantity = quantity
-                        
+                        kg_quantity = q
                     product_id = product.id
                     if product_id in product_quantities:
                         product_quantities[product_id] += kg_quantity
@@ -582,11 +532,11 @@ def allocation_edit_view(request, order_number, allocation_number):
     # محاسبه مقادیر
     order_total = calculate_order_total_quantity(order)
     # محاسبه بدون تخصیص فعلی (با استفاده از allocation_number)
-    other_allocations_total = 0
+    other_allocations_total = Decimal('0')
     other_allocations = Allocation.objects.filter(order=order).exclude(allocation_number=original_allocation_number)
     for other_allocation in other_allocations:
         for product_info in other_allocation.product_infos.all():
-            quantity = float(product_info.quantity or 0)
+            quantity = Decimal(str(product_info.quantity or 0))
             unit = product_info.unit
             if unit == 'kg':
                 other_allocations_total += quantity
@@ -594,6 +544,8 @@ def allocation_edit_view(request, order_number, allocation_number):
                 other_allocations_total += quantity * 1000
             elif unit == 'gr':
                 other_allocations_total += quantity / 1000
+            else:
+                other_allocations_total += quantity
 
     if request.method == 'POST':
         form = CreateAllocationForm(request.POST, instance=allocation, order=order)
@@ -715,9 +667,9 @@ def allocation_edit_view(request, order_number, allocation_number):
         formset = AllocationProductInfoFormSet(instance=allocation, order=order)
 
     # محاسبه مقدار فعلی این تخصیص
-    current_allocation_total = 0
+    current_allocation_total = Decimal('0')
     for product_info in allocation.product_infos.all():
-        quantity = float(product_info.quantity or 0)
+        quantity = Decimal(str(product_info.quantity or 0))
         unit = product_info.unit
         if unit == 'kg':
             current_allocation_total += quantity
@@ -725,6 +677,8 @@ def allocation_edit_view(request, order_number, allocation_number):
             current_allocation_total += quantity * 1000
         elif unit == 'gr':
             current_allocation_total += quantity / 1000
+        else:
+            current_allocation_total += quantity
 
     # محاسبه وضعیت هر محصول برای نمایش در جدول
     product_status_list = []

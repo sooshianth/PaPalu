@@ -712,15 +712,15 @@ def proforma_download_pdf(request, proforma_id):
         # دریافت اطلاعات سفارش و اقلام
         order = proforma.order
         order_items = []
-        total_amount = 0
+        from decimal import Decimal
+        total_amount = Decimal('0')
         if order:
             order_items = OrderItem.objects.filter(order=order).select_related('product')
-            # محاسبه مجموع کل
             for item in order_items:
                 if item.total_purchase_cost:
-                    total_amount += float(item.total_purchase_cost)
+                    total_amount += Decimal(str(item.total_purchase_cost))
                 elif item.quantity and item.unit_price:
-                    subtotal = float(item.quantity) * float(item.unit_price)
+                    subtotal = Decimal(str(item.quantity)) * Decimal(str(item.unit_price))
                     total_amount += subtotal
         
         # دریافت اطلاعات کامل مشتری و شرکت

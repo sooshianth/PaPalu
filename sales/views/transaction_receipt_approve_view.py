@@ -31,12 +31,13 @@ def to_persian_digits(text):
 
 
 def persian_number_with_comma(value):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی (برای مبالغ)"""
+    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
+    from decimal import Decimal
     if value is None:
         return '-'
     try:
-        num_float = float(value)
-        formatted = f"{num_float:,.0f}"
+        d = Decimal(str(value))
+        formatted = f"{d.quantize(Decimal('1')):,.0f}"
         return to_persian_digits(formatted)
     except (ValueError, TypeError):
         return str(value)
@@ -77,7 +78,8 @@ def approve_transaction_receipt_list_view(request):
                 all_approved = settlement.transaction_documents.exclude(approval_status='approved').count() == 0
                 all_documents_exist = settlement.transaction_documents.count() > 0
                 # فقط اگر مبلغ کامل رسیده و هنوز همه تایید نشده‌اند، نمایش بده
-                if float(all_documents_total) >= float(settlement.original_document_amount) and not (all_approved and all_documents_exist):
+                from decimal import Decimal
+                if (Decimal(str(all_documents_total)) >= Decimal(str(settlement.original_document_amount))) and not (all_approved and all_documents_exist):
                     orders_with_complete_amount.append(order.order_number)
         except Settlement.DoesNotExist:
             pass
@@ -173,7 +175,8 @@ def approve_transaction_receipt_detail_view(request, order_number):
             if settlement.original_document_amount:
                 # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
                 all_documents_total = settlement.transaction_documents.aggregate(total=Sum('document_amount'))['total'] or 0
-                if float(all_documents_total) >= float(settlement.original_document_amount):
+                from decimal import Decimal
+                if Decimal(str(all_documents_total)) >= Decimal(str(settlement.original_document_amount)):
                     is_pending_upload_with_complete_amount = True
         except Settlement.DoesNotExist:
             pass
@@ -361,10 +364,10 @@ def approve_transaction_receipt_detail_view(request, order_number):
             form = None
             rejection_form = None
 
-    # محاسبه باقیمانده
-    remaining_amount = 0
+    from decimal import Decimal
+    remaining_amount = Decimal('0')
     if settlement.original_document_amount:
-        remaining_amount = float(settlement.original_document_amount) - float(total_inquiry_amount)
+        remaining_amount = Decimal(str(settlement.original_document_amount)) - Decimal(str(total_inquiry_amount))
 
     bug_logger.debug(f"نمایش صفحه جزئیات تأیید تراکنش سفارش {order_number}: {len(documents)} سند، {len(approved_documents)} تأیید شده")
 

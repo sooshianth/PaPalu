@@ -254,6 +254,7 @@ def mul(value, arg):
     مثال: {{ 5|mul:3 }} -> 15
     """
     try:
-        return float(value) * float(arg)
+        from decimal import Decimal
+        return Decimal(str(value)) * Decimal(str(arg))
     except (ValueError, TypeError):
-        return 0 
+        return Decimal('0') 

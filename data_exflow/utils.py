@@ -400,10 +400,13 @@ def get_lookup_strategies(model_class, identifier_field, identifier_value):
             try:
                 # Remove any non-numeric characters except decimal point
                 cleaned_value = ''.join(c for c in identifier_value if c.isdigit() or c == '.')
+                from decimal import Decimal
                 if isinstance(field, models.IntegerField):
-                    numeric_value = int(float(cleaned_value))
+                    numeric_value = int(Decimal(str(cleaned_value)))
+                elif isinstance(field, models.DecimalField):
+                    numeric_value = Decimal(str(cleaned_value))
                 else:
-                    numeric_value = float(cleaned_value)
+                    numeric_value = Decimal(str(cleaned_value))  # FloatField: use Decimal for consistency
                     
                 strategies.append({
                     'lookup': {identifier_field: numeric_value},
@@ -1460,10 +1463,10 @@ def sanitize_value(value, field_obj):
             return None
     
     elif isinstance(field_obj, models.FloatField) or isinstance(field_obj, models.DecimalField):
-        # For float/decimal fields, ensure we have a valid number
         try:
+            from decimal import Decimal
             if isinstance(value, str):
-                value = float(value)
+                value = Decimal(str(value))
         except (ValueError, TypeError):
             return None
     

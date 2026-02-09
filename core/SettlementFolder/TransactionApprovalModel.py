@@ -54,7 +54,7 @@ class TransactionApproval(models.Model):
 
     # شماره حساب
     account_number = models.CharField(
-        max_length=50,
+        max_length=100,
         verbose_name='شماره حساب',
         null=False,
         blank=False

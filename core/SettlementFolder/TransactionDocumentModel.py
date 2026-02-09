@@ -174,7 +174,7 @@ class TransactionDocument(models.Model):
 
     # شماره حساب (برای تأیید)
     approval_account_number = models.CharField(
-        max_length=50,
+        max_length=100,
         verbose_name='شماره حساب',
         null=True,
         blank=True
