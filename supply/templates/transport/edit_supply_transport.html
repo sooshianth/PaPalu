@@ -647,6 +647,28 @@
                 کل</small>
             </div>
           </div>
+
+          <!-- حساب بانکی راننده - فقط برای pay_to_driver -->
+          <div class="row driver-bank-account-container" style="display: none;">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.driver_bank_account.label }}</label>
+              {{ form.driver_bank_account }}
+              {% if form.driver_bank_account.errors %}
+              <div class="text-danger">{{ form.driver_bank_account.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- حساب بانکی تامین‌کننده - فقط برای pay_to_supplier -->
+          <div class="row supplier-bank-account-container" style="display: none;">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">{{ form.supplier_bank_account.label }}</label>
+              {{ form.supplier_bank_account }}
+              {% if form.supplier_bank_account.errors %}
+              <div class="text-danger">{{ form.supplier_bank_account.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -829,10 +851,20 @@
 
       if (selectedType === 'calculated_in_invoice') {
         if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
-      } else if (selectedType === 'pay_to_driver' || selectedType === 'pay_to_supplier') {
+        document.querySelectorAll('.driver-bank-account-container').forEach(function (el) { el.style.display = 'none'; });
+        document.querySelectorAll('.supplier-bank-account-container').forEach(function (el) { el.style.display = 'none'; });
+      } else if (selectedType === 'pay_to_driver') {
         if (freightFieldsContainer) freightFieldsContainer.style.display = 'block';
+        document.querySelectorAll('.driver-bank-account-container').forEach(function (el) { el.style.display = 'flex'; });
+        document.querySelectorAll('.supplier-bank-account-container').forEach(function (el) { el.style.display = 'none'; });
+      } else if (selectedType === 'pay_to_supplier') {
+        if (freightFieldsContainer) freightFieldsContainer.style.display = 'block';
+        document.querySelectorAll('.driver-bank-account-container').forEach(function (el) { el.style.display = 'none'; });
+        document.querySelectorAll('.supplier-bank-account-container').forEach(function (el) { el.style.display = 'flex'; });
       } else {
         if (freightFieldsContainer) freightFieldsContainer.style.display = 'none';
+        document.querySelectorAll('.driver-bank-account-container').forEach(function (el) { el.style.display = 'none'; });
+        document.querySelectorAll('.supplier-bank-account-container').forEach(function (el) { el.style.display = 'none'; });
       }
     }
 

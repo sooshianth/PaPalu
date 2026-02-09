@@ -393,9 +393,10 @@ class TransportForm(ModelForm):
             except Exception:
                 pass
         
-        # مخفی کردن فیلدهای حساب بانکی (به صورت پیش‌فرض - با JavaScript نمایش داده می‌شوند)
-        self.fields['driver_bank_account'].widget = forms.HiddenInput()
-        self.fields['supplier_bank_account'].widget = forms.HiddenInput()
+        # مخفی کردن فیلدهای حساب بانکی فقط در حالت ایجاد (در ویرایش به‌صورت Select نمایش داده می‌شوند)
+        if not (self.instance and self.instance.pk):
+            self.fields['driver_bank_account'].widget = forms.HiddenInput()
+            self.fields['supplier_bank_account'].widget = forms.HiddenInput()
     
     def clean(self):
         cleaned_data = super().clean()
