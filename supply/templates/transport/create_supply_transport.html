@@ -1140,6 +1140,7 @@
               {% if form.initial_freight.errors %}
               <div class="text-danger">{{ form.initial_freight.errors.0 }}</div>
               {% endif %}
+              <small class="persian-number-display" id="id_initial_freight_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
             </div>
             {% endif %}
 
@@ -1152,6 +1153,7 @@
               {% endif %}
               <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: کرایه اولیه +
                 مازاد - تخفیف</small>
+              <small class="persian-number-display" id="id_total_freight_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
             </div>
             {% endif %}
           </div>
@@ -1164,6 +1166,7 @@
               {% if form.discount.errors %}
               <div class="text-danger">{{ form.discount.errors.0 }}</div>
               {% endif %}
+              <small class="persian-number-display" id="id_discount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
             </div>
             {% endif %}
 
@@ -1174,6 +1177,7 @@
               {% if form.surplus.errors %}
               <div class="text-danger">{{ form.surplus.errors.0 }}</div>
               {% endif %}
+              <small class="persian-number-display" id="id_surplus_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
             </div>
             {% endif %}
           </div>
@@ -1188,6 +1192,7 @@
               {% endif %}
               <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">محاسبه خودکار: برابر با کرایه
                 کل</small>
+              <small class="persian-number-display" id="id_freight_payment_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
             </div>
             {% endif %}
           </div>
@@ -2023,6 +2028,9 @@
       if (freightPaymentInput) {
         freightPaymentInput.value = formattedTotal;
       }
+      // به‌روزرسانی نمایش فارسی زیر اینپوت‌ها (با trigger کردن input)
+      if (totalFreightInput) totalFreightInput.dispatchEvent(new Event('input'));
+      if (freightPaymentInput) freightPaymentInput.dispatchEvent(new Event('input'));
     }
 
     // اضافه کردن event listener به فیلدهای کرایه اولیه، تخفیف و مازاد
@@ -2048,6 +2056,45 @@
     // محاسبه اولیه در صورت وجود مقادیر
     calculateFreight();
   });
+
+  // نمایش عدد فارسی با جداکننده هزارگان (،) زیر اینپوت‌های وزن/پول (کرایه)
+  (function () {
+    var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    function formatNumberToPersian(num, decimalPlaces) {
+      if (num === null || num === undefined || isNaN(num)) return '';
+      var n = parseFloat(num);
+      var fixed = (decimalPlaces !== undefined && decimalPlaces > 0)
+        ? n.toFixed(decimalPlaces)
+        : (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+      var parts = fixed.split('.');
+      var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+      var result = intPart + (parts[1] ? '.' + parts[1] : '');
+      return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+    }
+    function updatePersianDisplay(inputId, displayId, decimals) {
+      var input = document.getElementById(inputId);
+      var display = document.getElementById(displayId);
+      if (!input || !display) return;
+      var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+      var num = parseFloat(raw);
+      display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, decimals);
+    }
+    function attachPersianDisplay(inputId, displayId, decimals) {
+      decimals = decimals !== undefined ? decimals : 2;
+      var input = document.getElementById(inputId);
+      if (!input) return;
+      updatePersianDisplay(inputId, displayId, decimals);
+      input.addEventListener('input', function () { updatePersianDisplay(inputId, displayId, decimals); });
+      input.addEventListener('change', function () { updatePersianDisplay(inputId, displayId, decimals); });
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+      attachPersianDisplay('id_initial_freight', 'id_initial_freight_persian', 2);
+      attachPersianDisplay('id_total_freight', 'id_total_freight_persian', 2);
+      attachPersianDisplay('id_discount', 'id_discount_persian', 2);
+      attachPersianDisplay('id_surplus', 'id_surplus_persian', 2);
+      attachPersianDisplay('id_freight_payment', 'id_freight_payment_persian', 2);
+    });
+  })();
 
   // راه‌اندازی Custom Jalali Datepicker برای expected_arrival_date
   document.addEventListener('DOMContentLoaded', function () {
