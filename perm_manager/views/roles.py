@@ -67,15 +67,16 @@ def add_role(request):
             if pks:
                 role.task_permissions.set(TaskPermission.objects.filter(id__in=pks))
         
-        # اضافه کردن FieldPermission ها به Role
+        # اضافه کردن FieldPermission ها به Role (چند-به-چند؛ مشابه TaskPermission)
         if field_permission_ids and isinstance(field_permission_ids, list):
+            fp_pks = []
             for fp_id in field_permission_ids:
                 try:
-                    field_perm = FieldPermission.objects.get(id=int(fp_id))
-                    field_perm.role = role
-                    field_perm.save()
-                except (FieldPermission.DoesNotExist, ValueError):
+                    fp_pks.append(int(fp_id))
+                except (ValueError, TypeError):
                     pass
+            if fp_pks:
+                role.field_permissions.set(FieldPermission.objects.filter(id__in=fp_pks))
         
         return JsonResponse({
             'status': 'success',
@@ -123,18 +124,17 @@ def update_role(request):
                     pass
             role.task_permissions.set(TaskPermission.objects.filter(id__in=pks))
         
-        # Update field permissions if provided
+        # به‌روزرسانی مجوزهای فیلد (چند-به-چند؛ مشابه TaskPermission)
         if field_permission_ids is not None:
-            FieldPermission.objects.filter(role=role).update(role=None)
             if isinstance(field_permission_ids, list):
+                fp_pks = []
                 for fp_id in field_permission_ids:
-                    if fp_id:
+                    if fp_id is not None and fp_id != '':
                         try:
-                            field_perm = FieldPermission.objects.get(id=int(fp_id))
-                            field_perm.role = role
-                            field_perm.save()
-                        except (FieldPermission.DoesNotExist, ValueError):
+                            fp_pks.append(int(fp_id))
+                        except (ValueError, TypeError):
                             pass
+                role.field_permissions.set(FieldPermission.objects.filter(id__in=fp_pks))
         
         # Update description if provided
         if 'description' in data:

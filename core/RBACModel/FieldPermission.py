@@ -41,7 +41,7 @@ class FieldPermission(models.Model):
     """
     مدل مجوز دسترسی فیلد
     این مدل یک مجموعه از قوانین دسترسی به فیلدها را تعریف می‌کند.
-    می‌تواند به یک نقش (Role) اختصاص داده شود تا آن نقش چندین مجوز فیلد داشته باشد.
+    از طریق ManyToMany روی Role می‌تواند به چند نقش اختصاص داده شود (مشابه TaskPermission).
     """
     name = models.CharField(
         max_length=100,
@@ -53,15 +53,6 @@ class FieldPermission(models.Model):
         blank=True,
         null=True,
         verbose_name='توضیحات'
-    )
-    
-    role = models.ForeignKey(
-        'Role',
-        on_delete=models.CASCADE,
-        related_name='field_permissions',
-        null=True,
-        blank=True,
-        verbose_name='نقش'
     )
     
     created_at = models.DateTimeField(

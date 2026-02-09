@@ -571,7 +571,7 @@
                                 <div class="task-perm-checkbox-group" data-field-role-id="{{ role.id }}">
                                     {% for fp in field_permissions %}
                                     <div class="task-perm-item">
-                                        <input type="checkbox" class="role-field-perm-checkbox" id="role_{{ role.id }}_fp_{{ fp.id }}" value="{{ fp.id }}" data-role-id="{{ role.id }}" {% if fp.role and fp.role.id == role.id %}checked{% endif %} onchange="updateFieldPermBadge('fp_role_{{ role.id }}'); onFieldPermChange({{ role.id }})" />
+                                        <input type="checkbox" class="role-field-perm-checkbox" id="role_{{ role.id }}_fp_{{ fp.id }}" value="{{ fp.id }}" data-role-id="{{ role.id }}" {% if fp in role.field_permissions.all %}checked{% endif %} onchange="updateFieldPermBadge('fp_role_{{ role.id }}'); onFieldPermChange({{ role.id }})" />
                                         <label for="role_{{ role.id }}_fp_{{ fp.id }}">{{ fp.name|escape }}</label>
                                     </div>
                                     {% endfor %}
