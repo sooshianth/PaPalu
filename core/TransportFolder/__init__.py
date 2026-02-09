@@ -5,6 +5,7 @@ from .TruckInfoModel import TruckInfo
 from .FareModel import Fare
 from .LoadingScheduleInfoModel import LoadingScheduleInfo
 from .TransportAttachmentModel import TransportAttachment
+from .FreightPaymentDocumentAttachmentModel import FreightPaymentDocumentAttachment
 
 __all__ = [
     'Transport',
@@ -14,5 +15,6 @@ __all__ = [
     'Fare',
     'LoadingScheduleInfo',
     'TransportAttachment',
+    'FreightPaymentDocumentAttachment',
 ]
 

@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django.utils.html import format_html
 from django.urls import reverse
 from core.TransportFolder.TransportModel import Transport
+from supply.templatetags.number_filters import persian_number, persian_digits
 
 
 class UploadFarePaymentDocsTable(tables.Table):
@@ -104,34 +105,27 @@ class UploadFarePaymentDocsTable(tables.Table):
         return '—'
     
     def render_transport_number(self, value, record):
-        """نمایش شماره حمل به صورت bold با لینک"""
+        """نمایش شماره حمل به صورت bold با لینک (اعداد فارسی)"""
         if value:
             detail_url = reverse(self.detail_url_name, kwargs={'transport_number': value})
-            return format_html('<strong><a href="{}">{}</a></strong>', detail_url, value)
+            display_value = persian_digits(value) if value else '—'
+            return format_html('<strong><a href="{}">{}</a></strong>', detail_url, display_value)
         return '—'
     
     def render_net_weight(self, value):
-        """نمایش وزن خالص با فرمت عددی (اعشار ثابت)"""
+        """نمایش وزن خالص با فرمت عددی فارسی و کاما (اعشار ثابت)"""
         if value is not None and value != '':
-            from decimal import Decimal
-            try:
-                d = Decimal(str(value)).quantize(Decimal('0.01'))
-            except Exception:
-                return '—'
-            formatted = f'{d:,.2f}'
-            return format_html('<span dir="ltr">{}</span> کیلوگرم', formatted)
+            formatted = persian_number(value, 2)
+            if formatted != '-':
+                return format_html('{} کیلوگرم', formatted)
         return '—'
     
     def render_freight_payment(self, value):
-        """نمایش کرایه پرداختی نهایی (اعشار ثابت)"""
+        """نمایش کرایه پرداختی نهایی با اعداد فارسی و کاما (ریال)"""
         if value is not None and value != '':
-            from decimal import Decimal
-            try:
-                d = Decimal(str(value)).quantize(Decimal('1'))
-            except Exception:
-                return '—'
-            formatted = f'{d:,.0f}'
-            return format_html('<span dir="ltr">{}</span> ریال', formatted)
+            formatted = persian_number(value, 0)
+            if formatted != '-':
+                return format_html('{} ریال', formatted)
         return '—'
     
     def render_status(self, record):
