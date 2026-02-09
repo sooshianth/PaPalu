@@ -446,6 +446,21 @@ def supplier_edit_view(request, national_id):
 			sn_fs = SocialNetworkFormSet(instance=supplier, prefix='sn')
 			att_fs = AttachmentFormSet(instance=supplier, prefix='att')
 		
+		form_has_errors = request.method == 'POST' and (
+			not person_form.is_valid() or not fb_form.is_valid() or
+			not rep_fs.is_valid() or not ba_fs.is_valid() or
+			not pay_fs.is_valid() or not sn_fs.is_valid() or not att_fs.is_valid()
+		)
+		section_errors = {
+			'person': request.method == 'POST' and not person_form.is_valid(),
+			'financial': request.method == 'POST' and not fb_form.is_valid(),
+			'representatives': request.method == 'POST' and not rep_fs.is_valid(),
+			'bank_accounts': request.method == 'POST' and not ba_fs.is_valid(),
+			'payment_preferences': request.method == 'POST' and not pay_fs.is_valid(),
+			'social_networks': request.method == 'POST' and not sn_fs.is_valid(),
+			'attachments': request.method == 'POST' and not att_fs.is_valid(),
+		}
+		
 		context = {
 			'supplier': supplier,
 			'person_form': person_form,
@@ -455,6 +470,8 @@ def supplier_edit_view(request, national_id):
 			'pay_formset': pay_fs,
 			'sn_formset': sn_fs,
 			'att_formset': att_fs,
+			'form_has_errors': form_has_errors,
+			'section_errors': section_errors,
 		}
 		return render(request, 'supplier/supplier_edit.html', context)
 	except Person.DoesNotExist:

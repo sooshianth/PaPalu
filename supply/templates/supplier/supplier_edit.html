@@ -1,347 +1,208 @@
 {% extends 'base.html' %}
 {% load static %}
-{% block title %}ویرایش تأمین کننده{% endblock %}
+{% block title %}ویرایش تأمین‌کننده{% endblock %}
 
 {% block extra_css %}
 <style>
-  .card {background:#fff;border:1px solid #e9ecef;border-radius:14px;box-shadow:0 4px 18px rgba(0,0,0,0.04)}
-  .card-header {padding:14px 20px;border-bottom:1px solid #e9ecef;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#f8f9fa,#eef5f1)}
-  .card-body {padding:22px}
-  .section-title {font-size:1rem;margin:0 0 14px 0;color:#2d3e3f;font-weight:600;display:flex;align-items:center;gap:8px}
-  .section-title svg{width:18px;height:18px;color:#28a745}
-  .rules{background:#f8f9fa;border:1px dashed #cfd8dc;padding:12px 14px;border-radius:10px;font-size:.9rem;color:#37474f;margin-bottom:18px;line-height:1.6}
-  .form-wrapper{background:#fafafa;border:1px solid #e3e7ea;border-radius:12px;padding:18px 20px;margin-bottom:26px}
-  .form-groups{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
-  .field{display:flex;flex-direction:column;gap:6px}
-  .field label{font-size:.78rem;font-weight:600;color:#455a64;letter-spacing:.3px}
-  .field input[type=text], .field input[type=number], .field select, .field textarea{width:100%;padding:8px 10px;border:1px solid #cfd8dc;background:#fff;border-radius:8px;font-size:.85rem;font-family:inherit;transition:.2s}
-  .field textarea{min-height:90px;resize:vertical}
-  .field input:focus, .field select:focus, .field textarea:focus{outline:none;border-color:#28a745;box-shadow:0 0 0 3px rgba(40,167,69,0.15)}
-  .required-marker{color:#c62828;font-weight:700;font-size:.9rem;margin-right:4px}
-  .submit-row{margin-top:8px;display:flex;gap:10px}
+  .page-header {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 3px solid var(--primary-green);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .page-header h2 {
+    color: var(--gray-800);
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    overflow: hidden;
+  }
+  .card-body {
+    padding: 20px;
+  }
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 32px;
+  }
+  .detail-card {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+  }
+  .detail-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--primary-green);
+  }
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #f8f9fa;
+  }
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+  .detail-label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+  .detail-value {
+    color: #343a40;
+    font-size: 0.9rem;
+    text-align: left;
+    flex: 1;
+  }
+  .detail-value input,
+  .detail-value select,
+  .detail-value textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s ease;
+  }
+  .detail-value input:focus,
+  .detail-value select:focus,
+  .detail-value textarea:focus {
+    outline: none;
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
+  }
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+  .required-marker {
+    color: #dc3545;
+    font-weight: 700;
+    margin-right: 4px;
+  }
+  .detail-card.has-error {
+    border: 2px solid #dc3545;
+    border-radius: 12px;
+    background-color: #fff5f5;
+    animation: highlightError 0.5s ease-in-out;
+  }
+  @keyframes highlightError {
+    0% { background-color: #fff5f5; }
+    50% { background-color: #ffe0e0; }
+    100% { background-color: #fff5f5; }
+  }
+  .alert {
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    border: none;
+  }
+  .alert-success { background-color: var(--light-green); color: var(--dark-green); }
+  .alert-danger { background-color: #f8d7da; color: #721c24; }
 </style>
-<link rel="stylesheet" href="{% static 'vendor/datatables-1.13.8/css/jquery.dataTables.min.css' %}"/>
-<!-- Custom Jalali Datepicker Component -->
-{% include "components/jalali_datepicker.html" %}
 {% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-header">
-    <h3 style="font-size:1.1rem">ویرایش تأمین‌کننده: {{ supplier.name|default:supplier.national_id }}</h3>
-    <div>
-      <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary btn-sm">بازگشت به جزئیات</a>
-      <a href="{% url 'supply:supplier_list' %}" class="btn btn-secondary btn-sm">لیست تأمین‌کنندگان</a>
-    </div>
+<div class="page-header">
+  <h2>ویرایش تأمین‌کننده: {{ supplier.name|default:supplier.national_id }}</h2>
+  <div style="display: flex; gap: 10px;">
+    <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary btn-sm">بازگشت به جزئیات</a>
+    <a href="{% url 'supply:supplier_list' %}" class="btn btn-secondary btn-sm">لیست تأمین‌کنندگان</a>
   </div>
-  <div class="card-body">
-    {% if messages %}
-      {% for message in messages %}
-        <div class="message {{ message.tags }}">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
+</div>
 
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+  {% endfor %}
+{% endif %}
+
+<div class="card">
+  <div class="card-body">
     <form method="post" enctype="multipart/form-data" novalidate>
       {% csrf_token %}
 
-      <div class="form-wrapper">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          اطلاعات شخص/شرکت
-        </div>
-        <div class="form-groups">
-          <div class="field">
-            <label>{% if person_form.national_id.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.national_id.label }}</label>
-            {{ person_form.national_id }}
-            {% if person_form.national_id.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.national_id.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{% if person_form.name.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.name.label }}</label>
-            {{ person_form.name }}
-            {% if person_form.name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.name.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{% if person_form.nature.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.nature.label }}</label>
-            {{ person_form.nature }}
-            {% if person_form.nature.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.nature.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ person_form.registration_number.label }}</label>
-            {{ person_form.registration_number }}
-            {% if person_form.registration_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.registration_number.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ person_form.birth_date.label }}</label>
-            {{ person_form.birth_date }}
-            {% if person_form.birth_date.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.birth_date.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ person_form.accounting_code.label }}</label>
-            {{ person_form.accounting_code }}
-            {% if person_form.accounting_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.accounting_code.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ person_form.activity_fields.label }}</label>
-            {{ person_form.activity_fields }}
-            {% if person_form.activity_fields.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.activity_fields.errors.0 }}</div>{% endif %}
-            <small class="form-text text-muted" style="font-size: 0.85rem; color: #6c757d;">می‌توانید چندین مورد را انتخاب کنید (Ctrl+Click)</small>
-          </div>
-          <div class="field">
-            <label>{{ person_form.phone_number.label }}</label>
-            {{ person_form.phone_number }}
-            {% if person_form.phone_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.phone_number.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ person_form.sales_expert.label }}</label>
-            {{ person_form.sales_expert }}
-            {% if person_form.sales_expert.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.sales_expert.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ person_form.introducer.label }}</label>
-            {{ person_form.introducer }}
-            {% if person_form.introducer.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.introducer.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label>{{ person_form.description.label }}</label>
-            {{ person_form.description }}
-            {% if person_form.description.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ person_form.description.errors.0 }}</div>{% endif %}
-          </div>
-        </div>
+      {% if form_has_errors %}
+      <div class="alert alert-danger" style="margin-bottom: 20px;">
+        <strong>خطاهای فرم:</strong>
+        <ul style="margin: 10px 0 0 20px;">
+          {% if section_errors.person %}
+            <li>
+              <strong>بخش اطلاعات شخص/شرکت:</strong>
+              <a href="#section-person" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+              <ul style="margin: 5px 0 0 20px;">
+                {% for field, errors in person_form.errors.items %}
+                  {% for error in errors %}
+                    <li>{% if field != '__all__' %}{{ field }}: {% endif %}{{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+                {% if person_form.non_field_errors %}
+                  {% for error in person_form.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                {% endif %}
+              </ul>
+            </li>
+          {% endif %}
+          {% if section_errors.financial %}
+            <li>
+              <strong>بخش اطلاعات مالی/بانکی:</strong>
+              <a href="#section-financial" style="color: #dc3545; text-decoration: underline; margin-right: 5px;">رفتن به بخش</a>
+              <ul style="margin: 5px 0 0 20px;">
+                {% for field, errors in fb_form.errors.items %}
+                  {% for error in errors %}
+                    <li>{% if field != '__all__' %}{{ field }}: {% endif %}{{ error }}</li>
+                  {% endfor %}
+                {% endfor %}
+              </ul>
+            </li>
+          {% endif %}
+          {% if section_errors.representatives %}
+            <li><strong>بخش نمایندگان:</strong> <a href="#section-representatives" style="color: #dc3545; text-decoration: underline;">رفتن به بخش</a></li>
+          {% endif %}
+          {% if section_errors.bank_accounts %}
+            <li><strong>بخش حساب‌های بانکی:</strong> <a href="#section-bank-accounts" style="color: #dc3545; text-decoration: underline;">رفتن به بخش</a></li>
+          {% endif %}
+          {% if section_errors.payment_preferences %}
+            <li><strong>بخش ترجیحات پرداخت:</strong> <a href="#section-payment-preferences" style="color: #dc3545; text-decoration: underline;">رفتن به بخش</a></li>
+          {% endif %}
+          {% if section_errors.social_networks %}
+            <li><strong>بخش شبکه‌های اجتماعی:</strong> <a href="#section-social-networks" style="color: #dc3545; text-decoration: underline;">رفتن به بخش</a></li>
+          {% endif %}
+          {% if section_errors.attachments %}
+            <li><strong>بخش پیوست‌ها:</strong> <a href="#section-attachments" style="color: #dc3545; text-decoration: underline;">رفتن به بخش</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <div class="detail-grid">
+        {% include 'supplier/create_supplier_form_content.html' %}
       </div>
 
-      <div class="form-wrapper">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          اطلاعات مالی/بانکی
-        </div>
-        <div class="form-groups">
-          <div class="field">
-            <label>{{ fb_form.tax_group.label }}</label>
-            {{ fb_form.tax_group }}
-            {% if fb_form.tax_group.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_group.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ fb_form.account_balance.label }}</label>
-            {{ fb_form.account_balance }}
-            {% if fb_form.account_balance.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.account_balance.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ fb_form.economic_code.label }}</label>
-            {{ fb_form.economic_code }}
-            {% if fb_form.economic_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.economic_code.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ fb_form.tax_postal_code.label }}</label>
-            {{ fb_form.tax_postal_code }}
-            {% if fb_form.tax_postal_code.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_postal_code.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ fb_form.tax_province.label }}</label>
-            {{ fb_form.tax_province }}
-            {% if fb_form.tax_province.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_province.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field">
-            <label>{{ fb_form.tax_city.label }}</label>
-            {{ fb_form.tax_city }}
-            {% if fb_form.tax_city.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_city.errors.0 }}</div>{% endif %}
-          </div>
-          <div class="field" style="grid-column:1/-1">
-            <label>{{ fb_form.tax_address.label }}</label>
-            {{ fb_form.tax_address }}
-            {% if fb_form.tax_address.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ fb_form.tax_address.errors.0 }}</div>{% endif %}
-          </div>
-        </div>
-      </div>
-
-      <div class="form-wrapper">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          نمایندگان
-        </div>
-        {{ rep_formset.management_form }}
-        {% for form in rep_formset.forms %}
-          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
-            {{ form.id }}
-            <div class="field">
-              <label>نام نماینده</label>
-              {{ form.name }}
-              {% if form.name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.name.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>سمت</label>
-              {{ form.position }}
-              {% if form.position.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.position.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>موبایل</label>
-              {{ form.mobile_number }}
-              {% if form.mobile_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.mobile_number.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>تلفن</label>
-              {{ form.phone_number }}
-              {% if form.phone_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.phone_number.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>نامه تایید</label>
-              {{ form.confirmation_letter }}
-              {% if form.confirmation_letter.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.confirmation_letter.errors.0 }}</div>{% endif %}
-            </div>
-            {% if form.DELETE %}
-            <div class="field">
-              <label>حذف؟</label>
-              {{ form.DELETE }}
-            </div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="form-wrapper">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          حساب‌های بانکی
-        </div>
-        {{ ba_formset.management_form }}
-        {% for form in ba_formset.forms %}
-          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
-            {{ form.id }}
-            <div class="field">
-              <label>نام بانک</label>
-              {{ form.bank_name }}
-              {% if form.bank_name.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.bank_name.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>شماره حساب</label>
-              {{ form.account_number }}
-              {% if form.account_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.account_number.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>شماره شبا</label>
-              {{ form.shaba_number }}
-              {% if form.shaba_number.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.shaba_number.errors.0 }}</div>{% endif %}
-            </div>
-            {% if form.DELETE %}
-            <div class="field">
-              <label>حذف؟</label>
-              {{ form.DELETE }}
-            </div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="form-wrapper">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          ترجیحات پرداخت
-        </div>
-        {{ pay_formset.management_form }}
-        {% for form in pay_formset.forms %}
-          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
-            {{ form.id }}
-            <div class="field">
-              <label>روش پرداخت</label>
-              {{ form.payment_method }}
-              {% if form.payment_method.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.payment_method.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>شرایط (روز)</label>
-              {{ form.payment_term_days }}
-              {% if form.payment_term_days.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.payment_term_days.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>سقف اعتبار</label>
-              {{ form.credit_limit }}
-              {% if form.credit_limit.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.credit_limit.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field" style="grid-column:1/-1">
-              <label>توضیحات</label>
-              {{ form.notes }}
-              {% if form.notes.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.notes.errors.0 }}</div>{% endif %}
-            </div>
-            {% if form.DELETE %}
-            <div class="field">
-              <label>حذف؟</label>
-              {{ form.DELETE }}
-            </div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="form-wrapper">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21M3 12H21M3 17H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          شبکه‌های اجتماعی
-        </div>
-        {{ sn_formset.management_form }}
-        {% for form in sn_formset.forms %}
-          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
-            {{ form.id }}
-            <div class="field">
-              <label>پلتفرم</label>
-              {{ form.platform }}
-              {% if form.platform.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.platform.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>شناسه</label>
-              {{ form.handle }}
-              {% if form.handle.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.handle.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>آدرس</label>
-              {{ form.url }}
-              {% if form.url.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.url.errors.0 }}</div>{% endif %}
-            </div>
-            {% if form.DELETE %}
-            <div class="field">
-              <label>حذف؟</label>
-              {{ form.DELETE }}
-            </div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="form-wrapper">
-        <div class="section-title">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          پیوست‌ها
-        </div>
-        {{ att_formset.management_form }}
-        {% for form in att_formset.forms %}
-          <div class="form-groups" style="border-top:{% if not forloop.first %}1px dashed #cfd8dc{% else %}none{% endif %};padding-top:{% if not forloop.first %}16px{% else %}0{% endif %};margin-top:{% if not forloop.first %}16px{% else %}0{% endif %}">
-            {{ form.id }}
-            <div class="field">
-              <label>نوع مدرک</label>
-              {{ form.doc_type }}
-              {% if form.doc_type.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.doc_type.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field">
-              <label>فایل</label>
-              {{ form.file }}
-              {% if form.file.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.file.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="field" style="grid-column:1/-1">
-              <label>توضیح</label>
-              {{ form.description }}
-              {% if form.description.errors %}<div style="color:#c62828;font-size:.8rem;margin-top:4px">{{ form.description.errors.0 }}</div>{% endif %}
-            </div>
-            {% if form.DELETE %}
-            <div class="field">
-              <label>حذف؟</label>
-              {{ form.DELETE }}
-            </div>
-            {% endif %}
-          </div>
-        {% endfor %}
-      </div>
-
-      <div class="submit-row">
-        <button type="submit" class="btn btn-primary btn-sm">ذخیره تغییرات</button>
-        <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary btn-sm">انصراف</a>
-        <a href="{% url 'supply:supplier_list' %}" class="btn btn-outline-secondary btn-sm">بازگشت به لیست</a>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
+        <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary">انصراف</a>
+        <a href="{% url 'supply:supplier_list' %}" class="btn btn-outline-secondary">بازگشت به لیست</a>
       </div>
     </form>
   </div>
@@ -350,142 +211,232 @@
 
 {% block extra_js %}
 <script src="{% static 'vendor/jquery-3.7.1/jquery.min.js' %}" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+{% include "components/jalali_datepicker.html" %}
 <script>
-  (function() {
-    function initJalali() {
-      var inputs = document.querySelectorAll('.jalali-date');
-      inputs.forEach(function(inp){
-        // جلوگیری از راه‌اندازی مجدد
-        if (inp.hasAttribute('data-jdp-initialized')) {
-          return;
-        }
-        
-        const originalName = inp.name;
-        if (!originalName) return;
-        
-        // ایجاد فیلد مخفی
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = originalName;
-        hiddenInput.id = 'hidden_' + (inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9));
-        
-        // حذف name از فیلد نمایشی
-        inp.removeAttribute('name');
-        const originalId = inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9);
-        inp.id = 'visual_' + originalId;
-        
-        // اضافه کردن کلاس
-        inp.classList.add('form-control');
-        
-        // قرار دادن hidden input
-        inp.parentNode.appendChild(hiddenInput);
-        
-        // راه‌اندازی datepicker
-        JalaliDatepicker.init('#' + inp.id, { time: false });
-        
-        // تنظیم مقدار اولیه
-        setTimeout(function() {
-          const gdate = inp.getAttribute('data-gdate');
-          if (gdate) {
-            const parts = gdate.trim().replace('T', ' ').split(/[- :]/);
-            if (parts.length >= 3) {
-              const gy = parseInt(parts[0]);
-              const gm = parseInt(parts[1]);
-              const gd = parseInt(parts[2]);
-              
-              if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
-                const g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-                const gy2 = (gm > 2) ? (gy + 1) : gy;
-                let days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
-                let jy = -1595 + (33 * Math.floor(days / 12053));
-                days %= 12053;
-                jy += 4 * Math.floor(days / 1461);
-                days %= 1461;
-                if (days > 365) {
-                  jy += Math.floor((days - 1) / 365);
-                  days = (days - 1) % 365;
-                }
-                let jm, jd;
-                if (days < 186) {
-                  jm = 1 + Math.floor(days / 31);
-                  jd = 1 + (days % 31);
-                } else {
-                  jm = 7 + Math.floor((days - 186) / 30);
-                  jd = 1 + ((days - 186) % 30);
-                }
-                
-                const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
-                hiddenInput.value = jalaliDateStr;
-              }
-            }
-          } else if (inp.value) {
-            const valueParts = inp.value.trim().split(/[-/]/);
-            if (valueParts.length === 3) {
-              const year = parseInt(valueParts[0]);
-              if (year > 1900 && year < 2100) {
-                hiddenInput.value = inp.value;
-              }
+(function() {
+  function initJalali() {
+    var inputs = document.querySelectorAll('.jalali-date');
+    inputs.forEach(function(inp){
+      if (inp.hasAttribute('data-jdp-initialized')) return;
+      var originalName = inp.name;
+      if (!originalName) return;
+      var hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.name = originalName;
+      hiddenInput.id = 'hidden_' + (inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9));
+      inp.removeAttribute('name');
+      var originalId = inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9);
+      inp.id = 'visual_' + originalId;
+      inp.classList.add('form-control');
+      inp.parentNode.appendChild(hiddenInput);
+      JalaliDatepicker.init('#' + inp.id, { time: false });
+      setTimeout(function() {
+        var gdate = inp.getAttribute('data-gdate');
+        if (gdate) {
+          var parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+          if (parts.length >= 3) {
+            var gy = parseInt(parts[0]), gm = parseInt(parts[1]), gd = parseInt(parts[2]);
+            if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+              var g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+              var gy2 = (gm > 2) ? (gy + 1) : gy;
+              var days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+              var jy = -1595 + (33 * Math.floor(days / 12053));
+              days %= 12053;
+              jy += 4 * Math.floor(days / 1461);
+              days %= 1461;
+              if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+              var jm = days < 186 ? (1 + Math.floor(days / 31)) : (7 + Math.floor((days - 186) / 30));
+              var jd = days < 186 ? (1 + (days % 31)) : (1 + ((days - 186) % 30));
+              hiddenInput.value = jy + '-' + String(jm).padStart(2, '0') + '-' + String(jd).padStart(2, '0');
             }
           }
-        }, 300);
-        
-        // گوش دادن به تغییرات
-        inp.addEventListener('jdp:change', function (e) {
-          const jy = e.detail.year;
-          const jm = String(e.detail.month).padStart(2, '0');
-          const jd = String(e.detail.day).padStart(2, '0');
-          const jalaliDateStr = `${jy}-${jm}-${jd}`;
-          hiddenInput.value = jalaliDateStr;
-        });
-        
-        inp.setAttribute('data-jdp-initialized', 'true');
+        } else if (inp.value) {
+          var valueParts = inp.value.trim().split(/[-/]/);
+          if (valueParts.length === 3 && parseInt(valueParts[0]) > 1900 && parseInt(valueParts[0]) < 2100) {
+            hiddenInput.value = inp.value;
+          }
+        }
+      }, 300);
+      inp.addEventListener('jdp:change', function (e) {
+        hiddenInput.value = e.detail.year + '-' + String(e.detail.month).padStart(2, '0') + '-' + String(e.detail.day).padStart(2, '0');
       });
+      inp.setAttribute('data-jdp-initialized', 'true');
+    });
+  }
+
+  function formatPhoneNumber(value) {
+    value = value.replace(/\D/g, '');
+    if (value.startsWith('09') && value.length <= 11) {
+      if (value.length >= 7) return value.substring(0,4) + '-' + value.substring(4,7) + '-' + value.substring(7,11);
+      if (value.length >= 4) return value.substring(0,4) + '-' + value.substring(4);
+      return value;
     }
-    
-    // Auto-fill representative phone from main phone field
-    function autoFillRepPhone() {
-      var mainPhoneField = document.querySelector('input[name="phone_number"]');
-      var firstRepPhoneField = document.querySelector('input[id$="-0-phone_number"]');
-      var firstRepMobileField = document.querySelector('input[id$="-0-mobile_number"]');
-      
-      if (mainPhoneField && (firstRepPhoneField || firstRepMobileField)) {
-        // Function to copy phone to representative
-        function copyPhoneToRep() {
-          var phoneValue = mainPhoneField.value;
-          if (phoneValue) {
-            // Split by comma and get first phone
-            var phones = phoneValue.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-            if (phones.length > 0) {
-              var firstPhone = phones[0];
-              // Check if it's mobile (starts with 09) or landline
-              var digitsOnly = firstPhone.replace(/\D/g, '');
-              if (digitsOnly.startsWith('09')) {
-                // It's mobile - put in mobile_number field
-                if (firstRepMobileField && !firstRepMobileField.value) {
-                  firstRepMobileField.value = firstPhone;
-                }
-              } else {
-                // It's landline - put in phone_number field
-                if (firstRepPhoneField && !firstRepPhoneField.value) {
-                  firstRepPhoneField.value = firstPhone;
-                }
-              }
-            }
-          }
+    if (value.startsWith('0') && value.length <= 11) {
+      var cityLen = 3;
+      if (value.startsWith('021') || value.startsWith('031') || value.startsWith('051') || value.startsWith('061') || value.startsWith('071') || value.startsWith('081')) cityLen = 3;
+      else if (value.length >= 2) cityLen = 4;
+      var prefix = value.substring(0, cityLen);
+      var rest = value.substring(cityLen);
+      if (rest.length > 4) return prefix + '-' + rest.substring(0,4) + '-' + rest.substring(4);
+      if (rest.length > 0) return prefix + '-' + rest;
+      return prefix;
+    }
+    return value;
+  }
+  function validatePhoneNumber(value) {
+    value = value.replace(/\D/g, '');
+    return /^09\d{9}$/.test(value) || /^0\d{2,3}\d{7,8}$/.test(value);
+  }
+
+  window.addFormsetRow = function(prefix) {
+    var container = document.getElementById(prefix + '-formset-container');
+    var totalFormsInput = document.querySelector('[name="' + prefix + '-TOTAL_FORMS"]');
+    if (!container || !totalFormsInput) return;
+    var currentTotal = parseInt(totalFormsInput.value);
+    var allForms = container.querySelectorAll('.formset-form');
+    var formToClone = null;
+    for (var i = allForms.length - 1; i >= 0; i--) {
+      var f = allForms[i];
+      if (f.style.display !== 'none' && window.getComputedStyle(f).display !== 'none') { formToClone = f; break; }
+    }
+    if (!formToClone && allForms.length > 0) formToClone = allForms[allForms.length - 1];
+    if (!formToClone) return;
+    var cloneIndex = parseInt(formToClone.getAttribute('data-index')) || (currentTotal - 1);
+    var newForm = formToClone.cloneNode(true);
+    newForm.setAttribute('data-index', currentTotal);
+    newForm.style.display = '';
+    newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
+      if (input.name) input.name = input.name.replace(new RegExp(prefix + '-' + cloneIndex + '-'), prefix + '-' + currentTotal + '-');
+      if (input.id) input.id = input.id.replace(new RegExp(prefix + '-' + cloneIndex + '-'), prefix + '-' + currentTotal + '-');
+      if (input.type === 'checkbox' || input.type === 'radio') input.checked = false;
+      else if (input.type !== 'hidden' || !input.name.endsWith('-id')) input.value = '';
+      if (input.name && input.name.endsWith('-DELETE')) input.checked = false;
+    });
+    newForm.querySelectorAll('label').forEach(function(label) {
+      if (label.htmlFor) label.htmlFor = label.htmlFor.replace(new RegExp(prefix + '-' + cloneIndex + '-'), prefix + '-' + currentTotal + '-');
+    });
+    var divider = document.createElement('div');
+    divider.style.cssText = 'border-top:1px dashed #dee2e6;margin:12px 0;';
+    container.appendChild(divider);
+    container.appendChild(newForm);
+    totalFormsInput.value = currentTotal + 1;
+    initJalali();
+  };
+
+  window.removeFormsetRow = function(prefix, btnEl) {
+    var container = document.getElementById(prefix + '-formset-container');
+    var totalFormsInput = document.querySelector('[name="' + prefix + '-TOTAL_FORMS"]');
+    if (!container || !totalFormsInput) return;
+    var formEl = btnEl.closest('.formset-form');
+    if (!formEl) return;
+    var deleteCheckbox = formEl.querySelector('input[type="checkbox"][name$="-DELETE"]');
+    if (deleteCheckbox) {
+      deleteCheckbox.checked = true;
+      formEl.style.display = 'none';
+      return;
+    }
+    var prevSibling = formEl.previousElementSibling;
+    if (prevSibling && prevSibling.getAttribute('style') && prevSibling.getAttribute('style').includes('border-top')) prevSibling.remove();
+    formEl.remove();
+    var forms = container.querySelectorAll('.formset-form');
+    forms.forEach(function(fEl, newIdx) {
+      fEl.setAttribute('data-index', newIdx);
+      fEl.querySelectorAll('input, select, textarea, label').forEach(function(node) {
+        if (node.name) node.name = node.name.replace(new RegExp(prefix + '-\\d+-'), prefix + '-' + newIdx + '-');
+        if (node.id) node.id = node.id.replace(new RegExp(prefix + '-\\d+-'), prefix + '-' + newIdx + '-');
+        if (node.htmlFor) node.htmlFor = node.htmlFor.replace(new RegExp(prefix + '-\\d+-'), prefix + '-' + newIdx + '-');
+      });
+    });
+    totalFormsInput.value = forms.length;
+  };
+
+  window.addPhoneItem = function() {
+    var list = document.getElementById('person-phone-list');
+    if (!list) return;
+    var item = document.createElement('div');
+    item.className = 'phone-item';
+    item.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:8px;';
+    item.innerHTML = '<input type="text" class="form-control phone-input" placeholder="021-12345678 یا 09123456789" dir="ltr" /><button type="button" class="btn btn-sm btn-outline-danger" onclick="removePhoneItem(this)">حذف</button>';
+    list.appendChild(item);
+  };
+  window.removePhoneItem = function(btn) {
+    var list = document.getElementById('person-phone-list');
+    if (!list) return;
+    var items = list.querySelectorAll('.phone-item');
+    if (items.length <= 1) return;
+    var item = btn.closest('.phone-item');
+    if (item) item.remove();
+  };
+
+  document.addEventListener('submit', function(e) {
+    var phoneHidden = document.getElementById('person-phone-hidden');
+    var list = document.getElementById('person-phone-list');
+    if (!phoneHidden || !list) return;
+    var values = [];
+    list.querySelectorAll('.phone-item input').forEach(function(inp){
+      var val = (inp.value || '').trim();
+      if (val) values.push(val);
+    });
+    if (values.length === 0) {
+      e.preventDefault();
+      var err = document.querySelector('.phone-error-global');
+      if (err) { err.textContent = 'لطفاً حداقل یک شماره معتبر وارد کنید.'; err.style.display = 'block'; }
+      return false;
+    }
+    phoneHidden.value = values.join(',');
+  }, true);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(initJalali, 200);
+    var phoneFields = document.querySelectorAll('input[name$="phone_number"], input[name$="mobile_number"], .phone-input');
+    phoneFields.forEach(function(field) {
+      field.addEventListener('input', function(e) {
+        var cursorPos = e.target.selectionStart;
+        var oldVal = e.target.value;
+        var newVal = formatPhoneNumber(oldVal);
+        if (newVal !== oldVal) {
+          e.target.value = newVal;
+          var diff = newVal.length - oldVal.length;
+          e.target.setSelectionRange(cursorPos + diff, cursorPos + diff);
         }
-        
-        // Copy on blur and change
-        mainPhoneField.addEventListener('blur', copyPhoneToRep);
-        mainPhoneField.addEventListener('change', copyPhoneToRep);
-        // Also run once on page load
-        copyPhoneToRep();
+      });
+    });
+    var list = document.getElementById('person-phone-list');
+    var firstItemInput = list ? list.querySelector('.phone-item input') : null;
+    var hiddenFieldInForm = document.querySelector('input[name="phone_number"]');
+    if (list && firstItemInput && hiddenFieldInForm && hiddenFieldInForm.value) {
+      var parts = hiddenFieldInForm.value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+      if (parts.length) {
+        firstItemInput.value = parts[0];
+        for (var i = 1; i < parts.length; i++) {
+          addPhoneItem();
+          var items = list.querySelectorAll('.phone-item input');
+          if (items[items.length - 1]) items[items.length - 1].value = parts[i];
+        }
       }
     }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-      initJalali();
-      autoFillRepPhone();
+    {% if form_has_errors %}
+    {% if section_errors.person %}(function(){ var el = document.getElementById('section-person'); if (el) el.classList.add('has-error'); })();{% endif %}
+    {% if section_errors.financial %}(function(){ var el = document.getElementById('section-financial'); if (el) el.classList.add('has-error'); })();{% endif %}
+    {% if section_errors.representatives %}(function(){ var el = document.getElementById('section-representatives'); if (el) el.classList.add('has-error'); })();{% endif %}
+    {% if section_errors.bank_accounts %}(function(){ var el = document.getElementById('section-bank-accounts'); if (el) el.classList.add('has-error'); })();{% endif %}
+    {% if section_errors.payment_preferences %}(function(){ var el = document.getElementById('section-payment-preferences'); if (el) el.classList.add('has-error'); })();{% endif %}
+    {% if section_errors.social_networks %}(function(){ var el = document.getElementById('section-social-networks'); if (el) el.classList.add('has-error'); })();{% endif %}
+    {% if section_errors.attachments %}(function(){ var el = document.getElementById('section-attachments'); if (el) el.classList.add('has-error'); })();{% endif %}
+    document.querySelectorAll('a[href^="#section-"]').forEach(function(link) {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        var targetId = this.getAttribute('href').substring(1);
+        var targetElement = document.getElementById(targetId);
+        if (targetElement) {
+          targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          targetElement.style.animation = 'none';
+          setTimeout(function() { targetElement.style.animation = 'highlightError 0.5s ease-in-out'; }, 10);
+        }
+      });
     });
-  })();
+    {% endif %}
+  });
+})();
 </script>
 {% endblock %}

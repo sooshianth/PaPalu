@@ -81,6 +81,7 @@
   <div id="rep-formset-container">
   {% for form in rep_formset.forms %}
     <div class="formset-form" data-formset="rep" data-index="{{ forloop.counter0 }}">
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
     {% if not forloop.first %}<div style="border-top:1px dashed #dee2e6;margin:12px 0;"></div>{% endif %}
     <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
       <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFormsetRow('rep', this)">حذف این نماینده</button>
@@ -123,6 +124,7 @@
   <div id="ba-formset-container">
   {% for form in ba_formset.forms %}
     <div class="formset-form" data-formset="ba" data-index="{{ forloop.counter0 }}">
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
     {% if not forloop.first %}<div style="border-top:1px dashed #dee2e6;margin:12px 0;"></div>{% endif %}
     <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
       <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFormsetRow('ba', this)">حذف این حساب</button>
@@ -157,6 +159,7 @@
   <div id="pay-formset-container">
   {% for form in pay_formset.forms %}
     <div class="formset-form" data-formset="pay" data-index="{{ forloop.counter0 }}">
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
     {% if not forloop.first %}<div style="border-top:1px dashed #dee2e6;margin:12px 0;"></div>{% endif %}
     <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
       <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFormsetRow('pay', this)">حذف این ترجیح</button>
@@ -195,6 +198,7 @@
   <div id="sn-formset-container">
   {% for form in sn_formset.forms %}
     <div class="formset-form" data-formset="sn" data-index="{{ forloop.counter0 }}">
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
     {% if not forloop.first %}<div style="border-top:1px dashed #dee2e6;margin:12px 0;"></div>{% endif %}
     <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
       <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFormsetRow('sn', this)">حذف این شبکه</button>
@@ -228,7 +232,7 @@
   <div class="detail-row">
     <span class="detail-label">{% if person_form.phone_number.field.required %}<span class="required-marker">*</span>{% endif %}{{ person_form.phone_number.label }}:</span>
     <span class="detail-value">
-      <input type="hidden" name="phone_number" id="person-phone-hidden">
+      <input type="hidden" name="phone_number" id="person-phone-hidden" value="{{ person_form.phone_number.value|default:'' }}">
       <div id="person-phone-list" data-min="1">
         <div class="phone-item" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
           <input type="text" class="form-control phone-input" placeholder="021-12345678 یا 09123456789" dir="ltr" />
@@ -250,6 +254,7 @@
   <div id="att-formset-container">
   {% for form in att_formset.forms %}
     <div class="formset-form" data-formset="att" data-index="{{ forloop.counter0 }}">
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
     {% if not forloop.first %}<div style="border-top:1px dashed #dee2e6;margin:12px 0;"></div>{% endif %}
     <div style="display:flex; justify-content:flex-end; margin-bottom:8px;">
       <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeFormsetRow('att', this)">حذف این پیوست</button>
