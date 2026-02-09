@@ -72,32 +72,42 @@ class PendingSupplySettlementOrderTable(tables.Table):
     def render_order_weight(self, value, record):
         """رندر وزن سفارش (اعشار ثابت)"""
         if self.accessible_fields.get('order_weight', False):
-            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            return format_html('{:,.2f}', d)
+            try:
+                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            except Exception:
+                return '-'
+            formatted = f'{d:,.2f}'
+            return format_html('{}', formatted)
         return '-'
     
     def render_delivered_weight(self, value, record):
         """رندر وزن تحویلی (اعشار ثابت)"""
         if self.accessible_fields.get('delivered_weight', False):
-            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            return format_html('{:,.2f}', d)
+            try:
+                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            except Exception:
+                return '-'
+            formatted = f'{d:,.2f}'
+            return format_html('{}', formatted)
         return '-'
     
     def render_difference_amount(self, value, record):
         """رندر مبلغ اختلاف (اعشار ثابت)"""
         if self.accessible_fields.get('difference_amount', False):
-            amount = Decimal(str(value or 0)).quantize(Decimal('1'))
+            try:
+                amount = Decimal(str(value or 0)).quantize(Decimal('1'))
+            except Exception:
+                return '-'
+            formatted = f'{amount:,.0f}'
             if amount > 0:
-                # سرک (مثبت) - سبز
                 return format_html(
-                    '<span style="color: #28a745; font-weight: 600;">{:,.0f} ریال</span>',
-                    amount
+                    '<span style="color: #28a745; font-weight: 600;">{} ریال</span>',
+                    formatted
                 )
             elif amount < 0:
-                # کسری (منفی) - قرمز
                 return format_html(
-                    '<span style="color: #dc3545; font-weight: 600;">{:,.0f} ریال</span>',
-                    amount
+                    '<span style="color: #dc3545; font-weight: 600;">{} ریال</span>',
+                    formatted
                 )
             else:
                 return format_html('<span>۰ ریال</span>')
@@ -187,32 +197,42 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
     def render_order_weight(self, value, record):
         """رندر وزن سفارش (اعشار ثابت)"""
         if self.accessible_fields.get('order_weight', False):
-            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            return format_html('{:,.2f}', d)
+            try:
+                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            except Exception:
+                return '-'
+            formatted = f'{d:,.2f}'
+            return format_html('{}', formatted)
         return '-'
     
     def render_delivered_weight(self, value, record):
         """رندر وزن تحویلی (اعشار ثابت)"""
         if self.accessible_fields.get('delivered_weight', False):
-            d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            return format_html('{:,.2f}', d)
+            try:
+                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
+            except Exception:
+                return '-'
+            formatted = f'{d:,.2f}'
+            return format_html('{}', formatted)
         return '-'
     
     def render_difference_amount(self, value, record):
         """رندر مبلغ اختلاف (اعشار ثابت)"""
         if self.accessible_fields.get('difference_amount', False):
-            amount = Decimal(str(value or 0)).quantize(Decimal('1'))
+            try:
+                amount = Decimal(str(value or 0)).quantize(Decimal('1'))
+            except Exception:
+                return '-'
+            formatted = f'{amount:,.0f}'
             if amount > 0:
-                # سرک (مثبت) - سبز
                 return format_html(
-                    '<span style="color: #28a745; font-weight: 600;">{:,.0f} ریال</span>',
-                    amount
+                    '<span style="color: #28a745; font-weight: 600;">{} ریال</span>',
+                    formatted
                 )
             elif amount < 0:
-                # کسری (منفی) - قرمز
                 return format_html(
-                    '<span style="color: #dc3545; font-weight: 600;">{:,.0f} ریال</span>',
-                    amount
+                    '<span style="color: #dc3545; font-weight: 600;">{} ریال</span>',
+                    formatted
                 )
             else:
                 return format_html('<span>۰ ریال</span>')
@@ -221,10 +241,14 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
     def render_settled_amount(self, value, record):
         """رندر مبلغ تسویه شده (اعشار ثابت)"""
         if self.accessible_fields.get('settled_amount', False):
-            d = Decimal(str(value or 0)).quantize(Decimal('1'))
+            try:
+                d = Decimal(str(value or 0)).quantize(Decimal('1'))
+            except Exception:
+                return '-'
+            formatted = f'{d:,.0f}'
             return format_html(
-                '<span style="color: #28a745; font-weight: 600;">{:,.0f} ریال</span>',
-                d
+                '<span style="color: #28a745; font-weight: 600;">{} ریال</span>',
+                formatted
             )
         return '-'
     
