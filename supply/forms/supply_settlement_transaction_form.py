@@ -36,7 +36,6 @@ class SupplySettlementTransactionForm(forms.ModelForm):
             'document_amount',
             'due_date',
             'source_account',
-            'document_attachment',
             'accounting_document_number',
             'tracking_number',
             'source_bank',
@@ -65,9 +64,6 @@ class SupplySettlementTransactionForm(forms.ModelForm):
                 'placeholder': 'تاریخ سررسید'
             }),
             'source_account': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'document_attachment': forms.ClearableFileInput(attrs={
                 'class': 'form-control'
             }),
             'accounting_document_number': forms.TextInput(attrs={
@@ -174,7 +170,6 @@ class SupplySettlementTransactionForm(forms.ModelForm):
             'document_amount',
             'due_date',
             'source_account',
-            'document_attachment',
             'accounting_document_number',
             'tracking_number',
             'source_bank',
@@ -204,7 +199,6 @@ class SupplySettlementTransactionForm(forms.ModelForm):
         else:
             self.fields['source_account'].label = 'حساب مبدا'
             self.fields['approval_account_number'].label = 'شماره حساب'
-        self.fields['document_attachment'].label = 'پیوست سند'
         self.fields['accounting_document_number'].label = 'شماره سند حسابداری'
         self.fields['tracking_number'].label = 'شماره پیگیری واریز'
         self.fields['source_bank'].label = 'بانک مقصد'

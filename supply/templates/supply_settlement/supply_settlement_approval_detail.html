@@ -360,10 +360,10 @@
             <div class="info-item">
                 <strong>مبلغ اختلاف:</strong>
                 <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
-                    {{ difference_amount|rials_to_tomans }} تومان
+                    {{ difference_amount|persian_number:0 }} ریال
                 </span>
                 <div class="amount-in-words" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem;">
-                    {{ difference_amount|rials_to_tomans|number_to_words_persian }} تومان
+                    {{ difference_amount|number_to_words_persian }} ریال
                 </div>
             </div>
         </div>
@@ -432,15 +432,15 @@
                         <td>
                             <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
                         </td>
-                        <td><strong>{{ transaction.document_amount|rials_to_tomans }}</strong> تومان</td>
+                        <td><strong>{{ transaction.document_amount|persian_number:0 }}</strong> ریال</td>
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
-                            {% if transaction.document_attachment %}
-                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
-                            {% else %}
+                            {% for label, file in transaction.get_all_attachments %}
+                            <a href="{{ file.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">{{ label }}</a>{% if not forloop.last %} | {% endif %}
+                            {% empty %}
                             -
-                            {% endif %}
+                            {% endfor %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -448,9 +448,9 @@
             </table>
         </div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--gray-200);">
-            <strong>جمع مبالغ: {{ settled_weight_discrepancy|rials_to_tomans }} تومان</strong>
+            <strong>جمع مبالغ: {{ settled_weight_discrepancy|persian_number:0 }} ریال</strong>
             <div class="amount-in-words" style="margin-top: 0.5rem;">
-                {{ settled_weight_discrepancy|rials_to_tomans|number_to_words_persian }} تومان
+                {{ settled_weight_discrepancy|number_to_words_persian }} ریال
             </div>
         </div>
     </div>
