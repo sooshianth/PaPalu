@@ -15,6 +15,12 @@ class Role(models.Model):
         blank=True,
         verbose_name='مجوزهای وظیفه'
     )
+    field_permissions = models.ManyToManyField(
+        FieldPermission,
+        related_name='roles',
+        blank=True,
+        verbose_name='مجوزهای فیلد'
+    )
 
     class Meta:
         verbose_name = 'RBAC | نقش'
