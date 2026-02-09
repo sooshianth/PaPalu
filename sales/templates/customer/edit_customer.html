@@ -440,45 +440,46 @@ document.addEventListener('DOMContentLoaded', function() {
     if (repContainer) observer.observe(repContainer, { childList: true, subtree: true });
     if (bankContainer) observer.observe(bankContainer, { childList: true, subtree: true });
     
-    // مدیریت حذف آدرس تحویل
+    // مدیریت حذف آدرس تحویل (بدون API: حذف از فرم و با ارسال فرم اعمال می‌شود)
     document.addEventListener('click', function(e) {
         if (e.target.closest('.delete-delivery-btn')) {
-            const btn = e.target.closest('.delete-delivery-btn');
-            const postalCode = btn.getAttribute('data-postal-code');
-            
-            if (!postalCode) {
-                alert('خطا: کد پستی یافت نشد');
-                return;
-            }
-            
-            if (!confirm('آیا مطمئن هستید که می‌خواهید این آدرس تحویل را حذف کنید؟')) {
-                return;
-            }
-            
             e.preventDefault();
-            
-            // ارسال درخواست حذف
-            fetch(`/sales/api/delivery-address/${encodeURIComponent(postalCode)}/delete/`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(data.message || 'آدرس تحویل با موفقیت حذف شد');
-                    // حذف فرم از DOM
-                    const formRow = btn.closest('.delivery-form-row');
-                    formRow.remove();
-                } else {
-                    alert('خطا: ' + (data.error || 'خطای نامشخص'));
-                }
-            })
-            .catch(error => {
-                console.error('خطا:', error);
-                alert('خطا در حذف آدرس تحویل');
-            });
+            const btn = e.target.closest('.delete-delivery-btn');
+            if (!confirm('آیا مطمئن هستید که می‌خواهید این آدرس تحویل را حذف کنید؟')) return;
+            const formRow = btn.closest('.delivery-form-row');
+            const container = document.getElementById('delivery-container');
+            const totalInput = container && container.previousElementSibling ? container.previousElementSibling.querySelector('input[name$="-TOTAL_FORMS"]') : null;
+            formRow.remove();
+            if (totalInput) {
+                const n = parseInt(totalInput.value, 10) || 0;
+                if (n > 0) totalInput.value = n - 1;
+            }
+        }
+        // حذف نماینده: علامت‌گذاری برای حذف با ارسال فرم
+        if (e.target.closest('.delete-rep-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.delete-rep-btn');
+            if (!confirm('آیا مطمئن هستید که می‌خواهید این نماینده را حذف کنید؟')) return;
+            const formRow = btn.closest('.rep-form-row');
+            const deleteInput = formRow.querySelector('input[name$="-DELETE"]');
+            if (deleteInput) { deleteInput.value = 'on'; }
+            formRow.classList.add('deleted');
+            formRow.style.opacity = '0.5';
+            formRow.style.pointerEvents = 'none';
+            btn.disabled = true;
+        }
+        // حذف حساب بانکی: علامت‌گذاری برای حذف با ارسال فرم
+        if (e.target.closest('.delete-bank-btn')) {
+            e.preventDefault();
+            const btn = e.target.closest('.delete-bank-btn');
+            if (!confirm('آیا مطمئن هستید که می‌خواهید این حساب بانکی را حذف کنید؟')) return;
+            const formRow = btn.closest('.bank-form-row');
+            const deleteInput = formRow.querySelector('input[name$="-DELETE"]');
+            if (deleteInput) { deleteInput.value = 'on'; }
+            formRow.classList.add('deleted');
+            formRow.style.opacity = '0.5';
+            formRow.style.pointerEvents = 'none';
+            btn.disabled = true;
         }
     });
     
@@ -565,16 +566,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 50);
             });
             
-            deliveryContainer.addEventListener('change', function(e) {
-                if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
-                    const formRow = e.target.closest('.delivery-form-row');
-                    if (e.target.checked) {
-                        formRow.classList.add('deleted');
-                    } else {
-                        formRow.classList.remove('deleted');
-                    }
-                }
-            });
         }
     }
     
@@ -627,21 +618,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
-                    // حذف data-converted برای اینکه دوباره setup شود
                     input.removeAttribute('data-converted');
-                    if (input.type === 'checkbox') {
-                        if (input.name.includes('-DELETE')) {
-                            input.checked = false;
-                        }
+                    if (input.name && input.name.includes('-DELETE')) {
+                        input.value = '';
                     } else if (input.type !== 'hidden') {
                         input.value = '';
                     }
                 });
-                
+                newForm.querySelectorAll('.delete-rep-btn').forEach(function(b) { b.disabled = false; });
+                newForm.classList.remove('deleted');
+                newForm.style.opacity = '';
+                newForm.style.pointerEvents = '';
                 newForm.querySelectorAll('.text-danger').forEach(function(error) {
                     error.remove();
                 });
-                
                 repContainer.appendChild(newForm);
                 repFormCount++;
                 repTotalFormsInput.value = repFormCount;
@@ -651,16 +641,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 50);
             });
             
-            repContainer.addEventListener('change', function(e) {
-                if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
-                    const formRow = e.target.closest('.rep-form-row');
-                    if (e.target.checked) {
-                        formRow.classList.add('deleted');
-                    } else {
-                        formRow.classList.remove('deleted');
-                    }
-                }
-            });
         }
     }
     
@@ -711,21 +691,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 newForm.querySelectorAll('input, select, textarea').forEach(function(input) {
-                    // حذف data-converted برای اینکه دوباره setup شود
                     input.removeAttribute('data-converted');
-                    if (input.type === 'checkbox') {
-                        if (input.name.includes('-DELETE')) {
-                            input.checked = false;
-                        }
+                    if (input.name && input.name.includes('-DELETE')) {
+                        input.value = '';
                     } else if (input.type !== 'hidden') {
                         input.value = '';
                     }
                 });
-                
+                newForm.querySelectorAll('.delete-bank-btn').forEach(function(b) { b.disabled = false; });
+                newForm.classList.remove('deleted');
+                newForm.style.opacity = '';
+                newForm.style.pointerEvents = '';
                 newForm.querySelectorAll('.text-danger').forEach(function(error) {
                     error.remove();
                 });
-                
                 bankContainer.appendChild(newForm);
                 bankFormCount++;
                 bankTotalFormsInput.value = bankFormCount;
@@ -735,16 +714,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 50);
             });
             
-            bankContainer.addEventListener('change', function(e) {
-                if (e.target.type === 'checkbox' && e.target.name.includes('-DELETE')) {
-                    const formRow = e.target.closest('.bank-form-row');
-                    if (e.target.checked) {
-                        formRow.classList.add('deleted');
-                    } else {
-                        formRow.classList.remove('deleted');
-                    }
-                }
-            });
         }
     }
     
@@ -981,14 +950,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div id="bank-container">
                                         {% for f in bank_formset.forms %}
                                             <div class="bank-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
-                                                {% if f.DELETE %}
-                                                    <div style="position: absolute; left: 10px; top: 10px;">
-                                                        <label style="display: flex; align-items: center; cursor: pointer;">
-                                                            {{ f.DELETE }}
-                                                            <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
-                                                        </label>
-                                                    </div>
-                                                {% endif %}
+                                                <div style="position: absolute; left: 10px; top: 10px;">
+                                                    {% if f.DELETE %}<input type="hidden" name="{{ f.DELETE.html_name }}" value="" id="{{ f.DELETE.id_for_label }}">{% endif %}
+                                                    <button type="button" class="btn btn-sm btn-danger delete-bank-btn" title="حذف حساب بانکی">
+                                                        <i class="fas fa-trash"></i> حذف
+                                                    </button>
+                                                </div>
                                                 <div class="row">
                                                     {% if accessible_bank_fields.account_number %}
                                                     <div class="col-md-4 mb-3">
@@ -1057,11 +1024,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     {% for f in delivery_formset.forms %}
                                         <div class="delivery-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
                                             <div style="position: absolute; left: 10px; top: 10px;">
-                                                {% if f.instance and f.instance.postal_code %}
-                                                <button type="button" class="btn btn-sm btn-danger delete-delivery-btn" data-postal-code="{{ f.instance.postal_code }}" title="حذف آدرس تحویل">
+                                                <button type="button" class="btn btn-sm btn-danger delete-delivery-btn" title="حذف آدرس تحویل">
                                                     <i class="fas fa-trash"></i> حذف
                                                 </button>
-                                                {% endif %}
                                             </div>
                                             <div class="row">
                                                 {% if accessible_delivery_fields.postal_code %}
@@ -1209,14 +1174,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div id="rep-container">
                                     {% for f in rep_formset.forms %}
                                         <div class="rep-form-row" style="border:1px dashed #dee2e6; padding:12px; border-radius:8px; margin-bottom:12px; position: relative;">
-                                            {% if f.DELETE %}
-                                                <div style="position: absolute; left: 10px; top: 10px;">
-                                                    <label style="display: flex; align-items: center; cursor: pointer;">
-                                                        {{ f.DELETE }}
-                                                        <span style="margin-right: 5px; color: #dc3545; font-size: 0.9rem;">حذف</span>
-                                                    </label>
-                                                </div>
-                                            {% endif %}
+                                            <div style="position: absolute; left: 10px; top: 10px;">
+                                                {% if f.DELETE %}<input type="hidden" name="{{ f.DELETE.html_name }}" value="" id="{{ f.DELETE.id_for_label }}">{% endif %}
+                                                <button type="button" class="btn btn-sm btn-danger delete-rep-btn" title="حذف نماینده">
+                                                    <i class="fas fa-trash"></i> حذف
+                                                </button>
+                                            </div>
                                             <div class="row">
                                                 {% if accessible_rep_fields.name %}
                                                 <div class="col-md-6 mb-3">

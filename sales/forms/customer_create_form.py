@@ -198,7 +198,7 @@ class RepresentativeForm(forms.Form):
         return landline
 
 
-def build_delivery_address_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
+def build_delivery_address_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None, prefix='delivery'):
     """سازنده فرم‌ست آدرس‌های تحویل"""
     DeliveryFormSet = formset_factory(
         form=DeliveryAddressForm,
@@ -208,17 +208,13 @@ def build_delivery_address_formset(data=None, files=None, accessible_fields: Opt
         validate_min=False
     )
     if data is None:
-        # GET request - استفاده از initial برای پیش‌پر کردن فرم‌ها
         if initial:
-            return DeliveryFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields})
-        return DeliveryFormSet(form_kwargs={'accessible_fields': accessible_fields})
-    
-    # POST request - نباید initial را پاس بدهیم، چون داده‌ها از request.POST می‌آیند
-    # initial فقط برای GET requests استفاده می‌شود
-    return DeliveryFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
+            return DeliveryFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
+        return DeliveryFormSet(form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
+    return DeliveryFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
 
 
-def build_representative_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
+def build_representative_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None, prefix='rep'):
     """سازنده فرم‌ست نمایندگان"""
     RepresentativeFormSet = formset_factory(
         form=RepresentativeForm,
@@ -227,9 +223,9 @@ def build_representative_formset(data=None, files=None, accessible_fields: Optio
     )
     if data is None:
         if initial:
-            return RepresentativeFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields})
-        return RepresentativeFormSet(form_kwargs={'accessible_fields': accessible_fields})
-    return RepresentativeFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
+            return RepresentativeFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
+        return RepresentativeFormSet(form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
+    return RepresentativeFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
 
 
 class BankAccountForm(forms.Form):
@@ -297,7 +293,7 @@ class BankAccountForm(forms.Form):
         return shaba_number
 
 
-def build_bank_account_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None):
+def build_bank_account_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None, prefix='bank'):
     """سازنده فرم‌ست حساب‌های بانکی"""
     BankAccountFormSet = formset_factory(
         form=BankAccountForm,
@@ -306,9 +302,9 @@ def build_bank_account_formset(data=None, files=None, accessible_fields: Optiona
     )
     if data is None:
         if initial:
-            return BankAccountFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields})
-        return BankAccountFormSet(form_kwargs={'accessible_fields': accessible_fields})
-    return BankAccountFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields})
+            return BankAccountFormSet(initial=initial, form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
+        return BankAccountFormSet(form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
+    return BankAccountFormSet(data, files, form_kwargs={'accessible_fields': accessible_fields}, prefix=prefix)
 
 
 class CreateCustomerForm(forms.Form):
