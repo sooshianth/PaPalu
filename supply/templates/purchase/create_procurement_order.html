@@ -39,6 +39,10 @@
         position: relative;
         z-index: 1;
     }
+    /* بخش اطلاعات اجباری: وقتی لیست سرچ تأمین‌کننده باز است بالای کارت بعدی باشد */
+    .form-section.supplier-dropdown-open {
+        z-index: 100;
+    }
     
     .form-section-header {
         display: flex;
@@ -290,6 +294,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (supplierSuggestions.length === 0) {
                 suggestionsContainer.style.display = 'none';
+                var reqSection = document.getElementById('required-info-section');
+                if (reqSection) reqSection.classList.remove('supplier-dropdown-open');
                 return;
             }
             
@@ -309,6 +315,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         supplierIdInput.value = item.id;
                     }
                     suggestionsContainer.style.display = 'none';
+                    var reqSection = document.getElementById('required-info-section');
+                    if (reqSection) reqSection.classList.remove('supplier-dropdown-open');
                     
                     // بروزرسانی قیمت‌های همه اقلام با تامین‌کننده جدید
                     updateAllMaterialPrices();
@@ -317,6 +325,8 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             suggestionsContainer.style.display = 'block';
+            var reqSection = document.getElementById('required-info-section');
+            if (reqSection) reqSection.classList.add('supplier-dropdown-open');
         }
         
         // تابع برای بروزرسانی قیمت همه اقلام بر اساس تامین‌کننده انتخابی
@@ -389,6 +399,8 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('click', function(e) {
             if (!supplierInput.contains(e.target) && !suggestionsContainer.contains(e.target)) {
                 suggestionsContainer.style.display = 'none';
+                var reqSection = document.getElementById('required-info-section');
+                if (reqSection) reqSection.classList.remove('supplier-dropdown-open');
             }
         });
     }
@@ -877,7 +889,7 @@ document.addEventListener('DOMContentLoaded', function() {
         {% csrf_token %}
 
         <!-- بخش اطلاعات اجباری -->
-        <div class="form-section">
+        <div class="form-section" id="required-info-section">
             <div class="form-section-header">
                 <h5>اطلاعات اجباری</h5>
                 <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
