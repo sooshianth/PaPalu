@@ -650,6 +650,50 @@ def rejected_transport_detail_view(request, transport_number):
             messages.warning(request, f'این حمل در وضعیت ارجاع به مدیریت نیست. وضعیت فعلی: {transport.get_status_display()}')
             return redirect('supply:rejected_transports_list')
         
+        # مدیریت تایید توسط مدیر (POST)
+        if request.method == 'POST' and request.POST.get('action') == 'approve':
+            from django.db import transaction
+            try:
+                with transaction.atomic():
+                    transport.logistic_confirmed = True
+                    if transport.payment_doc_uploaded:
+                        transport.status = Transport.STATUS_COMPLETED
+                        bug_logger.info(f"حمل {transport_number} تکمیل شد - تایید مدیر و بارگذاری سند هر دو انجام شده است")
+                    else:
+                        transport.status = Transport.STATUS_AWAITING_PAYMENT_DOC
+                    transport.save()
+                    po = transport.allocation.order if transport.allocation else None
+                    if po and po.order_type == 'purchase':
+                        all_transports = Transport.objects.filter(allocation__order=po)
+                        all_completed = not all_transports.exclude(
+                            status=Transport.STATUS_COMPLETED
+                        ).exists()
+                        remaining_weight = po.get_remaining_weight()
+                        if remaining_weight <= 0 and all_completed:
+                            if po.status != Order.STATUS_COMPLETED:
+                                try:
+                                    po.transition(Order.STATUS_COMPLETED, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند و تمام وزن تخصیص یافت.')
+                                    bug_logger.info(f"وضعیت سفارش {po.order_number} به 'تکمیل شده' تغییر یافت - تمام حمل‌ها تکمیل شدند")
+                                except Exception as order_transition_err:
+                                    bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number}: {order_transition_err}")
+                        elif all_completed and po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                            try:
+                                po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند.')
+                            except Exception:
+                                pass
+                    audit_logger.info(
+                        f"تایید مدیر - حمل {transport_number} | کاربر: {request.user.username} | زمان: {timezone.now()} | وضعیت جدید: {transport.status}"
+                    )
+                    bug_logger.info(f"تایید مدیر موفق - حمل {transport_number} - وضعیت: {transport.status}")
+                if transport.status == Transport.STATUS_COMPLETED:
+                    messages.success(request, 'تایید مدیر با موفقیت انجام شد. حمل تکمیل شد.')
+                else:
+                    messages.success(request, 'تایید مدیر با موفقیت انجام شد. وضعیت به «در انتظار بارگذاری اسناد پرداخت کرایه» تغییر یافت.')
+                return redirect('supply:rejected_transports_list')
+            except Exception as e:
+                bug_logger.error(f"خطا در تایید مدیر - حمل {transport_number}: {str(e)}", exc_info=True)
+                messages.error(request, f'خطا در ثبت تایید: {str(e)}')
+        
         # آماده‌سازی context
         try:
             po = transport.allocation.order if transport.allocation else None

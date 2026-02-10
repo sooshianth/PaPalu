@@ -384,6 +384,20 @@
             <strong>وضعیت:</strong> این حمل به مدیریت ارجاع داده شده است و در انتظار بررسی و تصمیم‌گیری مدیریت می‌باشد.
         </div>
     </div>
+    
+    <form method="post" style="margin-top: 25px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="approve">
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button type="submit" class="btn" onclick="return confirm('آیا از تایید این حمل و ارسال به مرحله بعد اطمینان دارید؟');" style="background: #28a745; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                    <path d="M9 11L12 14L22 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M21 12V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V5C3 3.89543 3.89543 3 5 3H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                تایید مدیر و ارسال به مرحله بعد
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}
 
