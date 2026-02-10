@@ -708,7 +708,7 @@ def production_declaration_view(request):
     Display production programs by status and raw material inventory
     """
     # Check permission for submitting production reports
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_SUBMIT_REPORT.value):
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_DECLARATION.value):
         audit_logger.activity("تلاش برای دسترسی به صفحه اظهار تولید بدون دسترسی")
         messages.error(request, 'شما دسترسی به صفحه اظهار تولید ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -1056,7 +1056,7 @@ def production_program_crud_view(request, program_id=None):
     
     # Check permission for creating new production program
     if is_create:
-        if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
+        if not user_has_task(request.user, TaskChoices.PRODUCTION_DECLARATION_CRUD.value):
             audit_logger.activity("تلاش برای ایجاد برنامه تولید جدید بدون دسترسی")
             messages.error(request, 'شما دسترسی به ایجاد برنامه تولید جدید ندارید.')
             return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
@@ -2032,7 +2032,7 @@ def archived_programs_view(request):
     Display archived production programs
     """
     # Check permission for submitting production reports
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_SUBMIT_REPORT.value):
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_DECLARATION_ARCHIVED.value):
         audit_logger.activity("تلاش برای دسترسی به صفحه برنامه‌های بایگانی‌شده بدون دسترسی")
         messages.error(request, 'شما دسترسی به صفحه برنامه‌های بایگانی‌شده ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')

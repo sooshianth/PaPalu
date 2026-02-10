@@ -1204,7 +1204,7 @@
                             </a>
                         </li>
                         {% endif %}
-                        {% if user|has_task:'production.approve_report' %}
+                        {% if user|has_task:'production.warehouse_production_list' %}
                         <li class="submenu-item">
                             <a href="{% url 'production:warehouse_production_list' %}" class="nav-link submenu-link" title="اظهار تولید (انبار)">
                                 <svg class="nav-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
