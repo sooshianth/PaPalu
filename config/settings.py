@@ -113,9 +113,16 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
         'OPTIONS': {
-            'timeout': 10,  # Wait up to 10 seconds before 'database is locked'
-            'init_command': 'PRAGMA busy_timeout=10000;'  # حذف WAL mode برای جلوگیری از مشکل Foreign Key
-        }
+            'timeout': 30,  # Wait up to 30 seconds before 'database is locked'
+            'init_command': (
+                'PRAGMA journal_mode=WAL;'  # Enable Write-Ahead Logging for better concurrency
+                'PRAGMA busy_timeout=30000;'  # 30 second timeout
+                'PRAGMA synchronous=NORMAL;'  # Faster writes, still safe with WAL
+                'PRAGMA cache_size=-64000;'  # 64MB cache
+                'PRAGMA temp_store=MEMORY;'  # Store temp tables in memory
+            )
+        },
+        'CONN_MAX_AGE': 0,  # Close connections immediately to prevent locks
     }
 }
 
