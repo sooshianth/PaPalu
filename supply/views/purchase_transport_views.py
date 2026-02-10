@@ -1163,7 +1163,8 @@ def create_driver_api(request):
 
 @login_required
 def get_driver_bank_accounts_api(request, driver_id):
-    """API endpoint برای دریافت حساب‌های بانکی راننده"""
+    """API endpoint برای دریافت حساب‌های بانکی راننده.
+    حساب‌ها مستقیماً از خود راننده (Person) خوانده می‌شوند، نه از حمل‌های قبلی."""
     from django.http import JsonResponse
     from core.PersonFolder.FinancialBankingModel import FinancialBanking
     from core.PersonFolder.BankAccountModel import BankAccount
@@ -1172,12 +1173,12 @@ def get_driver_bank_accounts_api(request, driver_id):
     try:
         driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
         
-        # دریافت FinancialBanking برای این راننده
+        # خواندن حساب‌ها از خود راننده (Person) نه از حمل‌های گذشته
         financial_banking = FinancialBanking.objects.filter(person=driver).first()
         
         accounts_data = []
         if financial_banking:
-            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).all()
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).distinct()
             for account in bank_accounts:
                 accounts_data.append({
                     'id': account.pk,
@@ -1254,7 +1255,9 @@ def create_driver_bank_account_api(request):
 
 @login_required
 def get_supplier_bank_accounts_api(request, order_id):
-    """API endpoint برای دریافت حساب‌های بانکی تامین‌کننده از طریق order_id"""
+    """API endpoint برای دریافت حساب‌های بانکی تامین‌کننده.
+    حساب‌ها مستقیماً از خود تامین‌کننده (Person) خوانده می‌شوند، نه از حمل یا خریدهای قبلی.
+    order_id فقط برای شناسایی تامین‌کننده سفارش استفاده می‌شود."""
     from django.http import JsonResponse
     from core.PersonFolder.FinancialBankingModel import FinancialBanking
     from core.PersonFolder.BankAccountModel import BankAccount
@@ -1271,12 +1274,12 @@ def get_supplier_bank_accounts_api(request, order_id):
                 'accounts': [],
             })
         
-        # دریافت FinancialBanking برای این تامین‌کننده
+        # خواندن حساب‌ها از خود تامین‌کننده (Person) نه از حمل/خریدهای گذشته
         financial_banking = FinancialBanking.objects.filter(person=supplier).first()
         
         accounts_data = []
         if financial_banking:
-            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).all()
+            bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking).distinct()
             for account in bank_accounts:
                 accounts_data.append({
                     'id': account.pk,

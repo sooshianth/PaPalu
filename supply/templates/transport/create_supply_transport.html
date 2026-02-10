@@ -2455,6 +2455,8 @@
       .then(response => response.json())
       .then(data => {
         if (data.success && data.accounts) {
+          // پاک کردن قبل از append برای جلوگیری از تکراری شدن در صورت فراخوانی همزمان
+          accountSelect.innerHTML = '<option value="">-- انتخاب حساب بانکی --</option>';
           data.accounts.forEach(function (account) {
             const option = document.createElement('option');
             option.value = account.id;
@@ -2653,6 +2655,8 @@
       .then(response => response.json())
       .then(data => {
         if (data.success && data.accounts) {
+          // پاک کردن قبل از append برای جلوگیری از تکراری شدن در صورت فراخوانی همزمان
+          accountSelect.innerHTML = '<option value="">-- انتخاب حساب بانکی --</option>';
           data.accounts.forEach(function (account) {
             const option = document.createElement('option');
             option.value = account.id;
@@ -2686,9 +2690,6 @@
 
     // بارگذاری حساب‌های بانکی تامین‌کننده وقتی سفارش تغییر می‌کند
     const purchaseOrderSelect = document.getElementById('id_purchase_order');
-    const purchaseOrderHidden = document.querySelector('input[name="purchase_order"][type="hidden"]');
-
-    // اگر select وجود داشت، event listener اضافه کن
     if (purchaseOrderSelect) {
       purchaseOrderSelect.addEventListener('change', function () {
         const freightPaymentType = document.getElementById('id_freight_payment_type');
@@ -2697,14 +2698,7 @@
         }
       });
     }
-
-    // اگر hidden input وجود داشت (initial_order)، حساب‌های بانکی را لود کن
-    if (purchaseOrderHidden && purchaseOrderHidden.value) {
-      const freightPaymentType = document.getElementById('id_freight_payment_type');
-      if (freightPaymentType && freightPaymentType.value === 'pay_to_supplier') {
-        loadSupplierBankAccounts();
-      }
-    }
+    // توجه: بارگذاری اولیه حساب‌های تامین‌کننده توسط updateFreightFieldsVisibility انجام می‌شود
   });
 
   // مدیریت submit فرم - فقط فرم‌های انتخاب شده را ارسال کن
