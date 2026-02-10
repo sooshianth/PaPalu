@@ -449,8 +449,8 @@ def car_entrance_list_view(request):
             bug_logger.warning(f"هیچ حمل ورودی پیدا نشد! نمایش همه حمل‌های در انتظار ورود برای دیباگ")
             sample_transports = list(all_awaiting.values_list('transport_number', 'direction', 'transport_type', 'status')[:5])
             bug_logger.warning(f"نمونه حمل‌ها (transport_number, direction, transport_type, status): {sample_transports}")
-            # نمایش همه حمل‌های در انتظار ورود (حتی اگر direction/transport_type تنظیم نشده باشند)
-            transports = all_awaiting
+            # نمایش همه حمل‌های در انتظار ورود (حتی اگر direction/transport_type تنظیم نشده باشند)، بدون ارجاع‌شده‌ها
+            transports = all_awaiting.filter(carentrance_referred_to_manager=False)
         
         transports = transports.select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
         final_count = transports.count()
@@ -579,6 +579,7 @@ def register_driver_for_transport_view(request, transport_number):
                     'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
                     'show_refer_button': not getattr(pt, 'carentrance_referred_to_manager', False) and not request.user.is_superuser,
                     'refer_modal_open': True,
+                    'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
                 }
                 # لیست مواد و سفارش را پر کن
                 transport_raw_materials_list = []
@@ -616,6 +617,7 @@ def register_driver_for_transport_view(request, transport_number):
                     'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
                     'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
                     'show_refer_button': True, 'refer_modal_open': True,
+                    'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
                 }
                 try:
                     transport_raw_materials_list = []
@@ -699,6 +701,7 @@ def register_driver_for_transport_view(request, transport_number):
                     'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
                     'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
                     'show_refer_button': True, 'refer_modal_open': True,
+                    'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
                 }
                 try:
                     context_refer['transport_raw_materials_list'] = [
@@ -981,6 +984,7 @@ def register_driver_for_transport_view(request, transport_number):
         'is_carentrance_referred': is_carentrance_referred,
         'show_refer_button': show_refer_button,
         'refer_modal_open': False,
+        'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
     }
     return render(request, 'car_entrance_register.html', context)
 

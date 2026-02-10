@@ -400,6 +400,13 @@
             در صورت عدم وجود راننده در سیستم، اطلاعات جدید ثبت خواهد شد.
         </p>
     </div>
+
+    {% if is_carentrance_referred and carentrance_referral_reason %}
+    <div class="alert alert-warning" role="alert" style="border-right: 4px solid #856404; background: #fff3cd; color: #856404; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;">
+        <strong>دلیل ارجاع به مدیر:</strong><br>
+        <span style="white-space: pre-wrap;">{{ carentrance_referral_reason }}</span>
+    </div>
+    {% endif %}
     
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
