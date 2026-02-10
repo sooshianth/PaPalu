@@ -2071,9 +2071,14 @@
     function formatNumberToPersian(num, decimalPlaces) {
       if (num === null || num === undefined || isNaN(num)) return '';
       var n = parseFloat(num);
-      var fixed = (decimalPlaces !== undefined && decimalPlaces > 0)
-        ? n.toFixed(decimalPlaces)
-        : (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+      var fixed;
+      if (decimalPlaces === 0) {
+        fixed = String(Math.round(n));
+      } else if (decimalPlaces !== undefined && decimalPlaces > 0) {
+        fixed = n.toFixed(decimalPlaces);
+      } else {
+        fixed = (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+      }
       var parts = fixed.split('.');
       var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
       var result = intPart + (parts[1] ? '.' + parts[1] : '');
@@ -2096,11 +2101,11 @@
       input.addEventListener('change', function () { updatePersianDisplay(inputId, displayId, decimals); });
     }
     document.addEventListener('DOMContentLoaded', function () {
-      attachPersianDisplay('id_initial_freight', 'id_initial_freight_persian', 2);
-      attachPersianDisplay('id_total_freight', 'id_total_freight_persian', 2);
-      attachPersianDisplay('id_discount', 'id_discount_persian', 2);
-      attachPersianDisplay('id_surplus', 'id_surplus_persian', 2);
-      attachPersianDisplay('id_freight_payment', 'id_freight_payment_persian', 2);
+      attachPersianDisplay('id_initial_freight', 'id_initial_freight_persian', 0);
+      attachPersianDisplay('id_total_freight', 'id_total_freight_persian', 0);
+      attachPersianDisplay('id_discount', 'id_discount_persian', 0);
+      attachPersianDisplay('id_surplus', 'id_surplus_persian', 0);
+      attachPersianDisplay('id_freight_payment', 'id_freight_payment_persian', 0);
     });
   })();
 
