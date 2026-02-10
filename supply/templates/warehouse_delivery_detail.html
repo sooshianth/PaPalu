@@ -944,8 +944,9 @@
                             <tr>
                                 <th>ماده اولیه</th>
                                 <th>وزن تخصیص یافته در سفارش (کیلوگرم)</th>
+                                <th>وزن بارنامه (کیلوگرم)</th>
                                 <th>وزن خالص محاسبه شده (کیلوگرم)</th>
-                                <th>اختلاف (کیلوگرم)</th>
+                                <th>اختلاف تخصیص و خالص (کیلوگرم)</th>
                             </tr>
                         </thead>
                         <tbody id="comparison-table-body">
@@ -955,15 +956,17 @@
                                 <td id="allocated-{{ item_data.item.id }}">
                                     {{ item_data.allocated_quantity|persian_number:3|default:"—" }}
                                 </td>
-                                <td id="calculated-{{ item_data.item.id }}">—</td>
-                                <td id="diff-{{ item_data.item.id }}">—</td>
+                                <td id="waybill-{{ item_data.item.id }}">{% if pt.waybill_weight is not None %}{{ pt.waybill_weight|persian_number:3 }}{% else %}—{% endif %}</td>
+                                <td id="calculated-{{ item_data.item.id }}">{% if item_data.calculated_net_weight is not None %}{{ item_data.calculated_net_weight|persian_number:3 }}{% else %}—{% endif %}</td>
+                                <td id="diff-{{ item_data.item.id }}">{% if item_data.weight_diff is not None %}{{ item_data.weight_diff|persian_number:3 }}{% else %}—{% endif %}</td>
                             </tr>
                             {% endfor %}
                             <tr class="total-row">
                                 <td><strong>جمع کل</strong></td>
-                                <td id="total-allocated"><strong>—</strong></td>
-                                <td id="total-calculated"><strong>—</strong></td>
-                                <td id="total-diff"><strong>—</strong></td>
+                                <td id="total-allocated"><strong>{% if comparison_totals %}{{ comparison_totals.total_allocated|persian_number:3 }}{% else %}—{% endif %}</strong></td>
+                                <td id="total-waybill"><strong>{% if pt.waybill_weight is not None %}{{ pt.waybill_weight|persian_number:3 }}{% else %}—{% endif %}</strong></td>
+                                <td id="total-calculated"><strong>{% if comparison_totals %}{{ comparison_totals.total_calculated|persian_number:3 }}{% else %}—{% endif %}</strong></td>
+                                <td id="total-diff"><strong>{% if comparison_totals %}{{ comparison_totals.total_diff|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                             </tr>
                         </tbody>
                     </table>
@@ -1395,6 +1398,8 @@
         }
 
         function updateComparison() {
+            // وقتی هیچ مرحله‌ای در این صفحه اضافه نشده، مقادیر از backend را بازنویسی نکن (جدول از سرور پر شده)
+            if (stages.length === 0) return;
             // Create a map of item_id to calculated weight
             const calculatedWeights = {};
             stages.forEach(stage => {

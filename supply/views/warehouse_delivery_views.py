@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib import messages
@@ -105,6 +106,17 @@ def get_accessible_person_fields_for_warehouse(user):
         'name': user_can_access_field(user, Person, 'name', 'view'),
         'phone_number': user_can_access_field(user, Person, 'phone_number', 'view'),
         'type': user_can_access_field(user, Person, 'type', 'view'),
+    }
+
+
+def _comparison_totals_from_order_items(order_items):
+    """محاسبه جمع کل تخصیص، وزن خالص محاسبه‌شده و اختلاف برای جدول مقایسه وزن‌ها"""
+    total_allocated = sum((item.get('allocated_quantity') or Decimal('0')) for item in order_items)
+    total_calculated = sum((item.get('calculated_net_weight') or Decimal('0')) for item in order_items)
+    return {
+        'total_allocated': total_allocated,
+        'total_calculated': total_calculated,
+        'total_diff': total_calculated - total_allocated,
     }
 
 
@@ -492,12 +504,17 @@ def warehouse_delivery_detail_view(request, transport_number):
             
             for info in existing_infos:
                 if info.order_item and info.order_item.raw_material:
+                    net = info.net_weight or Decimal('0')
+                    alloc = info.allocated_quantity or Decimal('0')
                     order_items.append({
                         'item': info.order_item,
                         'raw_material': info.raw_material,
-                        'allocated_quantity': info.allocated_quantity
+                        'allocated_quantity': info.allocated_quantity,
+                        'calculated_net_weight': info.net_weight,
+                        'weight_diff': (net - alloc) if info.net_weight is not None else None,
                     })
         
+        comparison_totals = _comparison_totals_from_order_items(order_items)
         # Initialize form for display
         # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
         freight_payment_type = None
@@ -520,6 +537,7 @@ def warehouse_delivery_detail_view(request, transport_number):
             'form': form,
             'pt': pt,
             'order_items': order_items,
+            'comparison_totals': comparison_totals,
             'read_only': True,
             'awaiting_guard': True,
             'accessible_transport_fields': accessible_transport_fields_view,
@@ -545,9 +563,15 @@ def warehouse_delivery_detail_view(request, transport_number):
                     existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material', 'order_item__raw_material')
                     for info in existing_infos:
                         if info.order_item and info.order_item.raw_material:
-                            order_items.append({'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity})
+                            net = info.net_weight or Decimal('0')
+                            alloc = info.allocated_quantity or Decimal('0')
+                            order_items.append({
+                                'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
+                                'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                            })
+                comparison_totals = _comparison_totals_from_order_items(order_items)
                 context = {
-                    'form': form, 'pt': pt, 'order_items': order_items,
+                    'form': form, 'pt': pt, 'order_items': order_items, 'comparison_totals': comparison_totals,
                     'read_only': False, 'awaiting_guard': False,
                     'destination_warehouses': destination_warehouses,
                     'accessible_transport_fields': accessible_transport_fields_view,
@@ -575,7 +599,6 @@ def warehouse_delivery_detail_view(request, transport_number):
                         return redirect(request.path)
                     
                     try:
-                        from decimal import Decimal
                         gross = Decimal(str(gross))
                     except (ValueError, TypeError):
                         messages.error(request, 'وزن پر اولیه نامعتبر است.')
@@ -614,7 +637,6 @@ def warehouse_delivery_detail_view(request, transport_number):
                             break
                         
                         try:
-                            from decimal import Decimal
                             item_id = int(item_id)
                             weight = Decimal(str(weight))
                             warehouse_id = int(warehouse_id)
@@ -901,9 +923,15 @@ def warehouse_delivery_detail_view(request, transport_number):
                 existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material', 'order_item__raw_material')
                 for info in existing_infos:
                     if info.order_item and info.order_item.raw_material:
-                        order_items.append({'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity})
+                        net = info.net_weight or Decimal('0')
+                        alloc = info.allocated_quantity or Decimal('0')
+                        order_items.append({
+                            'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
+                            'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                        })
+            comparison_totals = _comparison_totals_from_order_items(order_items)
             context = {
-                'form': form, 'pt': pt, 'order_items': order_items,
+                'form': form, 'pt': pt, 'order_items': order_items, 'comparison_totals': comparison_totals,
                 'read_only': False, 'awaiting_guard': False,
                 'destination_warehouses': destination_warehouses,
                 'accessible_transport_fields': accessible_transport_fields_view,
@@ -943,12 +971,17 @@ def warehouse_delivery_detail_view(request, transport_number):
         
         for info in existing_infos:
             if info.order_item and info.order_item.raw_material:
+                net = info.net_weight or Decimal('0')
+                alloc = info.allocated_quantity or Decimal('0')
                 order_items.append({
                     'item': info.order_item,
                     'raw_material': info.raw_material,
-                    'allocated_quantity': info.allocated_quantity
+                    'allocated_quantity': info.allocated_quantity,
+                    'calculated_net_weight': info.net_weight,
+                    'weight_diff': (net - alloc) if info.net_weight is not None else None,
                 })
     
+    comparison_totals = _comparison_totals_from_order_items(order_items)
     # لیست انبارهای مقصد (فقط انبارهای اولیه) برای انتخاب در هر مرحله
     destination_warehouses = Warehouse.objects.filter(warehouse_type='primary')
     
@@ -958,6 +991,7 @@ def warehouse_delivery_detail_view(request, transport_number):
         'form': form,
         'pt': pt,
         'order_items': order_items,
+        'comparison_totals': comparison_totals,
         'read_only': False,
         'awaiting_guard': False,
         'destination_warehouses': destination_warehouses,
