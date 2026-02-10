@@ -65,19 +65,23 @@ class TaskChoices(models.TextChoices):
     # SUPPLY_UPLOAD_PAYMENT_DOCUMENTS = 'supply.upload_payment_documents', 'بارگذاری اسناد پرداخت کرایه'
     
     # Production (تولید)
+    PRODUCTION_DECLARATION = 'production.declaration', 'اعلام تولید'
+    PRODUCTION_DECLARATION_CRUD = 'production.declaration_crud', 'اعلام تولید جدید'
+    PRODUCTION_DECLARATION_ARCHIVED = 'production.declaration_archived', 'اعلام تولید بایگانی شده'
+    WAREHOUSE_PRODUCTION_LIST = 'production.warehouse_production_list', 'مشاهده لیست اظهار تولید'
     PRODUCTION_SUBMIT_REPORT = 'production.submit_report', 'اظهار تولید'
     PRODUCTION_APPROVE_REPORT = 'production.approve_report', 'تایید اظهار تولید'
     PRODUCTION_MANAGER_SOLVE_ISSUES = 'production.manager_solve_issues', 'مدیریت حل مشکلات تولید'
+    WAREHOUSE_PRODUCTION_DETAIL = 'production.warehouse_production_detail', 'مشاهده جزئیات اظهار تولید'
     PRODUCTION_REGISTER_NEW_SCHEDULE = 'production.register_new_schedule', 'ثبت برنامه تولید جدید'
-    WAREHOUSE_PRODUCTION_LIST = 'warehouse.production_list', 'مشاهده لیست اظهار تولید'
-    WAREHOUSE_PRODUCTION_DETAIL = 'warehouse.production_detail', 'مشاهده جزئیات اظهار تولید'
-    WAREHOUSE_APPROVE_PRODUCTION = 'warehouse.approve_production', 'تایید اظهار تولید'
-    WAREHOUSE_DISAPPROVE_PRODUCTION = 'warehouse.disapprove_production', 'رد اظهار تولید'
-    STOCK_ENTRY_DETAIL = 'stock.entry_detail', 'مشاهده جزئیات ورود انبار'
+    WAREHOUSE_APPROVE_PRODUCTION = 'production.warehouse_approve_production', 'تایید اظهار تولید'
+    WAREHOUSE_DISAPPROVE_PRODUCTION = 'production.warehouse_disapprove_production', 'رد اظهار تولید'
+    STOCK_ENTRY_DETAIL = 'production.stock_entry_detail', 'مشاهده جزئیات ورود انبار'
     # PRODUCTION_QUALITY_CONTROL_FORMS = 'production.quality_control_forms', 'فرم های کنترل کیفیت'
     PRODUCTION_REJECT_SCHEDULE = 'production.reject_schedule', 'رد برنامه تولید'
     PRODUCTION_REVERT_SCHEDULE = 'production.revert_schedule', 'بازگشت از تولید'
     PRODUCTION_ARCHIVE = 'production.archive', 'آرشیو تولید'
+    PRODUCTION_PROGRAM_LIST = 'production.program_list', 'مشاهده لیست برنامه‌های تولید'
     PRODUCTION_VIEW_WAREHOUSE = 'production.view_warehouse', 'مشاهده انبار'
 
     # Distribution (توزیع)

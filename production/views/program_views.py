@@ -25,6 +25,8 @@ from core.OrderFolder.OrderItemModel import OrderItem
 from core.AllocationFolder.AllocationModel import Allocation
 from core.AllocationFolder.AllocationProductInfoModel import AllocationProductInfo
 from django_tables2 import RequestConfig
+from core.RBACModel import user_has_task, TaskChoices
+from django.http import HttpResponseForbidden
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -636,6 +638,10 @@ def edit_program_view(request, program_id):
 
 
 def program_list_view(request):
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_PROGRAM_LIST.value):
+        audit_logger.activity("تلاش برای مشاهده لیست برنامه‌های تولید بدون دسترسی")
+        messages.error(request, 'شما دسترسی به مشاهده لیست برنامه‌های تولید ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     audit_logger.info("نمایش لیست برنامه‌های تولید")
     try:
         programs = ProductionProgram.objects.all().select_related('product', 'production_info')
