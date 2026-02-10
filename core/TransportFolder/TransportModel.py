@@ -498,6 +498,40 @@ class Transport(models.Model):
         null=True,
         verbose_name='دلیل ارجاع ثبت ورود خودرو به مدیریت'
     )
+
+    # ارجاع از تحویل انبار به مدیر
+    warehouse_delivery_referred_to_manager = models.BooleanField(
+        default=False,
+        verbose_name='ارجاع تحویل انبار به مدیریت',
+        help_text='اگر True باشد فقط سوپرادمین این حمل را در لیست تحویل انبار/خروج می‌بیند و از صفحه ارجاعات حل می‌کند.'
+    )
+    warehouse_delivery_referred_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان ارجاع تحویل انبار به مدیریت'
+    )
+    warehouse_delivery_referral_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='دلیل ارجاع تحویل انبار به مدیریت'
+    )
+
+    # ارجاع از تایید خروج خودرو به مدیر (نگهبان)
+    carexit_referred_to_manager = models.BooleanField(
+        default=False,
+        verbose_name='ارجاع تایید خروج خودرو به مدیریت',
+        help_text='اگر True باشد فقط سوپرادمین از صفحه ارجاعات می‌تواند خروج را تایید کند.'
+    )
+    carexit_referred_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان ارجاع خروج خودرو به مدیریت'
+    )
+    carexit_referral_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='دلیل ارجاع خروج خودرو به مدیریت'
+    )
     
     # Timestamps
     created_by = models.ForeignKey(

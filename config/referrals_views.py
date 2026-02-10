@@ -69,6 +69,38 @@ def _get_referrals(user):
             'description': f'حمل {t.transport_number or t.pk} - ارجاع از ثبت ورود خودرو',
         })
 
+    # 2.6. تحویل انبار ارجاع‌شده به مدیر (از انباردار)
+    wh_referred = Transport.objects.filter(
+        warehouse_delivery_referred_to_manager=True,
+        status=Transport.STATUS_AWAITING_WH_RECONCILIATION
+    ).order_by('-warehouse_delivery_referred_at')
+    for t in wh_referred:
+        dt = getattr(t, 'warehouse_delivery_referred_at', None) or t.updated_at
+        referrals.append({
+            'type': 'warehouse_delivery',
+            'source': 'تحویل انبار',
+            'resolve_url': reverse('supply:warehouse_delivery_detail', kwargs={'transport_number': t.transport_number or str(t.pk)}),
+            'identifier': t.transport_number or str(t.pk),
+            'created_at': dt,
+            'description': f'حمل {t.transport_number or t.pk} - ارجاع از تحویل انبار',
+        })
+
+    # 2.7. خروج خودرو ارجاع‌شده به مدیر (از نگهبان)
+    carexit_referred = Transport.objects.filter(
+        carexit_referred_to_manager=True,
+        status=Transport.STATUS_AWAITING_WH_RECONCILIATION
+    ).order_by('-carexit_referred_at')
+    for t in carexit_referred:
+        dt = getattr(t, 'carexit_referred_at', None) or t.updated_at
+        referrals.append({
+            'type': 'carexit',
+            'source': 'خروج خودرو',
+            'resolve_url': reverse('supply:guard_vehicle_exit', kwargs={'transport_number': t.transport_number or str(t.pk)}),
+            'identifier': t.transport_number or str(t.pk),
+            'created_at': dt,
+            'description': f'حمل {t.transport_number or t.pk} - ارجاع از تایید خروج خودرو',
+        })
+
     # 3. تخصیص‌های رد شده (از تایید تخصیص)
     orders_with_rejected = Order.objects.filter(
         allocations__is_rejected=True

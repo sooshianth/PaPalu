@@ -32,6 +32,7 @@ from django.contrib.auth import get_user_model
 from supply.tables import TransportTable, WarehouseDeliveryTable
 import django_tables2 as tables
 from django.utils.html import format_html
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -360,16 +361,19 @@ def warehouse_delivery_list_view(request):
     accessible_po_material_fields = get_accessible_po_material_fields_for_warehouse(request.user)
     
     try:
-        # حمل‌های در وضعیت های قابل تحویل انبار (awaiting_unloading for warehouseman)
+        # حمل‌های در وضعیت های قابل تحویل انبار (awaiting_unloading for warehouseman) - بدون ارجاع‌شده به مدیر
         transports_unloading_qs = Transport.objects.filter(
-            status=Transport.STATUS_AWAITING_UNLOADING
+            status=Transport.STATUS_AWAITING_UNLOADING,
+            warehouse_delivery_referred_to_manager=False
         ).select_related('allocation__order', 'driver').order_by('-created_at')
         
         bug_logger.debug(f"Found {transports_unloading_qs.count()} transports awaiting unloading")
         
-        # حمل‌های در انتظار تایید خروج توسط نگهبان (awaiting_wh_reconciliation)
+        # حمل‌های در انتظار تایید خروج توسط نگهبان - بدون ارجاع‌شده به مدیر (تحویل انبار یا خروج خودرو)
         transports_guard_qs = Transport.objects.filter(
-            status=Transport.STATUS_AWAITING_WH_RECONCILIATION
+            status=Transport.STATUS_AWAITING_WH_RECONCILIATION,
+            carexit_referred_to_manager=False,
+            warehouse_delivery_referred_to_manager=False
         ).select_related('allocation__order', 'driver').order_by('-created_at')
         
         bug_logger.debug(f"Found {transports_guard_qs.count()} transports awaiting guard reconciliation")
@@ -470,6 +474,12 @@ def warehouse_delivery_detail_view(request, transport_number):
         audit_logger.activity(f"تلاش برای دسترسی به تخلیه با وضعیت نامعتبر - حمل {transport_number}: {pt.status}")
         messages.error(request, 'این حمل در وضعیت قابل مشاهده نیست.')
         return redirect(reverse('supply:warehouse_delivery'))
+
+    # اگر تحویل انبار به مدیر ارجاع شده، فقط سوپرادمین می‌تواند وارد شود
+    if getattr(pt, 'warehouse_delivery_referred_to_manager', False) and not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای دسترسی به تحویل انبار ارجاع‌شده به مدیر - حمل {transport_number}")
+        messages.error(request, 'این مورد به مدیر ارجاع شده و فقط مدیر می‌تواند آن را مشاهده و حل کند.')
+        return HttpResponseForbidden('دسترسی غیرمجاز. این مورد به مدیر ارجاع شده است.')
     
     # If awaiting guard reconciliation, show read-only
     if pt.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
@@ -516,12 +526,40 @@ def warehouse_delivery_detail_view(request, transport_number):
             'accessible_po_fields': accessible_po_fields,
             'accessible_raw_material_fields': accessible_raw_material_fields,
             'accessible_po_material_fields': accessible_po_material_fields,
+            'is_warehouse_delivery_referred': getattr(pt, 'warehouse_delivery_referred_to_manager', False),
+            'show_refer_button': False,
+            'warehouse_delivery_referral_reason': getattr(pt, 'warehouse_delivery_referral_reason', '') or '',
         }
         return render(request, 'warehouse_delivery_detail.html', context)
     
     if request.method == 'POST':
+        is_refer_to_manager = request.POST.get('refer_to_manager') == '1'
+        wh_referral_reason = (request.POST.get('warehouse_delivery_referral_reason') or '').strip()
         form = WarehouseDeliveryForm(request.POST, transport=pt)
         if form.is_valid():
+            if is_refer_to_manager and not wh_referral_reason:
+                messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
+                destination_warehouses = Warehouse.objects.filter(warehouse_type='primary')
+                order_items = []
+                if pt.allocation and pt.allocation.order:
+                    existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material', 'order_item__raw_material')
+                    for info in existing_infos:
+                        if info.order_item and info.order_item.raw_material:
+                            order_items.append({'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity})
+                context = {
+                    'form': form, 'pt': pt, 'order_items': order_items,
+                    'read_only': False, 'awaiting_guard': False,
+                    'destination_warehouses': destination_warehouses,
+                    'accessible_transport_fields': accessible_transport_fields_view,
+                    'accessible_po_fields': accessible_po_fields,
+                    'accessible_raw_material_fields': accessible_raw_material_fields,
+                    'accessible_po_material_fields': accessible_po_material_fields,
+                    'is_warehouse_delivery_referred': getattr(pt, 'warehouse_delivery_referred_to_manager', False),
+                    'show_refer_button': not getattr(pt, 'warehouse_delivery_referred_to_manager', False) and not request.user.is_superuser,
+                    'refer_modal_open': True,
+                    'warehouse_delivery_referral_reason': getattr(pt, 'warehouse_delivery_referral_reason', '') or '',
+                }
+                return render(request, 'warehouse_delivery_detail.html', context)
             data = form.cleaned_data
             audit_logger.info(f"شروع ثبت تخلیه برای حمل {transport_number}")
             
@@ -817,6 +855,14 @@ def warehouse_delivery_detail_view(request, transport_number):
                     pt.save()
                     bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تطبیق انبار' تغییر یافت")
                     
+                    # در صورت ارجاع به مدیر، فلگ‌های ارجاع را ست کن
+                    if is_refer_to_manager and wh_referral_reason:
+                        pt.warehouse_delivery_referred_to_manager = True
+                        pt.warehouse_delivery_referred_at = timezone.now()
+                        pt.warehouse_delivery_referral_reason = wh_referral_reason
+                        pt.save(update_fields=['warehouse_delivery_referred_to_manager', 'warehouse_delivery_referred_at', 'warehouse_delivery_referral_reason'])
+                        audit_logger.activity(f"تحویل انبار برای حمل {transport_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {wh_referral_reason[:100]}")
+                    
                     # تغییر وضعیت سفارش از "در انتظار تحویل بار" به "در انتظار تطبیق اطلاعات انبار"
                     po = pt.allocation.order if pt.allocation else None
                     if po and po.status == Order.STATUS_AWAITING_DELIVERY:
@@ -837,7 +883,10 @@ def warehouse_delivery_detail_view(request, transport_number):
                         f"کرایه پرداختی: {data.get('freight_payment')}"
                     )
                     
-                messages.success(request, f'اطلاعات تخلیه ثبت شد. وزن خالص: {net_weight} - حمل به مرحله تطبیق انبار منتقل شد.')
+                if is_refer_to_manager:
+                    messages.warning(request, 'اطلاعات تخلیه ثبت شد و این مورد به مدیر ارجاع داده شد. فقط مدیر می‌تواند از صفحه ارجاعات آن را باز کرده و خروج خودرو را تایید کند.')
+                else:
+                    messages.success(request, f'اطلاعات تخلیه ثبت شد. وزن خالص: {net_weight} - حمل به مرحله تطبیق انبار منتقل شد.')
                 return redirect(reverse('supply:warehouse_delivery'))
             except Exception as e:
                 bug_logger.error(f"خطا در ثبت تخلیه برای حمل {transport_number}: {e}")
@@ -845,6 +894,28 @@ def warehouse_delivery_detail_view(request, transport_number):
         else:
             bug_logger.warning(f"فرم ثبت تخلیه نامعتبر برای حمل {transport_number}: {form.errors}")
             audit_logger.activity(f"فرم نامعتبر برای ثبت تخلیه حمل {transport_number}")
+            # برای نمایش مجدد فرم با مودال ارجاع در صورت نیاز
+            destination_warehouses = Warehouse.objects.filter(warehouse_type='primary')
+            order_items = []
+            if pt.allocation and pt.allocation.order:
+                existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material', 'order_item__raw_material')
+                for info in existing_infos:
+                    if info.order_item and info.order_item.raw_material:
+                        order_items.append({'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity})
+            context = {
+                'form': form, 'pt': pt, 'order_items': order_items,
+                'read_only': False, 'awaiting_guard': False,
+                'destination_warehouses': destination_warehouses,
+                'accessible_transport_fields': accessible_transport_fields_view,
+                'accessible_po_fields': accessible_po_fields,
+                'accessible_raw_material_fields': accessible_raw_material_fields,
+                'accessible_po_material_fields': accessible_po_material_fields,
+                'is_warehouse_delivery_referred': getattr(pt, 'warehouse_delivery_referred_to_manager', False),
+                'show_refer_button': not getattr(pt, 'warehouse_delivery_referred_to_manager', False) and not request.user.is_superuser,
+                'refer_modal_open': is_refer_to_manager,
+                'warehouse_delivery_referral_reason': getattr(pt, 'warehouse_delivery_referral_reason', '') or '',
+            }
+            return render(request, 'warehouse_delivery_detail.html', context)
     else:
         # مقداردهی اولیه فرم
         # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
@@ -881,6 +952,8 @@ def warehouse_delivery_detail_view(request, transport_number):
     # لیست انبارهای مقصد (فقط انبارهای اولیه) برای انتخاب در هر مرحله
     destination_warehouses = Warehouse.objects.filter(warehouse_type='primary')
     
+    is_wh_referred = getattr(pt, 'warehouse_delivery_referred_to_manager', False)
+    show_refer_btn = not is_wh_referred and not request.user.is_superuser
     context = {
         'form': form,
         'pt': pt,
@@ -892,6 +965,10 @@ def warehouse_delivery_detail_view(request, transport_number):
         'accessible_po_fields': accessible_po_fields,
         'accessible_raw_material_fields': accessible_raw_material_fields,
         'accessible_po_material_fields': accessible_po_material_fields,
+        'is_warehouse_delivery_referred': is_wh_referred,
+        'show_refer_button': show_refer_btn,
+        'refer_modal_open': False,
+        'warehouse_delivery_referral_reason': getattr(pt, 'warehouse_delivery_referral_reason', '') or '',
     }
     return render(request, 'warehouse_delivery_detail.html', context)
 
@@ -930,42 +1007,85 @@ def guard_vehicle_exit_view(request, transport_number):
         audit_logger.activity(f"تلاش برای خروج خودرو با وضعیت نامعتبر - حمل {transport_number}: {pt.status}")
         messages.error(request, 'این حمل در وضعیت قابل خروج نیست. ابتدا باید اطلاعات تخلیه توسط انباردار تکمیل شود.')
         return redirect(reverse('supply:warehouse_delivery'))
+
+    # اگر خروج خودرو به مدیر ارجاع شده، فقط سوپرادمین می‌تواند وارد شود
+    if getattr(pt, 'carexit_referred_to_manager', False) and not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای دسترسی به خروج خودرو ارجاع‌شده به مدیر - حمل {transport_number}")
+        messages.error(request, 'این مورد به مدیر ارجاع شده و فقط مدیر می‌تواند خروج را تایید کند.')
+        return HttpResponseForbidden('دسترسی غیرمجاز. این مورد به مدیر ارجاع شده است.')
     
     if request.method == 'POST':
-        # Confirm vehicle exit
-        bug_logger.debug(f"Guard confirming vehicle exit for transport {transport_number}")
-        try:
-            with transaction.atomic():
-                # تغییر وضعیت حمل به "در انتظار تسویه"
-                bug_logger.debug(f"Changing transport {transport_number} status to awaiting_settlement")
-                pt.status = Transport.STATUS_AWAITING_SETTLEMENT
-                pt.delivery_date = jdatetime.date.today()
-                pt.save()
-                
-                # تغییر وضعیت سفارش از "در انتظار تطبیق اطلاعات انبار" به "در انتظار تسویه نهایی"
-                po = pt.allocation.order if pt.allocation else None
-                if po and po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
-                    # بعد از تایید خروج خودرو توسط نگهبان، سفارش به مرحله تسویه نهایی می‌رود
-                    po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"خروج خودرو برای حمل {transport_number} تایید شد و سفارش به مرحله تسویه نهایی منتقل شد.")
-                    bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
-                
-                audit_logger.info(
-                    f"خروج خودرو تایید شد - "
-                    f"حمل: {transport_number} - "
-                    f"سفارش: {pt.allocation.order.order_number if pt.allocation and pt.allocation.order else 'N/A'} - "
-                    f"نگهبان: {request.user.username} - "
-                    f"وزن خالص: {pt.net_weight}"
-                )
-                
-            messages.success(request, f'خروج خودرو تایید شد. حمل {transport_number} به مرحله تسویه منتقل شد.')
+        is_refer = request.POST.get('refer_to_manager') == '1'
+        carexit_reason = (request.POST.get('carexit_referral_reason') or '').strip()
+        if is_refer and not carexit_reason:
+            messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
+            context = {
+                'pt': pt,
+                'accessible_transport_fields': accessible_transport_fields,
+                'accessible_po_fields': accessible_po_fields,
+                'is_carexit_referred': getattr(pt, 'carexit_referred_to_manager', False),
+                'show_refer_button': True,
+                'carexit_referral_reason': getattr(pt, 'carexit_referral_reason', '') or '',
+                'refer_modal_open': True,
+            }
+            return render(request, 'car_exit_custodian_confirmation.html', context)
+        if is_refer and carexit_reason:
+            # ارجاع به مدیر بدون تغییر وضعیت
+            try:
+                pt.carexit_referred_to_manager = True
+                pt.carexit_referred_at = timezone.now()
+                pt.carexit_referral_reason = carexit_reason
+                pt.save(update_fields=['carexit_referred_to_manager', 'carexit_referred_at', 'carexit_referral_reason'])
+                audit_logger.activity(f"خروج خودرو برای حمل {transport_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {carexit_reason[:100]}")
+                messages.warning(request, 'این مورد به مدیر ارجاع داده شد. فقط مدیر می‌تواند از صفحه ارجاعات خروج را تایید کند.')
+            except Exception as e:
+                bug_logger.error(f"خطا در ارجاع خروج خودرو برای حمل {transport_number}: {e}")
+                messages.error(request, f'خطا در ارجاع: {str(e)}')
             return redirect(reverse('supply:warehouse_delivery'))
-        except Exception as e:
-            bug_logger.error(f"خطا در تایید خروج خودرو برای حمل {transport_number}: {e}")
-            messages.error(request, f'خطا در تایید خروج خودرو: {str(e)}')
+        if not is_refer:
+            # Confirm vehicle exit
+            bug_logger.debug(f"Guard confirming vehicle exit for transport {transport_number}")
+            try:
+                with transaction.atomic():
+                    pt.status = Transport.STATUS_AWAITING_SETTLEMENT
+                    pt.delivery_date = jdatetime.date.today()
+                    # در صورت تایید توسط مدیر، فلگ‌های ارجاع را پاک کن
+                    if request.user.is_superuser:
+                        pt.warehouse_delivery_referred_to_manager = False
+                        pt.warehouse_delivery_referred_at = None
+                        pt.warehouse_delivery_referral_reason = None
+                        pt.carexit_referred_to_manager = False
+                        pt.carexit_referred_at = None
+                        pt.carexit_referral_reason = None
+                    pt.save()
+                    
+                    po = pt.allocation.order if pt.allocation else None
+                    if po and po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                        po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"خروج خودرو برای حمل {transport_number} تایید شد و سفارش به مرحله تسویه نهایی منتقل شد.")
+                        bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
+                    
+                    audit_logger.info(
+                        f"خروج خودرو تایید شد - "
+                        f"حمل: {transport_number} - "
+                        f"سفارش: {pt.allocation.order.order_number if pt.allocation and pt.allocation.order else 'N/A'} - "
+                        f"نگهبان: {request.user.username} - "
+                        f"وزن خالص: {pt.net_weight}"
+                    )
+                
+                messages.success(request, f'خروج خودرو تایید شد. حمل {transport_number} به مرحله تسویه منتقل شد.')
+                return redirect(reverse('supply:warehouse_delivery'))
+            except Exception as e:
+                bug_logger.error(f"خطا در تایید خروج خودرو برای حمل {transport_number}: {e}")
+                messages.error(request, f'خطا در تایید خروج خودرو: {str(e)}')
     
+    is_carexit_referred = getattr(pt, 'carexit_referred_to_manager', False)
     context = {
         'pt': pt,
         'accessible_transport_fields': accessible_transport_fields,
         'accessible_po_fields': accessible_po_fields,
+        'is_carexit_referred': is_carexit_referred,
+        'show_refer_button': not is_carexit_referred and not request.user.is_superuser,
+        'carexit_referral_reason': getattr(pt, 'carexit_referral_reason', '') or '',
+        'refer_modal_open': False,
     }
     return render(request, 'car_exit_custodian_confirmation.html', context)
