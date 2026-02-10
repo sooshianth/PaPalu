@@ -394,12 +394,13 @@ def warehouse_delivery_list_view(request):
                 except Exception as gen_err:
                     bug_logger.warning(f"Failed to backfill transport_number for transport pk={pt.pk}: {gen_err}")
             transports_guard.append(pt)
-        
-        table_unloading = WarehouseDeliveryTable(transports_unloading, prefix='wh-', accessible_fields=accessible_transport_fields)
+        if user_has_task(request.user, TaskChoices.SUPPLY_WAREHOUSE_DELIVERY.value):
+            table_unloading = WarehouseDeliveryTable(transports_unloading, prefix='wh-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table_unloading)
         
         from supply.tables import GuardExitTable
-        table_guard = GuardExitTable(transports_guard, prefix='guard-', accessible_fields=accessible_transport_fields)
+        if user_has_task(request.user, TaskChoices.SUPPLY_REGISTER_VEHICLE_EXIT.value):
+            table_guard = GuardExitTable(transports_guard, prefix='guard-', accessible_fields=accessible_transport_fields)
         RequestConfig(request, paginate={'per_page': 20}).configure(table_guard)
         
         context = {
@@ -414,7 +415,8 @@ def warehouse_delivery_list_view(request):
         return render(request, 'warehouse_delivery_list.html', context)
     except Exception as e:
         bug_logger.error(f"Warehouse delivery list error: {e}")
-        messages.error(request, 'خطا در بارگذاری لیست تحویل انبار.')
+        if not user_has_task(request.user, TaskChoices.SUPPLY_WAREHOUSE_DELIVERY.value):
+            messages.error(request, 'خطا در بارگذاری لیست تحویل انبار.')
         context = {
             'table': WarehouseDeliveryTable([], prefix='wh-'),
             'accessible_transport_fields': accessible_transport_fields,
