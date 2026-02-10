@@ -120,6 +120,37 @@ def _comparison_totals_from_order_items(order_items):
     }
 
 
+def _initial_stages_from_order_items(pt, order_items):
+    """
+    برای نمایش مراحل تخلیه و خلاصه وزن‌ها وقتی داده قبلاً ذخیره شده است.
+    از gross، tare و وزن خالص هر ماده، وزن بعد از هر مرحله را بازسازی می‌کند.
+    خروجی لیست دیکت‌های قابل JSON برای استفاده در فرانت‌اند.
+    """
+    if not order_items or not getattr(pt, 'gross_weight', None) or not getattr(pt, 'tare_weight', None):
+        return []
+    gross = float(pt.gross_weight)
+    cum = 0.0
+    out = []
+    for i, item_data in enumerate(order_items):
+        net = item_data.get('calculated_net_weight')
+        if net is None:
+            continue
+        net_f = float(net)
+        if net_f <= 0:
+            continue
+        weight_after = gross - cum - net_f
+        cum += net_f
+        wh_id = item_data.get('destination_warehouse_id')
+        out.append({
+            'id': i + 1,
+            'item_id': item_data['item'].id,
+            'net_weight': round(net_f, 6),
+            'weight_after': round(weight_after, 6),
+            'warehouse_id': int(wh_id) if wh_id else None,
+        })
+    return out
+
+
 def get_accessible_po_material_fields_for_warehouse(user):
     """Check field access for OrderItem model (materials in purchase orders)"""
     # برای سوپریوزر، همه فیلدها قابل دسترسی هستند
@@ -512,9 +543,11 @@ def warehouse_delivery_detail_view(request, transport_number):
                         'allocated_quantity': info.allocated_quantity,
                         'calculated_net_weight': info.net_weight,
                         'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                        'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                     })
         
         comparison_totals = _comparison_totals_from_order_items(order_items)
+        initial_stages = _initial_stages_from_order_items(pt, order_items)
         # Initialize form for display
         # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
         freight_payment_type = None
@@ -538,6 +571,7 @@ def warehouse_delivery_detail_view(request, transport_number):
             'pt': pt,
             'order_items': order_items,
             'comparison_totals': comparison_totals,
+            'initial_stages': initial_stages,
             'read_only': True,
             'awaiting_guard': True,
             'accessible_transport_fields': accessible_transport_fields_view,
@@ -568,10 +602,13 @@ def warehouse_delivery_detail_view(request, transport_number):
                             order_items.append({
                                 'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
                                 'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                                'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                             })
                 comparison_totals = _comparison_totals_from_order_items(order_items)
+                initial_stages = _initial_stages_from_order_items(pt, order_items)
                 context = {
                     'form': form, 'pt': pt, 'order_items': order_items, 'comparison_totals': comparison_totals,
+                    'initial_stages': initial_stages,
                     'read_only': False, 'awaiting_guard': False,
                     'destination_warehouses': destination_warehouses,
                     'accessible_transport_fields': accessible_transport_fields_view,
@@ -787,13 +824,14 @@ def warehouse_delivery_detail_view(request, transport_number):
                                 # استفاده از allocated_quantity قبلی (اگر وجود دارد)
                                 # اگر وجود نداشت، از وزن خالص استفاده می‌کنیم (برای اولین بار)
                                 allocated_qty = allocated_map.get(item.id, w)
-                                
+                                dest_warehouse = item_warehouses.get(item.id)
                                 rmi = RawMaterialInfo.objects.create(
                                     transport=pt,
                                     order_item=item,
                                     raw_material=item.raw_material,
                                     allocated_quantity=allocated_qty,  # وزن تخصیص یافته قبلی (یا وزن خالص برای اولین بار)
                                     net_weight=w,  # وزن خالص محاسبه شده از تخلیه
+                                    destination_warehouse=dest_warehouse,  # انبار مقصد این مرحله تخلیه
                                     weight_unit='kg' # Unloading is usually in KG
                                 )
                                 valid_raw_material_infos.append(rmi)
@@ -872,24 +910,28 @@ def warehouse_delivery_detail_view(request, transport_number):
                             # خطا را لاگ می‌کنیم اما فرآیند را متوقف نمی‌کنیم
                             messages.warning(request, f'اطلاعات تخلیه ثبت شد اما خطا در ایجاد لاگ موجودیت: {str(inv_err)}')
                     
-                    # تغییر وضعیت حمل به "در انتظار تطبیق انبار"
-                    pt.status = Transport.STATUS_AWAITING_WH_RECONCILIATION
-                    pt.save()
-                    bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تطبیق انبار' تغییر یافت")
-                    
-                    # در صورت ارجاع به مدیر، فلگ‌های ارجاع را ست کن
+                    # در صورت ارجاع به مدیر: وضعیت و سفارش را عوض نکن، فقط فلگ ارجاع را بزن (مثل ورود خودرو)
                     if is_refer_to_manager and wh_referral_reason:
                         pt.warehouse_delivery_referred_to_manager = True
                         pt.warehouse_delivery_referred_at = timezone.now()
                         pt.warehouse_delivery_referral_reason = wh_referral_reason
                         pt.save(update_fields=['warehouse_delivery_referred_to_manager', 'warehouse_delivery_referred_at', 'warehouse_delivery_referral_reason'])
                         audit_logger.activity(f"تحویل انبار برای حمل {transport_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {wh_referral_reason[:100]}")
-                    
-                    # تغییر وضعیت سفارش از "در انتظار تحویل بار" به "در انتظار تطبیق اطلاعات انبار"
-                    po = pt.allocation.order if pt.allocation else None
-                    if po and po.status == Order.STATUS_AWAITING_DELIVERY:
-                        po.transition(Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION, user=request.user, note=f"تخلیه برای حمل {transport_number} تکمیل شد و در انتظار تطبیق اطلاعات انبار است.")
-                        bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تطبیق اطلاعات انبار' تغییر یافت")
+                        bug_logger.info(f"حمل {transport_number} به مدیر ارجاع داده شد - وضعیت بدون تغییر (در انتظار تایید مدیر)")
+                    else:
+                        # بدون ارجاع (یا تایید مدیر پس از ارجاع): وضعیت را به «در انتظار تطبیق انبار» ببر و در صورت ارجاع‌شده، پرچم را پاک کن
+                        pt.status = Transport.STATUS_AWAITING_WH_RECONCILIATION
+                        if getattr(pt, 'warehouse_delivery_referred_to_manager', False):
+                            pt.warehouse_delivery_referred_to_manager = False
+                            pt.warehouse_delivery_referred_at = None
+                            pt.warehouse_delivery_referral_reason = None
+                            bug_logger.info(f"ارجاع تحویل انبار برای حمل {transport_number} توسط مدیر تایید شد - وضعیت به 'در انتظار تطبیق انبار' تغییر یافت")
+                        pt.save()
+                        bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تطبیق انبار' تغییر یافت")
+                        po = pt.allocation.order if pt.allocation else None
+                        if po and po.status == Order.STATUS_AWAITING_DELIVERY:
+                            po.transition(Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION, user=request.user, note=f"تخلیه برای حمل {transport_number} تکمیل شد و در انتظار تطبیق اطلاعات انبار است.")
+                            bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تطبیق اطلاعات انبار' تغییر یافت")
                     
                     # ثبت در Audit Trail
                     audit_logger.info(
@@ -906,7 +948,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                     )
                     
                 if is_refer_to_manager:
-                    messages.warning(request, 'اطلاعات تخلیه ثبت شد و این مورد به مدیر ارجاع داده شد. فقط مدیر می‌تواند از صفحه ارجاعات آن را باز کرده و خروج خودرو را تایید کند.')
+                    messages.warning(request, 'اطلاعات تخلیه ثبت شد و این مورد به مدیر ارجاع داده شد. تا تایید مدیر، این حمل در همین مرحله باقی می‌ماند، در لیست تحویل انبار نمایش داده نمی‌شود و فقط مدیر می‌تواند آن را باز کرده و تایید کند.')
                 else:
                     messages.success(request, f'اطلاعات تخلیه ثبت شد. وزن خالص: {net_weight} - حمل به مرحله تطبیق انبار منتقل شد.')
                 return redirect(reverse('supply:warehouse_delivery'))
@@ -928,10 +970,13 @@ def warehouse_delivery_detail_view(request, transport_number):
                         order_items.append({
                             'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
                             'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                            'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                         })
             comparison_totals = _comparison_totals_from_order_items(order_items)
+            initial_stages = _initial_stages_from_order_items(pt, order_items)
             context = {
                 'form': form, 'pt': pt, 'order_items': order_items, 'comparison_totals': comparison_totals,
+                'initial_stages': initial_stages,
                 'read_only': False, 'awaiting_guard': False,
                 'destination_warehouses': destination_warehouses,
                 'accessible_transport_fields': accessible_transport_fields_view,
@@ -979,9 +1024,11 @@ def warehouse_delivery_detail_view(request, transport_number):
                     'allocated_quantity': info.allocated_quantity,
                     'calculated_net_weight': info.net_weight,
                     'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                    'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                 })
     
     comparison_totals = _comparison_totals_from_order_items(order_items)
+    initial_stages = _initial_stages_from_order_items(pt, order_items)
     # لیست انبارهای مقصد (فقط انبارهای اولیه) برای انتخاب در هر مرحله
     destination_warehouses = Warehouse.objects.filter(warehouse_type='primary')
     
@@ -992,6 +1039,7 @@ def warehouse_delivery_detail_view(request, transport_number):
         'pt': pt,
         'order_items': order_items,
         'comparison_totals': comparison_totals,
+        'initial_stages': initial_stages,
         'read_only': False,
         'awaiting_guard': False,
         'destination_warehouses': destination_warehouses,

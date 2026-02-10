@@ -65,6 +65,16 @@ class RawMaterialInfo(models.Model):
         help_text='وزن خالص محاسبه شده این ماده اولیه در تخلیه'
     )
     
+    destination_warehouse = models.ForeignKey(
+        'core.Warehouse',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='raw_material_info_destinations',
+        verbose_name='انبار مقصد (در تخلیه)',
+        help_text='انبار مقصدی که این ماده در تحویل انبار به آن تخلیه شده'
+    )
+    
     weight_unit = models.CharField(
         max_length=10,
         choices=WEIGHT_UNIT_CHOICES,

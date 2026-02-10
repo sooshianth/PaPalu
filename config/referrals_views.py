@@ -69,10 +69,10 @@ def _get_referrals(user):
             'description': f'حمل {t.transport_number or t.pk} - ارجاع از ثبت ورود خودرو',
         })
 
-    # 2.6. تحویل انبار ارجاع‌شده به مدیر (از انباردار)
+    # 2.6. تحویل انبار ارجاع‌شده به مدیر (از انباردار) — هنگام ارجاع وضعیت همان «در انتظار تخلیه» می‌ماند
     wh_referred = Transport.objects.filter(
         warehouse_delivery_referred_to_manager=True,
-        status=Transport.STATUS_AWAITING_WH_RECONCILIATION
+        status=Transport.STATUS_AWAITING_UNLOADING
     ).order_by('-warehouse_delivery_referred_at')
     for t in wh_referred:
         dt = getattr(t, 'warehouse_delivery_referred_at', None) or t.updated_at
