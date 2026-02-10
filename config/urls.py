@@ -5,6 +5,7 @@ from django.conf.urls.static import static
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
 from production.views import program_views  # kept for names, no direct routes
+from config.referrals_views import referrals_list_view, referrals_api_view
 
 def redirect_to_login(request):
     """هدایت به صفحه لاگین برای کاربران غیر لاگین شده"""
@@ -27,6 +28,8 @@ urlpatterns = [
     path('authentication/', include('authentication.urls')),
     path('home/', home_view, name='home'),
     path('', home_view, name='root'),
+    path('management/referrals/', referrals_list_view, name='referrals_list'),
+    path('management/referrals/api/', referrals_api_view, name='referrals_api'),
     path('accounting/', include('accounting.urls')),
     path('distribution/', include('distribution.urls')),
     path('supply/', include('supply.urls')),

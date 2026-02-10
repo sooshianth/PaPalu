@@ -482,6 +482,23 @@ class Transport(models.Model):
         blank=True
     )
     
+    # ارجاع از ثبت ورود خودرو به مدیر (فقط مدیر دسترسی دارد تا حل کند)
+    carentrance_referred_to_manager = models.BooleanField(
+        default=False,
+        verbose_name='ارجاع ثبت ورود خودرو به مدیریت',
+        help_text='اگر True باشد فقط سوپرادمین می‌تواند این حمل را در صفحه ثبت ورود خودرو ببیند و تایید کند.'
+    )
+    carentrance_referred_at = jmodels.jDateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان ارجاع ثبت ورود خودرو به مدیریت'
+    )
+    carentrance_referral_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='دلیل ارجاع ثبت ورود خودرو به مدیریت'
+    )
+    
     # Timestamps
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
