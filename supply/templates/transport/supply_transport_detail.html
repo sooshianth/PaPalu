@@ -293,23 +293,35 @@
     <div class="detail-grid">
         <div class="kv">
             <span>وزن ناخالص</span>
-            <strong>{% if pt.gross_weight is not None %}{{ pt.gross_weight|persian_number:3 }}{% else %}—{% endif %}</strong>
+            <strong>{% if pt.gross_weight is not None %}{{ pt.gross_weight|persian_number:3 }}{% else %}—{% endif %} کیلوگرم</strong>
         </div>
         <div class="kv">
             <span>وزن خالی</span>
-            <strong>{% if pt.tare_weight is not None %}{{ pt.tare_weight|persian_number:3 }}{% else %}—{% endif %}</strong>
+            <strong>{% if pt.tare_weight is not None %}{{ pt.tare_weight|persian_number:3 }}{% else %}—{% endif %} کیلوگرم</strong>
         </div>
         <div class="kv">
             <span>وزن خالص</span>
-            <strong>{% if pt.net_weight is not None %}{{ pt.net_weight|persian_number:3 }}{% else %}—{% endif %}</strong>
+            <strong>{% if pt.net_weight is not None %}{{ pt.net_weight|persian_number:3 }}{% else %}—{% endif %} کیلوگرم</strong>
         </div>
     </div>
     
-    <h3 class="section-title">سایر اطلاعات</h3>
+    <h3 class="section-title">اطلاعات بارنامه</h3>
     <div class="detail-grid">
         <div class="kv">
             <span>شماره بارنامه</span>
             <strong>{{ pt.waybill_number|default:"—" }}</strong>
+        </div>
+        <div class="kv">
+            <span>وزن خالص بارنامه</span>
+            <strong>{% if pt.waybill_weight is not None %}{{ pt.waybill_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</strong>
+        </div>
+        <div class="kv">
+            <span>وزن پر بارنامه</span>
+            <strong>{% if pt.waybill_gross_weight is not None %}{{ pt.waybill_gross_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</strong>
+        </div>
+        <div class="kv">
+            <span>تاریخ صدور بارنامه</span>
+            <strong>{{ pt.bill_of_lading_date|default:"—" }}</strong>
         </div>
         {% if pt.bill_of_lading_file %}
         <div class="kv">
@@ -317,6 +329,10 @@
             <strong><a href="{{ pt.bill_of_lading_file.url }}" target="_blank" rel="noopener" style="color: var(--primary-green); font-weight: 600;">📄 مشاهده بارنامه</a></strong>
         </div>
         {% endif %}
+    </div>
+    
+    <h3 class="section-title">سایر اطلاعات</h3>
+    <div class="detail-grid">
         <div class="kv">
             <span>کاربر ایجاد کننده</span>
             <strong>{% if pt.created_by %}{{ pt.created_by.get_full_name|default:pt.created_by.username }}{% else %}—{% endif %}</strong>
