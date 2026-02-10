@@ -147,7 +147,7 @@
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        overflow: hidden;
+        overflow: visible;
         margin-bottom: 1.5rem;
     }
     
@@ -415,7 +415,7 @@
             <div class="info-item">
                 <strong>مبلغ اختلاف کل:</strong>
                 <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
-                    {{ difference_amount|rials_to_tomans }} تومان
+                    {{ difference_amount|persian_number:0 }} ریال
                 </span>
             </div>
         </div>
@@ -423,7 +423,7 @@
         <!-- نمایش مبلغ به حروف -->
         {% if difference_amount %}
         <div class="amount-in-words">
-            <strong>مبلغ به حروف:</strong> {{ difference_amount|rials_to_tomans|number_to_words_persian }} تومان
+            <strong>مبلغ به حروف:</strong> {{ difference_amount|number_to_words_persian }} ریال
         </div>
         {% endif %}
         
@@ -439,8 +439,8 @@
                             <th>وزن تخصیص یافته (کیلوگرم)</th>
                             <th>وزن تحویلی (کیلوگرم)</th>
                             <th>اختلاف وزن (کیلوگرم)</th>
-                            <th>فی (تومان/کیلوگرم)</th>
-                            <th>مبلغ اختلاف (تومان)</th>
+                            <th>فی (ریال/کیلوگرم)</th>
+                            <th>مبلغ اختلاف (ریال)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -452,9 +452,9 @@
                             <td class="{% if discrepancy.weight_difference > 0 %}positive{% elif discrepancy.weight_difference < 0 %}negative{% endif %}">
                                 {{ discrepancy.weight_difference|persian_number:2 }}
                             </td>
-                            <td>{{ discrepancy.unit_price|rials_to_tomans }}</td>
+                            <td>{{ discrepancy.unit_price|persian_number:0 }}</td>
                             <td class="{% if discrepancy.difference_amount > 0 %}positive{% elif discrepancy.difference_amount < 0 %}negative{% endif %}">
-                                <strong>{{ discrepancy.difference_amount|rials_to_tomans }}</strong>
+                                <strong>{{ discrepancy.difference_amount|persian_number:0 }}</strong>
                             </td>
                         </tr>
                         {% endfor %}
@@ -470,7 +470,7 @@
                 {% if settlement_completed %}
                     تسویه کامل شد
                 {% else %}
-                    {{ settled_amount|rials_to_tomans }} از {{ difference_amount|rials_to_tomans }} تومان
+                    {{ settled_amount|persian_number:0 }} از {{ difference_amount|persian_number:0 }} ریال
                 {% endif %}
             </div>
         </div>
@@ -478,19 +478,19 @@
         <div class="info-row">
             <div class="info-item">
                 <strong>مبلغ تسویه شده:</strong>
-                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|rials_to_tomans }} تومان</span>
+                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|persian_number:0 }} ریال</span>
                 <div class="amount-in-words" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem;">
-                    {{ settled_amount|rials_to_tomans|number_to_words_persian }} تومان
+                    {{ settled_amount|number_to_words_persian }} ریال
                 </div>
             </div>
             <div class="info-item">
                 <strong>مانده تسویه:</strong>
                 <span class="{% if remaining_amount > 0 %}negative{% else %}positive{% endif %}">
-                    {{ remaining_amount|rials_to_tomans }} تومان
+                    {{ remaining_amount|persian_number:0 }} ریال
                 </span>
                 {% if remaining_amount > 0 %}
                 <div class="amount-in-words" style="margin-top: 0.5rem; padding: 0.5rem 1rem; font-size: 0.85rem;">
-                    {{ remaining_amount|rials_to_tomans|number_to_words_persian }} تومان
+                    {{ remaining_amount|number_to_words_persian }} ریال
                 </div>
                 {% endif %}
             </div>
@@ -502,7 +502,7 @@
         </div>
         {% elif remaining_amount > 0 and not settlement_completed %}
         <div class="alert-warning">
-            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|rials_to_tomans }} تومان ({{ remaining_amount|rials_to_tomans|number_to_words_persian }} تومان) باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
+            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|persian_number:0 }} ریال ({{ remaining_amount|number_to_words_persian }} ریال) باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
         </div>
         {% elif settlement_completed %}
         <div class="alert-success">
@@ -577,7 +577,7 @@
         ثبت تراکنش جدید
     </div>
     <div class="form-section-body">
-        <form method="post" enctype="multipart/form-data">
+        <form id="supply-settlement-transaction-form" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="form-grid">
@@ -599,6 +599,7 @@
                 <div class="form-group">
                     <label for="{{ form.document_amount.id_for_label }}">{{ form.document_amount.label }} <span style="color: #dc3545;">*</span></label>
                     {{ form.document_amount }}
+                    <small class="persian-number-display" id="id_document_amount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {{ form.document_amount.errors }}
                 </div>
                 
@@ -658,11 +659,13 @@
             </div>
             
             <div class="form-group">
-                <label for="{{ form.document_attachment.id_for_label }}">{{ form.document_attachment.label }} <span style="color: #dc3545;">*</span></label>
-                {{ form.document_attachment }}
-                {{ form.document_attachment.errors }}
+                <label>پیوست‌های سند <span style="color: #dc3545;">*</span></label>
+                <input type="file" id="document_attachments_file_input" accept="image/*,.pdf,.doc,.docx" multiple style="display: none;">
+                <button type="button" id="btn-add-document-attachments" class="btn btn-outline-secondary" style="margin-bottom: 8px;">افزودن فایل(ها)</button>
+                <ul id="document_attachments_list" style="list-style: none; padding: 0; margin: 0 0 1rem 0; border: 1px solid var(--gray-300); border-radius: 8px; max-height: 200px; overflow-y: auto;"></ul>
+                <small style="color: var(--gray-600); font-size: 0.85rem;">حداقل یک فایل الزامی است. با «افزودن فایل(ها)» می‌توانید چند پیوست اضافه کنید؛ با «حذف» هر کدام را جداگانه حذف کنید.</small>
             </div>
-            
+
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary">ثبت تراکنش</button>
             </div>
@@ -711,15 +714,15 @@
                         <td>
                             <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
                         </td>
-                        <td><strong>{{ transaction.document_amount|rials_to_tomans }}</strong> تومان</td>
+                        <td><strong>{{ transaction.document_amount|persian_number:0 }}</strong> ریال</td>
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
-                            {% if transaction.document_attachment %}
-                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
-                            {% else %}
+                            {% for label, file in transaction.get_all_attachments %}
+                            <a href="{{ file.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">{{ label }}</a>{% if not forloop.last %} | {% endif %}
+                            {% empty %}
                             -
-                            {% endif %}
+                            {% endfor %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -727,7 +730,7 @@
             </table>
         </div>
         <div class="total-amount">
-            جمع مبالغ تراکنش‌ها: {{ settled_amount|rials_to_tomans }} تومان ({{ settled_amount|rials_to_tomans|number_to_words_persian }} تومان)
+            جمع مبالغ تراکنش‌ها: {{ settled_amount|persian_number:0 }} ریال ({{ settled_amount|number_to_words_persian }} ریال)
         </div>
     </div>
 </div>
@@ -752,6 +755,105 @@
 document.addEventListener('DOMContentLoaded', function() {
     // راه‌اندازی Custom Jalali Datepicker با تاخیر
     setTimeout(initializeDatePickers, 200);
+
+    // نمایش عدد فارسی با ، زیر مبلغ سند
+    (function () {
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        function formatNumberToPersian(num, decimalPlaces) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            var n = parseFloat(num);
+            var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : String(Math.round(n));
+            var parts = fixed.split('.');
+            var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+            var result = intPart + (parts[1] ? '.' + parts[1] : '');
+            return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+        }
+        var input = document.getElementById('id_document_amount');
+        var display = document.getElementById('id_document_amount_persian');
+        if (input && display) {
+            function update() {
+                var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+                var num = parseFloat(raw);
+                display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 0);
+            }
+            update();
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+        }
+    })();
+
+    // پیوست‌های سند: لیست فایل + افزودن/حذف + ارسال با FormData
+    (function () {
+        var form = document.getElementById('supply-settlement-transaction-form');
+        var fileInput = document.getElementById('document_attachments_file_input');
+        var listEl = document.getElementById('document_attachments_list');
+        var addBtn = document.getElementById('btn-add-document-attachments');
+        var attachmentFiles = [];
+
+        if (!form || !fileInput || !listEl || !addBtn) return;
+
+        function renderList() {
+            listEl.innerHTML = '';
+            attachmentFiles.forEach(function (f, i) {
+                var li = document.createElement('li');
+                li.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--gray-200);';
+                var span = document.createElement('span');
+                span.textContent = f.name;
+                span.style.cssText = 'font-size: 0.9rem;';
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-sm btn-outline-danger';
+                btn.textContent = 'حذف';
+                btn.addEventListener('click', function () {
+                    attachmentFiles.splice(i, 1);
+                    renderList();
+                });
+                li.appendChild(span);
+                li.appendChild(btn);
+                listEl.appendChild(li);
+            });
+        }
+
+        addBtn.addEventListener('click', function () { fileInput.click(); });
+
+        fileInput.addEventListener('change', function () {
+            var files = this.files;
+            for (var i = 0; i < files.length; i++) attachmentFiles.push(files[i]);
+            renderList();
+            this.value = '';
+        });
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            if (attachmentFiles.length === 0) {
+                alert('حداقل یک پیوست سند الزامی است.');
+                return;
+            }
+            var formData = new FormData();
+            var els = form.elements;
+            for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                if (!el.name || el.type === 'file' || el.tagName === 'BUTTON') continue;
+                if (el.type === 'checkbox' || el.type === 'radio') {
+                    if (el.checked) formData.append(el.name, el.value);
+                } else {
+                    formData.append(el.name, el.value || '');
+                }
+            }
+            for (var j = 0; j < attachmentFiles.length; j++) {
+                formData.append('document_attachments', attachmentFiles[j]);
+            }
+            fetch(form.action, { method: 'POST', body: formData, credentials: 'same-origin' })
+                .then(function (r) {
+                    if (r.redirected) { window.location.href = r.url; return; }
+                    return r.text();
+                })
+                .then(function (html) {
+                    if (html) { document.open(); document.write(html); document.close(); }
+                })
+                .catch(function (err) { console.error(err); alert('خطا در ارسال فرم.'); });
+        });
+    })();
 });
 
 // Moved to global scope to avoid ReferenceError

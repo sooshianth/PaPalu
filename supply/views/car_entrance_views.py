@@ -437,6 +437,8 @@ def car_entrance_list_view(request):
             Q(transport_type='inbound') |
             (Q(direction__isnull=True) & Q(transport_type__isnull=True))
         )
+        # حمل‌های ارجاع‌شده به مدیر را از لیست اصلاً نشان نده (همه کاربران؛ مدیر فقط از صفحه ارجاعات وارد می‌شود)
+        transports = transports.filter(carentrance_referred_to_manager=False)
         
         inbound_count = transports.count()
         bug_logger.info(f"تعداد حمل‌های ورودی در انتظار ورود خودرو: {inbound_count}")
@@ -541,21 +543,180 @@ def register_driver_for_transport_view(request, transport_number):
         messages.error(request, 'این حمل در وضعیت قابل ثبت راننده نیست.')
         return redirect(reverse('supply:carentrance'))
 
+    # اگر این حمل به مدیر ارجاع شده، فقط سوپرادمین می‌تواند وارد شود
+    if getattr(pt, 'carentrance_referred_to_manager', False) and not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای دسترسی به ثبت ورود خودرو ارجاع‌شده به مدیر - حمل {transport_number}")
+        messages.error(request, 'این مورد به مدیر ارجاع شده و فقط مدیر می‌تواند آن را مشاهده و حل کند.')
+        return HttpResponseForbidden('دسترسی غیرمجاز. این مورد به مدیر ارجاع شده است.')
+
     if request.method == 'POST':
+        is_refer_to_manager = request.POST.get('refer_to_manager') == '1'
+        referral_reason = (request.POST.get('carentrance_referral_reason') or '').strip()
+
         # ابتدا راننده را پیدا یا ایجاد می‌کنیم تا بتوانیم queryset فرم را تنظیم کنیم
         phone = request.POST.get('phone', '').strip()
         driver = None
         if phone:
             driver = Person.objects.filter(phone_number=phone, type='driver').first()
-        
+
         # دریافت freight_payment_type از سفارش خرید (نه از transport)
         freight_payment_type = None
         if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
             freight_payment_type = pt.allocation.order.freight_payment_type
         elif pt.freight_payment_type:
             freight_payment_type = pt.freight_payment_type
-        
+
         form = CarEntranceDriverForm(request.POST, request.FILES, freight_payment_type=freight_payment_type, driver=driver)
+
+        # ارجاع به مدیر: دلیل اجباری است و فرم باید معتبر و ذخیره شود
+        if is_refer_to_manager:
+            if not referral_reason:
+                messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
+                context_refer = {
+                    'form': form, 'pt': pt, 'transport_raw_materials_list': [], 'all_order_items_list': [],
+                    'accessible_transport_fields': accessible_transport_fields, 'accessible_po_fields': accessible_po_fields,
+                    'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
+                    'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
+                    'show_refer_button': not getattr(pt, 'carentrance_referred_to_manager', False) and not request.user.is_superuser,
+                    'refer_modal_open': True,
+                }
+                # لیست مواد و سفارش را پر کن
+                transport_raw_materials_list = []
+                try:
+                    raw_material_infos = pt.raw_material_infos.select_related('raw_material').all()
+                    for rmi in raw_material_infos:
+                        if rmi.raw_material:
+                            class SimpleRawMaterial:
+                                def __init__(self, raw_material_id, raw_material_name, allocated_quantity, weight_unit):
+                                    self.id, self.name, self.allocated_quantity, self.weight_unit = raw_material_id, raw_material_name, allocated_quantity, weight_unit
+                            try:
+                                wud = rmi.get_weight_unit_display()
+                            except Exception:
+                                wud = rmi.weight_unit or 'کیلوگرم'
+                            transport_raw_materials_list.append(SimpleRawMaterial(rmi.raw_material.id, rmi.raw_material.name, rmi.allocated_quantity, wud))
+                except Exception:
+                    pass
+                all_order_items_list = []
+                if pt.purchase_order:
+                    try:
+                        order_items_data = pt.purchase_order.order_items.filter(raw_material__isnull=False).values('id', 'raw_material__id', 'raw_material__name')
+                        class SimpleOrderItem:
+                            def __init__(self, raw_material_id, raw_material_name):
+                                self.raw_material = type('RM', (), {'id': raw_material_id, 'name': raw_material_name})()
+                        all_order_items_list = [SimpleOrderItem(d['raw_material__id'], d['raw_material__name']) for d in order_items_data]
+                    except Exception:
+                        pass
+                context_refer['transport_raw_materials_list'] = transport_raw_materials_list
+                context_refer['all_order_items_list'] = all_order_items_list
+                return render(request, 'car_entrance_register.html', context_refer)
+            if not form.is_valid():
+                context_refer = {
+                    'form': form, 'pt': pt, 'transport_raw_materials_list': [], 'all_order_items_list': [],
+                    'accessible_transport_fields': accessible_transport_fields, 'accessible_po_fields': accessible_po_fields,
+                    'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
+                    'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
+                    'show_refer_button': True, 'refer_modal_open': True,
+                }
+                try:
+                    transport_raw_materials_list = []
+                    for rmi in pt.raw_material_infos.select_related('raw_material').all():
+                        if rmi.raw_material:
+                            class SimpleRawMaterial:
+                                def __init__(self, a, b, c, d): self.id, self.name, self.allocated_quantity, self.weight_unit = a, b, c, d
+                            transport_raw_materials_list.append(SimpleRawMaterial(rmi.raw_material.id, rmi.raw_material.name, rmi.allocated_quantity, getattr(rmi, 'get_weight_unit_display', lambda: 'kg')() or 'kg'))
+                    context_refer['transport_raw_materials_list'] = transport_raw_materials_list
+                except Exception:
+                    pass
+                try:
+                    all_order_items_list = [type('O', (), {'raw_material': type('R', (), {'id': d['raw_material__id'], 'name': d['raw_material__name']})()})().raw_material for d in (pt.purchase_order.order_items.filter(raw_material__isnull=False).values('raw_material__id', 'raw_material__name') if pt.purchase_order else [])]
+                    context_refer['all_order_items_list'] = []
+                    if pt.purchase_order:
+                        for d in pt.purchase_order.order_items.filter(raw_material__isnull=False).values('raw_material__id', 'raw_material__name'):
+                            class SimpleOrderItem:
+                                def __init__(self, rid, rname):
+                                    self.raw_material = type('R', (), {'id': rid, 'name': rname})()
+                            context_refer['all_order_items_list'].append(SimpleOrderItem(d['raw_material__id'], d['raw_material__name']))
+                except Exception:
+                    pass
+                return render(request, 'car_entrance_register.html', context_refer)
+
+            # فرم معتبر است: ذخیره اطلاعات (راننده، پلاک، بارنامه، فایل) بدون تغییر وضعیت، سپس ارجاع
+            data = form.cleaned_data
+            phone = data.get('phone')
+            try:
+                with transaction.atomic():
+                    driver = Person.objects.filter(phone_number=phone, type='driver').first()
+                    if not driver:
+                        driver = Person.objects.create(name=data.get('name'), phone_number=phone, national_id=data.get('national_id') or '', type='driver')
+                    else:
+                        if driver.name != data.get('name'):
+                            driver.name = data.get('name')
+                        if driver.national_id != data.get('national_id'):
+                            driver.national_id = data.get('national_id') or ''
+                        driver.save()
+                    pt.driver = driver
+                    pt.plate_number = data.get('plate_number')
+                    if data.get('waybill_weight'):
+                        pt.waybill_weight = data.get('waybill_weight')
+                    if data.get('waybill_gross_weight'):
+                        pt.waybill_gross_weight = data.get('waybill_gross_weight')
+                    if data.get('waybill_date'):
+                        pt.waybill_date = data.get('waybill_date')
+                    if 'bill_of_lading_file' in request.FILES:
+                        pt.bill_of_lading_file = request.FILES['bill_of_lading_file']
+                    freight_payment_type = pt.allocation.order.freight_payment_type if pt.allocation and pt.allocation.order else pt.freight_payment_type
+                    if freight_payment_type == 'pay_to_driver':
+                        account_number = data.get('account', '').strip()
+                        sheba_number = data.get('sheba', '').strip()
+                        if account_number or sheba_number:
+                            financial_banking, _ = FinancialBanking.objects.get_or_create(person=driver)
+                            bank_account = BankAccount.objects.filter(financial_banking=financial_banking, account_number=account_number or None, shaba_number=sheba_number or None).first()
+                            if not bank_account and account_number:
+                                bank_account = BankAccount.objects.filter(financial_banking=financial_banking, account_number=account_number).first()
+                            if not bank_account and sheba_number:
+                                bank_account = BankAccount.objects.filter(financial_banking=financial_banking, shaba_number=sheba_number).first()
+                            if not bank_account:
+                                bank_account = BankAccount.objects.create(financial_banking=financial_banking, account_number=account_number or None, shaba_number=sheba_number or None, bank_name=None)
+                            pt.driver_bank_account = bank_account
+                        else:
+                            pt.driver_bank_account = None
+                    else:
+                        pt.driver_bank_account = None
+                    pt.actual_arrival_date = jdatetime.date.today()
+                    pt.carentrance_referred_to_manager = True
+                    pt.carentrance_referred_at = timezone.now()
+                    pt.carentrance_referral_reason = referral_reason
+                    pt.save()
+                    audit_logger.activity(f"ثبت ورود خودرو برای حمل {transport_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {referral_reason[:100]}")
+                messages.warning(request, 'اطلاعات ذخیره شد و این مورد به مدیر ارجاع داده شد. فقط مدیر می‌تواند از صفحه ارجاعات آن را باز کرده و تایید کند.')
+                return redirect(reverse('supply:carentrance'))
+            except Exception as e:
+                bug_logger.error(f"خطا در ارجاع به مدیر برای حمل {transport_number}: {e}", exc_info=True)
+                messages.error(request, f'خطا در ذخیره یا ارجاع: {str(e)}')
+                context_refer = {
+                    'form': form, 'pt': pt, 'transport_raw_materials_list': [], 'all_order_items_list': [],
+                    'accessible_transport_fields': accessible_transport_fields, 'accessible_po_fields': accessible_po_fields,
+                    'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
+                    'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
+                    'show_refer_button': True, 'refer_modal_open': True,
+                }
+                try:
+                    context_refer['transport_raw_materials_list'] = [
+                        type('S', (), {'id': r.raw_material.id, 'name': r.raw_material.name, 'allocated_quantity': r.allocated_quantity, 'weight_unit': getattr(r, 'get_weight_unit_display', lambda: 'kg')() or 'kg'})()
+                        for r in pt.raw_material_infos.select_related('raw_material').all() if r.raw_material
+                    ]
+                except Exception:
+                    pass
+                try:
+                    if pt.purchase_order:
+                        context_refer['all_order_items_list'] = [
+                            type('O', (), {'raw_material': type('R', (), {'id': d['raw_material__id'], 'name': d['raw_material__name']})()})()
+                            for d in pt.purchase_order.order_items.filter(raw_material__isnull=False).values('raw_material__id', 'raw_material__name')
+                        ]
+                except Exception:
+                    pass
+                return render(request, 'car_entrance_register.html', context_refer)
+
         if form.is_valid():
             data = form.cleaned_data
             phone = data.get('phone')
@@ -673,6 +834,11 @@ def register_driver_for_transport_view(request, transport_number):
                     
                     # تغییر وضعیت به "در انتظار تخلیه"
                     pt.status = Transport.STATUS_AWAITING_UNLOADING
+                    # اگر مدیر از صفحه ارجاعات حل کرده، پرچم ارجاع را بردار
+                    if getattr(pt, 'carentrance_referred_to_manager', False) and request.user.is_superuser:
+                        pt.carentrance_referred_to_manager = False
+                        pt.carentrance_referred_at = None
+                        pt.carentrance_referral_reason = None
                     pt.save()
                     bug_logger.info(f"وضعیت حمل {transport_number} به 'در انتظار تخلیه' تغییر یافت")
                     
@@ -800,6 +966,9 @@ def register_driver_for_transport_view(request, transport_number):
             # در صورت خطا، list خالی برمی‌گردانیم
             all_order_items_list = []
 
+    is_carentrance_referred = getattr(pt, 'carentrance_referred_to_manager', False)
+    show_refer_button = not is_carentrance_referred and not request.user.is_superuser
+
     context = {
         'form': form,
         'pt': pt,
@@ -809,6 +978,9 @@ def register_driver_for_transport_view(request, transport_number):
         'accessible_po_fields': accessible_po_fields,
         'accessible_raw_material_fields': accessible_raw_material_fields,
         'accessible_person_fields': accessible_person_fields,
+        'is_carentrance_referred': is_carentrance_referred,
+        'show_refer_button': show_refer_button,
+        'refer_modal_open': False,
     }
     return render(request, 'car_entrance_register.html', context)
 

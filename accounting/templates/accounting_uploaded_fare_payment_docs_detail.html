@@ -165,7 +165,7 @@
     <div class="info-grid">
         <div class="info-item">
             <span class="info-label">شماره حمل</span>
-            <span class="info-value">{{ transport.transport_number|default:"—" }}</span>
+            <span class="info-value">{{ transport.transport_number|persian_digits|default:"—" }}</span>
         </div>
         {% if purchase_order %}
         <div class="info-item">
@@ -176,7 +176,7 @@
         {% if transport.plate_number %}
         <div class="info-item">
             <span class="info-label">پلاک خودرو</span>
-            <span class="info-value">{{ transport.plate_number }}</span>
+            <span class="info-value">{{ transport.plate_number|persian_digits }}</span>
         </div>
         {% endif %}
         {% if transport.vehicle_type %}
@@ -189,6 +189,28 @@
         <div class="info-item">
             <span class="info-label">راننده</span>
             <span class="info-value">{{ transport.driver.name|default:"—" }}</span>
+        </div>
+        {% endif %}
+        {% if transport.driver_bank_account and transport.driver_bank_account.account_number %}
+        <div class="info-item">
+            <span class="info-label">شماره حساب راننده</span>
+            <span class="info-value">{{ transport.driver_bank_account.account_number }}</span>
+        </div>
+        {% elif transport.driver_account_number %}
+        <div class="info-item">
+            <span class="info-label">شماره حساب راننده</span>
+            <span class="info-value">{{ transport.driver_account_number }}</span>
+        </div>
+        {% endif %}
+        {% if transport.driver_bank_account and transport.driver_bank_account.shaba_number %}
+        <div class="info-item">
+            <span class="info-label">شماره شبا راننده</span>
+            <span class="info-value">IR{{ transport.driver_bank_account.shaba_number }}</span>
+        </div>
+        {% elif transport.driver_sheba_number %}
+        <div class="info-item">
+            <span class="info-label">شماره شبا راننده</span>
+            <span class="info-value">IR{{ transport.driver_sheba_number }}</span>
         </div>
         {% endif %}
         {% if transport.driver and transport.driver.phone_number %}
@@ -225,7 +247,7 @@
         <div class="info-item">
             <span class="info-label">کرایه پرداختی</span>
             <span class="info-value" style="border-right-color: #28a745; font-weight: 700; color: #28a745;">
-                {{ transport.freight_payment|persian_number:2 }} ریال
+                {{ transport.freight_payment|persian_number:0 }} ریال
             </span>
         </div>
         {% endif %}
@@ -245,19 +267,30 @@
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 24px; height: 24px; color: #2e7d32;">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <strong style="color: #2e7d32; font-size: 1.1rem;">سند پرداخت کرایه</strong>
+            <strong style="color: #2e7d32; font-size: 1.1rem;">اسناد پرداخت کرایه</strong>
         </div>
         
         <div class="document-info">
-            <a href="{{ transport.freight_payment_document.url }}" target="_blank" class="document-link">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
-                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                مشاهده / دانلود سند پرداخت کرایه
-            </a>
+            {% if transport.freight_payment_document_attachments %}
+                {% for att in transport.freight_payment_document_attachments.all %}
+                <a href="{{ att.file.url }}" target="_blank" class="document-link" style="margin-left: 8px; margin-bottom: 8px;">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    سند {{ forloop.counter }}
+                </a>
+                {% endfor %}
+            {% elif transport.freight_payment_document %}
+                <a href="{{ transport.freight_payment_document.url }}" target="_blank" class="document-link">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    مشاهده / دانلود سند پرداخت کرایه
+                </a>
+            {% endif %}
             
             {% if transport.freight_payment_document_uploaded_at %}
-            <div style="color: #555; font-size: 0.95rem;">
+            <div style="color: #555; font-size: 0.95rem; margin-top: 12px;">
                 <strong>تاریخ بارگذاری:</strong> {{ transport.freight_payment_document_uploaded_at|date:"Y/m/d H:i" }}
             </div>
             {% endif %}

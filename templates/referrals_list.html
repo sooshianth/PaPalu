@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ارجاعات به مدیریت{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #6f42c1;
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .info-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 18px;
+        background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+        color: white;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+    }
+    
+    .live-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        background: #d4edda;
+        color: #155724;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .live-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #28a745;
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    
+    .referral-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 15px;
+        border-right: 4px solid #6f42c1;
+        transition: all 0.3s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .referral-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .referral-info {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .referral-source {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+    
+    .referral-source.transport {
+        background: #ffeaa7;
+        color: #6c5ce7;
+    }
+    
+    .referral-source.production {
+        background: #dfe6e9;
+        color: #2d3436;
+    }
+    
+    .referral-source.allocation {
+        background: #fab1a0;
+        color: #d63031;
+    }
+    
+    .referral-source.carentrance {
+        background: #81ecec;
+        color: #0984e3;
+    }
+    
+    .referral-description {
+        font-size: 1rem;
+        color: var(--gray-800);
+        font-weight: 500;
+    }
+    
+    .referral-date {
+        font-size: 0.85rem;
+        color: var(--gray-600);
+        margin-top: 6px;
+    }
+    
+    .referral-action a {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(111, 66, 193, 0.3);
+        transition: all 0.3s;
+    }
+    
+    .referral-action a:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(111, 66, 193, 0.4);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: #f8f9fa;
+        border-radius: 12px;
+        margin-top: 30px;
+    }
+    
+    .empty-state h3 {
+        color: var(--gray-600);
+        font-size: 1.3rem;
+        margin-bottom: 10px;
+    }
+    
+    .empty-state p {
+        color: var(--gray-600);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+        <h2>ارجاعات به مدیریت</h2>
+        <span class="info-badge" id="countBadge">{{ total_count }} ارجاع</span>
+        <span class="live-indicator">
+            <span class="live-dot"></span>
+            بروزرسانی خودکار
+        </span>
+    </div>
+</div>
+
+<div id="referralsContainer">
+    {% if referrals %}
+        {% for r in referrals %}
+        <div class="referral-card" data-type="{{ r.type }}">
+            <div class="referral-info">
+                <span class="referral-source {{ r.type }}">{{ r.source }}</span>
+                <div class="referral-description">{{ r.description }}</div>
+                <div class="referral-date">
+                    {% if r.created_at %}
+                        {{ r.created_at|date:"Y/m/d" }} - {{ r.created_at|time:"H:i" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </div>
+            </div>
+            <div class="referral-action">
+                <a href="{{ r.resolve_url }}">رفتن به صفحه حل →</a>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="empty-state" id="emptyState">
+            <h3>ارجاعی وجود ندارد</h3>
+            <p>در حال حاضر هیچ موردی برای بررسی مدیریت ارجاع نشده است.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+    const API_URL = '{% url "referrals_api" %}';
+    const POLL_INTERVAL = 10000; // 10 ثانیه
+
+    function formatDate(dtStr) {
+        if (!dtStr) return '-';
+        const d = new Date(dtStr);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return y + '/' + m + '/' + day + ' - ' + h + ':' + min;
+    }
+
+    function renderReferral(r) {
+        const typeClass = r.type;
+        const typeLabel = r.source;
+        return '<div class="referral-card" data-type="' + r.type + '">' +
+            '<div class="referral-info">' +
+            '<span class="referral-source ' + typeClass + '">' + typeLabel + '</span>' +
+            '<div class="referral-description">' + r.description + '</div>' +
+            '<div class="referral-date">' + formatDate(r.created_at) + '</div>' +
+            '</div>' +
+            '<div class="referral-action">' +
+            '<a href="' + r.resolve_url + '">رفتن به صفحه حل →</a>' +
+            '</div>' +
+            '</div>';
+    }
+
+    function updateList(data) {
+        const container = document.getElementById('referralsContainer');
+        const countBadge = document.getElementById('countBadge');
+
+        if (countBadge) countBadge.textContent = data.total_count + ' ارجاع';
+
+        if (data.referrals.length === 0) {
+            container.innerHTML = '<div class="empty-state" id="emptyState"><h3>ارجاعی وجود ندارد</h3><p>در حال حاضر هیچ موردی برای بررسی مدیریت ارجاع نشده است.</p></div>';
+        } else {
+            const cards = data.referrals.map(renderReferral).join('');
+            container.innerHTML = cards;
+        }
+    }
+
+    function fetchReferrals() {
+        fetch(API_URL, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(updateList)
+        .catch(() => {});
+    }
+
+    // اولین بروزرسانی بعد از 10 ثانیه، سپس هر 10 ثانیه
+    setInterval(fetchReferrals, POLL_INTERVAL);
+})();
+</script>
+{% endblock %}

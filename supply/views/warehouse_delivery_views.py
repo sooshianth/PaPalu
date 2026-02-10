@@ -764,22 +764,22 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
                                     )
                                     
-                                    # ایجاد SourceStock (از انبار تامین‌کننده)
+                                    # ایجاد SourceStock (از انبار تامین‌کننده) — مقدار بر اساس وزن خالص واقعی تخلیه‌شده
                                     SourceStock.objects.create(
                                         stock_entry=stock_entry,
                                         from_content_type=raw_material_content_type,
                                         from_object_id=rmi.raw_material.pk,
                                         from_warehouse=source_warehouse,
-                                        quantity=rmi.allocated_quantity
+                                        quantity=rmi.net_weight
                                     )
                                     
-                                    # ایجاد TargetStock (به انبار کارخانه - انبار مقصد مربوط به این ماده اولیه)
+                                    # ایجاد TargetStock (به انبار کارخانه) — مقدار بر اساس وزن خالص واقعی تخلیه‌شده
                                     TargetStock.objects.create(
                                         stock_entry=stock_entry,
                                         to_content_type=raw_material_content_type,
                                         to_object_id=rmi.raw_material.pk,
                                         to_warehouse=destination_warehouse_for_item,
-                                        quantity=rmi.allocated_quantity
+                                        quantity=rmi.net_weight
                                     )
                                     
                                     # Commit کردن StockEntry برای به‌روزرسانی موجودیت‌ها
@@ -791,7 +791,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         f"ماده اولیه: {rmi.raw_material.name}, "
                                         f"از انبار: {source_warehouse.warehouse_id}, "
                                         f"به انبار: {destination_warehouse_for_item.warehouse_id}, "
-                                        f"مقدار: {rmi.allocated_quantity} کیلوگرم"
+                                        f"مقدار (وزن خالص تخلیه): {rmi.net_weight} کیلوگرم"
                                     )
                                 
                                 # لاگ کلی برای audit

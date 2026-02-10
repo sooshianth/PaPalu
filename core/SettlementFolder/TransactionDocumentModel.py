@@ -243,7 +243,17 @@ class TransactionDocument(models.Model):
 
     def __str__(self):
         return f"سند تراکنش {self.accounting_document_number or f'#{self.id}'} - {self.document_number or ''}"
-    
+
+    def get_all_attachments(self):
+        """لیست همه پیوست‌ها: پیوست اصلی + پیوست‌های اضافی"""
+        out = []
+        if self.document_attachment:
+            out.append(('اصلی', self.document_attachment))
+        for i, att in enumerate(self.additional_attachments.order_by('id'), start=1):
+            if att.file:
+                out.append((f'پیوست {i}', att.file))
+        return out
+
     def generate_accounting_document_number(self):
         """
         تولید خودکار شماره سند حسابداری
@@ -259,4 +269,25 @@ class TransactionDocument(models.Model):
             self.accounting_document_number = f"TRX-{settlement_id}-{timestamp}-{unique_id}"
         
         return self.accounting_document_number
+
+
+class TransactionDocumentAttachment(models.Model):
+    """پیوست اضافی برای سند تراکنش (چند پیوست به ازای هر سند)"""
+    transaction_document = models.ForeignKey(
+        TransactionDocument,
+        on_delete=models.CASCADE,
+        related_name='additional_attachments',
+        verbose_name='سند تراکنش',
+    )
+    file = models.FileField(
+        upload_to='transaction_documents/attachments/%Y/%m/%d/',
+        verbose_name='فایل پیوست',
+    )
+
+    class Meta:
+        verbose_name = 'تسویه | پیوست اضافی سند'
+        verbose_name_plural = 'تسویه | پیوست‌های اضافی اسناد'
+
+    def __str__(self):
+        return f"پیوست #{self.id} برای سند {self.transaction_document_id}"
 

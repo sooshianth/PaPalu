@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load number_filters %}
 {% block title %}بارگذاری اسناد پرداخت - {{ transport.transport_number }}{% endblock %}
 {% block extra_css %}
 <style>
@@ -231,7 +232,7 @@
 
 {% block content %}
 <div class="page-header">
-    <h2>بارگذاری اسناد پرداخت - {{ transport.transport_number }}</h2>
+    <h2>بارگذاری اسناد پرداخت - {{ transport.transport_number|persian_digits }}</h2>
     <a href="{% url 'accounting:upload_fare_payment_docs_list' %}" class="back-link">
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px;">
             <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -255,7 +256,7 @@
         </div>
         <div class="info-item">
             <span class="info-label">پلاک خودرو</span>
-            <span class="info-value">{{ transport.plate_number|default:"—" }}</span>
+            <span class="info-value">{{ transport.plate_number|persian_digits|default:"—" }}</span>
         </div>
         <div class="info-item">
             <span class="info-label">نوع ماده اولیه</span>
@@ -273,7 +274,7 @@
             <span class="info-label">کرایه پرداختی (نهایی - جهت کنترل)</span>
             <span class="info-value" style="border-right-color: #ff9800; font-weight: 700; color: #e65100;">
                 {% if transport.freight_payment %}
-                    <span dir="ltr">{{ transport.freight_payment|floatformat:0 }}</span> ریال
+                    {{ transport.freight_payment|persian_number:0 }} ریال
                 {% else %}
                     —
                 {% endif %}
@@ -285,17 +286,33 @@
         </div>
         <div class="info-item">
             <span class="info-label">شماره حساب راننده</span>
-            <span class="info-value">{{ transport.driver_account_number|default:"—" }}</span>
+            <span class="info-value">
+                {% if transport.driver_bank_account and transport.driver_bank_account.account_number %}
+                    {{ transport.driver_bank_account.account_number }}
+                {% elif transport.driver_account_number %}
+                    {{ transport.driver_account_number }}
+                {% else %}
+                    —
+                {% endif %}
+            </span>
         </div>
         <div class="info-item">
             <span class="info-label">شماره شبا راننده</span>
-            <span class="info-value">{{ transport.driver_sheba_number|default:"—" }}</span>
+            <span class="info-value">
+                {% if transport.driver_bank_account and transport.driver_bank_account.shaba_number %}
+                    IR{{ transport.driver_bank_account.shaba_number }}
+                {% elif transport.driver_sheba_number %}
+                    IR{{ transport.driver_sheba_number }}
+                {% else %}
+                    —
+                {% endif %}
+            </span>
         </div>
         <div class="info-item">
             <span class="info-label">شماره تلفن راننده</span>
             <span class="info-value">
-                {% if transport.driver and transport.driver.phone %}
-                    {{ transport.driver.phone }}
+                {% if transport.driver and transport.driver.phone_number %}
+                    {{ transport.driver.phone_number }}
                 {% else %}
                     —
                 {% endif %}
@@ -320,26 +337,22 @@
             <path d="M13 16H12V12H11M12 8H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
         <div>
-            <strong>فایل آپلود محلی:</strong> برای بارگذاری اسناد مربوط به پرداخت کرایه (مانند فیش واریز، تاییدیه بانکی، سند حسابداری پرداخت یا سند تسویه حساب نهایی)، لطفاً فایل آپلود بارگذاری نمایید.
+            <strong>فایل آپلود محلی:</strong> برای بارگذاری اسناد مربوط به پرداخت کرایه (مانند فیش واریز، تاییدیه بانکی، سند حسابداری پرداخت یا سند تسویه حساب نهایی)، لطفاً یک یا چند فایل بارگذاری نمایید.
         </div>
     </div>
     
-    <form method="post" enctype="multipart/form-data" novalidate>
+    <form id="upload-fare-payment-docs-form" method="post" enctype="multipart/form-data" novalidate>
         {% csrf_token %}
         
         <div class="form-group">
-            <label for="{{ form.freight_payment_document.id_for_label }}">
-                <span class="required">*</span>
-                {{ form.freight_payment_document.label }}
-            </label>
-            {{ form.freight_payment_document }}
-            {% if form.freight_payment_document.errors %}
-                {% for error in form.freight_payment_document.errors %}
-                    <div class="invalid-feedback">{{ error }}</div>
-                {% endfor %}
-            {% endif %}
+            <label>پیوست‌های سند پرداخت کرایه <span class="required">*</span></label>
+            <input type="file" id="document_attachments_file_input" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" multiple style="display: none;">
+            <button type="button" id="btn-add-document-attachments" class="btn btn-secondary" style="margin-bottom: 8px;">
+                افزودن فایل(ها)
+            </button>
+            <ul id="document_attachments_list" style="list-style: none; padding: 0; margin: 0 0 1rem 0; border: 1px solid var(--gray-300); border-radius: 8px; max-height: 200px; overflow-y: auto;"></ul>
             <small style="display: block; margin-top: 5px; color: var(--gray-600);">
-                فرمت‌های مجاز: PDF, JPG, PNG, DOC, DOCX
+                حداقل یک فایل الزامی است. فرمت‌های مجاز: PDF, JPG, PNG, DOC, DOCX. با «افزودن فایل(ها)» می‌توانید چند سند اضافه کنید.
             </small>
         </div>
         
@@ -365,4 +378,69 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var form = document.getElementById('upload-fare-payment-docs-form');
+    var fileInput = document.getElementById('document_attachments_file_input');
+    var listEl = document.getElementById('document_attachments_list');
+    var addBtn = document.getElementById('btn-add-document-attachments');
+    var attachmentFiles = [];
+
+    if (!form || !fileInput || !listEl || !addBtn) return;
+
+    function renderList() {
+        listEl.innerHTML = '';
+        attachmentFiles.forEach(function(f, i) {
+            var li = document.createElement('li');
+            li.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--gray-200);';
+            var span = document.createElement('span');
+            span.textContent = f.name;
+            span.style.cssText = 'font-size: 0.9rem;';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-secondary';
+            btn.style.cssText = 'padding: 4px 10px; font-size: 0.85rem;';
+            btn.textContent = 'حذف';
+            btn.addEventListener('click', function() {
+                attachmentFiles.splice(i, 1);
+                renderList();
+            });
+            li.appendChild(span);
+            li.appendChild(btn);
+            listEl.appendChild(li);
+        });
+    }
+
+    addBtn.addEventListener('click', function() { fileInput.click(); });
+
+    fileInput.addEventListener('change', function() {
+        var files = this.files;
+        for (var i = 0; i < files.length; i++) attachmentFiles.push(files[i]);
+        renderList();
+        this.value = '';
+    });
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (attachmentFiles.length === 0) {
+            alert('حداقل یک فایل سند الزامی است.');
+            return;
+        }
+        var formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        for (var j = 0; j < attachmentFiles.length; j++) {
+            formData.append('document_attachments', attachmentFiles[j]);
+        }
+        fetch(form.action, { method: 'POST', body: formData, credentials: 'same-origin' })
+            .then(function(r) {
+                if (r.redirected) { window.location.href = r.url; return; }
+                return r.text();
+            })
+            .then(function(html) {
+                if (html) { document.open(); document.write(html); document.close(); }
+            })
+            .catch(function(err) { console.error(err); alert('خطا در ارسال فرم.'); });
+    });
+});
+</script>
 {% endblock %}

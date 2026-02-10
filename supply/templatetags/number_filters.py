@@ -12,6 +12,14 @@ def convert_to_persian_numbers(text):
     return str(text).translate(translation_table)
 
 
+@register.filter(name='persian_digits')
+def persian_digits(value):
+    """تبدیل ارقام انگلیسی به فارسی در هر متنی (مثلاً پلاک)"""
+    if value is None or value == '':
+        return value
+    return convert_to_persian_numbers(str(value))
+
+
 def _to_decimal(value):
     """تبدیل امن به Decimal برای نمایش بدون خطای ممیز شناور"""
     if value is None:

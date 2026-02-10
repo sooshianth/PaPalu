@@ -655,7 +655,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             totalInput.value = total.toFixed(2);
-            
+            totalInput.dispatchEvent(new Event('input'));
             // محاسبه مجموع کل
             calculateSubtotal();
             
@@ -697,6 +697,50 @@ document.addEventListener('DOMContentLoaded', function() {
         const subtotalInput = document.querySelector('input[name="subtotal_without_freight"]');
         if (subtotalInput) {
             subtotalInput.value = subtotal.toFixed(2);
+            subtotalInput.dispatchEvent(new Event('input'));
+        }
+    }
+
+    // نمایش عدد فارسی با ، زیر فیلدهای عددی
+    var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    function formatNumberToPersian(num, decimalPlaces) {
+        if (num === null || num === undefined || isNaN(num)) return '';
+        var n = parseFloat(num);
+        var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+        var parts = fixed.split('.');
+        var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+        var result = intPart + (parts[1] ? '.' + parts[1] : '');
+        return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+    }
+    function updatePersianDisplay(input, displayEl, decimals) {
+        if (!input || !displayEl) return;
+        var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+        var num = parseFloat(raw);
+        displayEl.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, decimals !== undefined ? decimals : 2);
+    }
+    function attachPersianToRow(formRow) {
+        if (formRow.dataset.persianAttached === '1') return;
+        formRow.dataset.persianAttached = '1';
+        var q = formRow.querySelector('input[name*="-quantity"]');
+        var u = formRow.querySelector('input[name*="-unit_price"]');
+        var t = formRow.querySelector('input[name*="-total_purchase_cost"]');
+        var dq = formRow.querySelector('.quantity-persian');
+        var du = formRow.querySelector('.unit-price-persian');
+        var dt = formRow.querySelector('.total-persian');
+        if (q && dq) {
+            updatePersianDisplay(q, dq, 2);
+            q.addEventListener('input', function () { updatePersianDisplay(q, dq, 2); });
+            q.addEventListener('change', function () { updatePersianDisplay(q, dq, 2); });
+        }
+        if (u && du) {
+            updatePersianDisplay(u, du, 2);
+            u.addEventListener('input', function () { updatePersianDisplay(u, du, 2); });
+            u.addEventListener('change', function () { updatePersianDisplay(u, du, 2); });
+        }
+        if (t && dt) {
+            updatePersianDisplay(t, dt, 2);
+            t.addEventListener('input', function () { updatePersianDisplay(t, dt, 2); });
+            t.addEventListener('change', function () { updatePersianDisplay(t, dt, 2); });
         }
     }
     
@@ -859,6 +903,41 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // محاسبه اولیه
     calculateSubtotal();
+
+    // نمایش فارسی: جمع بدون کرایه و کرایه (سطح سفارش)
+    var subtotalInp = document.querySelector('input[name="subtotal_without_freight"]');
+    var subtotalPersian = document.getElementById('id_subtotal_without_freight_persian');
+    if (subtotalInp && subtotalPersian) {
+        updatePersianDisplay(subtotalInp, subtotalPersian, 2);
+        subtotalInp.addEventListener('input', function () { updatePersianDisplay(subtotalInp, subtotalPersian, 2); });
+        subtotalInp.addEventListener('change', function () { updatePersianDisplay(subtotalInp, subtotalPersian, 2); });
+    }
+    var freightInp = document.getElementById('id_freight_cost');
+    var freightPersian = document.getElementById('id_freight_cost_persian');
+    if (freightInp && freightPersian) {
+        updatePersianDisplay(freightInp, freightPersian, 2);
+        freightInp.addEventListener('input', function () { updatePersianDisplay(freightInp, freightPersian, 2); });
+        freightInp.addEventListener('change', function () { updatePersianDisplay(freightInp, freightPersian, 2); });
+    }
+
+    // نمایش فارسی برای هر ردیف ماده: مقدار، قیمت واحد، قیمت کل
+    document.querySelectorAll('.item-form-row').forEach(function (row) {
+        if (!row.classList.contains('deleted')) attachPersianToRow(row);
+    });
+
+    // برای ردیف جدید بعد از افزودن (کلون data-persian-attached دارد، پس پاک می‌کنیم و وصل می‌کنیم)
+    if (addButton && formsetContainer) {
+        addButton.addEventListener('click', function () {
+            setTimeout(function () {
+                var rows = formsetContainer.querySelectorAll('.item-form-row');
+                if (rows.length) {
+                    var lastRow = rows[rows.length - 1];
+                    lastRow.removeAttribute('data-persian-attached');
+                    attachPersianToRow(lastRow);
+                }
+            }, 0);
+        });
+    }
     
     // مدیریت باز و بسته شدن بخش‌های فرم
     document.querySelectorAll('.form-section-header').forEach(function(header) {
@@ -936,6 +1015,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ form.subtotal_without_freight.label }}</label>
                     {{ form.subtotal_without_freight }}
+                    <small class="persian-number-display" id="id_subtotal_without_freight_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if form.subtotal_without_freight.errors %}
                         <div class="text-danger">{{ form.subtotal_without_freight.errors.0 }}</div>
                     {% endif %}
@@ -945,7 +1025,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 {% if accessible_po_fields.freight_cost %}
                 <div class="col-md-6 mb-3">
                     <label class="form-label">{{ form.freight_cost.label }}</label>
-                    <input type="number" step="0.01" name="{{ form.freight_cost.name }}" value="{{ form.freight_cost.value|default:'' }}" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                    <input type="number" step="0.01" id="id_freight_cost" name="{{ form.freight_cost.name }}" value="{{ form.freight_cost.value|default:'' }}" class="form-control" readonly style="background-color: #f5f5f5; cursor: not-allowed;">
+                    <small class="persian-number-display" id="id_freight_cost_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if form.freight_cost.errors %}
                         <div class="text-danger">{{ form.freight_cost.errors.0 }}</div>
                     {% endif %}
@@ -1014,6 +1095,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label required-field">مقدار</label>
                                     {{ f.quantity }}
+                                    <small class="persian-number-display quantity-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                                     {% if f.quantity.errors %}
                                         <div class="text-danger">{{ f.quantity.errors.0 }}</div>
                                     {% endif %}
@@ -1034,6 +1116,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label required-field">قیمت واحد</label>
                                     {{ f.unit_price }}
+                                    <small class="persian-number-display unit-price-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                                     {% if f.unit_price.errors %}
                                         <div class="text-danger">{{ f.unit_price.errors.0 }}</div>
                                     {% endif %}
@@ -1044,6 +1127,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="col-md-3 mb-3">
                                     <label class="form-label">قیمت کل</label>
                                     {{ f.total_purchase_cost }}
+                                    <small class="persian-number-display total-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                                     {% if f.total_purchase_cost.errors %}
                                         <div class="text-danger">{{ f.total_purchase_cost.errors.0 }}</div>
                                     {% endif %}

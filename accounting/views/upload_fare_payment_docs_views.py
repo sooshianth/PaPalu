@@ -9,6 +9,7 @@ import logging
 
 from core.logging_levels import *
 from core.TransportFolder.TransportModel import Transport
+from core.TransportFolder.FreightPaymentDocumentAttachmentModel import FreightPaymentDocumentAttachment
 from core.OrderFolder.OrderModel import Order
 from core.RBACModel.TaskPermission import TaskChoices
 from core.RBACModel.Roles import user_has_task
@@ -110,9 +111,11 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
             Transport.objects.select_related(
                 'allocation__order',
                 'allocation__order__customer',
-                'driver'
+                'driver',
+                'driver_bank_account'
             ).prefetch_related(
-                'allocation__order__order_items__raw_material'
+                'allocation__order__order_items__raw_material',
+                'freight_payment_document_attachments'
             ),
             transport_number=transport_number
         )
@@ -139,141 +142,113 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
             messages.warning(request, 'این حمل در وضعیت مناسب برای بارگذاری اسناد پرداخت نیست.')
             return redirect('accounting:upload_fare_payment_docs_list')
         
-        # Check if document already uploaded
-        if transport.freight_payment_document and str(transport.freight_payment_document).strip():
+        # Check if document already uploaded (یک فایل اصلی یا حداقل یک پیوست)
+        has_docs = (
+            (transport.freight_payment_document and str(transport.freight_payment_document).strip())
+            or transport.freight_payment_document_attachments.exists()
+        )
+        if has_docs:
             audit_logger.warning(f"تلاش برای بارگذاری مجدد سند - حمل {transport_number}")
             messages.info(request, 'سند پرداخت قبلاً برای این حمل بارگذاری شده است.')
             return redirect('accounting:upload_fare_payment_docs_list')
         
         if request.method == 'POST':
-            form = UploadFarePaymentDocForm(request.POST, request.FILES, instance=transport)
-            
-            if form.is_valid():
-                try:
-                    from django.db import transaction as db_transaction
-                    
-                    with db_transaction.atomic():
-                        # Save the transport with payment document
-                        transport = form.save(commit=False)
-                        transport.freight_payment_document_uploaded_at = timezone.now()
-                        transport.freight_payment_document_uploaded_by = request.user
+            doc_files = request.FILES.getlist('document_attachments')
+            if not doc_files:
+                messages.error(request, 'حداقل یک فایل سند الزامی است.')
+                form = UploadFarePaymentDocForm(instance=transport)
+            else:
+                form = UploadFarePaymentDocForm(request.POST, instance=transport)
+                if form.is_valid():
+                    try:
+                        from django.db import transaction as db_transaction
                         
-                        # تنظیم payment_doc_uploaded
-                        transport.payment_doc_uploaded = True
-                        
-                        # اگر تایید لجستیک هم انجام شده است، وضعیت را به completed ببر
-                        # در غیر این صورت، وضعیت را بر اساس وضعیت قبلی تنظیم کن
-                        original_status = transport.status
-                        if transport.logistic_confirmed:
-                            # هر دو شرط برقرار است -> تکمیل شده
-                            transport.status = Transport.STATUS_COMPLETED
-                            bug_logger.info(f"حمل {transport_number} تکمیل شد - تایید لجستیک و بارگذاری سند هر دو انجام شده است")
-                        elif transport.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
-                            # Keep in same status (آماده خروج)
-                            pass
-                        else:
-                            # فقط سند بارگذاری شده -> در انتظار تایید لجستیک
-                            transport.status = Transport.STATUS_AWAITING_PAYMENT_DOC
-                        
-                        transport.save()
-                        
-                        # بررسی اینکه آیا تمام حمل‌های سفارش تکمیل شده‌اند
-                        po = transport.allocation.order if transport.allocation else None
-                        if po and po.order_type == 'purchase':
-                            # بررسی اینکه آیا تمام وزن سفارش تخصیص یافته است
-                            remaining_weight = po.get_remaining_weight()
+                        with db_transaction.atomic():
+                            # اولین فایل به فیلد اصلی (سازگاری با قبل)
+                            transport = form.save(commit=False)
+                            transport.freight_payment_document = doc_files[0]
+                            transport.freight_payment_document_uploaded_at = timezone.now()
+                            transport.freight_payment_document_uploaded_by = request.user
+                            transport.payment_doc_uploaded = True
+                            
+                            original_status = transport.status
+                            if transport.logistic_confirmed:
+                                transport.status = Transport.STATUS_COMPLETED
+                                bug_logger.info(f"حمل {transport_number} تکمیل شد - تایید لجستیک و بارگذاری سند هر دو انجام شده است")
+                            elif transport.status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                                pass
+                            else:
+                                transport.status = Transport.STATUS_AWAITING_PAYMENT_DOC
+                            
+                            transport.save()
+                            
+                            # ذخیره همه فایل‌ها به عنوان پیوست
+                            for f in doc_files:
+                                if f:
+                                    FreightPaymentDocumentAttachment.objects.create(transport=transport, file=f)
                             
                             # بررسی اینکه آیا تمام حمل‌های سفارش تکمیل شده‌اند
-                            all_transports = Transport.objects.filter(allocation__order=po)
-                            all_completed = not all_transports.exclude(
-                                status=Transport.STATUS_COMPLETED
-                            ).exists()
-                            
-                            # اگر تمام وزن تخصیص یافته و تمام حمل‌ها تکمیل شده‌اند، سفارش را تکمیل کن
-                            if remaining_weight <= 0 and all_completed:
-                                if po.status != Order.STATUS_COMPLETED:
+                            po = transport.allocation.order if transport.allocation else None
+                            if po and po.order_type == 'purchase':
+                                remaining_weight = po.get_remaining_weight()
+                                all_transports = Transport.objects.filter(allocation__order=po)
+                                all_completed = not all_transports.exclude(status=Transport.STATUS_COMPLETED).exists()
+                                if remaining_weight <= 0 and all_completed and po.status != Order.STATUS_COMPLETED:
                                     try:
                                         po.transition(Order.STATUS_COMPLETED, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند و تمام وزن تخصیص یافت.')
                                         bug_logger.info(f"وضعیت سفارش {po.order_number} به 'تکمیل شده' تغییر یافت - تمام حمل‌ها تکمیل شدند")
                                         audit_logger.info(f"سفارش {po.order_number} به صورت خودکار تکمیل شد - تمام حمل‌ها تکمیل شدند")
                                     except Exception as order_transition_err:
                                         bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number} به تکمیل شده: {order_transition_err}")
-                        
-                        # Log successful upload
-                        status_message = 'سند پرداخت با موفقیت بارگذاری شد.'
-                        if transport.status == Transport.STATUS_COMPLETED:
-                            status_message += ' حمل تکمیل شد (تایید لجستیک قبلاً انجام شده بود).'
-                        elif original_status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
-                            status_message += ' وضعیت حمل در حالت آماده خروج باقی ماند.'
-                        else:
-                            status_message += ' وضعیت به "در انتظار تایید لجستیک" تغییر یافت.'
-                        
-                        audit_logger.info(
-                            f"بارگذاری موفق سند پرداخت - حمل {transport_number} | "
-                            f"وضعیت قبلی: {original_status} | "
-                            f"وضعیت جدید: {transport.status} | "
-                            f"فایل: {transport.freight_payment_document.name if transport.freight_payment_document else 'N/A'}"
-                        )
-                        
-                        # ارسال پیامک به راننده
-                        try:
-                            if transport.driver and transport.driver.phone_number:
-                                # آماده‌سازی اطلاعات پیامک
-                                driver_name = transport.driver.name if transport.driver.name else "راننده محترم"
-                                transport_num = to_persian_digits(transport.transport_number or transport_number)
-                                
-                                # محاسبه مبلغ پرداختی
-                                amount = transport.freight_payment if transport.freight_payment else transport.total_freight
-                                if amount:
-                                    amount_formatted = format_currency_persian(amount)
-                                    amount_text = f"مبلغ {amount_formatted} ریال"
-                                else:
-                                    amount_text = "مبلغ کرایه"
-                                
-                                # اطلاعات حساب بانکی
-                                bank_info = ""
-                                if transport.driver_bank_account:
-                                    bank_account = transport.driver_bank_account
-                                    if bank_account.account_number:
-                                        account_num = to_persian_digits(bank_account.account_number[-4:])  # 4 رقم آخر
-                                        bank_name = bank_account.bank_name if bank_account.bank_name else "بانک"
-                                        bank_info = f" به حساب {bank_name} به شماره کارت *{account_num}"
-                                
-                                # ساخت متن پیامک
-                                sms_message = (
-                                    f"{driver_name} گرامی،\n"
-                                    f"{amount_text} بابت کرایه حمل شماره {transport_num}{bank_info} واریز گردید.\n"
-                                    f"با تشکر از همکاری شما\n"
-                                    f"شرکت تأمین نهاده سیمرغ (هاشمی)"
-                                )
-                                
-                                # ارسال پیامک به صف
-                                queue_sms(
-                                    number=transport.driver.phone_number,
-                                    message=sms_message,
-                                    notification_type='freight_payment_notification'
-                                )
-                                
-                                bug_logger.info(f"پیامک اطلاع‌رسانی پرداخت کرایه برای راننده {driver_name} (حمل {transport_number}) به صف اضافه شد")
-                                audit_logger.info(f"ارسال پیامک اطلاع‌رسانی پرداخت کرایه - حمل {transport_number}")
+                            
+                            status_message = 'سند پرداخت با موفقیت بارگذاری شد.'
+                            if transport.status == Transport.STATUS_COMPLETED:
+                                status_message += ' حمل تکمیل شد (تایید لجستیک قبلاً انجام شده بود).'
+                            elif original_status == Transport.STATUS_AWAITING_WH_RECONCILIATION:
+                                status_message += ' وضعیت حمل در حالت آماده خروج باقی ماند.'
                             else:
-                                bug_logger.warning(f"راننده یا شماره تلفن راننده برای حمل {transport_number} موجود نیست - پیامک ارسال نشد")
-                        except Exception as sms_error:
-                            # خطا در ارسال پیامک نباید مانع از ادامه فرآیند شود
-                            bug_logger.error(f"خطا در ارسال پیامک اطلاع‌رسانی پرداخت کرایه - حمل {transport_number}: {str(sms_error)}", exc_info=True)
+                                status_message += ' وضعیت به "در انتظار تایید لجستیک" تغییر یافت.'
+                            
+                            audit_logger.info(
+                                f"بارگذاری موفق سند پرداخت - حمل {transport_number} | "
+                                f"وضعیت قبلی: {original_status} | وضعیت جدید: {transport.status} | "
+                                f"تعداد فایل: {len(doc_files)}"
+                            )
+                            
+                            try:
+                                if transport.driver and transport.driver.phone_number:
+                                    driver_name = transport.driver.name if transport.driver.name else "راننده محترم"
+                                    transport_num = to_persian_digits(transport.transport_number or transport_number)
+                                    amount = transport.freight_payment if transport.freight_payment else transport.total_freight
+                                    amount_text = f"مبلغ {format_currency_persian(amount)} ریال" if amount else "مبلغ کرایه"
+                                    bank_info = ""
+                                    if transport.driver_bank_account and transport.driver_bank_account.account_number:
+                                        account_num = to_persian_digits(transport.driver_bank_account.account_number[-4:])
+                                        bank_name = transport.driver_bank_account.bank_name or "بانک"
+                                        bank_info = f" به حساب {bank_name} به شماره کارت *{account_num}"
+                                    sms_message = (
+                                        f"{driver_name} گرامی،\n{amount_text} بابت کرایه حمل شماره {transport_num}{bank_info} واریز گردید.\n"
+                                        f"با تشکر از همکاری شما\nشرکت تأمین نهاده سیمرغ (هاشمی)"
+                                    )
+                                    queue_sms(number=transport.driver.phone_number, message=sms_message, notification_type='freight_payment_notification')
+                                    bug_logger.info(f"پیامک اطلاع‌رسانی پرداخت کرایه برای راننده (حمل {transport_number}) به صف اضافه شد")
+                                else:
+                                    bug_logger.warning(f"راننده یا شماره تلفن برای حمل {transport_number} موجود نیست - پیامک ارسال نشد")
+                            except Exception as sms_error:
+                                bug_logger.error(f"خطا در ارسال پیامک پرداخت کرایه - حمل {transport_number}: {str(sms_error)}", exc_info=True)
+                        
+                        messages.success(request, status_message)
+                        return redirect('accounting:upload_fare_payment_docs_list')
                     
-                    messages.success(request, status_message)
-                    return redirect('accounting:upload_fare_payment_docs_list')
-                    
-                except ValueError as ve:
-                    bug_logger.warning(f"خطای تغییر وضعیت در بارگذاری سند - حمل {transport_number}: {str(ve)}")
-                    messages.error(request, f'خطا در تغییر وضعیت: {str(ve)}')
-                except Exception as e:
-                    bug_logger.error(f"خطا در بارگذاری سند پرداخت - حمل {transport_number}: {str(e)}", exc_info=True)
-                    messages.error(request, 'خطا در بارگذاری سند پرداخت')
-            else:
-                bug_logger.warning(f"فرم بارگذاری سند نامعتبر - حمل {transport_number}: {form.errors}")
-                messages.error(request, 'لطفا خطاهای فرم را بررسی کنید.')
+                    except ValueError as ve:
+                        bug_logger.warning(f"خطای تغییر وضعیت در بارگذاری سند - حمل {transport_number}: {str(ve)}")
+                        messages.error(request, f'خطا در تغییر وضعیت: {str(ve)}')
+                    except Exception as e:
+                        bug_logger.error(f"خطا در بارگذاری سند پرداخت - حمل {transport_number}: {str(e)}", exc_info=True)
+                        messages.error(request, 'خطا در بارگذاری سند پرداخت')
+                else:
+                    bug_logger.warning(f"فرم بارگذاری سند نامعتبر - حمل {transport_number}: {form.errors}")
+                    messages.error(request, 'لطفا خطاهای فرم را بررسی کنید.')
         else:
             form = UploadFarePaymentDocForm(instance=transport)
         
@@ -358,15 +333,21 @@ def uploaded_fare_payment_docs_detail_view(request, transport_number):
                 'allocation__order',
                 'allocation__order__customer',
                 'driver',
+                'driver_bank_account',
                 'freight_payment_document_uploaded_by'
             ).prefetch_related(
-                'allocation__order__order_items__raw_material'
+                'allocation__order__order_items__raw_material',
+                'freight_payment_document_attachments'
             ),
             transport_number=transport_number
         )
         
-        # بررسی اینکه حمل دارای سند بارگذاری شده است
-        if not transport.freight_payment_document or not str(transport.freight_payment_document).strip():
+        # بررسی اینکه حمل دارای سند بارگذاری شده است (فایل اصلی یا حداقل یک پیوست)
+        has_any_doc = (
+            (transport.freight_payment_document and str(transport.freight_payment_document).strip())
+            or transport.freight_payment_document_attachments.exists()
+        )
+        if not has_any_doc:
             audit_logger.warning(f"تلاش برای مشاهده جزئیات حمل بدون سند - حمل {transport_number}")
             messages.warning(request, 'این حمل دارای سند بارگذاری شده نیست.')
             return redirect('accounting:uploaded_fare_payment_docs_list')

@@ -15,7 +15,7 @@ from core.OrderFolder.OrderModel import Order
 from core.AllocationFolder.AllocationModel import Allocation
 from core.TransportFolder.TransportModel import Transport
 from core.SettlementFolder.SettlementModel import Settlement
-from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
+from core.SettlementFolder.TransactionDocumentModel import TransactionDocument, TransactionDocumentAttachment
 from supply.forms.supply_settlement_transaction_form import SupplySettlementTransactionForm
 from supply.tables import PendingSupplySettlementOrderTable
 
@@ -307,56 +307,64 @@ def supply_settlement_detail_view(request, order_number):
         )
         
         if form.is_valid():
-            try:
-                with transaction.atomic():
-                    # ایجاد تراکنش جدید
-                    transaction_doc = form.save(commit=False)
-                    transaction_doc.settlement = settlement
-                    
-                    # تنظیم discrepancy_type بر اساس difference_amount
-                    # در تأمین (خرید): سرک یعنی بیشتر تحویل شده → ما باید پرداخت کنیم
-                    # کسری یعنی کمتر تحویل شده → تأمین‌کننده باید پرداخت کند
-                    if difference_amount > 0:
-                        transaction_doc.discrepancy_type = 'surplus'  # سرک - ما پرداخت می‌کنیم (بابت جنس اضافه)
-                    elif difference_amount < 0:
-                        transaction_doc.discrepancy_type = 'shortage'  # کسری - تأمین‌کننده پرداخت می‌کند (بابت جنس کم)
-                    
-                    # تولید شماره سند حسابداری
-                    if not transaction_doc.accounting_document_number:
-                        transaction_doc.generate_accounting_document_number()
-                    
-                    transaction_doc.save()
-                    
-                    # به‌روزرسانی مبلغ تسویه شده
-                    new_settled_amount = settled_amount + transaction_doc.document_amount
-                    settlement.settled_amount = new_settled_amount
-                    
-                    # بررسی اتمام تسویه
-                    new_remaining = abs(difference_amount) - new_settled_amount
-                    if new_remaining <= 0:
-                        settlement.settlement_status = 'completed'
-                        order.status = 'pending_supply_settlement_approval'
-                        order.save(update_fields=['status'])
-                        messages.success(request, f'تراکنش با موفقیت ثبت شد. تسویه سفارش خرید {order_number} کامل شد و به وضعیت "در انتظار تایید تسویه کامل" منتقل شد.')
-                    else:
-                        settlement.settlement_status = 'partial'
-                        messages.success(request, f'تراکنش با موفقیت ثبت شد. مانده تسویه: {new_remaining:,.0f} ریال')
-                    
-                    settlement.save(update_fields=['settled_amount', 'settlement_status'])
-                    
-                    bug_logger.info(f"تراکنش جدید برای سفارش خرید {order_number} ثبت شد")
-                    audit_logger.activity(f"تراکنش جدید برای سفارش خرید {order_number} ثبت شد توسط کاربر {request.user.username}")
-                    
-                    # اگر تسویه کامل شد، به لیست برگرد
-                    if new_remaining <= 0:
-                        return redirect('supply:supply_settlement_list')
-                    else:
-                        # وگرنه صفحه را reload کن
+            doc_files = request.FILES.getlist('document_attachments')
+            if not doc_files:
+                messages.error(request, 'حداقل یک پیوست سند الزامی است.')
+            else:
+                try:
+                    with transaction.atomic():
+                        # ایجاد تراکنش جدید
+                        transaction_doc = form.save(commit=False)
+                        transaction_doc.settlement = settlement
+
+                        # اولین فایل به عنوان پیوست اصلی
+                        transaction_doc.document_attachment = doc_files[0]
+
+                        # تنظیم discrepancy_type بر اساس difference_amount
+                        if difference_amount > 0:
+                            transaction_doc.discrepancy_type = 'surplus'
+                        elif difference_amount < 0:
+                            transaction_doc.discrepancy_type = 'shortage'
+
+                        if not transaction_doc.accounting_document_number:
+                            transaction_doc.generate_accounting_document_number()
+
+                        transaction_doc.save()
+
+                        # بقیه فایل‌ها به عنوان پیوست اضافی
+                        for f in doc_files[1:]:
+                            if f:
+                                TransactionDocumentAttachment.objects.create(
+                                    transaction_document=transaction_doc,
+                                    file=f
+                                )
+
+                        # به‌روزرسانی مبلغ تسویه شده
+                        new_settled_amount = settled_amount + transaction_doc.document_amount
+                        settlement.settled_amount = new_settled_amount
+
+                        new_remaining = abs(difference_amount) - new_settled_amount
+                        if new_remaining <= 0:
+                            settlement.settlement_status = 'completed'
+                            order.status = 'pending_supply_settlement_approval'
+                            order.save(update_fields=['status'])
+                            messages.success(request, f'تراکنش با موفقیت ثبت شد. تسویه سفارش خرید {order_number} کامل شد و به وضعیت "در انتظار تایید تسویه کامل" منتقل شد.')
+                        else:
+                            settlement.settlement_status = 'partial'
+                            messages.success(request, f'تراکنش با موفقیت ثبت شد. مانده تسویه: {new_remaining:,.0f} ریال')
+
+                        settlement.save(update_fields=['settled_amount', 'settlement_status'])
+
+                        bug_logger.info(f"تراکنش جدید برای سفارش خرید {order_number} ثبت شد")
+                        audit_logger.activity(f"تراکنش جدید برای سفارش خرید {order_number} ثبت شد توسط کاربر {request.user.username}")
+
+                        if new_remaining <= 0:
+                            return redirect('supply:supply_settlement_list')
                         return redirect('supply:supply_settlement_detail', order_number=order_number)
-                    
-            except Exception as e:
-                bug_logger.error(f"خطا در ثبت تراکنش: {str(e)}")
-                messages.error(request, f'خطا در ثبت تراکنش: {str(e)}')
+
+                except Exception as e:
+                    bug_logger.error(f"خطا در ثبت تراکنش: {str(e)}")
+                    messages.error(request, f'خطا در ثبت تراکنش: {str(e)}')
         else:
             # نمایش خطاهای فرم
             for field, errors in form.errors.items():

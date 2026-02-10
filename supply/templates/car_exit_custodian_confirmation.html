@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}تایید خروج خودرو{% endblock %}
 
@@ -144,11 +145,11 @@
     </div>
     <div class="info-item">
       <label>شماره سفارش</label>
-      <div class="value">{{ pt.purchase_order.order_number }}</div>
+      <div class="value">{% if pt.purchase_order %}{{ pt.purchase_order.order_number }}{% else %}—{% endif %}</div>
     </div>
     <div class="info-item">
       <label>پلاک</label>
-      <div class="value">{{ pt.plate_number|default:'ثبت نشده' }}</div>
+      <div class="value">{% if pt.plate_number %}{{ pt.plate_number|persian_digits }}{% else %}ثبت نشده{% endif %}</div>
     </div>
     <div class="info-item">
       <label>نوع ماشین</label>
@@ -156,18 +157,18 @@
     </div>
     <div class="info-item">
       <label>وزن پر</label>
-      <div class="value">{{ pt.gross_weight }} کیلوگرم</div>
+      <div class="value">{% if pt.gross_weight is not None %}{{ pt.gross_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</div>
     </div>
     <div class="info-item">
       <label>وزن خالی</label>
-      <div class="value">{{ pt.tare_weight }} کیلوگرم</div>
+      <div class="value">{% if pt.tare_weight is not None %}{{ pt.tare_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}</div>
     </div>
   </div>
   
   <div class="highlight-box">
     <p>
-      <strong>وزن خالص تحویلی:</strong> {{ pt.net_weight }} کیلوگرم<br>
-      <strong>کرایه پرداختی:</strong> {{ pt.freight_payment|default:'—' }} ریال<br>
+      <strong>وزن خالص تحویلی:</strong> {% if pt.net_weight is not None %}{{ pt.net_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}<br>
+      <strong>کرایه پرداختی:</strong> {% if pt.freight_payment is not None %}{{ pt.freight_payment|persian_number:2 }} ریال{% else %}—{% endif %}<br>
       <strong>نوع کرایه:</strong> {{ pt.get_freight_payment_type_display|default:'—' }}
     </p>
   </div>

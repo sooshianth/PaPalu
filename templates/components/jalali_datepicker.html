@@ -213,19 +213,24 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        flex-wrap: nowrap;
+        gap: 4px;
         direction: ltr;
         /* Ensure HH:MM order */
         background-color: #fafafa;
     }
 
     .jdp-time-input {
-        width: 50px;
-        padding: 4px;
+        /* همیشه جا برای دو رقم؛ با em در هر رزولوشن درست نمایش داده می‌شود */
+        min-width: 4em;
+        width: 4em;
+        padding: 6px 4px;
         text-align: center;
         border: 1px solid #ddd;
         border-radius: 4px;
         font-size: 1rem;
-        margin: 0 5px;
+        box-sizing: border-box;
+        margin: 0 2px;
     }
 
     .jdp-time-input:focus {
@@ -236,6 +241,7 @@
     .jdp-time-separator {
         font-weight: bold;
         color: #555;
+        flex-shrink: 0;
     }
 
     .jdp-footer {

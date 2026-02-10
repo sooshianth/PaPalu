@@ -225,36 +225,48 @@
     <div class="detail-grid">
         <div class="kv">
             <span>نوع کرایه</span>
-            <strong>{{ pt.freight_payment_type|default:"—" }}</strong>
+            <strong>{% if pt.freight_payment_type %}{{ pt.get_freight_payment_type_display }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>کرایه اولیه</span>
-            <strong>{{ pt.initial_freight|default:"—" }}</strong>
+            <strong>{% if pt.initial_freight is not None %}{{ pt.initial_freight|persian_number:2 }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>کرایه کل</span>
-            <strong>{{ pt.total_freight|default:"—" }}</strong>
+            <strong>{% if pt.total_freight is not None %}{{ pt.total_freight|persian_number:2 }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>تخفیف</span>
-            <strong>{{ pt.discount|default:"—" }}</strong>
+            <strong>{% if pt.discount is not None %}{{ pt.discount|persian_number:2 }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>مازاد</span>
-            <strong>{{ pt.surplus|default:"—" }}</strong>
+            <strong>{% if pt.surplus is not None %}{{ pt.surplus|persian_number:2 }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>کرایه پرداختی</span>
-            <strong>{{ pt.freight_payment|default:"—" }}</strong>
+            <strong>{% if pt.freight_payment is not None %}{{ pt.freight_payment|persian_number:2 }}{% else %}—{% endif %}</strong>
         </div>
+        {% if pt.freight_payment_type == 'pay_to_driver' %}
         <div class="kv">
             <span>شماره حساب راننده</span>
-            <strong>{% if pt.driver_account_number %}{{ pt.driver_account_number.name }}{% else %}—{% endif %}</strong>
+            <strong>{% if pt.driver_bank_account %}{{ pt.driver_bank_account.account_number|default:"—" }}{% elif pt.driver_account_number %}{{ pt.driver_account_number }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>شماره شبا راننده</span>
-            <strong>{% if pt.driver_sheba_number %}{{ pt.driver_sheba_number.name }}{% else %}—{% endif %}</strong>
+            <strong>{% if pt.driver_bank_account %}{{ pt.driver_bank_account.shaba_number|default:"—" }}{% elif pt.driver_sheba_number %}{{ pt.driver_sheba_number }}{% else %}—{% endif %}</strong>
         </div>
+        {% endif %}
+        {% if pt.freight_payment_type == 'pay_to_supplier' %}
+        <div class="kv">
+            <span>شماره حساب تامین‌کننده</span>
+            <strong>{% if pt.supplier_bank_account %}{{ pt.supplier_bank_account.account_number|default:"—" }}{% elif pt.supplier_account_number %}{{ pt.supplier_account_number }}{% else %}—{% endif %}</strong>
+        </div>
+        <div class="kv">
+            <span>شماره شبا تامین‌کننده</span>
+            <strong>{% if pt.supplier_bank_account %}{{ pt.supplier_bank_account.shaba_number|default:"—" }}{% elif pt.supplier_sheba_number %}{{ pt.supplier_sheba_number }}{% else %}—{% endif %}</strong>
+        </div>
+        {% endif %}
     </div>
     
     <h3 class="section-title">تاریخ‌های حمل</h3>
@@ -281,15 +293,15 @@
     <div class="detail-grid">
         <div class="kv">
             <span>وزن ناخالص</span>
-            <strong>{{ pt.gross_weight|default:"—" }}</strong>
+            <strong>{% if pt.gross_weight is not None %}{{ pt.gross_weight|persian_number:3 }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>وزن خالی</span>
-            <strong>{{ pt.tare_weight|default:"—" }}</strong>
+            <strong>{% if pt.tare_weight is not None %}{{ pt.tare_weight|persian_number:3 }}{% else %}—{% endif %}</strong>
         </div>
         <div class="kv">
             <span>وزن خالص</span>
-            <strong>{{ pt.net_weight|default:"—" }}</strong>
+            <strong>{% if pt.net_weight is not None %}{{ pt.net_weight|persian_number:3 }}{% else %}—{% endif %}</strong>
         </div>
     </div>
     

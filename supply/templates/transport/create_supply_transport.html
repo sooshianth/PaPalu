@@ -94,6 +94,14 @@
     overflow: hidden;
   }
 
+  /* بخش تاریخ‌های حمل: تقویم بالای overlay (۹۹۹۸) و بالای کارت «سایر اطلاعات» باشد تا روی تاریخ بتوان کلیک کرد */
+  .form-section.transport-dates-section {
+    z-index: 10000;
+  }
+  .form-section.transport-dates-section .form-section-content {
+    overflow: visible;
+  }
+
   .form-label {
     color: var(--gray-800);
     font-weight: 500;
@@ -1245,7 +1253,7 @@
 </div>
 
 <!-- بخش تاریخ‌ها -->
-<div class="form-section">
+<div class="form-section transport-dates-section" id="transport-dates-section">
   <div class="form-section-header">
     <h5>تاریخ‌های حمل (اختیاری)</h5>
     <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
