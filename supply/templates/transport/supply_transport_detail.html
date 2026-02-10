@@ -311,6 +311,12 @@
             <span>شماره بارنامه</span>
             <strong>{{ pt.waybill_number|default:"—" }}</strong>
         </div>
+        {% if pt.bill_of_lading_file %}
+        <div class="kv">
+            <span>فایل بارنامه</span>
+            <strong><a href="{{ pt.bill_of_lading_file.url }}" target="_blank" rel="noopener" style="color: var(--primary-green); font-weight: 600;">📄 مشاهده بارنامه</a></strong>
+        </div>
+        {% endif %}
         <div class="kv">
             <span>کاربر ایجاد کننده</span>
             <strong>{% if pt.created_by %}{{ pt.created_by.get_full_name|default:pt.created_by.username }}{% else %}—{% endif %}</strong>

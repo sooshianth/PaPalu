@@ -274,6 +274,7 @@ class CarEntranceDriverForm(forms.Form):
             'accept': 'image/*,.pdf'
         })
     )
+
     account = forms.CharField(
         label='شماره حساب راننده',
         required=False,
@@ -285,11 +286,16 @@ class CarEntranceDriverForm(forms.Form):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'IR123456789012345678901234'})
     )
     
-    def __init__(self, *args, freight_payment_type=None, driver=None, **kwargs):
+    def __init__(self, *args, freight_payment_type=None, driver=None, has_existing_waybill=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.freight_payment_type = freight_payment_type
         self.driver = driver
-        
+        self.has_existing_waybill = has_existing_waybill
+
+        # اگر حمل از قبل تصویر بارنامه دارد، آپلود مجدد اجباری نیست
+        if has_existing_waybill:
+            self.fields['bill_of_lading_file'].required = False
+
         # اگر نوع کرایه "پرداخت به راننده" باشد، فیلدهای حساب و شبا را required می‌کنیم
         if freight_payment_type == 'pay_to_driver':
             self.fields['account'].required = True
@@ -566,7 +572,12 @@ def register_driver_for_transport_view(request, transport_number):
         elif pt.freight_payment_type:
             freight_payment_type = pt.freight_payment_type
 
-        form = CarEntranceDriverForm(request.POST, request.FILES, freight_payment_type=freight_payment_type, driver=driver)
+        form = CarEntranceDriverForm(
+            request.POST, request.FILES,
+            freight_payment_type=freight_payment_type,
+            driver=driver,
+            has_existing_waybill=bool(getattr(pt, 'bill_of_lading_file', None)),
+        )
 
         # ارجاع به مدیر: دلیل اجباری است و فرم باید معتبر و ذخیره شود
         if is_refer_to_manager:
@@ -909,8 +920,13 @@ def register_driver_for_transport_view(request, transport_number):
         elif pt.freight_payment_type:
             freight_payment_type = pt.freight_payment_type
         
-        # ارسال freight_payment_type و driver به فرم برای تعیین required بودن فیلدهای حساب و شبا
-        form = CarEntranceDriverForm(initial=initial, freight_payment_type=freight_payment_type, driver=pt.driver)
+        # ارسال freight_payment_type و driver به فرم؛ has_existing_waybill برای اختیاری کردن تصویر بارنامه وقتی از قبل وجود دارد
+        form = CarEntranceDriverForm(
+            initial=initial,
+            freight_payment_type=freight_payment_type,
+            driver=pt.driver,
+            has_existing_waybill=bool(getattr(pt, 'bill_of_lading_file', None)),
+        )
 
     # لیست مواد اولیه که در این ماشین (transport) هستند
     transport_raw_materials_list = []

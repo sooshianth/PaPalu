@@ -260,7 +260,13 @@
         background: #bbdefb;
         color: #0d47a1;
     }
-    
+    .waybill-current-box {
+        padding: 10px 0;
+    }
+    .waybill-upload-area {
+        margin-top: 8px;
+    }
+
     /* مودال ارجاع به مدیر */
     .refer-modal {
         display: none;
@@ -595,18 +601,24 @@
                     {% endif %}
                     
                     {% if accessible_transport_fields.bill_of_lading_file %}
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">{{ form.bill_of_lading_file.label }}</label>
+                    <div class="col-md-6 mb-3" id="waybill-file-wrap">
+                        <label class="form-label {% if not pt.bill_of_lading_file %}required-field{% endif %}">{{ form.bill_of_lading_file.label }}</label>
+                        {% if pt.bill_of_lading_file %}
+                        <div id="waybill-current-display" class="waybill-current-box">
+                            <a href="{{ pt.bill_of_lading_file.url }}" target="_blank" rel="noopener" class="btn-view-waybill" title="باز کردن تصویر بارنامه">📄 مشاهده تصویر بارنامه</a>
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="waybill-edit-btn" style="margin-right: 8px;">ویرایش و آپلود تصویر دیگر</button>
+                        </div>
+                        <div id="waybill-upload-area" class="waybill-upload-area" style="display: none;">
+                            {{ form.bill_of_lading_file }}
+                            <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">فرمت‌های مجاز: تصویر (JPG, PNG) یا PDF</small>
+                        </div>
+                        {% else %}
                         {{ form.bill_of_lading_file }}
+                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">فرمت‌های مجاز: تصویر (JPG, PNG) یا PDF</small>
+                        {% endif %}
                         {% if form.bill_of_lading_file.errors %}
                             <div class="text-danger">{{ form.bill_of_lading_file.errors.0 }}</div>
                         {% endif %}
-                        {% if pt.bill_of_lading_file %}
-                        <div class="mt-2">
-                            <a href="{{ pt.bill_of_lading_file.url }}" target="_blank" rel="noopener" class="btn-view-waybill" title="باز کردن تصویر بارنامه">📄 مشاهده تصویر بارنامه</a>
-                        </div>
-                        {% endif %}
-                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">فرمت‌های مجاز: تصویر (JPG, PNG) یا PDF</small>
                     </div>
                     {% endif %}
                 </div>
@@ -810,6 +822,17 @@
             section.classList.toggle('collapsed');
         });
     });
+
+    // دکمه ویرایش تصویر بارنامه: نمایش فیلد آپلود وقتی بارنامه از قبل وجود دارد
+    var waybillEditBtn = document.getElementById('waybill-edit-btn');
+    var waybillUploadArea = document.getElementById('waybill-upload-area');
+    var waybillCurrentDisplay = document.getElementById('waybill-current-display');
+    if (waybillEditBtn && waybillUploadArea && waybillCurrentDisplay) {
+        waybillEditBtn.addEventListener('click', function() {
+            waybillCurrentDisplay.style.display = 'none';
+            waybillUploadArea.style.display = 'block';
+        });
+    }
     
     // اگر پلاک از قبل وجود دارد، آن را parse و نمایش بده
     const hiddenPlate = document.getElementById('id_plate_number');
