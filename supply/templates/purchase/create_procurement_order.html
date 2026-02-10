@@ -706,11 +706,26 @@ document.addEventListener('DOMContentLoaded', function() {
     function formatNumberToPersian(num, decimalPlaces) {
         if (num === null || num === undefined || isNaN(num)) return '';
         var n = parseFloat(num);
-        var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+        var fixed;
+        if (decimalPlaces === 0) {
+            fixed = String(Math.round(n));
+        } else if (decimalPlaces !== undefined && decimalPlaces > 0) {
+            fixed = n.toFixed(decimalPlaces);
+        } else {
+            fixed = (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+        }
         var parts = fixed.split('.');
         var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
         var result = intPart + (parts[1] ? '.' + parts[1] : '');
         return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+    }
+    // استخراج تعداد رقم اعشار از مقدار ورودی (برای مقدار)
+    function getDecimalPlacesFromValue(val) {
+        if (!val || typeof val !== 'string') return 0;
+        var s = val.replace(/،/g, '').replace(/,/g, '').trim();
+        var dotIdx = s.indexOf('.');
+        if (dotIdx === -1) return 0;
+        return s.length - dotIdx - 1;
     }
     function updatePersianDisplay(input, displayEl, decimals) {
         if (!input || !displayEl) return;
@@ -727,20 +742,23 @@ document.addEventListener('DOMContentLoaded', function() {
         var dq = formRow.querySelector('.quantity-persian');
         var du = formRow.querySelector('.unit-price-persian');
         var dt = formRow.querySelector('.total-persian');
+        // مقدار: اعشار متن فارسی مطابق با input (صفر تا ۳ رقم)
         if (q && dq) {
-            updatePersianDisplay(q, dq, 2);
-            q.addEventListener('input', function () { updatePersianDisplay(q, dq, 2); });
-            q.addEventListener('change', function () { updatePersianDisplay(q, dq, 2); });
+            function updateQtyPersian() { updatePersianDisplay(q, dq, getDecimalPlacesFromValue(q.value)); }
+            updateQtyPersian();
+            q.addEventListener('input', updateQtyPersian);
+            q.addEventListener('change', updateQtyPersian);
         }
+        // قیمت‌ها: عدد صحیح بدون اعشار
         if (u && du) {
-            updatePersianDisplay(u, du, 2);
-            u.addEventListener('input', function () { updatePersianDisplay(u, du, 2); });
-            u.addEventListener('change', function () { updatePersianDisplay(u, du, 2); });
+            updatePersianDisplay(u, du, 0);
+            u.addEventListener('input', function () { updatePersianDisplay(u, du, 0); });
+            u.addEventListener('change', function () { updatePersianDisplay(u, du, 0); });
         }
         if (t && dt) {
-            updatePersianDisplay(t, dt, 2);
-            t.addEventListener('input', function () { updatePersianDisplay(t, dt, 2); });
-            t.addEventListener('change', function () { updatePersianDisplay(t, dt, 2); });
+            updatePersianDisplay(t, dt, 0);
+            t.addEventListener('input', function () { updatePersianDisplay(t, dt, 0); });
+            t.addEventListener('change', function () { updatePersianDisplay(t, dt, 0); });
         }
     }
     
@@ -904,20 +922,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // محاسبه اولیه
     calculateSubtotal();
 
-    // نمایش فارسی: جمع بدون کرایه و کرایه (سطح سفارش)
+    // نمایش فارسی: جمع بدون کرایه و کرایه (سطح سفارش) - عدد صحیح بدون اعشار
     var subtotalInp = document.querySelector('input[name="subtotal_without_freight"]');
     var subtotalPersian = document.getElementById('id_subtotal_without_freight_persian');
     if (subtotalInp && subtotalPersian) {
-        updatePersianDisplay(subtotalInp, subtotalPersian, 2);
-        subtotalInp.addEventListener('input', function () { updatePersianDisplay(subtotalInp, subtotalPersian, 2); });
-        subtotalInp.addEventListener('change', function () { updatePersianDisplay(subtotalInp, subtotalPersian, 2); });
+        updatePersianDisplay(subtotalInp, subtotalPersian, 0);
+        subtotalInp.addEventListener('input', function () { updatePersianDisplay(subtotalInp, subtotalPersian, 0); });
+        subtotalInp.addEventListener('change', function () { updatePersianDisplay(subtotalInp, subtotalPersian, 0); });
     }
     var freightInp = document.getElementById('id_freight_cost');
     var freightPersian = document.getElementById('id_freight_cost_persian');
     if (freightInp && freightPersian) {
-        updatePersianDisplay(freightInp, freightPersian, 2);
-        freightInp.addEventListener('input', function () { updatePersianDisplay(freightInp, freightPersian, 2); });
-        freightInp.addEventListener('change', function () { updatePersianDisplay(freightInp, freightPersian, 2); });
+        updatePersianDisplay(freightInp, freightPersian, 0);
+        freightInp.addEventListener('input', function () { updatePersianDisplay(freightInp, freightPersian, 0); });
+        freightInp.addEventListener('change', function () { updatePersianDisplay(freightInp, freightPersian, 0); });
     }
 
     // نمایش فارسی برای هر ردیف ماده: مقدار، قیمت واحد، قیمت کل
