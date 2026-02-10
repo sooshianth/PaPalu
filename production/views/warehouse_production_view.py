@@ -116,7 +116,7 @@ def warehouse_production_list(request):
     نمایش دو لیست: تایید شده و تایید نشده
     """
     # بررسی دسترسی task
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_APPROVE_REPORT.value):
+    if not user_has_task(request.user, TaskChoices.WAREHOUSE_PRODUCTION_LIST.value):
         audit_logger.alert(f"دسترسی غیرمجاز به لیست اظهار تولید (انبار)")
         return HttpResponseForbidden("شما اجازه دسترسی به این صفحه را ندارید.")
     
@@ -205,7 +205,7 @@ def warehouse_production_detail(request, program_id):
     شامل: جزئیات برنامه، ثبت‌های انبار، وضعیت فعلی انبارها، قبل و بعد
     """
     # بررسی دسترسی task
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_APPROVE_REPORT.value):
+    if not user_has_task(request.user, TaskChoices.WAREHOUSE_PRODUCTION_DETAIL.value):
         audit_logger.alert(f"دسترسی غیرمجاز به جزئیات اظهار تولید (انبار) - برنامه {program_id}")
         return HttpResponseForbidden("شما اجازه دسترسی به این صفحه را ندارید.")
     
@@ -389,7 +389,7 @@ def warehouse_approve_program(request, program_id):
         return JsonResponse({'success': False, 'message': 'درخواست نامعتبر'}, status=400)
     
     # بررسی دسترسی task
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_APPROVE_REPORT.value):
+    if not user_has_task(request.user, TaskChoices.WAREHOUSE_APPROVE_PRODUCTION.value):
         audit_logger.alert(f"دسترسی غیرمجاز به تایید انبار - برنامه {program_id}")
         return JsonResponse({'success': False, 'message': 'شما اجازه انجام این عملیات را ندارید'}, status=403)
     
@@ -435,7 +435,7 @@ def warehouse_disapprove_program(request, program_id):
         return JsonResponse({'success': False, 'message': 'درخواست نامعتبر'}, status=400)
     
     # بررسی دسترسی task
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_APPROVE_REPORT.value):
+    if not user_has_task(request.user, TaskChoices.WAREHOUSE_DISAPPROVE_PRODUCTION.value):
         audit_logger.alert(f"دسترسی غیرمجاز به عدم تایید انبار - برنامه {program_id}")
         return JsonResponse({'success': False, 'message': 'شما اجازه انجام این عملیات را ندارید'}, status=403)
     
@@ -627,7 +627,7 @@ def get_stock_entry_detail(request, entry_id):
     """
     API endpoint to get stock entry details for modal popup
     """
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_APPROVE_REPORT.value):
+    if not user_has_task(request.user, TaskChoices.STOCK_ENTRY_DETAIL.value):
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
     
     try:
