@@ -1366,19 +1366,24 @@ def get_driver_plate_numbers_api(request, driver_id):
         driver = get_object_or_404(Person, pk=int(driver_id), type='driver')
         
         # دریافت پلاک‌های منحصر به فرد که برای این راننده ثبت شده‌اند
-        # فقط پلاک‌هایی که خالی نیستند
+        # فقط پلاک‌هایی که خالی نیستند؛ حذف تکراری‌ها با نرمال‌سازی (strip) و set
         plate_numbers = Transport.objects.filter(
             driver=driver
         ).exclude(
             Q(plate_number__isnull=True) | Q(plate_number='')
-        ).values_list('plate_number', flat=True).distinct()
+        ).values_list('plate_number', flat=True)
         
+        seen = set()
         plates_data = []
         for plate in plate_numbers:
-            if plate:
+            if not plate:
+                continue
+            normalized = (plate or '').strip()
+            if normalized and normalized not in seen:
+                seen.add(normalized)
                 plates_data.append({
-                    'plate_number': plate,
-                    'display': plate  # می‌توانیم فرمت را تغییر دهیم اگر نیاز باشد
+                    'plate_number': normalized,
+                    'display': normalized
                 })
         
         return JsonResponse({
