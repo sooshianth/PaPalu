@@ -326,11 +326,22 @@ class CarEntranceTable(TransportTable):
         }
     )
     
+    driver_name = tables.Column(
+        verbose_name='اسم راننده',
+        accessor='driver__name',
+        orderable=False,
+        visible=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
     def __init__(self, *args, accessible_fields=None, **kwargs):
         super().__init__(*args, **kwargs)
         
-        # ستون‌های مورد نیاز برای نگهبان: شماره حمل، نوع ماشین، نام ماده اولیه، زمان ثبت، وضعیت، عملیات
-        required_columns = ['transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions']
+        # ستون‌های مورد نیاز برای نگهبان: شماره حمل، نوع ماشین، پلاک، اسم راننده، نام ماده اولیه، زمان ثبت، وضعیت، عملیات
+        required_columns = ['transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'expected_arrival_date', 'actions']
         
         # همیشه ستون‌های مورد نیاز را نمایش بده
         for col_name in required_columns:
@@ -363,24 +374,25 @@ class CarEntranceTable(TransportTable):
         """نمایش نوع ماشین"""
         return record.get_vehicle_type_display() or '—'
     
-    def render_status(self, value, record):
-        """نمایش وضعیت به صورت badge"""
-        status_display = record.get_status_display() if hasattr(record, 'get_status_display') else value
-        return format_html('<span class="status-badge status-{}">{}</span>', record.status, status_display)
+    def render_plate_number(self, value, record):
+        """نمایش پلاک خودرو"""
+        return (getattr(record, 'plate_number', None) or value or '').strip() or '—'
     
-    def render_created_at(self, value, record):
-        """نمایش تاریخ ایجاد"""
-        if hasattr(record, 'created_at') and record.created_at:
-            import jdatetime
-            dt = record.created_at
-            if isinstance(dt, jdatetime.datetime):
-                if dt.hour != 0 or dt.minute != 0 or dt.second != 0:
-                    return dt.strftime('%Y-%m-%d %H:%M')
-                else:
-                    return dt.strftime('%Y-%m-%d')
-            elif isinstance(dt, jdatetime.date):
-                return dt.strftime('%Y-%m-%d')
-        return value or '—'
+    def render_driver_name(self, value, record):
+        """نمایش اسم راننده"""
+        if value:
+            return value
+        driver = getattr(record, 'driver', None)
+        return (getattr(driver, 'name', None) or '').strip() or '—'
+    
+    def render_expected_arrival_date(self, value, record):
+        """نمایش تاریخ پیش‌بینی ورود"""
+        dt = getattr(record, 'expected_arrival_date', None) or value
+        if not dt:
+            return '—'
+        if hasattr(dt, 'strftime'):
+            return dt.strftime('%Y-%m-%d')
+        return str(dt) if dt else '—'
     
     def render_actions(self, record):
         """نمایش دکمه ثبت راننده"""
@@ -395,12 +407,12 @@ class CarEntranceTable(TransportTable):
     
     class Meta(TransportTable.Meta):
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        fields = ('transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'expected_arrival_date', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('transport_number', 'vehicle_type', 'raw_materials', 'created_at', 'status', 'actions')
+        sequence = ('transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'expected_arrival_date', 'actions')
 
 
 @login_required
@@ -471,8 +483,8 @@ def car_entrance_list_view(request):
         else:
             bug_logger.info(f"accessible_transport_fields sample: {dict(list(accessible_transport_fields.items())[:5])}")
         
-        # برای نگهبان، ستون‌های مورد نیاز را همیشه True می‌کنیم
-        required_fields_for_guard = ['vehicle_type', 'created_at', 'status']
+        # برای نگهبان، ستون‌های مورد نیاز را همیشه True می‌کنیم (پلاک و اسم راننده هم نمایش داده شوند)
+        required_fields_for_guard = ['vehicle_type', 'expected_arrival_date', 'plate_number', 'driver']
         for field in required_fields_for_guard:
             if field in accessible_transport_fields:
                 accessible_transport_fields[field] = True
