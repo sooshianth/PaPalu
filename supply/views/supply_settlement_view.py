@@ -228,7 +228,13 @@ def supply_settlement_detail_view(request, order_number):
         item_difference_amount = item_weight_diff * unit_price
         total_difference_amount += item_difference_amount
         
-        # ذخیره جزئیات برای نمایش
+        allocated_secondary = None
+        delivered_secondary = None
+        secondary_unit_display = ''
+        if order_item.is_purchased_in_secondary_unit():
+            secondary_unit_display = order_item.get_weight_unit_display()
+            allocated_secondary = order_item.kg_to_order_unit(allocated_weight)
+            delivered_secondary = order_item.kg_to_order_unit(item_delivered)
         material_discrepancies.append({
             'material_name': raw_material.name if raw_material.name else 'نامشخص',
             'allocated_weight': allocated_weight,
@@ -236,6 +242,9 @@ def supply_settlement_detail_view(request, order_number):
             'weight_difference': item_weight_diff,
             'unit_price': unit_price,
             'difference_amount': item_difference_amount,
+            'allocated_secondary': allocated_secondary,
+            'delivered_secondary': delivered_secondary,
+            'secondary_unit_display': secondary_unit_display,
         })
     
     # محاسبه مبلغ اختلاف کل بر اساس میانگین وزن‌دار فی (برای سازگاری با مبلغ کل)
@@ -262,6 +271,17 @@ def supply_settlement_detail_view(request, order_number):
     
     # مبلغ کل اختلاف
     difference_amount = total_difference_amount
+    
+    # وزن به واحد ثانویه - وقتی خرید با واحد ثانویه بوده (برای نمایش در سطر جدا)
+    order_weight_secondary = None
+    delivered_weight_secondary = None
+    secondary_unit_display_summary = ''
+    order_items_list = list(order.order_items.select_related('raw_material').filter(raw_material__isnull=False))
+    if len(order_items_list) == 1 and order_items_list[0].is_purchased_in_secondary_unit():
+        oi = order_items_list[0]
+        secondary_unit_display_summary = oi.get_weight_unit_display()
+        order_weight_secondary = oi.quantity
+        delivered_weight_secondary = oi.kg_to_order_unit(delivered_per_order_item.get(oi.id, Decimal('0')))
     
     # دریافت یا ایجاد Settlement با نوع کسری و سرک
     # در تأمین (خرید): ما خریدار هستیم و تأمین‌کننده فروشنده است
@@ -415,7 +435,11 @@ def supply_settlement_detail_view(request, order_number):
         'has_no_difference': has_no_difference,
         'transactions': transactions,
         'supplier_info': supplier_info,
-        'material_discrepancies': material_discrepancies,  # جزئیات اختلاف هر ماده اولیه
+        'material_discrepancies': material_discrepancies,
+        'order_weight_secondary': order_weight_secondary,
+        'delivered_weight_secondary': delivered_weight_secondary,
+        'secondary_unit_display_summary': secondary_unit_display_summary,
+        'has_any_secondary_in_discrepancies': any(d.get('secondary_unit_display') for d in material_discrepancies),
         'page_title': f'تسویه سفارش خرید - {order.order_number}',
     }
     return render(request, 'supply_settlement/supply_settlement_detail.html', context)

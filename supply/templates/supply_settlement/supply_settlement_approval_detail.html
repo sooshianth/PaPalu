@@ -344,13 +344,25 @@
         </div>
         <div class="info-row">
             <div class="info-item">
-                <strong>وزن کل سفارش:</strong>
+                <strong>وزن کل سفارش (کیلوگرم):</strong>
                 <span>{{ order_weight|persian_number:2 }} کیلوگرم</span>
             </div>
+            {% if order_weight_secondary is not None and secondary_unit_display_summary %}
             <div class="info-item">
-                <strong>وزن تحویلی:</strong>
+                <strong>وزن کل سفارش ({{ secondary_unit_display_summary }}):</strong>
+                <span>{{ order_weight_secondary|persian_number:2 }} {{ secondary_unit_display_summary }}</span>
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <strong>وزن تحویلی (کیلوگرم):</strong>
                 <span>{{ delivered_weight|persian_number:2 }} کیلوگرم</span>
             </div>
+            {% if delivered_weight_secondary is not None and secondary_unit_display_summary %}
+            <div class="info-item">
+                <strong>وزن تحویلی ({{ secondary_unit_display_summary }}):</strong>
+                <span>{{ delivered_weight_secondary|persian_number:2 }} {{ secondary_unit_display_summary }}</span>
+            </div>
+            {% endif %}
             <div class="info-item">
                 <strong>اختلاف وزن:</strong>
                 <span class="{% if weight_difference > 0 %}positive{% elif weight_difference < 0 %}negative{% endif %}">

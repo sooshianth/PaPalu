@@ -259,6 +259,46 @@ class OrderItem(models.Model):
                 return q_primary / cf
         return Decimal('0')
     
+    def kg_to_order_unit(self, kg_value):
+        """
+        تبدیل کیلوگرم به واحد سفارش. فرمول: primary = secondary * conversion_factor
+        یعنی secondary = primary / cf
+        """
+        if not kg_value or kg_value <= 0:
+            return Decimal('0')
+        kg_val = Decimal(str(kg_value))
+        if self.weight_unit == 'piece':
+            return kg_val
+        if self.weight_unit == 'bag' and self.bag_weight:
+            return kg_val / Decimal(str(self.bag_weight))
+        if self.raw_material:
+            cf = self.raw_material.conversion_factor
+            if not cf or cf <= 0:
+                cf = Decimal('1')
+            else:
+                cf = Decimal(str(cf))
+            primary = self.raw_material.primary_unit
+            secondary = self.raw_material.secondary_unit
+            if self.weight_unit == primary:
+                if primary == 'kg':
+                    return kg_val
+                if primary == 'ton':
+                    return kg_val / cf
+            elif self.weight_unit == secondary:
+                if primary == 'kg':
+                    return kg_val / cf
+                if secondary == 'kg':
+                    return kg_val
+        return kg_val
+    
+    def is_purchased_in_secondary_unit(self):
+        """آیا خرید با واحد فرعی (ثانویه) انجام شده؟"""
+        return (
+            self.raw_material
+            and self.weight_unit
+            and self.raw_material.secondary_unit == self.weight_unit
+        )
+    
     def calculate_total(self):
         """
         محاسبه مجموع بهای قلم

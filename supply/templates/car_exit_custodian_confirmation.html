@@ -167,7 +167,10 @@
   
   <div class="highlight-box">
     <p>
-      <strong>وزن خالص تحویلی:</strong> {% if pt.net_weight is not None %}{{ pt.net_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}<br>
+      <strong>وزن خالص تحویلی (کیلوگرم):</strong> {% if pt.net_weight is not None %}{{ pt.net_weight|persian_number:3 }} کیلوگرم{% else %}—{% endif %}<br>
+      {% if purchase_in_secondary and net_weight_secondary is not None %}
+      <strong>وزن خالص تحویلی ({{ secondary_unit_display }}):</strong> {{ net_weight_secondary|persian_number:3 }} {{ secondary_unit_display }}<br>
+      {% endif %}
       <strong>کرایه پرداختی:</strong> {% if pt.freight_payment is not None %}{{ pt.freight_payment|persian_number:2 }} ریال{% else %}—{% endif %}<br>
       <strong>نوع کرایه:</strong> {{ pt.get_freight_payment_type_display|default:'—' }}
     </p>

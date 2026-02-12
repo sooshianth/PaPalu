@@ -213,6 +213,17 @@ def supply_settlement_approval_detail_view(request, order_number):
     # محاسبه مبلغ اختلاف
     difference_amount = weight_difference * weighted_avg_price
     
+    # وزن به واحد ثانویه - وقتی خرید با واحد ثانویه بوده
+    order_weight_secondary = None
+    delivered_weight_secondary = None
+    secondary_unit_display_summary = ''
+    order_items_list = list(order.order_items.select_related('raw_material').filter(raw_material__isnull=False))
+    if len(order_items_list) == 1 and order_items_list[0].is_purchased_in_secondary_unit():
+        oi = order_items_list[0]
+        secondary_unit_display_summary = oi.get_weight_unit_display()
+        order_weight_secondary = oi.quantity
+        delivered_weight_secondary = oi.kg_to_order_unit(delivered_weight)
+    
     # دریافت Settlement مربوط به کسری و سرک
     weight_discrepancy_settlement = Settlement.objects.filter(
         order=order,
@@ -301,6 +312,9 @@ def supply_settlement_approval_detail_view(request, order_number):
         'weight_discrepancy_transactions': weight_discrepancy_transactions,
         'supplier_info': supplier_info,
         'allocations_with_transports': allocations_with_transports,
+        'order_weight_secondary': order_weight_secondary,
+        'delivered_weight_secondary': delivered_weight_secondary,
+        'secondary_unit_display_summary': secondary_unit_display_summary,
         'page_title': f'تایید تسویه کامل - سفارش خرید {order.order_number}',
     }
     return render(request, 'supply_settlement/supply_settlement_approval_detail.html', context)

@@ -109,6 +109,21 @@ def get_accessible_person_fields_for_warehouse(user):
     }
 
 
+def _carexit_secondary_context(pt):
+    """اطلاعات واحد ثانویه برای خروج خودرو - وقتی خرید با واحد ثانویه بوده"""
+    res = {'purchase_in_secondary': False, 'net_weight_secondary': None, 'secondary_unit_display': ''}
+    if not (pt.allocation and pt.allocation.order):
+        return res
+    for oi in pt.allocation.order.order_items.select_related('raw_material').filter(raw_material__isnull=False):
+        if oi.is_purchased_in_secondary_unit():
+            res['purchase_in_secondary'] = True
+            res['secondary_unit_display'] = oi.get_weight_unit_display()
+            if pt.net_weight and oi.raw_material and oi.raw_material.conversion_factor:
+                res['net_weight_secondary'] = oi.kg_to_order_unit(float(pt.net_weight))
+            break
+    return res
+
+
 def _comparison_totals_from_order_items(order_items):
     """محاسبه جمع کل تخصیص، وزن خالص محاسبه‌شده و اختلاف برای جدول مقایسه وزن‌ها"""
     total_allocated = sum((item.get('allocated_quantity') or Decimal('0')) for item in order_items)
@@ -1109,16 +1124,12 @@ def guard_vehicle_exit_view(request, transport_number):
         carexit_reason = (request.POST.get('carexit_referral_reason') or '').strip()
         if is_refer and not carexit_reason:
             messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
-            context = {
-                'pt': pt,
-                'accessible_transport_fields': accessible_transport_fields,
-                'accessible_po_fields': accessible_po_fields,
-                'is_carexit_referred': getattr(pt, 'carexit_referred_to_manager', False),
-                'show_refer_button': True,
-                'carexit_referral_reason': getattr(pt, 'carexit_referral_reason', '') or '',
-                'refer_modal_open': True,
-            }
-            return render(request, 'car_exit_custodian_confirmation.html', context)
+            ctx = _carexit_secondary_context(pt)
+            ctx.update({'pt': pt, 'accessible_transport_fields': accessible_transport_fields,
+                'accessible_po_fields': accessible_po_fields, 'is_carexit_referred': getattr(pt, 'carexit_referred_to_manager', False),
+                'show_refer_button': True, 'carexit_referral_reason': getattr(pt, 'carexit_referral_reason', '') or '',
+                'refer_modal_open': True})
+            return render(request, 'car_exit_custodian_confirmation.html', ctx)
         if is_refer and carexit_reason:
             # ارجاع به مدیر بدون تغییر وضعیت
             try:
@@ -1177,5 +1188,6 @@ def guard_vehicle_exit_view(request, transport_number):
         'show_refer_button': not is_carexit_referred and not request.user.is_superuser,
         'carexit_referral_reason': getattr(pt, 'carexit_referral_reason', '') or '',
         'refer_modal_open': False,
+        **_carexit_secondary_context(pt),
     }
     return render(request, 'car_exit_custodian_confirmation.html', context)
