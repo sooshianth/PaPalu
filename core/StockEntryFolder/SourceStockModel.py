@@ -12,7 +12,7 @@ class SourceStock(models.Model):
     
     stock_entry = models.ForeignKey(
         StockEntry,
-        on_delete=models.SET_NULL,
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
         related_name='source_stocks',
