@@ -121,7 +121,8 @@ class Product(models.Model):
         decimal_places=4,
         blank=True,
         null=True,
-        verbose_name='ضریب تبدیل اصلی به فرعی'
+        verbose_name='ضریب تبدیل فرعی به اصلی',
+        help_text='مثال: 1 گرم = 0.001 کیلوگرم → ضریب 0.001؛ مقدار اصلی = مقدار فرعی × ضریب'
     )
     
     expiration_date = models.CharField(

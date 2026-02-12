@@ -208,12 +208,13 @@ class CreateProductForm(forms.ModelForm):
         max_digits=10,
         decimal_places=4,
         required=False,
-        label='ضریب تبدیل اصلی به فرعی',
+        label='ضریب تبدیل فرعی به اصلی',
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.0001',
-            'placeholder': 'مثال: 1000'
+            'placeholder': 'مثال: 0.001 (۱ گرم = ۰.۰۰۱ کیلوگرم)'
         }),
+        help_text='مقدار اصلی = مقدار فرعی × این ضریب'
     )
 
     expiration_date = forms.CharField(
@@ -441,14 +442,14 @@ class CreateProductForm(forms.ModelForm):
         return grade.strip()
 
     def clean_conversion_coefficient(self):
-        """اعتبارسنجی ضریب تبدیل"""
+        """اعتبارسنجی ضریب تبدیل فرعی به اصلی"""
         conversion_coefficient = self.cleaned_data.get('conversion_coefficient')
         secondary_unit = self.cleaned_data.get('secondary_unit')
 
-        # اگر واحد فرعی وارد شده، ضریب تبدیل الزامی است
+        # اگر واحد فرعی تعریف شده، ضریب تبدیل فرعی به اصلی اجباری است
         if secondary_unit and not conversion_coefficient:
             raise forms.ValidationError(
-                'در صورت وارد کردن واحد فرعی، ضریب تبدیل الزامی است.'
+                'در صورت تعریف واحد فرعی، ضریب تبدیل فرعی به اصلی اجباری است.'
             )
 
         if conversion_coefficient and conversion_coefficient <= 0:
@@ -471,11 +472,11 @@ class CreateProductForm(forms.ModelForm):
         secondary_unit = cleaned_data.get('secondary_unit')
         conversion_coefficient = cleaned_data.get('conversion_coefficient')
 
-        # اگر واحد فرعی وارد شده، ضریب تبدیل الزامی است
+        # اگر واحد فرعی تعریف شده، ضریب تبدیل فرعی به اصلی اجباری است
         if secondary_unit and not conversion_coefficient:
             self.add_error(
                 'conversion_coefficient',
-                'در صورت وارد کردن واحد فرعی، ضریب تبدیل الزامی است.'
+                'در صورت تعریف واحد فرعی، ضریب تبدیل فرعی به اصلی اجباری است.'
             )
 
         return cleaned_data

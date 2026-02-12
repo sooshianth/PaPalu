@@ -390,14 +390,16 @@ def product_info_api(request, product_id):
         ).order_by('-created_at')
         
         # تبدیل main_unit و secondary_unit به weight_unit
-        # فقط واحدهای معتبر در OrderItem را می‌پذیریم: kg, ton, bag, piece
-        # واحدهای نامعتبر (مثل gr, m3, ltr, cc) فیلتر می‌شوند
+        # واحدهای معتبر در OrderItem برای محصول: kg, gr, ton, bag, piece (مثل مواد اولیه؛ فروش بر حسب فرعی/اصلی)
         weight_unit_mapping = {
             'kg': 'kg',
             'کیلوگرم': 'kg',
             'kilogram': 'kg',
             'ton': 'ton',
             'تن': 'ton',
+            'gr': 'gr',
+            'گرم': 'gr',
+            'gram': 'gr',
             'bag': 'bag',
             'کیسه': 'bag',
             'piece': 'piece',
@@ -405,13 +407,14 @@ def product_info_api(request, product_id):
             'تعداد': 'piece',
         }
         
-        # لیست واحدهای معتبر در OrderItem
-        valid_weight_units = {'kg', 'ton', 'bag', 'piece'}
+        # لیست واحدهای معتبر در OrderItem (شامل gr برای سفارش با واحد فرعی)
+        valid_weight_units = {'kg', 'gr', 'ton', 'bag', 'piece'}
         
         # ساخت لیست واحدهای قابل استفاده (اصلی و فرعی)
         available_units = []
         unit_display_names = {
             'kg': 'کیلوگرم',
+            'gr': 'گرم',
             'ton': 'تن',
             'bag': 'کیسه',
             'piece': 'عدد',

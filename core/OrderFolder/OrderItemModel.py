@@ -216,10 +216,25 @@ class OrderItem(models.Model):
         vat_amount = (vat_percent / Decimal('100')) * subtotal
         return vat_amount.quantize(Decimal('0.01'))
     
+    def _normalize_unit_to_canonical(self, unit_str):
+        """واحد را به فرم استاندارد (kg, ton, gr, bag, piece) برمی‌گرداند برای مقایسه."""
+        if not unit_str:
+            return None
+        u = (unit_str or '').strip().lower()
+        mapping = {
+            'kg': 'kg', 'کیلوگرم': 'kg', 'kilogram': 'kg',
+            'ton': 'ton', 'تن': 'ton',
+            'gr': 'gr', 'گرم': 'gr', 'gram': 'gr',
+            'bag': 'bag', 'کیسه': 'bag',
+            'piece': 'piece', 'عدد': 'piece', 'تعداد': 'piece',
+        }
+        return mapping.get(u, u)
+
     def get_weight_in_kg(self, quantity=None):
         """
-        محاسبه وزن کل به کیلوگرم - همه تبدیل‌ها از conversion_factor ماده اولیه.
-        فرمول: primary = secondary * conversion_factor (همیشه)
+        محاسبه وزن کل به کیلوگرم.
+        - برای ماده اولیه: از conversion_factor (اصلی به فرعی در مدل؛ در کد فرعی→اصلی استفاده می‌شود).
+        - برای محصول: از conversion_coefficient (فرعی به اصلی)؛ مقدار اصلی = مقدار فرعی × ضریب.
         quantity: اختیاری - اگر نباشد از self.quantity استفاده می‌شود.
         """
         qty = quantity if quantity is not None else self.quantity
@@ -230,7 +245,7 @@ class OrderItem(models.Model):
             return q
         if self.weight_unit == 'bag' and self.bag_weight:
             return q * Decimal(str(self.bag_weight))
-        # همه واحدهای RawMaterial: primary = secondary * conversion_factor
+        # ماده اولیه: primary = secondary * conversion_factor (در کد به صورت فرعی→اصلی استفاده شده)
         if self.raw_material:
             cf = self.raw_material.conversion_factor
             if not cf or cf <= 0:
@@ -249,6 +264,29 @@ class OrderItem(models.Model):
                 return q_primary
             if secondary == 'kg':
                 return q_primary / cf
+        # محصول: مثل مواد اولیه؛ فقط ضریب تبدیل فرعی به اصلی. بدون هاردکد برای تن/گرم.
+        # مقدار اصلی = مقدار فرعی × conversion_coefficient؛ تبدیل به kg فقط وقتی یکی از واحدها kg باشد.
+        if self.product:
+            main_unit = self._normalize_unit_to_canonical(self.product.main_unit)
+            sec_unit = self._normalize_unit_to_canonical(self.product.secondary_unit)
+            cf = self.product.conversion_coefficient
+            if not cf or cf <= 0:
+                cf = Decimal('1')
+            else:
+                cf = Decimal(str(cf))
+            order_unit = self._normalize_unit_to_canonical(self.weight_unit) or self.weight_unit
+            if order_unit == main_unit:
+                q_main = q
+            elif order_unit == sec_unit:
+                q_main = q * cf  # فرعی به اصلی
+            else:
+                return Decimal('0')
+            # تبدیل به kg فقط با استفاده از ضریب و واحد kg (مثل RawMaterial)
+            if main_unit == 'kg':
+                return q_main
+            if sec_unit == 'kg':
+                return q_main / cf
+            return Decimal('0')
         return Decimal('0')
     
     def kg_to_order_unit(self, kg_value):
