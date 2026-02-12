@@ -455,7 +455,7 @@
                             <th>تخصیص (واحد ثانویه)</th>
                             <th>تحویلی (واحد ثانویه)</th>
                             {% endif %}
-                            <th>فی (ریال/کیلوگرم)</th>
+                            <th>فی (واحد هر قلم)</th>
                             <th>مبلغ اختلاف (ریال)</th>
                         </tr>
                     </thead>
@@ -476,7 +476,7 @@
                             <td>—</td><td>—</td>
                             {% endif %}
                             {% endif %}
-                            <td>{{ discrepancy.unit_price|persian_number:0 }}</td>
+                            <td>{{ discrepancy.unit_price|persian_number:0 }} <span style="font-size:0.85em;color:var(--gray-600);">({{ discrepancy.unit_price_label }})</span></td>
                             <td class="{% if discrepancy.difference_amount > 0 %}positive{% elif discrepancy.difference_amount < 0 %}negative{% endif %}">
                                 <strong>{{ discrepancy.difference_amount|persian_number:0 }}</strong>
                             </td>
@@ -488,13 +488,13 @@
         </div>
         {% endif %}
         
-        <!-- نوار پیشرفت -->
+        <!-- نوار پیشرفت (مبلغ اختلاف ممکن است منفی باشد؛ درصد بر اساس قدر مطلق محاسبه می‌شود) -->
         <div class="progress-bar">
-            <div class="progress-fill" style="width: {% widthratio settled_amount difference_amount|add:'0.01' 100 %}%;">
+            <div class="progress-fill" style="width: {{ progress_percent }}%;">
                 {% if settlement_completed %}
                     تسویه کامل شد
                 {% else %}
-                    {{ settled_amount|persian_number:0 }} از {{ difference_amount|persian_number:0 }} ریال
+                    {{ settled_amount|persian_number:0 }} از {{ difference_amount_abs|persian_number:0 }} ریال
                 {% endif %}
             </div>
         </div>

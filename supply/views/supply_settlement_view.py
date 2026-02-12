@@ -60,7 +60,7 @@ def supply_settlement_list_view(request):
     all_transports = Transport.objects.filter(
         allocation__in=all_allocations,
         direction='inbound'  # فقط حمل‌های ورودی
-    ).select_related('allocation')
+    ).select_related('allocation').prefetch_related('raw_material_infos__order_item')
     
     # ایجاد دیکشنری برای حمل‌ها بر اساس allocation
     transport_dict = {}
@@ -71,15 +71,12 @@ def supply_settlement_list_view(request):
                 transport_dict[allocation_number] = []
             transport_dict[allocation_number].append(transport)
 
-    # Annotate کردن وزن سفارش، وزن تحویلی و مبلغ اختلاف
+    # Annotate کردن وزن سفارش، وزن تحویلی و مبلغ اختلاف (فی به ازای واحد هر قلم است)
     for order in orders_qs:
-        # محاسبه وزن سفارش
         order_weight = Decimal('0')
         for item in order.order_items.all():
-            weight_kg = item.get_weight_in_kg()
-            order_weight += Decimal(str(weight_kg))
+            order_weight += Decimal(str(item.get_weight_in_kg()))
         
-        # محاسبه وزن تحویلی از بارنامه‌ها (برای پرداخت سرک/کسری بر اساس وزن بارنامه، نه باسکول)
         allocation_numbers = allocation_dict.get(order.pk, [])
         transports_for_order = [t for alloc_num in allocation_numbers for t in transport_dict.get(alloc_num, [])]
         delivered_weight = Decimal('0')
@@ -88,27 +85,38 @@ def supply_settlement_list_view(request):
             if w:
                 delivered_weight += Decimal(str(w))
         
-        # محاسبه اختلاف وزن
-        weight_difference = delivered_weight - order_weight
+        # توزیع وزن تحویلی به هر قلم سفارش (مثل جزئیات)
+        order_item_ids = list(order.order_items.values_list('id', flat=True))
+        delivered_per_order_item = {}
+        for transport in transports_for_order:
+            w = getattr(transport, 'waybill_weight', None) or transport.net_weight
+            if not w:
+                continue
+            w = Decimal(str(w))
+            infos = list(transport.raw_material_infos.select_related('order_item').all())
+            total_alloc = sum(Decimal(str(rmi.allocated_quantity)) for rmi in infos if rmi.allocated_quantity)
+            if total_alloc and total_alloc > 0:
+                for rmi in infos:
+                    if rmi.order_item_id and rmi.allocated_quantity:
+                        part = w * (Decimal(str(rmi.allocated_quantity)) / total_alloc)
+                        delivered_per_order_item[rmi.order_item_id] = delivered_per_order_item.get(rmi.order_item_id, Decimal('0')) + part
+            elif len(order_item_ids) == 1:
+                delivered_per_order_item[order_item_ids[0]] = delivered_per_order_item.get(order_item_ids[0], Decimal('0')) + w
         
-        # محاسبه میانگین وزن‌دار فی خرید
-        total_price = Decimal('0')
-        total_weight_for_avg = Decimal('0')
-        
-        for item in order.order_items.all():
-            if item.unit_price and item.quantity:
-                item_weight = Decimal(str(item.get_weight_in_kg()))
-                item_price = Decimal(str(item.unit_price))
-                total_price += item_weight * item_price
-                total_weight_for_avg += item_weight
-        
-        if total_weight_for_avg > 0:
-            weighted_avg_price = total_price / total_weight_for_avg
-        else:
-            weighted_avg_price = Decimal('0')
-        
-        # مبلغ اختلاف
-        difference_amount = weight_difference * weighted_avg_price
+        # مبلغ اختلاف = جمع اختلاف هر قلم (فی هر قلم به ازای واحد خودش: کیلو یا لیتر و ...)
+        difference_amount = Decimal('0')
+        for order_item in order.order_items.all():
+            if not order_item.raw_material or not order_item.unit_price:
+                continue
+            allocated_weight = Decimal(str(order_item.get_weight_in_kg()))
+            item_delivered = delivered_per_order_item.get(order_item.id, Decimal('0'))
+            unit_price = Decimal(str(order_item.unit_price))
+            if order_item.is_purchased_in_secondary_unit():
+                allocated_sec = order_item.kg_to_order_unit(allocated_weight)
+                delivered_sec = order_item.kg_to_order_unit(item_delivered)
+                difference_amount += (delivered_sec - allocated_sec) * unit_price
+            else:
+                difference_amount += (item_delivered - allocated_weight) * unit_price
         
         order._order_weight = order_weight
         order._delivered_weight = delivered_weight
@@ -206,71 +214,68 @@ def supply_settlement_detail_view(request, order_number):
             delivered_per_order_item[order_item_ids[0]] = delivered_per_order_item.get(order_item_ids[0], Decimal('0')) + w
     
     # محاسبه اختلاف برای هر ماده اولیه (برای نمایش جزئیات)
+    # فی (unit_price) در سفارش خرید به ازای همان واحد انتخابی است (ریال/کیلوگرم یا ریال/لیتر و ...)
     material_discrepancies = []
     total_difference_amount = Decimal('0')
     
-    # برای هر ماده اولیه در سفارش
     for order_item in order.order_items.all():
         raw_material = order_item.raw_material
         if not raw_material:
             continue
         
-        # وزن تخصیص یافته (وزن سفارش برای این ماده اولیه)
         allocated_weight = Decimal(str(order_item.get_weight_in_kg()))
-        # وزن تحویلی این ماده (از توزیع وزن بارنامه‌ها)
         item_delivered = delivered_per_order_item.get(order_item.id, Decimal('0'))
-        # اختلاف وزن این ماده
         item_weight_diff = item_delivered - allocated_weight
         
-        # فی ماده اولیه
         unit_price = Decimal(str(order_item.unit_price)) if order_item.unit_price else Decimal('0')
-        # مبلغ اختلاف این ماده
-        item_difference_amount = item_weight_diff * unit_price
-        total_difference_amount += item_difference_amount
-        
-        allocated_secondary = None
-        delivered_secondary = None
-        secondary_unit_display = ''
+        # مبلغ اختلاف این ماده: اگر خرید با واحد ثانویه (مثلاً لیتر) بوده، فی به ازای همان واحد است
         if order_item.is_purchased_in_secondary_unit():
-            secondary_unit_display = order_item.get_weight_unit_display()
             allocated_secondary = order_item.kg_to_order_unit(allocated_weight)
             delivered_secondary = order_item.kg_to_order_unit(item_delivered)
+            diff_secondary = delivered_secondary - allocated_secondary
+            item_difference_amount = diff_secondary * unit_price
+            secondary_unit_display = order_item.get_weight_unit_display()
+            allocated_secondary_val = allocated_secondary
+            delivered_secondary_val = delivered_secondary
+        else:
+            item_difference_amount = item_weight_diff * unit_price
+            secondary_unit_display = ''
+            allocated_secondary_val = None
+            delivered_secondary_val = None
+        
+        total_difference_amount += item_difference_amount
+        
+        # برچسب فی برای نمایش (ریال/کیلوگرم یا ریال/لیتر و ...)
+        unit_price_label = f"ریال/{order_item.get_weight_unit_display()}" if order_item.weight_unit else "ریال"
+        
         material_discrepancies.append({
             'material_name': raw_material.name if raw_material.name else 'نامشخص',
             'allocated_weight': allocated_weight,
             'delivered_weight': item_delivered,
             'weight_difference': item_weight_diff,
             'unit_price': unit_price,
+            'unit_price_label': unit_price_label,
             'difference_amount': item_difference_amount,
-            'allocated_secondary': allocated_secondary,
-            'delivered_secondary': delivered_secondary,
+            'allocated_secondary': allocated_secondary_val,
+            'delivered_secondary': delivered_secondary_val,
             'secondary_unit_display': secondary_unit_display,
         })
     
-    # محاسبه مبلغ اختلاف کل بر اساس میانگین وزن‌دار فی (برای سازگاری با مبلغ کل)
     weight_difference = delivered_weight - order_weight
     
-    # محاسبه میانگین وزن‌دار فی خرید
+    # مبلغ اختلاف کل = جمع مبالغ اختلاف هر ماده (بر اساس فی هر ماده در واحد خودش)
+    difference_amount = total_difference_amount
+    
+    # میانگین وزن‌دار فی فقط برای نمایش در صورت نیاز (محاسبه کل دیگر از آن استفاده نمی‌کند)
     total_price = Decimal('0')
     total_weight_for_avg = Decimal('0')
-    
     for item in order.order_items.all():
         if item.unit_price and item.quantity:
-            item_weight = Decimal(str(item.get_weight_in_kg()))
+            qty = Decimal(str(item.quantity))
             item_price = Decimal(str(item.unit_price))
-            total_price += item_weight * item_price
-            total_weight_for_avg += item_weight
-    
-    if total_weight_for_avg > 0:
-        weighted_avg_price = total_price / total_weight_for_avg
-    else:
-        weighted_avg_price = Decimal('0')
-    
-    # مبلغ اختلاف کل (همان total_difference_amount از جمع مبالغ هر ماده است؛ برای نمایش از همین استفاده می‌کنیم)
-    total_difference_amount = weight_difference * weighted_avg_price
-    
-    # مبلغ کل اختلاف
-    difference_amount = total_difference_amount
+            total_price += qty * item_price
+            total_weight_for_avg += Decimal(str(item.get_weight_in_kg()))
+    weighted_avg_price = (total_price / total_weight_for_avg) if total_weight_for_avg > 0 else Decimal('0')
     
     # وزن به واحد ثانویه - وقتی خرید با واحد ثانویه بوده (برای نمایش در سطر جدا)
     order_weight_secondary = None
@@ -313,8 +318,15 @@ def supply_settlement_detail_view(request, order_number):
     # بررسی اتمام تسویه
     settlement_completed = remaining_amount <= 0
     
+    # برای نوار پیشرفت: درصد تسویه شده (مبلغ اختلاف ممکن است منفی باشد)
+    difference_amount_abs = abs(difference_amount)
+    if settlement_completed or difference_amount_abs < Decimal('0.01'):
+        progress_percent = 100
+    else:
+        progress_percent = min(100, float(settled_amount / difference_amount_abs * 100))
+    
     # بررسی اینکه آیا مبلغ اختلاف صفر است (با توجه به خطای محاسباتی)
-    has_no_difference = abs(difference_amount) < Decimal('0.01')
+    has_no_difference = difference_amount_abs < Decimal('0.01')
     
     # لاگ برای دیباگ
     bug_logger.debug(f"سفارش خرید {order_number}: difference_amount={difference_amount}, has_no_difference={has_no_difference}, settlement_completed={settlement_completed}")
@@ -429,6 +441,8 @@ def supply_settlement_detail_view(request, order_number):
         'weight_difference': weight_difference,
         'weighted_avg_price': weighted_avg_price,
         'difference_amount': difference_amount,
+        'difference_amount_abs': difference_amount_abs,
+        'progress_percent': progress_percent,
         'settled_amount': settled_amount,
         'remaining_amount': remaining_amount,
         'settlement_completed': settlement_completed,
@@ -468,47 +482,52 @@ def skip_supply_settlement_view(request, order_number):
     
     try:
         with transaction.atomic():
-            # محاسبه مبلغ اختلاف برای بررسی
             allocations = Allocation.objects.filter(order=order)
             transports = Transport.objects.filter(
                 allocation__in=allocations,
                 direction='inbound'
-            ).prefetch_related('raw_material_infos')
+            ).prefetch_related('raw_material_infos__order_item')
             
-            # محاسبه وزن سفارش
             order_weight = Decimal('0')
             for item in order.order_items.all():
-                weight_kg = item.get_weight_in_kg()
-                order_weight += Decimal(str(weight_kg))
+                order_weight += Decimal(str(item.get_weight_in_kg()))
             
-            # محاسبه وزن تحویلی از وزن بارنامه‌ها (برای سرک/کسری بر اساس waybill_weight)
             delivered_weight = Decimal('0')
             for transport in transports:
                 w = getattr(transport, 'waybill_weight', None) or transport.net_weight
                 if w:
                     delivered_weight += Decimal(str(w))
             
-            # محاسبه اختلاف وزن
-            weight_difference = delivered_weight - order_weight
+            order_item_ids = list(order.order_items.values_list('id', flat=True))
+            delivered_per_order_item = {}
+            for transport in transports:
+                w = getattr(transport, 'waybill_weight', None) or transport.net_weight
+                if not w:
+                    continue
+                w = Decimal(str(w))
+                infos = list(transport.raw_material_infos.select_related('order_item').all())
+                total_alloc = sum(Decimal(str(rmi.allocated_quantity)) for rmi in infos if rmi.allocated_quantity)
+                if total_alloc and total_alloc > 0:
+                    for rmi in infos:
+                        if rmi.order_item_id and rmi.allocated_quantity:
+                            part = w * (Decimal(str(rmi.allocated_quantity)) / total_alloc)
+                            delivered_per_order_item[rmi.order_item_id] = delivered_per_order_item.get(rmi.order_item_id, Decimal('0')) + part
+                elif len(order_item_ids) == 1:
+                    delivered_per_order_item[order_item_ids[0]] = delivered_per_order_item.get(order_item_ids[0], Decimal('0')) + w
             
-            # محاسبه میانگین وزن‌دار فی خرید
-            total_price = Decimal('0')
-            total_weight_for_avg = Decimal('0')
-            
-            for item in order.order_items.all():
-                if item.unit_price and item.quantity:
-                    item_weight = Decimal(str(item.get_weight_in_kg()))
-                    item_price = Decimal(str(item.unit_price))
-                    total_price += item_weight * item_price
-                    total_weight_for_avg += item_weight
-            
-            if total_weight_for_avg > 0:
-                weighted_avg_price = total_price / total_weight_for_avg
-            else:
-                weighted_avg_price = Decimal('0')
-            
-            # مبلغ اختلاف
-            difference_amount = weight_difference * weighted_avg_price
+            difference_amount = Decimal('0')
+            for order_item in order.order_items.all():
+                if not order_item.raw_material or not order_item.unit_price:
+                    continue
+                allocated_weight = Decimal(str(order_item.get_weight_in_kg()))
+                item_delivered = delivered_per_order_item.get(order_item.id, Decimal('0'))
+                unit_price = Decimal(str(order_item.unit_price))
+                if order_item.is_purchased_in_secondary_unit():
+                    allocated_sec = order_item.kg_to_order_unit(allocated_weight)
+                    delivered_sec = order_item.kg_to_order_unit(item_delivered)
+                    difference_amount += (delivered_sec - allocated_sec) * unit_price
+                else:
+                    difference_amount += (item_delivered - allocated_weight) * unit_price
             
             # بررسی اینکه مبلغ اختلاف صفر است
             if abs(difference_amount) > Decimal('0.01'):  # با توجه به خطای محاسباتی

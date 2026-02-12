@@ -210,16 +210,8 @@ class OrderItem(models.Model):
         if not self.quantity or not self.unit_price:
             return Decimal('0')
         
-        # محاسبه subtotal
-        if self.weight_unit == 'piece':
-            subtotal = Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
-        else:
-            weight_in_kg = self.get_weight_in_kg()
-            if weight_in_kg == 0:
-                return Decimal('0')
-            subtotal = Decimal(str(weight_in_kg)) * Decimal(str(self.unit_price))
-        
-        # محاسبه مالیات
+        # subtotal مطابق calculate_total: فی به ازای واحد سفارش
+        subtotal = Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
         vat_percent = Decimal(str(self.vat_percent or 0))
         vat_amount = (vat_percent / Decimal('100')) * subtotal
         return vat_amount.quantize(Decimal('0.01'))
@@ -302,7 +294,8 @@ class OrderItem(models.Model):
     def calculate_total(self):
         """
         محاسبه مجموع بهای قلم
-        unit_price بر اساس هر کیلوگرم است (مگر برای piece که بر اساس هر عدد است)
+        unit_price (فی) بر اساس همان واحد انتخابی سفارش است (ریال/کیلوگرم، ریال/لیتر، ریال/عدد و ...).
+        quantity در همان واحد ذخیره شده؛ پس subtotal = quantity * unit_price.
         مالیات بر ارزش افزوده به صورت درصدی (vat_percent) محاسبه می‌شود.
         """
         from decimal import Decimal
@@ -310,15 +303,8 @@ class OrderItem(models.Model):
         if not self.quantity or not self.unit_price:
             return Decimal('0')
         
-        # برای واحد piece، قیمت مستقیماً برای هر عدد است
-        if self.weight_unit == 'piece':
-            subtotal = Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
-        else:
-            # برای سایر واحدها (kg, ton, bag)، ابتدا وزن را به کیلوگرم تبدیل می‌کنیم
-            weight_in_kg = self.get_weight_in_kg()
-            if weight_in_kg == Decimal('0'):
-                return Decimal('0')
-            subtotal = weight_in_kg * Decimal(str(self.unit_price))
+        # فی همیشه به ازای همان واحد quantity است (عدد، کیلوگرم، لیتر، تن، کیسه و ...)
+        subtotal = Decimal(str(self.quantity)) * Decimal(str(self.unit_price))
         
         # محاسبه مالیات بر اساس درصد
         vat_percent = Decimal(str(self.vat_percent or 0))
