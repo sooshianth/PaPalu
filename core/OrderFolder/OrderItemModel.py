@@ -124,7 +124,7 @@ class OrderItem(models.Model):
     # فی
     unit_price = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
+        decimal_places=0,
         null=True,
         blank=True,
         verbose_name='فی (ریال)'
@@ -133,27 +133,27 @@ class OrderItem(models.Model):
     # تخفیف
     discount = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
+        decimal_places=0,
         default=0,
         null=True,
         blank=True,
-        verbose_name='تخفیف'
+        verbose_name='تخفیف (ریال)'
     )
     
     # اضافات
     additional_charges = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
+        decimal_places=0,
         default=0,
         null=True,
         blank=True,
-        verbose_name='اضافات'
+        verbose_name='اضافات (ریال)'
     )
     
     # بهای تمام شده بدون احتساب کرایه
     cost_without_freight = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
+        decimal_places=0,
         null=True,
         blank=True,
         verbose_name='بهای تمام شده بدون احتساب کرایه'
@@ -172,19 +172,19 @@ class OrderItem(models.Model):
     # بهای تمام شده کرایه خرید
     freight_cost = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
+        decimal_places=0,
         null=True,
         blank=True,
-        verbose_name='بهای تمام شده کرایه خرید'
+        verbose_name='بهای تمام شده کرایه خرید (ریال)'
     )
     
     # بهای تمام شده خرید
     total_purchase_cost = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
+        decimal_places=0,
         null=True,
         blank=True,
-        verbose_name='بهای تمام شده خرید'
+        verbose_name='بهای تمام شده خرید (ریال)'
     )
     
     class Meta:

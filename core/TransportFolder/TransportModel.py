@@ -272,8 +272,8 @@ class Transport(models.Model):
     
     initial_freight = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        verbose_name='کرایه اولیه',
+        decimal_places=0,
+        verbose_name='کرایه اولیه (ریال)',
         validators=[MinValueValidator(0)],
         null=True,
         blank=True
@@ -281,8 +281,8 @@ class Transport(models.Model):
     
     total_freight = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        verbose_name='کرایه کل',
+        decimal_places=0,
+        verbose_name='کرایه کل (ریال)',
         validators=[MinValueValidator(0)],
         null=True,
         blank=True
@@ -290,8 +290,8 @@ class Transport(models.Model):
     
     discount = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        verbose_name='تخفیف',
+        decimal_places=0,
+        verbose_name='تخفیف (ریال)',
         validators=[MinValueValidator(0)],
         null=True,
         blank=True
@@ -299,8 +299,8 @@ class Transport(models.Model):
     
     surplus = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        verbose_name='مازاد',
+        decimal_places=0,
+        verbose_name='مازاد (ریال)',
         validators=[MinValueValidator(0)],
         null=True,
         blank=True
@@ -308,8 +308,8 @@ class Transport(models.Model):
     
     freight_payment = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        verbose_name='کرایه پرداختی',
+        decimal_places=0,
+        verbose_name='کرایه پرداختی (ریال)',
         validators=[MinValueValidator(0)],
         null=True,
         blank=True

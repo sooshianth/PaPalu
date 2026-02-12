@@ -77,7 +77,7 @@ class TransactionDocument(models.Model):
     # مبلغ سند
     document_amount = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
+        decimal_places=0,
         verbose_name='مبلغ سند',
         null=True,
         blank=True
@@ -149,8 +149,8 @@ class TransactionDocument(models.Model):
     # مبلغ استعلام گرفته شده
     inquiry_amount = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        verbose_name='مبلغ استعلام گرفته شده',
+        decimal_places=0,
+        verbose_name='مبلغ استعلام گرفته شده (ریال)',
         null=True,
         blank=True
     )

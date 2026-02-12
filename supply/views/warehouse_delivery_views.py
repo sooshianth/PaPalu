@@ -229,49 +229,49 @@ class WarehouseDeliveryForm(forms.Form):
     
     # کرایه اولیه
     initial_freight = forms.DecimalField(
-        label='کرایه اولیه',
+        label='کرایه اولیه (ریال)',
         required=False,
         max_digits=15,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'id': 'id_initial_freight'})
+        decimal_places=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'id': 'id_initial_freight'})
     )
     
     # کرایه کل (read-only - محاسبه خودکار)
     total_freight = forms.DecimalField(
-        label='کرایه کل',
+        label='کرایه کل (ریال)',
         required=False,
         max_digits=15,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True, 'id': 'id_total_freight'})
+        decimal_places=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'readonly': True, 'id': 'id_total_freight'})
     )
     
     # تخفیف
     discount = forms.DecimalField(
-        label='تخفیف',
+        label='تخفیف (ریال)',
         required=False,
         max_digits=15,
-        decimal_places=2,
+        decimal_places=0,
         initial=0,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0', 'id': 'id_discount'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'value': '0', 'id': 'id_discount'})
     )
     
     # مازاد
     surplus = forms.DecimalField(
-        label='مازاد',
+        label='مازاد (ریال)',
         required=False,
         max_digits=15,
-        decimal_places=2,
+        decimal_places=0,
         initial=0,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'value': '0', 'id': 'id_surplus'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'value': '0', 'id': 'id_surplus'})
     )
     
     # کرایه پرداختی (read-only - محاسبه خودکار)
     freight_payment = forms.DecimalField(
-        label='کرایه پرداختی',
+        label='کرایه پرداختی (ریال)',
         required=False,
         max_digits=15,
-        decimal_places=2,
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True, 'id': 'id_freight_payment'})
+        decimal_places=0,
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'readonly': True, 'id': 'id_freight_payment'})
     )
     
     # انبار مبدأ (انبار مجازی تامین‌کننده)

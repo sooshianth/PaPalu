@@ -140,8 +140,8 @@ class RawMaterialPriceInquiryForm(ModelForm):
 		}
 		widgets = {
 			'inquiry_date': TextInput(attrs={'class': 'form-control', 'id': 'id_inquiry_date', 'dir': 'ltr', 'placeholder': 'YYYY/MM/DD', 'readonly': 'readonly', 'style': 'cursor:pointer; padding-left:40px'}),
-			'price': NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
-			'freight_unit_price': NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+			'price': NumberInput(attrs={'step': '1', 'class': 'form-control'}),
+			'freight_unit_price': NumberInput(attrs={'step': '1', 'class': 'form-control'}),
 			'delivery_terms': TextInput(attrs={'maxlength': 255, 'class': 'form-control'}),
 			'loading_location': TextInput(attrs={'maxlength': 255, 'class': 'form-control'}),
 			'negotiation_note': Textarea(attrs={'rows': 3, 'class': 'form-control'}),

@@ -2028,13 +2028,13 @@
             const total = initial - discount + surplus;
 
             if (totalFreightInput) {
-                totalFreightInput.value = total.toFixed(2);
+                totalFreightInput.value = Math.round(total);
                 totalFreightInput.classList.add('calculated-field');
             }
 
             if (freightPaymentInput) {
                 // کرایه پرداختی = کرایه کل
-                freightPaymentInput.value = total.toFixed(2);
+                freightPaymentInput.value = Math.round(total);
                 freightPaymentInput.classList.add('calculated-field');
             }
         }

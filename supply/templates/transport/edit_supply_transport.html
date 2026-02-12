@@ -908,7 +908,7 @@
 
       const totalFreight = initialFreight + surplus - discount;
       const finalTotalFreight = Math.max(0, totalFreight);
-      const formattedTotal = finalTotalFreight.toFixed(2);
+      const formattedTotal = String(Math.round(finalTotalFreight));
       totalFreightInput.value = formattedTotal;
 
       if (freightPaymentInput) {

@@ -27,7 +27,7 @@ class TransactionApprovalForm(forms.ModelForm):
         ]
         widgets = {
             'accounting_document_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
-            'inquiry_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'inquiry_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
             'tracking_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
             'transfer_time': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
         }

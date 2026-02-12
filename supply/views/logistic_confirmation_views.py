@@ -137,31 +137,31 @@ class LogisticConfirmationForm(ModelForm):
             }),
             'initial_freight': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
+                'step': '1',
                 'min': '0',
                 'required': True
             }),
             'total_freight': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
+                'step': '1',
                 'min': '0',
                 'required': True
             }),
             'discount': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
+                'step': '1',
                 'min': '0',
                 'required': True
             }),
             'surplus': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
+                'step': '1',
                 'min': '0',
                 'required': True
             }),
             'freight_payment': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
+                'step': '1',
                 'min': '0',
                 'required': True
             }),

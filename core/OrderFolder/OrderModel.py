@@ -157,16 +157,16 @@ class Order(models.Model):
     # فیلدهای مربوط به سفارش خرید تامینی
     subtotal_without_freight = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
-        verbose_name='جمع قیمت بدون کرایه',
+        decimal_places=0,
+        verbose_name='جمع قیمت بدون کرایه (ریال)',
         validators=[MinValueValidator(0)],
         null=True,
         blank=True
     )
     freight_cost = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
-        verbose_name='هزینه کرایه',
+        decimal_places=0,
+        verbose_name='هزینه کرایه (ریال)',
         validators=[MinValueValidator(0)],
         null=True,
         blank=True
@@ -218,7 +218,7 @@ class Order(models.Model):
     # فی تمام شده خرید (محاسبه شده پس از تکمیل سفارش)
     final_unit_price = models.DecimalField(
         max_digits=50,
-        decimal_places=2,
+        decimal_places=0,
         verbose_name='فی تمام شده خرید (ریال/کیلوگرم)',
         null=True,
         blank=True,

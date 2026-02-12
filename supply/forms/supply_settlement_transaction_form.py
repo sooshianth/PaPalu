@@ -55,8 +55,8 @@ class SupplySettlementTransactionForm(forms.ModelForm):
             }),
             'document_amount': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
-                'placeholder': 'مبلغ سند'
+                'step': '1',
+                'placeholder': 'مبلغ سند (ریال)'
             }),
             'due_date': forms.DateInput(attrs={
                 'class': 'form-control',

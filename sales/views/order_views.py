@@ -278,7 +278,7 @@ def order_list_view(request):
                     When(order_items__weight_unit='bag', then=Coalesce(F('order_items__quantity') * F('order_items__bag_weight'), Value(0))),
                     When(order_items__weight_unit='piece', then=F('order_items__quantity')),
                     default=Value(0),
-                    output_field=DecimalField(max_digits=15, decimal_places=2)
+                    output_field=DecimalField(max_digits=15, decimal_places=0)
                 )
             ),
             # بررسی وجود تاریخچه تغییرات
@@ -291,8 +291,8 @@ def order_list_view(request):
         bug_logger.error(f"خطا در annotate سفارش‌ها: {e}")
         # در صورت خطا، annotate را بدون محاسبه انجام می‌دهیم
         orders_qs = orders_qs.annotate(
-            total_purchase_cost=Value(0, output_field=DecimalField(max_digits=15, decimal_places=2)),
-            total_order_weight=Value(0, output_field=DecimalField(max_digits=15, decimal_places=2))
+            total_purchase_cost=Value(0, output_field=DecimalField(max_digits=15, decimal_places=0)),
+            total_order_weight=Value(0, output_field=DecimalField(max_digits=15, decimal_places=0))
         )  
 
     # محاسبه فیلدهای قابل دسترسی

@@ -208,26 +208,26 @@ class OrderItemForm(forms.Form):
     )
     unit_price = forms.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=0,
         required=True,
         label='فی (قیمت واحد) (ریال)',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1'})
     )
     discount = forms.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=0,
         required=False,
         initial=Decimal('0'),
-        label='تخفیف',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        label='تخفیف (ریال)',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1'})
     )
     additional_charges = forms.DecimalField(
         max_digits=12,
-        decimal_places=2,
+        decimal_places=0,
         required=False,
         initial=Decimal('0'),
-        label='اضافات',
-        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'})
+        label='اضافات (ریال)',
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '1'})
     )
     vat_percent = forms.DecimalField(
         max_digits=5,

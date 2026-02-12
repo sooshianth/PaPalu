@@ -819,7 +819,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // گرد کردن به 2 رقم اعشار
-            totalInput.value = total.toFixed(2);
+            totalInput.value = Math.round(total);
             
             // محاسبه مجدد جمع بدون کرایه
             calculateSubtotal();
@@ -845,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const subtotalInput = document.querySelector('input[name="subtotal_without_freight"]');
         if (subtotalInput) {
-            subtotalInput.value = subtotal.toFixed(2);
+            subtotalInput.value = Math.round(subtotal);
         }
     }
     

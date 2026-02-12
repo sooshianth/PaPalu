@@ -227,6 +227,52 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // اعمال به تمام فرم‌های موجود
     document.querySelectorAll('.item-form-row').forEach(setupBagWeightToggle);
+
+    // نمایش عدد فارسی با ، زیر مقدار/وزن و فی قیمت (مشابه تامین)
+    var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    function formatNumberToPersian(num, decimalPlaces) {
+        if (num === null || num === undefined || isNaN(num)) return '';
+        var n = parseFloat(num);
+        var fixed;
+        if (decimalPlaces === 0) {
+            fixed = String(Math.round(n));
+        } else if (decimalPlaces !== undefined && decimalPlaces > 0) {
+            fixed = n.toFixed(decimalPlaces);
+        } else {
+            fixed = (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+        }
+        var parts = fixed.split('.');
+        var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+        var result = intPart + (parts[1] ? '.' + parts[1] : '');
+        return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+    }
+    function updatePersianDisplay(input, displayEl, decimals) {
+        if (!input || !displayEl) return;
+        var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+        var num = parseFloat(raw);
+        displayEl.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, decimals !== undefined ? decimals : 2);
+    }
+    function attachPersianToRow(formRow) {
+        if (formRow.dataset.persianAttached === '1') return;
+        formRow.dataset.persianAttached = '1';
+        var q = formRow.querySelector('input[name*="-quantity"]');
+        var u = formRow.querySelector('input[name*="-unit_price"]');
+        var dq = formRow.querySelector('.quantity-persian');
+        var du = formRow.querySelector('.unit-price-persian');
+        if (q && dq) {
+            function updateQty() { updatePersianDisplay(q, dq, 2); }
+            updateQty();
+            q.addEventListener('input', updateQty);
+            q.addEventListener('change', updateQty);
+        }
+        if (u && du) {
+            function updatePrice() { updatePersianDisplay(u, du, 0); }
+            updatePrice();
+            u.addEventListener('input', updatePrice);
+            u.addEventListener('change', updatePrice);
+        }
+    }
+    document.querySelectorAll('.item-form-row').forEach(attachPersianToRow);
     
     // تابع برای ایجاد/حذف dropdown قیمت
     function createPriceDropdown(formRow, prices, unitPriceInput) {
@@ -579,6 +625,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // اعمال auto fill محصول به فرم جدید
             setupProductAutoFill(newForm);
             
+            // نمایش فارسی برای مقدار و فی در قلم جدید (کلون data-persian-attached دارد، پاک کن)
+            delete newForm.dataset.persianAttached;
+            attachPersianToRow(newForm);
+            
             // به‌روزرسانی تعداد فرم‌ها
             formCount++;
             totalFormsInput.value = formCount;
@@ -837,6 +887,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="col-md-3 mb-3">
                                 <label class="form-label required-field">{{ f.quantity.label }}</label>
                                 {{ f.quantity }}
+                                <small class="quantity-persian persian-number-display" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                                 {% if f.quantity.errors %}
                                     <div class="text-danger">{{ f.quantity.errors.0 }}</div>
                                 {% endif %}
@@ -847,6 +898,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="col-md-3 mb-3">
                                 <label class="form-label required-field">{{ f.unit_price.label }}</label>
                                 {{ f.unit_price }}
+                                <small class="unit-price-persian persian-number-display" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                                 {% if f.unit_price.errors %}
                                     <div class="text-danger">{{ f.unit_price.errors.0 }}</div>
                                 {% endif %}

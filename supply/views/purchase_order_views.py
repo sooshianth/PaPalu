@@ -104,8 +104,8 @@ class ProcurementPurchaseOrderForm(ModelForm):
         widgets = {
             'customer': forms.Select(attrs={'class': 'form-control'}),
             'freight_payment_type': forms.Select(attrs={'class': 'form-control'}),
-            'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
-            'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'readonly': True}),
+            'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
             'external_system_id': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
@@ -232,10 +232,10 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'}),
             'weight_unit': forms.Select(attrs={'class': 'form-control'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
-            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'total_purchase_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'readonly': True}),
+            'unit_price': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
+            'total_purchase_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'readonly': True}),
             'vat_percent': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
             'external_allocation_id': forms.TextInput(attrs={'class': 'form-control', 'readonly': True}),
         }
 

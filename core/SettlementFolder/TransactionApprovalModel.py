@@ -29,7 +29,7 @@ class TransactionApproval(models.Model):
     # مبلغ استعلام گرفته شده
     inquiry_amount = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
+        decimal_places=0,
         verbose_name='مبلغ استعلام گرفته شده',
         null=False,
         blank=False

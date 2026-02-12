@@ -16,8 +16,8 @@ class ProductFinancialInfo(models.Model):
     
     price = models.DecimalField(
         max_digits=15,
-        decimal_places=2,
-        verbose_name='قیمت'
+        decimal_places=0,
+        verbose_name='قیمت (ریال)'
     )
     
     deadline = jmodels.jDateTimeField(
