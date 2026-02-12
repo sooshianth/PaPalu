@@ -101,6 +101,23 @@ def _get_referrals(user):
             'description': f'حمل {t.transport_number or t.pk} - ارجاع از تایید خروج خودرو',
         })
 
+    # 2.8. تایید تسویه کامل خرید ارجاع‌شده به مدیر
+    settlement_referred = Order.objects.filter(
+        order_type='purchase',
+        status='pending_supply_settlement_approval',
+        supply_settlement_approval_referred_to_manager=True
+    ).order_by('-supply_settlement_approval_referred_at')
+    for o in settlement_referred:
+        dt = getattr(o, 'supply_settlement_approval_referred_at', None) or o.updated_at
+        referrals.append({
+            'type': 'supply_settlement_approval',
+            'source': 'تایید تسویه کامل خرید',
+            'resolve_url': reverse('supply:supply_settlement_approval_detail', kwargs={'order_number': o.order_number}),
+            'identifier': o.order_number,
+            'created_at': dt,
+            'description': f'سفارش {o.order_number} - ارجاع از تایید تسویه کامل خرید',
+        })
+
     # 3. تخصیص‌های رد شده (از تایید تخصیص)
     orders_with_rejected = Order.objects.filter(
         allocations__is_rejected=True

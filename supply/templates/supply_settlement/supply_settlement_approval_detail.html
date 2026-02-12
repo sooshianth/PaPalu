@@ -581,17 +581,31 @@
         تایید تسویه کامل
     </div>
     <div class="info-card-body">
-        <form method="post" onsubmit="return confirm('آیا از تایید تسویه کامل این سفارش اطمینان دارید؟ این عمل غیرقابل بازگشت است.');">
+        {% if is_supply_settlement_referred %}
+        <div class="alert alert-warning">
+            ⚠️ این سفارش به مدیر ارجاع شده است. فقط مدیر می‌تواند تسویه کامل را تایید کند.
+            {% if order.supply_settlement_approval_referral_reason %}
+            <br><strong>دلیل ارجاع به مدیر:</strong><br>
+            {{ order.supply_settlement_approval_referral_reason }}
+            {% endif %}
+        </div>
+        {% endif %}
+        <form method="post" id="supplySettlementApprovalForm">
             {% csrf_token %}
+            <input type="hidden" name="refer_to_manager" id="id_settlement_refer_to_manager" value="">
+            <input type="hidden" name="supply_settlement_referral_reason" id="id_settlement_referral_reason" value="">
             
             {% if weight_discrepancy_completed %}
             <div class="alert alert-success">
                 ✓ تسویه کامل شده است. می‌توانید تسویه کامل را تایید کنید.
             </div>
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" id="btnApproveSettlement">
                     تایید تسویه کامل و تکمیل سفارش
                 </button>
+                {% if show_refer_button %}
+                <button type="button" class="btn btn-warning" id="btnSettlementReferToManager" style="background: #856404; border-color: #856404; color: #fff;">ارجاع به مدیر</button>
+                {% endif %}
                 <a href="{% url 'supply:supply_settlement_approval_list' %}" class="btn btn-secondary">
                     بازگشت به لیست
                 </a>
@@ -601,9 +615,12 @@
                 ⚠️ تسویه هنوز کامل نشده است. لطفاً قبل از تایید تسویه کامل، تسویه را بررسی کنید.
             </div>
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary" disabled>
+                <button type="submit" class="btn btn-primary" id="btnApproveSettlement" disabled>
                     تایید تسویه کامل و تکمیل سفارش (غیرفعال)
                 </button>
+                {% if show_refer_button %}
+                <button type="button" class="btn btn-warning" id="btnSettlementReferToManager" style="background: #856404; border-color: #856404; color: #fff;">ارجاع به مدیر</button>
+                {% endif %}
                 <a href="{% url 'supply:supply_settlement_approval_list' %}" class="btn btn-secondary">
                     بازگشت به لیست
                 </a>
@@ -612,5 +629,70 @@
         </form>
     </div>
 </div>
+
+<!-- تایید قبل از ارسال فرم «تایید تسویه کامل» -->
+<script>
+(function() {
+    var form = document.getElementById('supplySettlementApprovalForm');
+    var btnApprove = document.getElementById('btnApproveSettlement');
+    if (form && btnApprove) {
+        form.addEventListener('submit', function(e) {
+            if (document.getElementById('id_settlement_refer_to_manager') && document.getElementById('id_settlement_refer_to_manager').value === '1')
+                return;
+            if (btnApprove.disabled) return;
+            if (!confirm('آیا از تایید تسویه کامل این سفارش اطمینان دارید؟ این عمل غیرقابل بازگشت است.'))
+                e.preventDefault();
+        });
+    }
+})();
+</script>
+
+<!-- مودال دلیل ارجاع به مدیر (تایید تسویه کامل خرید) -->
+{% if show_refer_button %}
+<script>window.settlementReferModalOpen = {{ refer_modal_open|yesno:"true,false" }};</script>
+<div id="settlementReferToManagerModal" class="refer-modal" role="dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.4);">
+    <div style="background: #fff; padding: 25px; border-radius: 12px; max-width: 500px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <h3 style="margin-top: 0;">ارجاع به مدیر</h3>
+        <p style="color: #666;">پس از ارجاع، این سفارش در لیست تایید تسویه نمایش داده نمی‌شود و فقط مدیر می‌تواند از صفحه ارجاعات آن را باز کرده و تسویه کامل را تایید کند.</p>
+        <label class="form-label">دلیل ارجاع (اجباری)</label>
+        <textarea id="id_settlement_referral_reason_text" class="form-control" rows="4" placeholder="دلیل ارجاع به مدیر را بنویسید..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"></textarea>
+        <div id="settlementReferReasonError" class="text-danger mt-2" style="display: none;">لطفاً دلیل ارجاع را وارد کنید.</div>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="button" class="btn btn-primary" id="btnSettlementConfirmRefer">تایید ارجاع</button>
+            <button type="button" class="btn btn-secondary" id="btnSettlementCancelRefer">انصراف</button>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var form = document.getElementById('supplySettlementApprovalForm');
+    var modal = document.getElementById('settlementReferToManagerModal');
+    var btnRefer = document.getElementById('btnSettlementReferToManager');
+    var btnConfirm = document.getElementById('btnSettlementConfirmRefer');
+    var btnCancel = document.getElementById('btnSettlementCancelRefer');
+    var reasonInput = document.getElementById('id_settlement_referral_reason_text');
+    var reasonError = document.getElementById('settlementReferReasonError');
+    var hidRefer = document.getElementById('id_settlement_refer_to_manager');
+    var hidReason = document.getElementById('id_settlement_referral_reason');
+    if (!modal || !form) return;
+    function showModal() { modal.style.display = 'flex'; }
+    function hideModal() { modal.style.display = 'none'; if (reasonError) reasonError.style.display = 'none'; }
+    if (btnRefer) btnRefer.addEventListener('click', showModal);
+    if (btnCancel) btnCancel.addEventListener('click', hideModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) hideModal(); });
+    if (btnConfirm && hidRefer && hidReason) {
+        btnConfirm.addEventListener('click', function() {
+            var reason = reasonInput ? reasonInput.value.trim() : '';
+            if (!reason) { if (reasonError) { reasonError.style.display = 'block'; reasonError.textContent = 'لطفاً دلیل ارجاع را وارد کنید.'; } return; }
+            hidRefer.value = '1';
+            hidReason.value = reason;
+            if (reasonError) reasonError.style.display = 'none';
+            form.submit();
+        });
+    }
+    if (window.settlementReferModalOpen) showModal();
+})();
+</script>
+{% endif %}
 
 {% endblock %}

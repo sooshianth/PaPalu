@@ -200,6 +200,21 @@ class Order(models.Model):
         verbose_name='شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت'
     )
     
+    # ارجاع تایید تسویه کامل خرید به مدیر (فقط مدیر می‌تواند باز کرده و تایید کند)
+    supply_settlement_approval_referred_to_manager = models.BooleanField(
+        default=False,
+        verbose_name='ارجاع تایید تسویه کامل خرید به مدیریت'
+    )
+    supply_settlement_approval_referred_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان ارجاع تایید تسویه کامل خرید به مدیریت'
+    )
+    supply_settlement_approval_referral_reason = models.TextField(
+        blank=True,
+        verbose_name='دلیل ارجاع تایید تسویه کامل خرید به مدیریت'
+    )
+    
     # فی تمام شده خرید (محاسبه شده پس از تکمیل سفارش)
     final_unit_price = models.DecimalField(
         max_digits=50,

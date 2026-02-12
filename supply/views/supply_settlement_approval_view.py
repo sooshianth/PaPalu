@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render, redirect
+from django.utils import timezone
 from decimal import Decimal
 import logging
 from core.logging_levels import *
@@ -36,11 +37,12 @@ def supply_settlement_approval_list_view(request):
         messages.error(request, 'شما دسترسی به تایید تسویه کامل را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    # دریافت سفارش‌های خرید در انتظار تایید تسویه کامل
+    # دریافت سفارش‌های خرید در انتظار تایید تسویه کامل (سفارش‌های ارجاع‌شده به مدیر فقط در صفحه ارجاعات دیده می‌شوند)
     orders_qs = Order.objects.filter(
         order_type='purchase',
         status='pending_supply_settlement_approval'
-    ).select_related('customer').prefetch_related(
+    ).exclude(supply_settlement_approval_referred_to_manager=True)
+    orders_qs = orders_qs.select_related('customer').prefetch_related(
         'order_items',
         'allocations',
         'order_items__raw_material'
@@ -169,6 +171,12 @@ def supply_settlement_approval_detail_view(request, order_number):
 
     order = get_object_or_404(Order, order_number=order_number, order_type='purchase')
 
+    # اگر به مدیر ارجاع شده فقط سوپرادمین دسترسی دارد
+    if getattr(order, 'supply_settlement_approval_referred_to_manager', False) and not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای دسترسی به تایید تسویه ارجاع‌شده به مدیر - سفارش {order_number}")
+        messages.error(request, 'این سفارش به مدیر ارجاع شده و فقط مدیر می‌تواند آن را مشاهده و تایید کند.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
     if order.status != 'pending_supply_settlement_approval':
         bug_logger.warning(f"سفارش خرید {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_supply_settlement_approval می‌رود")
         messages.error(request, 'این سفارش در وضعیت مناسب برای تایید تسویه کامل نیست.')
@@ -277,29 +285,65 @@ def supply_settlement_approval_detail_view(request, order_number):
             'transports': alloc_transports,
         })
     
+    is_refer_to_manager = False
+    referral_reason = ''
     if request.method == 'POST':
-        # تایید تسویه کامل
-        try:
-            with transaction.atomic():
-                # تغییر وضعیت سفارش به completed (تکمیل شده)
-                order.status = 'completed'
-                order.save(update_fields=['status'])
-                
-                # به‌روزرسانی وضعیت Settlement به completed
-                if weight_discrepancy_settlement:
-                    weight_discrepancy_settlement.settlement_status = 'completed'
-                    weight_discrepancy_settlement.save(update_fields=['settlement_status'])
-                
-                bug_logger.info(f"تایید تسویه کامل برای سفارش خرید {order_number} ثبت شد و به وضعیت 'تکمیل شده' تغییر کرد")
-                messages.success(request, f'تایید تسویه کامل برای سفارش خرید {order_number} با موفقیت ثبت شد. سفارش در حال حاضر در وضعیت «تکمیل شده» قرار دارد.')
-                audit_logger.activity(f"تایید تسویه کامل برای سفارش خرید {order_number} ثبت شد و به وضعیت 'تکمیل شده' تغییر کرد توسط کاربر {request.user.username}")
-                
-                return redirect('supply:supply_settlement_approval_list')
-                
-        except Exception as e:
-            bug_logger.error(f"خطا در تایید تسویه کامل: {str(e)}")
-            messages.error(request, f'خطا در تایید تسویه کامل: {str(e)}')
+        is_refer_to_manager = request.POST.get('refer_to_manager') == '1'
+        referral_reason = (request.POST.get('supply_settlement_referral_reason') or '').strip()
+
+        # ارجاع به مدیر با دلیل
+        if is_refer_to_manager:
+            if not referral_reason:
+                messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
+            else:
+                try:
+                    order.supply_settlement_approval_referred_to_manager = True
+                    order.supply_settlement_approval_referred_at = timezone.now()
+                    order.supply_settlement_approval_referral_reason = referral_reason
+                    order.save(update_fields=['supply_settlement_approval_referred_to_manager', 'supply_settlement_approval_referred_at', 'supply_settlement_approval_referral_reason'])
+                    bug_logger.info(f"سفارش خرید {order_number} به مدیر ارجاع داده شد - تایید تسویه کامل")
+                    audit_logger.activity(f"تایید تسویه کامل خرید برای سفارش {order_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {referral_reason[:100]}")
+                    messages.warning(request, 'این سفارش به مدیر ارجاع داده شد. تا تایید مدیر، در لیست تایید تسویه نمایش داده نمی‌شود و فقط مدیر می‌تواند از صفحه ارجاعات آن را باز کرده و تایید کند.')
+                    return redirect('supply:supply_settlement_approval_list')
+                except Exception as e:
+                    bug_logger.error(f"خطا در ارجاع به مدیر برای سفارش {order_number}: {e}", exc_info=True)
+                    messages.error(request, f'خطا در ارجاع به مدیر: {str(e)}')
+        else:
+            # تایید تسویه کامل
+            if not weight_discrepancy_completed:
+                messages.error(request, 'تسویه هنوز کامل نشده است. امکان تایید وجود ندارد.')
+            else:
+                try:
+                    with transaction.atomic():
+                        # تغییر وضعیت سفارش به completed (تکمیل شده)
+                        order.status = 'completed'
+                        # در صورت تایید توسط مدیر پس از ارجاع، پرچم ارجاع را پاک کن
+                        if getattr(order, 'supply_settlement_approval_referred_to_manager', False):
+                            order.supply_settlement_approval_referred_to_manager = False
+                            order.supply_settlement_approval_referred_at = None
+                            order.supply_settlement_approval_referral_reason = ''
+                            order.save(update_fields=['status', 'supply_settlement_approval_referred_to_manager', 'supply_settlement_approval_referred_at', 'supply_settlement_approval_referral_reason'])
+                        else:
+                            order.save(update_fields=['status'])
+                        
+                        # به‌روزرسانی وضعیت Settlement به completed
+                        if weight_discrepancy_settlement:
+                            weight_discrepancy_settlement.settlement_status = 'completed'
+                            weight_discrepancy_settlement.save(update_fields=['settlement_status'])
+                        
+                        bug_logger.info(f"تایید تسویه کامل برای سفارش خرید {order_number} ثبت شد و به وضعیت 'تکمیل شده' تغییر کرد")
+                        messages.success(request, f'تایید تسویه کامل برای سفارش خرید {order_number} با موفقیت ثبت شد. سفارش در حال حاضر در وضعیت «تکمیل شده» قرار دارد.')
+                        audit_logger.activity(f"تایید تسویه کامل برای سفارش خرید {order_number} ثبت شد و به وضعیت 'تکمیل شده' تغییر کرد توسط کاربر {request.user.username}")
+                        
+                        return redirect('supply:supply_settlement_approval_list')
+                        
+                except Exception as e:
+                    bug_logger.error(f"خطا در تایید تسویه کامل: {str(e)}")
+                    messages.error(request, f'خطا در تایید تسویه کامل: {str(e)}')
     
+    is_supply_settlement_referred = getattr(order, 'supply_settlement_approval_referred_to_manager', False)
+    show_refer_button = not is_supply_settlement_referred and not request.user.is_superuser
+
     context = {
         'order': order,
         'order_weight': order_weight,
@@ -316,5 +360,8 @@ def supply_settlement_approval_detail_view(request, order_number):
         'delivered_weight_secondary': delivered_weight_secondary,
         'secondary_unit_display_summary': secondary_unit_display_summary,
         'page_title': f'تایید تسویه کامل - سفارش خرید {order.order_number}',
+        'is_supply_settlement_referred': is_supply_settlement_referred,
+        'show_refer_button': show_refer_button,
+        'refer_modal_open': request.method == 'POST' and is_refer_to_manager and not referral_reason,
     }
     return render(request, 'supply_settlement/supply_settlement_approval_detail.html', context)
