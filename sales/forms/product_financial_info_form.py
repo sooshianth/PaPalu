@@ -48,7 +48,7 @@ class ProductFinancialInfoForm(forms.ModelForm):
             }),
         }
         labels = {
-            'price': 'قیمت فی (ریال)',
+            'price': 'قیمت فی (کیلوگرم/ریال)',
             'deadline': 'مهلت اعتبار قیمت',
             'condition': 'شرط',
             'loading_date': 'مدت زمان بارگیری',

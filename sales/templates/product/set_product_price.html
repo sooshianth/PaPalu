@@ -295,6 +295,7 @@
                 <div class="col-md-6 mb-3">
                     <label class="form-label required-field">{{ financial_info_form.price.label }}</label>
                     {{ financial_info_form.price }}
+                    <small class="persian-number-display" id="id_price_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if financial_info_form.price.errors %}
                         <div class="text-danger">{{ financial_info_form.price.errors.0 }}</div>
                     {% endif %}
@@ -501,6 +502,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // نمایش عدد فارسی با ، زیر فیلد قیمت (مشابه تامین)
+    (function () {
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        function formatNumberToPersian(num, decimalPlaces) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            var n = parseFloat(num);
+            var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : String(Math.round(n));
+            var parts = fixed.split('.');
+            var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+            var result = intPart + (parts[1] ? '.' + parts[1] : '');
+            return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+        }
+        var input = document.getElementById('id_price');
+        var display = document.getElementById('id_price_persian');
+        if (input && display) {
+            function update() {
+                var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+                var num = parseFloat(raw);
+                display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 0);
+            }
+            update();
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+        }
+    })();
     
     // اعتبارسنجی فرم قبل از ارسال
     const priceForm = document.getElementById('price-form');
