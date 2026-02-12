@@ -83,6 +83,14 @@
         padding: 0 25px;
     }
     
+    /* بخش‌هایی که فیلد تاریخ دارند: تقویم از پشت کارت پایینی نیفته (overflow + z-index) */
+    .form-section.form-section-with-date {
+        z-index: 100;
+    }
+    .form-section.form-section-with-date .form-section-content {
+        overflow: visible;
+    }
+    
     .form-label {
         color: var(--gray-800);
         font-weight: 500;
@@ -258,11 +266,74 @@
         cursor: pointer;
     }
 </style>
+<!-- تقویم شمسی (همان کامپوننت تامین) -->
+{% include "components/jalali_datepicker.html" %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // راه‌اندازی تقویم شمسی برای تمام فیلدهای تاریخ (همان کامپوننت تامین)
+    function initJalaliDatePickers() {
+        var inputs = document.querySelectorAll('.jalali-date');
+        inputs.forEach(function(inp) {
+            if (inp.hasAttribute('data-jdp-initialized')) return;
+            var originalName = inp.name;
+            if (!originalName) return;
+
+            var hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = originalName;
+            hiddenInput.id = 'hidden_' + (inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9));
+
+            inp.removeAttribute('name');
+            var originalId = inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9);
+            inp.id = 'visual_' + originalId;
+            inp.classList.add('form-control');
+            inp.parentNode.appendChild(hiddenInput);
+
+            if (typeof JalaliDatepicker !== 'undefined') {
+                JalaliDatepicker.init('#' + inp.id, { time: false });
+            }
+
+            // مقدار اولیه: اگر مقدار گرگوری در data-gdate یا value هست، در hidden هم بگذار
+            setTimeout(function() {
+                var gdate = inp.getAttribute('data-gdate');
+                if (gdate) {
+                    var parts = gdate.trim().replace('T', ' ').split(/[- :]/);
+                    if (parts.length >= 3) {
+                        var gy = parseInt(parts[0], 10), gm = parseInt(parts[1], 10), gd = parseInt(parts[2], 10);
+                        if (!isNaN(gy) && !isNaN(gm) && !isNaN(gd) && gy > 1900) {
+                            var g_d_m = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+                            var gy2 = (gm > 2) ? (gy + 1) : gy;
+                            var days = 355666 + (365 * gy) + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + gd + g_d_m[gm - 1];
+                            var jy = -1595 + (33 * Math.floor(days / 12053));
+                            days %= 12053;
+                            jy += 4 * Math.floor(days / 1461);
+                            days %= 1461;
+                            if (days > 365) { jy += Math.floor((days - 1) / 365); days = (days - 1) % 365; }
+                            var jm, jd;
+                            if (days < 186) { jm = 1 + Math.floor(days / 31); jd = 1 + (days % 31); }
+                            else { jm = 7 + Math.floor((days - 186) / 30); jd = 1 + ((days - 186) % 30); }
+                            hiddenInput.value = jy + '-' + String(jm).padStart(2, '0') + '-' + String(jd).padStart(2, '0');
+                        }
+                    }
+                } else if (inp.value && /^\d{4}-\d{2}-\d{2}/.test(inp.value)) {
+                    hiddenInput.value = inp.value.split(/[\sT]/)[0];
+                }
+            }, 300);
+
+            inp.addEventListener('jdp:change', function(e) {
+                var jy = e.detail.year;
+                var jm = String(e.detail.month).padStart(2, '0');
+                var jd = String(e.detail.day).padStart(2, '0');
+                hiddenInput.value = jy + '-' + jm + '-' + jd;
+            });
+            inp.setAttribute('data-jdp-initialized', 'true');
+        });
+    }
+    setTimeout(initJalaliDatePickers, 200);
+
     // تابع عمومی تبدیل اعداد فارسی به انگلیسی
     function persianToEnglish(text) {
         if (!text) return text;
@@ -772,8 +843,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </div>
                             </div>
                             
-                            <!-- بخش اطلاعات پایه -->
-                            <div class="form-section">
+                            <!-- بخش اطلاعات پایه (شامل فیلد تاریخ - تقویم overflow ندارد) -->
+                            <div class="form-section form-section-with-date">
                                 <div class="form-section-header">
                                     <h5>اطلاعات پایه </h5>
                                     <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

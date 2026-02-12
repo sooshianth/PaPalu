@@ -395,7 +395,7 @@ class CreateCustomerForm(forms.Form):
         required=False,
         label='تاریخ تولد شخص',
         widget=jDateInput(attrs={
-            'class': 'form-control',
+            'class': 'form-control jalali-date',
             'placeholder': 'انتخاب تاریخ',
             'dir': 'ltr'
         })
