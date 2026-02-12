@@ -854,11 +854,13 @@ def warehouse_delivery_detail_view(request, transport_number):
                     bug_logger.info(f"اطلاعات تخلیه برای حمل {transport_number} ثبت شد - وزن خالص: {net_weight}")
                     
                     # ایجاد لاگ موجودیت: از انبار مبدأ (تامین‌کننده) به انبار مقصد (کارخانه)
-                    # برای هر ماده اولیه، انبار مقصد جداگانه است
+                    # از تامین‌کننده به اندازه وزن بارنامه کم می‌شود، به انبار کارخانه به اندازه وزن خالص باسکول اضافه می‌شود (تفاوت ممکن است سرک یا کسری باشد)
                     if source_warehouse and net_weight and net_weight > 0:
                         try:
                             if valid_raw_material_infos:
                                 raw_material_content_type = ContentType.objects.get_for_model(RawMaterial)
+                                total_allocated = sum((rmi.allocated_quantity or Decimal('0')) for rmi in valid_raw_material_infos)
+                                waybill_total = (pt.waybill_weight or Decimal('0'))
                                 
                                 # برای هر ماده اولیه یک StockEntry جداگانه ایجاد می‌کنیم (چون انبار مقصد متفاوت است)
                                 for rmi in valid_raw_material_infos:
@@ -869,11 +871,23 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         bug_logger.warning(f"انبار مقصد برای ماده اولیه {rmi.raw_material.name} یافت نشد")
                                         continue
                                     
-                                    # مقدار اضافه‌شده به انبار فقط باید وزن خالص باسکول باشد، نه وزن بارنامه (waybill_weight) و نه تخصیص (allocated_quantity)
+                                    # مقدار اضافه‌شده به انبار کارخانه = وزن خالص باسکول
                                     scale_net_weight = rmi.net_weight
                                     if not scale_net_weight or scale_net_weight <= 0:
                                         bug_logger.warning(
                                             f"رد شد: ماده اولیه {rmi.raw_material.name} - وزن خالص باسکول نامعتبر (net_weight={rmi.net_weight}). به انبار اضافه نمی‌شود."
+                                        )
+                                        continue
+                                    
+                                    # مقدار کم‌شده از تامین‌کننده = سهم این ماده از وزن بارنامه (نسبت تخصیص). در صورت نبود وزن بارنامه از تخصیص استفاده می‌شود.
+                                    if waybill_total and total_allocated and total_allocated > 0:
+                                        waybill_portion = waybill_total * (rmi.allocated_quantity or Decimal('0')) / total_allocated
+                                    else:
+                                        waybill_portion = rmi.allocated_quantity or Decimal('0')
+                                    
+                                    if not waybill_portion or waybill_portion <= 0:
+                                        bug_logger.warning(
+                                            f"رد شد: ماده اولیه {rmi.raw_material.name} - سهم وزن بارنامه نامعتبر. از انبار تامین‌کننده کم نمی‌شود."
                                         )
                                         continue
                                     
@@ -885,16 +899,16 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
                                     )
                                     
-                                    # ایجاد SourceStock (از انبار تامین‌کننده) — فقط وزن خالص باسکول
+                                    # ایجاد SourceStock (از انبار تامین‌کننده) — به اندازه وزن بارنامه (سهم این ماده)
                                     SourceStock.objects.create(
                                         stock_entry=stock_entry,
                                         from_content_type=raw_material_content_type,
                                         from_object_id=rmi.raw_material.pk,
                                         from_warehouse=source_warehouse,
-                                        quantity=scale_net_weight
+                                        quantity=waybill_portion
                                     )
                                     
-                                    # ایجاد TargetStock (به انبار کارخانه) — فقط وزن خالص باسکول، نه وزن بارنامه
+                                    # ایجاد TargetStock (به انبار کارخانه) — به اندازه وزن خالص باسکول
                                     TargetStock.objects.create(
                                         stock_entry=stock_entry,
                                         to_content_type=raw_material_content_type,
@@ -910,19 +924,17 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         f"لاگ موجودیت ایجاد شد - "
                                         f"StockEntry ID: {stock_entry.pk}, "
                                         f"ماده اولیه: {rmi.raw_material.name}, "
-                                        f"از انبار: {source_warehouse.warehouse_id}, "
-                                        f"به انبار: {destination_warehouse_for_item.warehouse_id}, "
-                                        f"مقدار (فقط وزن خالص باسکول): {scale_net_weight} کیلوگرم"
+                                        f"از انبار: {source_warehouse.warehouse_id} (وزن بارنامه: {waybill_portion} kg), "
+                                        f"به انبار: {destination_warehouse_for_item.warehouse_id} (وزن خالص باسکول: {scale_net_weight} kg)"
                                     )
                                 
-                                # لاگ کلی برای audit
+                                # لاگ کلی برای audit (از تامین‌کننده وزن بارنامه کم، به انبار وزن خالص باسکول اضافه)
                                 warehouses_list = ', '.join([wh.warehouse_id for wh in set(item_warehouses.values())])
                                 audit_logger.info(
                                     f"لاگ موجودیت برای تخلیه - "
                                     f"حمل: {transport_number}, "
-                                    f"از انبار: {source_warehouse.warehouse_id}, "
-                                    f"به انبارها: {warehouses_list}, "
-                                    f"مقدار کل: {net_weight} کیلوگرم, "
+                                    f"از انبار تامین‌کننده: {source_warehouse.warehouse_id} (وزن بارنامه), "
+                                    f"به انبارها: {warehouses_list} (وزن خالص باسکول), "
                                     f"کاربر: {request.user.username}"
                                 )
                             else:
