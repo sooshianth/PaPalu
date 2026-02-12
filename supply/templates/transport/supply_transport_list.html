@@ -512,6 +512,7 @@
                     <option value="">همه</option>
                     <option value="pending_vehicle_entry" {% if filters.status == 'pending_vehicle_entry' %}selected{% endif %}>در انتظار ورود خودرو به کارخانه</option>
                     <option value="pending_unloading" {% if filters.status == 'pending_unloading' %}selected{% endif %}>در انتظار تخلیه</option>
+                    <option value="awaiting_wh_reconciliation" {% if filters.status == 'awaiting_wh_reconciliation' %}selected{% endif %}>در انتظار تطبیق اطلاعات انبار</option>
                     <option value="pending_settlement" {% if filters.status == 'pending_settlement' %}selected{% endif %}>در انتظار تسویه</option>
                     <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>تکمیل شده</option>
                     <option value="payment_doc_uploaded" {% if filters.status == 'payment_doc_uploaded' %}selected{% endif %}>سند پرداخت بارگذاری شده</option>

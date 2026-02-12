@@ -34,6 +34,7 @@ class Transport(models.Model):
         ('pending_waybill', 'در انتظار بارنامه'),
         ('pending_exit', 'در انتظار خروج'),
         ('pending_unloading', 'در انتظار تخلیه'),
+        ('awaiting_wh_reconciliation', 'در انتظار تطبیق اطلاعات انبار'),
         ('pending_logistics_approval', 'در انتظار تایید لجستیک'),
         ('pending_settlement', 'در انتظار تسویه'),
         ('completed', 'تکمیل شده'),

@@ -175,6 +175,27 @@
       <strong>نوع کرایه:</strong> {{ pt.get_freight_payment_type_display|default:'—' }}
     </p>
   </div>
+
+  {% if delivery_items %}
+  <div class="delivery-by-item" style="margin-top: 20px;">
+    <h3 style="font-size: 1rem; font-weight: 600; color: #2d3e50; margin-bottom: 12px; border-bottom: 2px solid #e0e5e8; padding-bottom: 8px;">وزن خالص تحویلی به تفکیک جنس</h3>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      {% for item in delivery_items %}
+      <div style="background: #f8f9fa; padding: 12px 16px; border-radius: 8px; border-right: 4px solid var(--primary-green);">
+        <strong style="color: #2d3e50;">{{ item.name }}</strong>
+        <div style="margin-top: 6px; font-size: 0.9rem; color: #546e7a;">
+          <span>وزن خالص (کیلوگرم):</span>
+          {% if item.net_kg is not None %}{{ item.net_kg|persian_number:3 }} کیلوگرم{% else %}—{% endif %}
+          {% if item.secondary_value is not None and item.secondary_unit_display %}
+          <span style="margin-right: 12px;">|</span>
+          <span>وزن خالص ({{ item.secondary_unit_display }}):</span> {{ item.secondary_value|persian_number:3 }} {{ item.secondary_unit_display }}
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
   
   {% if is_carexit_referred and carexit_referral_reason %}
   <div class="alert alert-warning" role="alert" style="border-right: 4px solid #856404; background: #fff3cd; color: #856404; padding: 15px 20px; border-radius: 8px; margin: 20px 0;">
