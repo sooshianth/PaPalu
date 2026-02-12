@@ -1,4 +1,5 @@
 {% load static %}
+{% load number_filters %}
 <div class="order-detail-popup" id="orderDetailPopup">
     <div class="popup-overlay" onclick="closeOrderDetailPopup()"></div>
     <div class="popup-content">
@@ -93,18 +94,14 @@
                     <div class="detail-item">
                         <span class="detail-label">بهای تمام شده خرید (کل):</span>
                         <span class="detail-value" style="font-size: 1.2rem; font-weight: 600; color: var(--primary-green);">
-                            {{ total_purchase_cost|floatformat:0|default:"0" }} تومان
+                            {{ total_purchase_cost|persian_number:0|default:"۰" }} ریال
                         </span>
                     </div>
                     
                     <div class="detail-item">
                         <span class="detail-label">وزن کل سفارش:</span>
                         <span class="detail-value" style="font-size: 1.2rem; font-weight: 600; color: var(--primary-green);">
-                            {% if total_weight_ton %}
-                                {{ total_weight_ton|floatformat:2 }} تن
-                            {% else %}
-                                {{ total_weight|floatformat:2 }} کیلوگرم
-                            {% endif %}
+                            {{ total_weight|persian_number:2|default:"۰" }} کیلوگرم
                         </span>
                     </div>
                 </div>
@@ -134,17 +131,17 @@
                                     <td>{{ item.product.name|default:"-" }}</td>
                                     <td>{{ item.get_weight_unit_display|default:"-" }}</td>
                                     <td>
-                                        {{ item.quantity|floatformat:2|default:"-" }}
+                                        {{ item.quantity|persian_number:2|default:"-" }}
                                         {% if item.weight_unit == 'bag' and item.bag_weight %}
-                                            ({{ item.bag_weight|floatformat:2 }} کیلوگرم هر کیسه)
+                                            ({{ item.bag_weight|persian_number:2 }} کیلوگرم هر کیسه)
                                         {% endif %}
                                     </td>
-                                    <td>{{ item.unit_price|floatformat:0|default:"-" }} تومان</td>
-                                    <td>{{ item.discount|floatformat:0|default:"0" }} تومان</td>
-                                    <td>{{ item.additional_charges|floatformat:0|default:"0" }} تومان</td>
-                                    <td>{{ item.vat|floatformat:0|default:"0" }} تومان</td>
+                                    <td>{{ item.unit_price|persian_number:0|default:"-" }} ریال</td>
+                                    <td>{{ item.discount|persian_number:0|default:"۰" }} ریال</td>
+                                    <td>{{ item.additional_charges|persian_number:0|default:"۰" }} ریال</td>
+                                    <td>{{ item.vat|persian_number:0|default:"۰" }} ریال</td>
                                     <td style="font-weight: 600; color: var(--primary-green);">
-                                        {{ item.total_purchase_cost|floatformat:0|default:"0" }} تومان
+                                        {{ item.total_purchase_cost|persian_number:0|default:"۰" }} ریال
                                     </td>
                                 </tr>
                                 {% endfor %}
