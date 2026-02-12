@@ -854,6 +854,14 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         bug_logger.warning(f"انبار مقصد برای ماده اولیه {rmi.raw_material.name} یافت نشد")
                                         continue
                                     
+                                    # مقدار اضافه‌شده به انبار فقط باید وزن خالص باسکول باشد، نه وزن بارنامه (waybill_weight) و نه تخصیص (allocated_quantity)
+                                    scale_net_weight = rmi.net_weight
+                                    if not scale_net_weight or scale_net_weight <= 0:
+                                        bug_logger.warning(
+                                            f"رد شد: ماده اولیه {rmi.raw_material.name} - وزن خالص باسکول نامعتبر (net_weight={rmi.net_weight}). به انبار اضافه نمی‌شود."
+                                        )
+                                        continue
+                                    
                                     # ایجاد StockEntry برای این ماده اولیه
                                     stock_entry = StockEntry.objects.create(
                                         transaction_date=jdatetime_datetime.now(),
@@ -862,22 +870,22 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         is_committed=False  # ابتدا commit نمی‌کنیم، بعد commit می‌کنیم
                                     )
                                     
-                                    # ایجاد SourceStock (از انبار تامین‌کننده) — مقدار بر اساس وزن خالص واقعی تخلیه‌شده
+                                    # ایجاد SourceStock (از انبار تامین‌کننده) — فقط وزن خالص باسکول
                                     SourceStock.objects.create(
                                         stock_entry=stock_entry,
                                         from_content_type=raw_material_content_type,
                                         from_object_id=rmi.raw_material.pk,
                                         from_warehouse=source_warehouse,
-                                        quantity=rmi.net_weight
+                                        quantity=scale_net_weight
                                     )
                                     
-                                    # ایجاد TargetStock (به انبار کارخانه) — مقدار بر اساس وزن خالص واقعی تخلیه‌شده
+                                    # ایجاد TargetStock (به انبار کارخانه) — فقط وزن خالص باسکول، نه وزن بارنامه
                                     TargetStock.objects.create(
                                         stock_entry=stock_entry,
                                         to_content_type=raw_material_content_type,
                                         to_object_id=rmi.raw_material.pk,
                                         to_warehouse=destination_warehouse_for_item,
-                                        quantity=rmi.net_weight
+                                        quantity=scale_net_weight
                                     )
                                     
                                     # Commit کردن StockEntry برای به‌روزرسانی موجودیت‌ها
@@ -889,7 +897,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         f"ماده اولیه: {rmi.raw_material.name}, "
                                         f"از انبار: {source_warehouse.warehouse_id}, "
                                         f"به انبار: {destination_warehouse_for_item.warehouse_id}, "
-                                        f"مقدار (وزن خالص تخلیه): {rmi.net_weight} کیلوگرم"
+                                        f"مقدار (فقط وزن خالص باسکول): {scale_net_weight} کیلوگرم"
                                     )
                                 
                                 # لاگ کلی برای audit

@@ -81,14 +81,15 @@ def supply_settlement_approval_list_view(request):
             order_weight += Decimal(str(weight_kg))
         order._order_weight = order_weight
         
-        # محاسبه وزن تحویلی
+        # محاسبه وزن تحویلی (برای پرداخت سرک/کسری بر اساس وزن بارنامه)
         allocation_numbers = allocation_dict.get(order.pk, [])
         delivered_weight = Decimal('0')
         for alloc_num in allocation_numbers:
             transports = transport_dict.get(alloc_num, [])
             for transport in transports:
-                if transport.net_weight:
-                    delivered_weight += Decimal(str(transport.net_weight))
+                w = getattr(transport, 'waybill_weight', None) or transport.net_weight
+                if w:
+                    delivered_weight += Decimal(str(w))
         order._delivered_weight = delivered_weight
         
         # محاسبه میانگین وزن‌دار فی خرید
@@ -179,14 +180,14 @@ def supply_settlement_approval_detail_view(request, order_number):
         weight_kg = item.get_weight_in_kg()
         order_weight += Decimal(str(weight_kg))
     
-    # محاسبه وزن تحویلی
+    # محاسبه وزن تحویلی (برای پرداخت سرک/کسری بر اساس وزن بارنامه)
     allocations = Allocation.objects.filter(order=order)
     transports = Transport.objects.filter(
         allocation__in=allocations,
         direction='inbound'
     )
     delivered_weight = sum(
-        Decimal(str(t.net_weight or 0)) for t in transports
+        Decimal(str(getattr(t, 'waybill_weight', None) or t.net_weight or 0)) for t in transports
     )
     
     # محاسبه اختلاف وزن

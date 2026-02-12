@@ -14,6 +14,7 @@ from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.AllocationFolder.AllocationModel import Allocation
 from core.TransportFolder.TransportModel import Transport
+from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument, TransactionDocumentAttachment
 from supply.forms.supply_settlement_transaction_form import SupplySettlementTransactionForm
@@ -78,13 +79,14 @@ def supply_settlement_list_view(request):
             weight_kg = item.get_weight_in_kg()
             order_weight += Decimal(str(weight_kg))
         
-        # محاسبه وزن تحویلی از بارنامه‌ها
+        # محاسبه وزن تحویلی از بارنامه‌ها (برای پرداخت سرک/کسری بر اساس وزن بارنامه، نه باسکول)
         allocation_numbers = allocation_dict.get(order.pk, [])
         transports_for_order = [t for alloc_num in allocation_numbers for t in transport_dict.get(alloc_num, [])]
         delivered_weight = Decimal('0')
         for transport in transports_for_order:
-            if transport.net_weight:
-                delivered_weight += Decimal(str(transport.net_weight))
+            w = getattr(transport, 'waybill_weight', None) or transport.net_weight
+            if w:
+                delivered_weight += Decimal(str(w))
         
         # محاسبه اختلاف وزن
         weight_difference = delivered_weight - order_weight
@@ -169,7 +171,7 @@ def supply_settlement_detail_view(request, order_number):
     ).prefetch_related('raw_material_infos')
     
     # محاسبه اختلاف
-    # در خرید، وزن تحویلی = مجموع net_weight بارنامه‌های ورودی
+    # در خرید، وزن تحویلی برای پرداخت سرک/کسری = مجموع وزن بارنامه (waybill_weight)، نه باسکول
     order_weight = Decimal('0')
     delivered_weight = Decimal('0')
     
@@ -178,10 +180,30 @@ def supply_settlement_detail_view(request, order_number):
         weight_kg = order_item.get_weight_in_kg()
         order_weight += Decimal(str(weight_kg))
     
-    # محاسبه وزن تحویلی از بارنامه‌ها
+    # محاسبه وزن تحویلی از وزن بارنامه‌ها
     for transport in transports:
-        if transport.net_weight:
-            delivered_weight += Decimal(str(transport.net_weight))
+        w = getattr(transport, 'waybill_weight', None) or transport.net_weight
+        if w:
+            delivered_weight += Decimal(str(w))
+    
+    # وزن تحویلی به تفکیک هر ماده اولیه: توزیع وزن بارنامه هر حمل بر اساس نسبت تخصیص (allocated_quantity)
+    delivered_per_order_item = {}
+    order_item_ids = list(order.order_items.values_list('id', flat=True))
+    for transport in transports:
+        w = getattr(transport, 'waybill_weight', None) or transport.net_weight
+        if not w:
+            continue
+        w = Decimal(str(w))
+        infos = list(transport.raw_material_infos.select_related('order_item').all())
+        total_alloc = sum(Decimal(str(rmi.allocated_quantity)) for rmi in infos if rmi.allocated_quantity)
+        if total_alloc and total_alloc > 0:
+            for rmi in infos:
+                if rmi.order_item_id and rmi.allocated_quantity:
+                    part = w * (Decimal(str(rmi.allocated_quantity)) / total_alloc)
+                    delivered_per_order_item[rmi.order_item_id] = delivered_per_order_item.get(rmi.order_item_id, Decimal('0')) + part
+        elif len(order_item_ids) == 1:
+            # حمل بدون RawMaterialInfo ولی سفارش فقط یک ماده دارد → کل وزن به همان ماده
+            delivered_per_order_item[order_item_ids[0]] = delivered_per_order_item.get(order_item_ids[0], Decimal('0')) + w
     
     # محاسبه اختلاف برای هر ماده اولیه (برای نمایش جزئیات)
     material_discrepancies = []
@@ -195,18 +217,28 @@ def supply_settlement_detail_view(request, order_number):
         
         # وزن تخصیص یافته (وزن سفارش برای این ماده اولیه)
         allocated_weight = Decimal(str(order_item.get_weight_in_kg()))
+        # وزن تحویلی این ماده (از توزیع وزن بارنامه‌ها)
+        item_delivered = delivered_per_order_item.get(order_item.id, Decimal('0'))
+        # اختلاف وزن این ماده
+        item_weight_diff = item_delivered - allocated_weight
         
         # فی ماده اولیه
         unit_price = Decimal(str(order_item.unit_price)) if order_item.unit_price else Decimal('0')
+        # مبلغ اختلاف این ماده
+        item_difference_amount = item_weight_diff * unit_price
+        total_difference_amount += item_difference_amount
         
         # ذخیره جزئیات برای نمایش
         material_discrepancies.append({
             'material_name': raw_material.name if raw_material.name else 'نامشخص',
             'allocated_weight': allocated_weight,
+            'delivered_weight': item_delivered,
+            'weight_difference': item_weight_diff,
             'unit_price': unit_price,
+            'difference_amount': item_difference_amount,
         })
     
-    # محاسبه مبلغ اختلاف کل بر اساس میانگین وزن‌دار فی
+    # محاسبه مبلغ اختلاف کل بر اساس میانگین وزن‌دار فی (برای سازگاری با مبلغ کل)
     weight_difference = delivered_weight - order_weight
     
     # محاسبه میانگین وزن‌دار فی خرید
@@ -225,16 +257,8 @@ def supply_settlement_detail_view(request, order_number):
     else:
         weighted_avg_price = Decimal('0')
     
-    # مبلغ اختلاف کل
+    # مبلغ اختلاف کل (همان total_difference_amount از جمع مبالغ هر ماده است؛ برای نمایش از همین استفاده می‌کنیم)
     total_difference_amount = weight_difference * weighted_avg_price
-    
-    # به‌روزرسانی material_discrepancies با وزن تحویلی و اختلاف
-    # (در خرید، وزن بارنامه به طور کلی است و نمی‌توان برای هر ماده اولیه جداگانه محاسبه کرد)
-    # پس فقط اطلاعات سفارش را نمایش می‌دهیم
-    for discrepancy in material_discrepancies:
-        discrepancy['delivered_weight'] = Decimal('0')  # نمی‌توان محاسبه کرد
-        discrepancy['weight_difference'] = Decimal('0')  # نمی‌توان محاسبه کرد
-        discrepancy['difference_amount'] = Decimal('0')  # نمی‌توان محاسبه کرد
     
     # مبلغ کل اختلاف
     difference_amount = total_difference_amount
@@ -433,11 +457,12 @@ def skip_supply_settlement_view(request, order_number):
                 weight_kg = item.get_weight_in_kg()
                 order_weight += Decimal(str(weight_kg))
             
-            # محاسبه وزن تحویلی از بارنامه‌ها
+            # محاسبه وزن تحویلی از وزن بارنامه‌ها (برای سرک/کسری بر اساس waybill_weight)
             delivered_weight = Decimal('0')
             for transport in transports:
-                if transport.net_weight:
-                    delivered_weight += Decimal(str(transport.net_weight))
+                w = getattr(transport, 'waybill_weight', None) or transport.net_weight
+                if w:
+                    delivered_weight += Decimal(str(w))
             
             # محاسبه اختلاف وزن
             weight_difference = delivered_weight - order_weight
