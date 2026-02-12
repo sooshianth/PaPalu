@@ -6,9 +6,14 @@ from .OrderModel import Order
 class OrderItem(models.Model):
     """مدل اقلام سفارش"""
     
+    # واحدها فقط از تعریف ماده اولیه - RawMaterial.UNIT_CHOICES + bag, piece
     WEIGHT_UNIT_CHOICES = [
+        ('gr', 'گرم'),
         ('kg', 'کیلوگرم'),
         ('ton', 'تن'),
+        ('m3', 'متر مکعب'),
+        ('ltr', 'لیتر'),
+        ('cc', 'میلی لیتر'),
         ('bag', 'کیسه'),
         ('piece', 'عدد'),
     ]
@@ -219,22 +224,39 @@ class OrderItem(models.Model):
         vat_amount = (vat_percent / Decimal('100')) * subtotal
         return vat_amount.quantize(Decimal('0.01'))
     
-    def get_weight_in_kg(self):
+    def get_weight_in_kg(self, quantity=None):
         """
-        محاسبه وزن کل به کیلوگرم (برای محاسبات یکپارچه).
-        مقدار برگشتی Decimal برای جلوگیری از خطای ممیز شناور.
+        محاسبه وزن کل به کیلوگرم - همه تبدیل‌ها از conversion_factor ماده اولیه.
+        فرمول: primary = secondary * conversion_factor (همیشه)
+        quantity: اختیاری - اگر نباشد از self.quantity استفاده می‌شود.
         """
-        if not self.quantity:
+        qty = quantity if quantity is not None else self.quantity
+        if not qty:
             return Decimal('0')
-        q = Decimal(str(self.quantity))
-        if self.weight_unit == 'kg':
-            return q
-        if self.weight_unit == 'ton':
-            return q * 1000
-        if self.weight_unit == 'bag' and self.bag_weight:
-            return q * Decimal(str(self.bag_weight))
+        q = Decimal(str(qty))
         if self.weight_unit == 'piece':
             return q
+        if self.weight_unit == 'bag' and self.bag_weight:
+            return q * Decimal(str(self.bag_weight))
+        # همه واحدهای RawMaterial: primary = secondary * conversion_factor
+        if self.raw_material:
+            cf = self.raw_material.conversion_factor
+            if not cf or cf <= 0:
+                cf = Decimal('1')
+            else:
+                cf = Decimal(str(cf))
+            primary = self.raw_material.primary_unit
+            secondary = self.raw_material.secondary_unit
+            if self.weight_unit == primary:
+                q_primary = q
+            elif self.weight_unit == secondary:
+                q_primary = q * cf
+            else:
+                return Decimal('0')
+            if primary == 'kg':
+                return q_primary
+            if secondary == 'kg':
+                return q_primary / cf
         return Decimal('0')
     
     def calculate_total(self):
@@ -282,26 +304,14 @@ class OrderItem(models.Model):
         """
         محاسبه مقدار باقیمانده برای تخصیص به حمل‌ها
         مقدار باقیمانده در واحد سفارش برمی‌گردد
+        RawMaterialInfo.allocated_quantity در همان واحد سفارش ذخیره می‌شود
         """
         from decimal import Decimal
         
         if not self.quantity:
             return Decimal('0')
         total_quantity = Decimal(str(self.quantity))
-        allocated_in_kg = self.get_allocated_quantity()  # مقدار تخصیص یافته در کیلوگرم
-        
-        # تبدیل مقدار تخصیص یافته به واحد سفارش
-        if self.weight_unit == 'kg':
-            allocated_in_order_unit = allocated_in_kg
-        elif self.weight_unit == 'ton':
-            allocated_in_order_unit = allocated_in_kg / Decimal('1000')
-        elif self.weight_unit == 'bag' and self.bag_weight:
-            allocated_in_order_unit = allocated_in_kg / Decimal(str(self.bag_weight))
-        elif self.weight_unit == 'piece':
-            allocated_in_order_unit = allocated_in_kg
-        else:
-            allocated_in_order_unit = allocated_in_kg
-        
+        allocated_in_order_unit = self.get_allocated_quantity()
         return total_quantity - allocated_in_order_unit
     
     def is_fully_allocated(self):

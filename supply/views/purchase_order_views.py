@@ -285,40 +285,26 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             self.fields['freight_cost'].widget.attrs['readonly'] = True
             self.fields['freight_cost'].widget.attrs['style'] = 'background-color: #f5f5f5; cursor: not-allowed;'
         
-        # واحد به صورت dropdown که بعداً با JavaScript پر می‌شود
+        # واحد به صورت dropdown - واحدها فقط از ماده اولیه (JavaScript پر می‌کند)
         self.fields['weight_unit'].widget = forms.Select(attrs={'class': 'form-control material-unit-select'})
-        # اجازه دادن به تمام choices ممکن (هم value و هم display name)
-        # این کار را در clean_weight_unit انجام می‌دهیم
-        self.fields['weight_unit'].choices = OrderItem.WEIGHT_UNIT_CHOICES + [
-            ('کیلوگرم', 'کیلوگرم'),
-            ('تن', 'تن'),
-            ('کیسه', 'کیسه'),
-            ('عدد', 'عدد'),
-        ]
+        self.fields['weight_unit'].choices = OrderItem.WEIGHT_UNIT_CHOICES
     
     def clean_weight_unit(self):
-        """تبدیل display name به value قبل از validation"""
+        """تبدیل display name به value - واحدها از RawMaterial"""
         weight_unit = self.cleaned_data.get('weight_unit')
         if not weight_unit:
             return weight_unit
         
-        # mapping display name به value
         display_to_value = {
-            'کیلوگرم': 'kg',
-            'تن': 'ton',
-            'کیسه': 'bag',
-            'عدد': 'piece',
+            'گرم': 'gr', 'کیلوگرم': 'kg', 'تن': 'ton',
+            'متر مکعب': 'm3', 'لیتر': 'ltr', 'میلی لیتر': 'cc',
+            'کیسه': 'bag', 'عدد': 'piece',
         }
-        
-        # اگر display name است، به value تبدیل کن
         if weight_unit in display_to_value:
             return display_to_value[weight_unit]
-        
-        # اگر value است، همان را برگردان
-        if weight_unit in ['kg', 'ton', 'bag', 'piece']:
+        valid_values = ['gr', 'kg', 'ton', 'm3', 'ltr', 'cc', 'bag', 'piece']
+        if weight_unit in valid_values:
             return weight_unit
-        
-        # اگر هیچکدام نبود، خطا بده
         return weight_unit
     
     def clean(self):
@@ -433,36 +419,15 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
             self.add_error('raw_material', 'ماده اولیه انتخاب شده یافت نشد.')
             return cleaned_data
         
-        # اعتبارسنجی واحد - weight_unit قبلاً در clean_weight_unit به value تبدیل شده است
-        # حالا فقط بررسی می‌کنیم که آیا با واحدهای ماده اولیه مطابقت دارد یا نه
+        # اعتبارسنجی واحد - واحدها فقط از تعریف ماده اولیه
         if raw_material and weight_unit:
-            # Get allowed units from raw material (به value تبدیل شده)
-            allowed_order_item_units = []  # لیست واحدهای OrderItem که مجاز هستند
-            # تبدیل واحدهای RawMaterial به واحد OrderItem
-            raw_to_order_mapping = {
-                'gr': 'kg',   # گرم به کیلوگرم
-                'm3': 'kg',   # متر مکعب به کیلوگرم
-                'ltr': 'kg',  # لیتر به کیلوگرم
-                'cc': 'kg',   # میلی لیتر به کیلوگرم
-                'kg': 'kg',
-                'ton': 'ton',
-                'bag': 'bag',
-                'piece': 'piece',
-            }
-            
+            allowed_order_item_units = []
             if raw_material.primary_unit:
-                raw_unit = raw_material.primary_unit
-                order_unit = raw_to_order_mapping.get(raw_unit, 'kg')
-                if order_unit not in allowed_order_item_units:
-                    allowed_order_item_units.append(order_unit)
-                    
+                if raw_material.primary_unit not in allowed_order_item_units:
+                    allowed_order_item_units.append(raw_material.primary_unit)
             if raw_material.secondary_unit:
-                raw_unit = raw_material.secondary_unit
-                order_unit = raw_to_order_mapping.get(raw_unit, 'kg')
-                if order_unit not in allowed_order_item_units:
-                    allowed_order_item_units.append(order_unit)
-            
-            # اگر هیچ واحدی وجود نداشت، پیش‌فرض کیلوگرم
+                if raw_material.secondary_unit not in allowed_order_item_units:
+                    allowed_order_item_units.append(raw_material.secondary_unit)
             if not allowed_order_item_units:
                 allowed_order_item_units = ['kg']
             
@@ -1115,13 +1080,12 @@ def raw_material_info_api(request, raw_material_id):
             raw_material=raw_material
         ).first()
         
-        # ساخت لیست واحدهای قابل استفاده
-        # استفاده از display name برای value چون unit در ProcurementPurchaseOrderMaterial یک CharField است
+        # ساخت لیست واحدهای قابل استفاده - واحدها فقط از تعریف ماده اولیه
         available_units = []
         if raw_material.primary_unit:
             primary_display = raw_material.get_primary_unit_display()
             available_units.append({
-                'value': primary_display,
+                'value': raw_material.primary_unit,
                 'display': primary_display,
                 'is_main': True
             })
@@ -1130,15 +1094,14 @@ def raw_material_info_api(request, raw_material_id):
             # فقط اگر با واحد اصلی متفاوت باشد اضافه کن
             if secondary_display != (raw_material.get_primary_unit_display() if raw_material.primary_unit else ''):
                 available_units.append({
-                    'value': secondary_display,
+                    'value': raw_material.secondary_unit,
                     'display': secondary_display,
                     'is_main': False
                 })
         
-        # اگر هیچ واحدی وجود نداشت، پیش‌فرض کیلوگرم
         if not available_units:
             available_units.append({
-                'value': 'کیلوگرم',
+                'value': 'kg',
                 'display': 'کیلوگرم',
                 'is_main': True
             })

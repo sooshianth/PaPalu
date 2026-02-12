@@ -730,7 +730,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
                                 data.available_units.forEach(function(unit) {
                                     const option = document.createElement('option');
-                                    option.value = unit.display;
+                                    option.value = unit.value || unit.display;
                                     option.textContent = unit.display;
                                     if (unit.is_main) {
                                         option.selected = true;
@@ -739,7 +739,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 });
                                 
                                 if (!unitSelect.value && data.available_units.length > 0) {
-                                    unitSelect.value = data.available_units[0].display;
+                                    unitSelect.value = data.available_units[0].value || data.available_units[0].display;
                                 }
                             }
                             

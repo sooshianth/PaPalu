@@ -562,10 +562,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 // پاک کردن گزینه‌های قبلی
                                 unitSelect.innerHTML = '<option value="">-- انتخاب واحد --</option>';
                                 
-                                // اضافه کردن تمام واحدهای موجود
+                                // اضافه کردن تمام واحدهای موجود - value از ماده اولیه (ltr, kg, etc.)
                                 data.available_units.forEach(function(unit) {
                                     const option = document.createElement('option');
-                                    option.value = unit.display; // استفاده از display name برای mapping در clean
+                                    option.value = unit.value || unit.display;
                                     option.textContent = unit.display;
                                     if (unit.is_main) {
                                         option.setAttribute('data-main', 'true');
@@ -577,7 +577,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 
                                 // اگر واحد اصلی انتخاب نشده بود، اولین واحد را انتخاب کن
                                 if (!unitSelect.value && data.available_units.length > 0) {
-                                    unitSelect.value = data.available_units[0].display;
+                                    unitSelect.value = data.available_units[0].value || data.available_units[0].display;
                                 }
                                 
                                 // trigger change event برای اطمینان از انتخاب

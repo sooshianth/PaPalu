@@ -8,11 +8,11 @@ from core.OrderFolder import OrderItem
 class RawMaterialInfo(models.Model):
     """مدل اطلاعات مواد اولیه در حمل - برای پیگیری مقدار هر ماده اولیه در هر حمل"""
 
+    # واحدها با OrderItem و RawMaterial هماهنگ - از تعریف ماده اولیه
     WEIGHT_UNIT_CHOICES = [
-        ('kg', 'کیلوگرم'),
-        ('ton', 'تن'),
-        ('bag', 'کیسه'),
-        ('piece', 'عدد'),
+        ('gr', 'گرم'), ('kg', 'کیلوگرم'), ('ton', 'تن'),
+        ('m3', 'متر مکعب'), ('ltr', 'لیتر'), ('cc', 'میلی لیتر'),
+        ('bag', 'کیسه'), ('piece', 'عدد'),
     ]
 
     PACKAGING_TYPE_CHOICES = [
@@ -135,35 +135,20 @@ class RawMaterialInfo(models.Model):
         if self.raw_material != self.order_item.raw_material:
             raise ValidationError('ماده اولیه انتخاب شده با ماده اولیه سفارش مطابقت ندارد.')
         
-        # محاسبه مقدار باقیمانده در واحد سفارش
+        # محاسبه مقدار باقیمانده در واحد سفارش - allocated_quantity در واحد سفارش است
         remaining_in_order_unit = self.order_item.get_remaining_quantity()
         
-        # تبدیل مقدار باقیمانده به کیلوگرم
-        # چون allocated_quantity همیشه در کیلوگرم است
-        order_item = self.order_item
-        if order_item.weight_unit == 'kg':
-            remaining_in_kg = remaining_in_order_unit
-        elif order_item.weight_unit == 'ton':
-            remaining_in_kg = remaining_in_order_unit * Decimal('1000')
-        elif order_item.weight_unit == 'bag' and order_item.bag_weight:
-            remaining_in_kg = remaining_in_order_unit * Decimal(str(order_item.bag_weight))
-        elif order_item.weight_unit == 'piece':
-            remaining_in_kg = remaining_in_order_unit
-        else:
-            remaining_in_kg = remaining_in_order_unit
-        
-        # اگر در حال ویرایش هستیم، مقدار فعلی را به باقیمانده اضافه کن
         if self.pk:
             try:
                 old_instance = RawMaterialInfo.objects.get(pk=self.pk)
-                # مقدار قدیمی هم در کیلوگرم است
-                remaining_in_kg += old_instance.allocated_quantity
+                remaining_in_order_unit += old_instance.allocated_quantity
             except RawMaterialInfo.DoesNotExist:
                 pass
         
-        if self.allocated_quantity > remaining_in_kg:
+        unit_display = self.order_item.get_weight_unit_display() if self.order_item.weight_unit else 'واحد'
+        if self.allocated_quantity > remaining_in_order_unit:
             raise ValidationError(
-                f'مقدار تخصیص یافته ({self.allocated_quantity} کیلوگرم) نمی‌تواند بیشتر از مقدار باقیمانده ({remaining_in_kg} کیلوگرم) باشد.'
+                f'مقدار تخصیص یافته ({self.allocated_quantity} {unit_display}) نمی‌تواند بیشتر از مقدار باقیمانده ({remaining_in_order_unit} {unit_display}) باشد.'
             )
     
     def save(self, *args, **kwargs):
