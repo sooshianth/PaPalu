@@ -280,20 +280,13 @@ class Order(models.Model):
     def get_total_allocated_weight(self):
         """
         محاسبه مجموع وزن تخصیص یافته در تمام حمل‌ها (به کیلوگرم)
+        allocated_quantity در واحد سفارش ذخیره می‌شود - از get_weight_in_kg برای تبدیل استفاده می‌شود
         """
         from decimal import Decimal
         total_weight = Decimal('0')
         for item in self.order_items.all():
-            # تبدیل مقدار تخصیص یافته به کیلوگرم بر اساس واحد
             allocated = item.get_allocated_quantity()
-            if item.weight_unit == 'kg':
-                total_weight += allocated
-            elif item.weight_unit == 'ton':
-                total_weight += allocated * Decimal('1000')
-            elif item.weight_unit == 'bag' and item.bag_weight:
-                total_weight += allocated * Decimal(str(item.bag_weight))
-            elif item.weight_unit == 'piece':
-                total_weight += allocated
+            total_weight += item.get_weight_in_kg(quantity=allocated)
         return total_weight
     
     def get_remaining_weight(self):

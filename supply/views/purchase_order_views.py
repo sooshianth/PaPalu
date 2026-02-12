@@ -848,6 +848,16 @@ def procurement_purchase_order_detail_view(request, order_number):
     can_edit_financial = not po.payment_confirmed
     can_delete = po.can_delete()  # محاسبه مقدار can_delete برای استفاده در template
     
+    # اگر تمام مواد تخصیص یافته و وضعیت هنوز «در انتظار تعریف حمل» است، وضعیت را به‌روز کن
+    if po.status == Order.STATUS_AWAITING_TRANSPORT_DEFINITION:
+        remaining_weight = po.get_remaining_weight()
+        if remaining_weight <= Decimal('0'):
+            try:
+                po.transition(Order.STATUS_AWAITING_VEHICLE_ENTRY, user=request.user, note='تمام مواد اولیه به حمل‌ها تخصیص یافت')
+                messages.success(request, 'وضعیت سفارش به «در انتظار ورود خودرو» به‌روزرسانی شد.')
+            except Exception as transition_err:
+                bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number}: {transition_err}")
+    
     # Get transports for this purchase order
     transports = Transport.objects.filter(allocation__order=po).select_related('driver').order_by('-created_at')
     
