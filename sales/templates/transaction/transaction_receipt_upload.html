@@ -102,7 +102,7 @@
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        overflow: hidden;
+        overflow: visible;
     }
     
     .form-section-header {
@@ -151,9 +151,15 @@
         position: relative;
     }
     
-    #id_due_date,
-    #id_check_receipt_date {
+    /* نگه‌داری فیلدهای تاریخ در همان کارت و جلوگیری از رفتن تقویم زیر کارت بعدی */
+    .form-group-date {
+        overflow: visible;
         position: relative;
+        z-index: 10;
+    }
+    .form-group-date .jdp-container {
+        position: relative;
+        z-index: 1;
     }
     
     .form-group input:focus,
@@ -485,9 +491,10 @@
                 <div class="form-group">
                     <label for="{{ form.document_amount.id_for_label }}">مبلغ سند <span style="color: #dc3545;">*</span></label>
                     {{ form.document_amount }}
+                    <small class="persian-number-display" id="id_document_amount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {{ form.document_amount.errors }}
                 </div>
-                <div class="form-group">
+                <div class="form-group form-group-date">
                     <label for="{{ form.due_date.id_for_label }}">تاریخ سررسید <span style="color: #dc3545;">*</span></label>
                     {{ form.due_date }}
                     {{ form.due_date.errors }}
@@ -516,7 +523,7 @@
                     {{ form.payment_status }}
                     {{ form.payment_status.errors }}
                 </div>
-                <div class="form-group">
+                <div class="form-group form-group-date">
                     <label for="{{ form.check_receipt_date.id_for_label }}">تاریخ وصول</label>
                     {{ form.check_receipt_date }}
                     {{ form.check_receipt_date.errors }}
@@ -540,6 +547,32 @@
 document.addEventListener('DOMContentLoaded', function() {
     // راه‌اندازی Custom Jalali Datepicker با تاخیر
     setTimeout(initializeDatePickers, 200);
+
+    // نمایش عدد فارسی با ، زیر مبلغ سند (مشابه تامین)
+    (function () {
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        function formatNumberToPersian(num, decimalPlaces) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            var n = parseFloat(num);
+            var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : String(Math.round(n));
+            var parts = fixed.split('.');
+            var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+            var result = intPart + (parts[1] ? '.' + parts[1] : '');
+            return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+        }
+        var input = document.getElementById('id_document_amount');
+        var display = document.getElementById('id_document_amount_persian');
+        if (input && display) {
+            function update() {
+                var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+                var num = parseFloat(raw);
+                display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 0);
+            }
+            update();
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+        }
+    })();
 });
 
 // Moved to global scope to avoid ReferenceError

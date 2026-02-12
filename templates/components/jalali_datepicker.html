@@ -57,6 +57,12 @@
         animation: jdpFadeIn 0.2s ease-out;
     }
 
+    /* وقتی تقویم باز است، کانتینر بالای بقیه المان‌ها باشد تا کلیک روی تاریخ کار کند */
+    .jdp-container.jdp-open {
+        position: relative;
+        z-index: 10000;
+    }
+
     @keyframes jdpFadeIn {
         from {
             opacity: 0;
@@ -503,9 +509,15 @@
 
             // Close others
             if (activeInstance && activeInstance !== container) {
+                const prevContainer = activeInstance.closest('.jdp-container');
+                if (prevContainer) prevContainer.classList.remove('jdp-open');
                 activeInstance.style.display = 'none';
             }
             activeInstance = container;
+
+            // بالا آوردن کانتینر تا کلیک روی تقویم به المان بعدی نرود
+            const jdpContainer = container.closest('.jdp-container');
+            if (jdpContainer) jdpContainer.classList.add('jdp-open');
 
             // Show overlay
             document.getElementById('jdp-overlay').style.display = 'block';
@@ -803,6 +815,8 @@
             input.setAttribute('data-gdate', gDateStr);
 
             // Hide Calendar
+            const jdpContainer = container.closest('.jdp-container');
+            if (jdpContainer) jdpContainer.classList.remove('jdp-open');
             container.style.display = 'none';
             document.getElementById('jdp-overlay').style.display = 'none';
             activeInstance = null;
@@ -822,6 +836,8 @@
         // Overlay close
         document.getElementById('jdp-overlay').addEventListener('click', () => {
             if (activeInstance) {
+                const jdpContainer = activeInstance.closest('.jdp-container');
+                if (jdpContainer) jdpContainer.classList.remove('jdp-open');
                 activeInstance.style.display = 'none';
                 activeInstance = null;
                 document.getElementById('jdp-overlay').style.display = 'none';

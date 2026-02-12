@@ -204,6 +204,16 @@ class ProcurementPurchaseOrderForm(ModelForm):
         except Person.DoesNotExist:
             self.add_error('customer', 'تأمین‌کننده انتخاب شده یافت نشد.')
         
+        # نرمال‌سازی فیلدهای پولی با ۰ رقم اعشار (مدل Order: decimal_places=0)
+        for field_name in ('subtotal_without_freight', 'freight_cost'):
+            val = cleaned_data.get(field_name)
+            if val is not None and val != '':
+                try:
+                    d = Decimal(str(val))
+                    cleaned_data[field_name] = d.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+                except (ValueError, TypeError, Exception):
+                    pass
+        
         return cleaned_data
 
 
@@ -471,12 +481,22 @@ class ProcurementPurchaseOrderMaterialForm(ModelForm):
                     # اگر مالیات معتبر نبود، فقط قیمت کل را بدون مالیات محاسبه کن
                     pass
             
-            # گرد کردن به 2 رقم اعشار برای مطابقت با محدودیت فیلد
-            calculated_total = calculated_total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            # گرد کردن به عدد صحیح (۰ رقم اعشار) برای مطابقت با محدودیت فیلد مدل
+            calculated_total = calculated_total.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
             cleaned_data['total_purchase_cost'] = calculated_total
-            if total_purchase_cost and abs(Decimal(str(total_purchase_cost)) - calculated_total) > Decimal('0.01'):
+            if total_purchase_cost and abs(Decimal(str(total_purchase_cost)) - calculated_total) > Decimal('1'):
                 # فقط هشدار می‌دهیم، مقدار را اصلاح می‌کنیم
                 pass
+        
+        # نرمال‌سازی فیلدهای پولی با ۰ رقم اعشار (مدل decimal_places=0)
+        for field_name in ('unit_price', 'total_purchase_cost', 'freight_cost'):
+            val = cleaned_data.get(field_name)
+            if val is not None and val != '':
+                try:
+                    d = Decimal(str(val))
+                    cleaned_data[field_name] = d.quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+                except (ValueError, TypeError, Exception):
+                    pass
         
         # اگر quantity required است و وجود ندارد، خطا بده
         if not quantity:

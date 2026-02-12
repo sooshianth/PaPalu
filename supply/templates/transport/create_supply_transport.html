@@ -102,6 +102,17 @@
     overflow: visible;
   }
 
+  /* بخش خودرو و راننده: overflow visible تا لیبل و دراپ‌داون زیر کارت بعدی نروند */
+  .form-section.vehicle-driver-section .form-section-content {
+    overflow: visible;
+  }
+  .form-section.vehicle-driver-section .driver-autocomplete-wrapper {
+    overflow: visible;
+  }
+  .form-section.vehicle-driver-section .col-md-8.mb-3 {
+    overflow: visible;
+  }
+
   .form-label {
     color: var(--gray-800);
     font-weight: 500;
@@ -965,7 +976,7 @@
     </div>
 
     <!-- بخش اطلاعات خودرو و راننده -->
-    <div class="form-section">
+    <div class="form-section vehicle-driver-section">
       <div class="form-section-header">
         <h5>اطلاعات خودرو و راننده</h5>
         <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
