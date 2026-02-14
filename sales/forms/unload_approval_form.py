@@ -1,19 +1,18 @@
 from django import forms
-from django_jalali.db import models as jmodels
-from core.OrderFolder.OrderModel import Order
-import jdatetime
+from django_jalali.forms import jDateTimeField
+from django_jalali.forms.widgets import jDateTimeInput
 
 
 class UnloadApprovalForm(forms.Form):
-    """فرم تایید تخلیه سفارش"""
+    """فرم تایید تخلیه سفارش - زمان به صورت شمسی (jDateTimeField) مانند فرم قیمت‌گذاری"""
     
-    unload_approval_time = forms.DateField(
+    unload_approval_time = jDateTimeField(
         label='زمان تایید تخلیه',
         required=True,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'date',
-            'placeholder': 'زمان تایید تخلیه را انتخاب کنید'
+        widget=jDateTimeInput(attrs={
+            'class': 'form-control jalali-datetime',
+            'placeholder': 'زمان تایید تخلیه را انتخاب کنید',
+            'dir': 'ltr',
         })
     )
     

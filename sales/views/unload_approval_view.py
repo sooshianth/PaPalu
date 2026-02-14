@@ -8,8 +8,6 @@ import logging
 from core.logging_levels import *
 import django_tables2 as tables
 from django_tables2 import RequestConfig
-import jdatetime
-from datetime import datetime
 
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
@@ -102,19 +100,9 @@ def unload_approval_detail_view(request, order_number):
         if form.is_valid():
             try:
                 with transaction.atomic():
-                    # دریافت داده‌های فرم
-                    unload_approval_date = form.cleaned_data['unload_approval_time']
+                    # دریافت داده‌های فرم (jDateTimeField مقدار jdatetime.datetime برمی‌گرداند)
+                    j_datetime = form.cleaned_data['unload_approval_time']
                     customer_feedback = form.cleaned_data.get('customer_feedback', '').strip()
-                    
-                    # تبدیل تاریخ میلادی به شمسی با datetime کامل
-                    if isinstance(unload_approval_date, datetime):
-                        # اگر datetime است
-                        j_datetime = jdatetime.datetime.fromgregorian(datetime=unload_approval_date)
-                    else:
-                        # اگر date است، زمان فعلی را اضافه می‌کنیم
-                        now = datetime.now()
-                        unload_approval_datetime = datetime.combine(unload_approval_date, now.time())
-                        j_datetime = jdatetime.datetime.fromgregorian(datetime=unload_approval_datetime)
                     
                     # ایجاد یا به‌روزرسانی ApprovalInfo
                     approval_info, created = ApprovalInfo.objects.get_or_create(
@@ -155,13 +143,8 @@ def unload_approval_detail_view(request, order_number):
         # دریافت ApprovalInfo موجود
         approval_info = ApprovalInfo.objects.filter(order=order).first()
         if approval_info and approval_info.unload_approval_time:
-            # تبدیل jDateTimeField به تاریخ میلادی برای نمایش در فرم
-            if isinstance(approval_info.unload_approval_time, jdatetime.datetime):
-                g_datetime = approval_info.unload_approval_time.togregorian()
-                initial_data['unload_approval_time'] = g_datetime.date()
-            elif isinstance(approval_info.unload_approval_time, jdatetime.date):
-                g_date = approval_info.unload_approval_time.togregorian()
-                initial_data['unload_approval_time'] = g_date
+            # jDateTimeField مقدار اولیه را به صورت jdatetime می‌پذیرد
+            initial_data['unload_approval_time'] = approval_info.unload_approval_time
         
         form = UnloadApprovalForm(initial=initial_data)
     
