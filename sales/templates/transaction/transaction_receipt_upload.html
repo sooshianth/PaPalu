@@ -157,6 +157,10 @@
         position: relative;
         z-index: 10;
     }
+    /* وقتی تقویم باز است، همین فیلد تاریخ بالاتر از بقیه باشد تا تقویم زیر «تاریخ وصول» نرود و کلیک روی روز جواب بدهد */
+    .form-group-date:has(.jdp-container.jdp-open) {
+        z-index: 10001;
+    }
     .form-group-date .jdp-container {
         position: relative;
         z-index: 1;
@@ -444,11 +448,11 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if item.doc.document_attachment %}
-                                    <a href="{{ item.doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
-                                {% else %}
+                                {% for label, file in item.doc.get_all_attachments %}
+                                    <a href="{{ file.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">{{ label }}</a>{% if not forloop.last %} | {% endif %}
+                                {% empty %}
                                     -
-                                {% endif %}
+                                {% endfor %}
                             </td>
                             <td>
                                 <div style="display: flex; gap: 5px; flex-wrap: wrap;">
@@ -479,7 +483,7 @@
         ثبت سند تراکنش جدید
     </div>
     <div class="form-section-body">
-        <form method="post" enctype="multipart/form-data">
+        <form id="transaction-receipt-upload-form" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
             <div class="form-grid">
@@ -508,9 +512,11 @@
                     {{ form.source_account.errors }}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.document_attachment.id_for_label }}">پیوست سند <span style="color: #dc3545;">*</span></label>
-                    {{ form.document_attachment }}
-                    {{ form.document_attachment.errors }}
+                    <label>پیوست‌های سند <span style="color: #dc3545;">*</span></label>
+                    <input type="file" id="document_attachments_file_input" accept="image/*,.pdf,.doc,.docx" multiple style="display: none;">
+                    <button type="button" id="btn-add-document-attachments" class="btn btn-outline-secondary" style="margin-bottom: 8px;">افزودن فایل(ها)</button>
+                    <ul id="document_attachments_list" style="list-style: none; padding: 0; margin: 0 0 1rem 0; border: 1px solid var(--gray-300); border-radius: 8px; max-height: 200px; overflow-y: auto;"></ul>
+                    <small style="color: var(--gray-600); font-size: 0.85rem;">حداقل یک فایل الزامی است. با «افزودن فایل(ها)» می‌توانید چند پیوست اضافه کنید؛ با «حذف» هر کدام را جداگانه حذف کنید.</small>
                 </div>
             </div>
 
@@ -547,6 +553,79 @@
 document.addEventListener('DOMContentLoaded', function() {
     // راه‌اندازی Custom Jalali Datepicker با تاخیر
     setTimeout(initializeDatePickers, 200);
+
+    // پیوست‌های سند: چند فایل، لیست + افزودن/حذف + ارسال با FormData (مشابه تامین/حسابداری)
+    (function () {
+        var form = document.getElementById('transaction-receipt-upload-form');
+        var fileInput = document.getElementById('document_attachments_file_input');
+        var listEl = document.getElementById('document_attachments_list');
+        var addBtn = document.getElementById('btn-add-document-attachments');
+        var attachmentFiles = [];
+
+        if (form && fileInput && listEl && addBtn) {
+            function renderList() {
+                listEl.innerHTML = '';
+                attachmentFiles.forEach(function (f, i) {
+                    var li = document.createElement('li');
+                    li.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--gray-200);';
+                    var span = document.createElement('span');
+                    span.textContent = f.name;
+                    span.style.cssText = 'font-size: 0.9rem;';
+                    var btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm btn-outline-danger';
+                    btn.textContent = 'حذف';
+                    btn.addEventListener('click', function () {
+                        attachmentFiles.splice(i, 1);
+                        renderList();
+                    });
+                    li.appendChild(span);
+                    li.appendChild(btn);
+                    listEl.appendChild(li);
+                });
+            }
+
+            addBtn.addEventListener('click', function () { fileInput.click(); });
+
+            fileInput.addEventListener('change', function () {
+                var files = this.files;
+                for (var i = 0; i < files.length; i++) attachmentFiles.push(files[i]);
+                renderList();
+                this.value = '';
+            });
+
+            form.addEventListener('submit', function (e) {
+                e.preventDefault();
+                if (attachmentFiles.length === 0) {
+                    alert('حداقل یک پیوست سند الزامی است.');
+                    return;
+                }
+                var formData = new FormData();
+                var els = form.elements;
+                for (var i = 0; i < els.length; i++) {
+                    var el = els[i];
+                    if (!el.name || el.type === 'file' || el.tagName === 'BUTTON') continue;
+                    if (el.type === 'checkbox' || el.type === 'radio') {
+                        if (el.checked) formData.append(el.name, el.value);
+                    } else {
+                        formData.append(el.name, el.value || '');
+                    }
+                }
+                for (var j = 0; j < attachmentFiles.length; j++) {
+                    formData.append('document_attachments', attachmentFiles[j]);
+                }
+                fetch(form.action, { method: 'POST', body: formData, credentials: 'same-origin' })
+                    .then(function (r) {
+                        if (r.redirected) { window.location.href = r.url; return; }
+                        return r.text();
+                    })
+                    .then(function (html) {
+                        if (html) { document.open(); document.write(html); document.close(); }
+                    })
+                    .catch(function (err) { console.error(err); alert('خطا در ارسال فرم.'); });
+            });
+        }
+    })();
 
     // نمایش عدد فارسی با ، زیر مبلغ سند (مشابه تامین)
     (function () {

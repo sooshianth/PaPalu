@@ -12,7 +12,7 @@ from django_tables2 import RequestConfig
 from core.RBACModel import user_has_task, TaskChoices
 from core.OrderFolder.OrderModel import Order
 from core.SettlementFolder.SettlementModel import Settlement
-from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
+from core.SettlementFolder.TransactionDocumentModel import TransactionDocument, TransactionDocumentAttachment
 from sales.forms.transaction_document_form import TransactionDocumentForm
 from sales.tables.tables_transaction_receipt import TransactionReceiptOrderTable
 
@@ -145,79 +145,91 @@ def transaction_receipt_upload_view(request, order_number):
 
     if request.method == 'POST':
         form = TransactionDocumentForm(request.POST, request.FILES, customer=order.customer)
+        doc_files = request.FILES.getlist('document_attachments')
         if form.is_valid():
-            # محاسبه باقیمانده قبل از ذخیره
-            new_document_amount = form.cleaned_data.get('document_amount', 0)
-            if settlement.original_document_amount:
-                # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
-                # باید دوباره query کنیم چون ممکن است در همین request تغییر کرده باشد
-                all_documents = settlement.transaction_documents.all()
-                from decimal import Decimal
-                all_documents_amount = all_documents.aggregate(total=Sum('document_amount'))['total'] or 0
-                orig = Decimal(str(settlement.original_document_amount))
-                total_existing = Decimal(str(all_documents_amount))
-                remaining_amount = orig - total_existing
-                total_with_new = total_existing + Decimal(str(new_document_amount))
-                if total_with_new > orig:
-                    form.add_error(
-                        'document_amount',
-                        f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({orig:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
-                    )
-                    bug_logger.warning(
-                        f"تلاش برای ثبت تراکنش با مبلغ {new_document_amount} که مجموع را به {total_with_new} می‌رساند (بیشتر از {settlement.original_document_amount}) برای سفارش {order_number}"
-                    )
-                elif Decimal(str(new_document_amount)) > remaining_amount:
-                    form.add_error(
-                        'document_amount',
-                        f'مبلغ تراکنش ({new_document_amount:,.0f}) نمی‌تواند از مبلغ باقیمانده ({remaining_amount:,.0f}) بیشتر باشد.'
-                    )
-                    bug_logger.warning(
-                        f"تلاش برای ثبت تراکنش با مبلغ {new_document_amount} که از باقیمانده {remaining_amount} بیشتر است برای سفارش {order_number}"
-                    )
-                else:
-                    try:
-                        with transaction.atomic():
-                            doc: TransactionDocument = form.save(commit=False)
-                            doc.settlement = settlement
-                            # تولید خودکار شماره سند حسابداری
-                            doc.generate_accounting_document_number()
-                            doc.save()
+            if not doc_files:
+                messages.error(request, 'حداقل یک پیوست سند الزامی است.')
+            else:
+                # محاسبه باقیمانده قبل از ذخیره
+                new_document_amount = form.cleaned_data.get('document_amount', 0)
+                if settlement.original_document_amount:
+                    # محاسبه مجموع همه تراکنش‌های موجود (چه تایید شده و چه نشده)
+                    # باید دوباره query کنیم چون ممکن است در همین request تغییر کرده باشد
+                    all_documents = settlement.transaction_documents.all()
+                    from decimal import Decimal
+                    all_documents_amount = all_documents.aggregate(total=Sum('document_amount'))['total'] or 0
+                    orig = Decimal(str(settlement.original_document_amount))
+                    total_existing = Decimal(str(all_documents_amount))
+                    remaining_amount = orig - total_existing
+                    total_with_new = total_existing + Decimal(str(new_document_amount))
+                    if total_with_new > orig:
+                        form.add_error(
+                            'document_amount',
+                            f'مجموع مبلغ تراکنش‌ها ({total_with_new:,.0f}) نمی‌تواند از مبلغ کل ({orig:,.0f}) بیشتر باشد. مبلغ باقیمانده: {remaining_amount:,.0f}'
+                        )
+                        bug_logger.warning(
+                            f"تلاش برای ثبت تراکنش با مبلغ {new_document_amount} که مجموع را به {total_with_new} می‌رساند (بیشتر از {settlement.original_document_amount}) برای سفارش {order_number}"
+                        )
+                    elif Decimal(str(new_document_amount)) > remaining_amount:
+                        form.add_error(
+                            'document_amount',
+                            f'مبلغ تراکنش ({new_document_amount:,.0f}) نمی‌تواند از مبلغ باقیمانده ({remaining_amount:,.0f}) بیشتر باشد.'
+                        )
+                        bug_logger.warning(
+                            f"تلاش برای ثبت تراکنش با مبلغ {new_document_amount} که از باقیمانده {remaining_amount} بیشتر است برای سفارش {order_number}"
+                        )
+                    else:
+                        try:
+                            with transaction.atomic():
+                                doc: TransactionDocument = form.save(commit=False)
+                                doc.settlement = settlement
+                                doc.document_attachment = doc_files[0]
+                                # تولید خودکار شماره سند حسابداری
+                                doc.generate_accounting_document_number()
+                                doc.save()
 
-                            # به‌روزرسانی مبالغ تسویه
-                            documents_qs = settlement.transaction_documents.all()
-                            # فقط تراکنش‌هایی که approval_status='approved' دارند را برای settled_amount در نظر می‌گیریم
-                            approved_documents_qs = documents_qs.filter(approval_status='approved')
-                            total_document_amount = approved_documents_qs.aggregate(total=Sum('document_amount'))['total'] or 0
-                            settlement.settled_amount = total_document_amount
+                                for f in doc_files[1:]:
+                                    if f:
+                                        TransactionDocumentAttachment.objects.create(
+                                            transaction_document=doc,
+                                            file=f
+                                        )
 
-                            # بررسی اینکه آیا همه تراکنش‌ها تایید شده‌اند
-                            all_approved = documents_qs.exclude(approval_status='approved').count() == 0
-                            all_documents_exist = documents_qs.count() > 0
+                                # به‌روزرسانی مبالغ تسویه
+                                documents_qs = settlement.transaction_documents.all()
+                                # فقط تراکنش‌هایی که approval_status='approved' دارند را برای settled_amount در نظر می‌گیریم
+                                approved_documents_qs = documents_qs.filter(approval_status='approved')
+                                total_document_amount = approved_documents_qs.aggregate(total=Sum('document_amount'))['total'] or 0
+                                settlement.settled_amount = total_document_amount
 
-                            # اگر مبلغ کل سند مبدا تعریف شده و مجموع اسناد >= آن شد
-                            if settlement.original_document_amount and total_document_amount >= settlement.original_document_amount:
-                                if all_approved and all_documents_exist:
-                                    # همه تراکنش‌ها تایید شده‌اند و مبلغ برابر است
-                                    settlement.settlement_status = 'completed'
-                                    # فقط اگر سفارش هنوز در وضعیت pending_transaction_receipt_upload است، وضعیت را تغییر بده
-                                    if order.status == 'pending_transaction_receipt_upload':
-                                        order.status = 'pending_accounting_approval'
-                                        order.save(update_fields=['status'])
-                                        bug_logger.info(f"وضعیت سفارش {order_number} به pending_accounting_approval تغییر یافت")
+                                # بررسی اینکه آیا همه تراکنش‌ها تایید شده‌اند
+                                all_approved = documents_qs.exclude(approval_status='approved').count() == 0
+                                all_documents_exist = documents_qs.count() > 0
+
+                                # اگر مبلغ کل سند مبدا تعریف شده و مجموع اسناد >= آن شد
+                                if settlement.original_document_amount and total_document_amount >= settlement.original_document_amount:
+                                    if all_approved and all_documents_exist:
+                                        # همه تراکنش‌ها تایید شده‌اند و مبلغ برابر است
+                                        settlement.settlement_status = 'completed'
+                                        # فقط اگر سفارش هنوز در وضعیت pending_transaction_receipt_upload است، وضعیت را تغییر بده
+                                        if order.status == 'pending_transaction_receipt_upload':
+                                            order.status = 'pending_accounting_approval'
+                                            order.save(update_fields=['status'])
+                                            bug_logger.info(f"وضعیت سفارش {order_number} به pending_accounting_approval تغییر یافت")
+                                    else:
+                                        # مبلغ برابر است اما هنوز همه تراکنش‌ها تایید نشده‌اند
+                                        settlement.settlement_status = 'partial'
                                 else:
-                                    # مبلغ برابر است اما هنوز همه تراکنش‌ها تایید نشده‌اند
                                     settlement.settlement_status = 'partial'
-                            else:
-                                settlement.settlement_status = 'partial'
 
-                            settlement.save(update_fields=['settled_amount', 'settlement_status'])
+                                settlement.save(update_fields=['settled_amount', 'settlement_status'])
 
-                        bug_logger.info(f"سند تراکنش جدید برای سفارش {order_number} ثبت شد")
-                        messages.success(request, 'سند تراکنش با موفقیت ثبت شد.')
-                        return redirect('sales:transaction_receipt_upload', order_number=order_number)
-                    except Exception as e:
-                        bug_logger.error(f"خطا در ثبت سند تراکنش سفارش {order_number}: {str(e)}", exc_info=True)
-                        messages.error(request, f'خطا در ثبت سند تراکنش: {str(e)}')
+                            bug_logger.info(f"سند تراکنش جدید برای سفارش {order_number} ثبت شد")
+                            messages.success(request, 'سند تراکنش با موفقیت ثبت شد.')
+                            return redirect('sales:transaction_receipt_upload', order_number=order_number)
+                        except Exception as e:
+                            bug_logger.error(f"خطا در ثبت سند تراکنش سفارش {order_number}: {str(e)}", exc_info=True)
+                            messages.error(request, f'خطا در ثبت سند تراکنش: {str(e)}')
         else:
             bug_logger.warning(f"فرم ثبت سند تراکنش سفارش {order_number} معتبر نیست")
             messages.error(request, 'اطلاعات فرم معتبر نیست. لطفاً خطاها را بررسی کنید.')
