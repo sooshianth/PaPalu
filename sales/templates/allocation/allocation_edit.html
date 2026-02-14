@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title|default:"ویرایش تخصیص" }}{% endblock %}
 
@@ -366,9 +367,9 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
             <h6 style="margin: 0;">وضعیت اقلام سفارش {{ order.order_number }}</h6>
             <div style="display: flex; gap: 10px;">
-                <span class="badge bg-secondary">سایر: {{ other_allocations_total|floatformat:2 }}</span>
-                <span class="badge bg-primary">این تخصیص: {{ current_allocation_total|floatformat:2 }}</span>
-                <span class="badge bg-info text-dark">کل سفارش: {{ order_total|floatformat:2 }}</span>
+                <span class="badge bg-secondary">سایر: {{ other_allocations_total|persian_number:2 }}</span>
+                <span class="badge bg-primary">این تخصیص: {{ current_allocation_total|persian_number:2 }}</span>
+                <span class="badge bg-info text-dark">کل سفارش: {{ order_total|persian_number:2 }}</span>
             </div>
         </div>
 
@@ -387,10 +388,10 @@
                     {% for item in product_status_list %}
                     <tr>
                         <td style="text-align: right; font-weight: 500;">{{ item.product_name }}</td>
-                        <td>{{ item.ordered_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
-                        <td>{{ item.allocated_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
+                        <td>{{ item.ordered_quantity|persian_number:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
+                        <td>{{ item.allocated_quantity|persian_number:2 }} <span class="text-muted-small">{{ item.unit }}</span></td>
                         <td style="color: {% if item.remaining_quantity < 0 %}#dc3545{% elif item.remaining_quantity == 0 %}#28a745{% else %}#007bff{% endif %}; font-weight: 600;">
-                            {{ item.remaining_quantity|floatformat:2 }} <span class="text-muted-small">{{ item.unit }}</span>
+                            {{ item.remaining_quantity|persian_number:2 }} <span class="text-muted-small">{{ item.unit }}</span>
                         </td>
                         <td>
                             {% if item.remaining_quantity <= 0.001 %} <span class="status-badge status-completed">تکمیل
@@ -419,9 +420,9 @@
                 <tfoot>
                     <tr style="background-color: #f8f9fa; font-weight: 600;">
                         <td style="text-align: right;">مجموع</td>
-                        <td>{{ order_total|floatformat:2 }}</td>
-                        <td>{{ other_allocations_total|floatformat:2 }}</td>
-                        <td>{{ remaining|floatformat:2 }}</td>
+                        <td>{{ order_total|persian_number:2 }}</td>
+                        <td>{{ other_allocations_total|persian_number:2 }}</td>
+                        <td>{{ remaining|persian_number:2 }}</td>
                         <td>-</td>
                     </tr>
                 </tfoot>
@@ -523,8 +524,9 @@
                     </div>
 
                     <div class="col-md-4 mb-3">
-                        <label class="form-label required-field">مقدار</label>
+                        <label class="form-label required-field">مقدار (وزن)</label>
                         {{ form.quantity }}
+                        <small class="quantity-persian persian-number-display" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                         {% if form.quantity.errors %}
                         <span class="text-danger">{{ form.quantity.errors }}</span>
                         {% endif %}
@@ -1279,6 +1281,42 @@
                 form.addEventListener('submit', submitHandler);
             }
         }
+
+        // نمایش عدد فارسی با ، زیر فیلدهای مقدار (وزن)
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        function formatNumberToPersian(num, decimalPlaces) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            var n = parseFloat(num);
+            var fixed;
+            if (decimalPlaces === 0) {
+                fixed = String(Math.round(n));
+            } else if (decimalPlaces !== undefined && decimalPlaces > 0) {
+                fixed = n.toFixed(decimalPlaces);
+            } else {
+                fixed = (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+            }
+            var parts = fixed.split('.');
+            var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+            var result = intPart + (parts[1] ? '.' + parts[1] : '');
+            return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+        }
+        function updateQuantityPersianDisplay(input, displayEl) {
+            if (!input || !displayEl) return;
+            var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+            var num = parseFloat(raw);
+            var decimals = raw.indexOf('.') >= 0 ? Math.min(raw.length - raw.indexOf('.') - 1, 3) : 2;
+            displayEl.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, decimals) + ' کیلوگرم';
+        }
+        document.querySelectorAll('.formset-item').forEach(function (formsetItem) {
+            var qInput = formsetItem.querySelector('input[name*="-quantity"]');
+            var qDisplay = formsetItem.querySelector('.quantity-persian');
+            if (qInput && qDisplay) {
+                function updateQty() { updateQuantityPersianDisplay(qInput, qDisplay); }
+                updateQty();
+                qInput.addEventListener('input', updateQty);
+                qInput.addEventListener('change', updateQty);
+            }
+        });
 
         // تنظیم خودکار واحد بر اساس محصول انتخاب شده
         const productSelects = document.querySelectorAll('.product-select');
