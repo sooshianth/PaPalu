@@ -334,13 +334,17 @@
         border-color: #ffc107 !important;
     }
     
-    /* استایل دکمه جزئیات - آبی */
+    /* استایل دکمه جزئیات و دیدن - آبی (فونت یکسان) */
     .data-table .btn-outline-info,
-    .table-container .btn-outline-info {
+    .table-container .btn-outline-info,
+    .data-table .btn-view-price-info,
+    .table-container .btn-view-price-info {
         padding: 5px 10px;
         border-radius: 6px;
         text-decoration: none;
         font-size: 0.875rem;
+        font-weight: 500;
+        font-family: inherit;
         border: 1px solid #17a2b8;
         transition: all 0.3s;
         color: #17a2b8 !important;
@@ -350,7 +354,9 @@
     }
     
     .data-table .btn-outline-info:hover,
-    .table-container .btn-outline-info:hover {
+    .table-container .btn-outline-info:hover,
+    .data-table .btn-view-price-info:hover,
+    .table-container .btn-view-price-info:hover {
         background-color: #17a2b8 !important;
         color: white !important;
         border-color: #17a2b8 !important;

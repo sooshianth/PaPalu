@@ -2,8 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Sum
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
+from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 import logging
 from core.logging_levels import *
@@ -575,5 +576,86 @@ def transaction_receipt_approve_reject_view(request, order_number, document_id, 
         messages.error(request, f'خطا در {action} تراکنش: {str(e)}')
 
     return redirect('sales:transaction_receipt_upload', order_number=order_number)
+
+
+@login_required
+@require_http_methods(["POST"])
+def create_customer_bank_account_api(request, order_number):
+    """
+    API برای ایجاد حساب بانکی جدید برای مشتری (حساب مبدا) در صفحه ثبت رسید تراکنش.
+    مشتری از طریق سفارش (debtor_person در تسویه) مشخص می‌شود.
+    """
+    audit_logger.info(f"درخواست ایجاد حساب بانکی برای مشتری - سفارش {order_number}")
+    
+    if not user_has_task(request.user, TaskChoices.SALES_TRANSACTION_RECEIPT.value):
+        audit_logger.activity("تلاش برای ایجاد حساب بانکی بدون دسترسی")
+        return JsonResponse({'error': 'شما دسترسی به این عملیات را ندارید.'}, status=403)
+    
+    order = get_object_or_404(Order, order_number=order_number)
+    
+    if not request.user.is_superuser and order.registered_by != request.user:
+        audit_logger.activity(f"تلاش برای دسترسی به سفارش {order_number} متعلق به کاربر دیگر")
+        return JsonResponse({'error': 'شما دسترسی به این سفارش ندارید.'}, status=403)
+    
+    customer = order.customer
+    if not customer:
+        return JsonResponse({'error': 'مشتری برای این سفارش یافت نشد.'}, status=400)
+    
+    account_number = (request.POST.get('account_number') or '').strip().replace(' ', '')
+    shaba_raw = (request.POST.get('shaba_number') or '').strip().upper().replace(' ', '')
+    bank_name = (request.POST.get('bank_name') or '').strip()
+    
+    # شماره حساب: فقط ارقام، حداکثر ۱۶ رقم
+    if account_number and not account_number.isdigit():
+        return JsonResponse({'error': 'شماره حساب باید فقط شامل اعداد باشد.'}, status=400)
+    if account_number and len(account_number) > 16:
+        return JsonResponse({'error': 'شماره حساب حداکثر ۱۶ رقم است.'}, status=400)
+    
+    # شماره شبا: IR اختیاری، فقط ۲۴ رقم - IR در ذخیره اضافه می‌شود
+    shaba_number = None
+    if shaba_raw:
+        if shaba_raw.startswith('IR'):
+            shaba_raw = shaba_raw[2:]
+        shaba_digits = ''.join(c for c in shaba_raw if c.isdigit())
+        if len(shaba_digits) > 24:
+            return JsonResponse({'error': 'شماره شبا حداکثر ۲۴ رقم دارد.'}, status=400)
+        if shaba_digits:
+            shaba_number = 'IR' + shaba_digits
+    
+    if not account_number and not shaba_number:
+        return JsonResponse({'error': 'حداقل شماره حساب یا شماره شبا الزامی است.'}, status=400)
+    
+    try:
+        from core.PersonFolder.FinancialBankingModel import FinancialBanking
+        from core.PersonFolder.BankAccountModel import BankAccount
+        
+        financial_banking, _ = FinancialBanking.objects.get_or_create(person=customer)
+        
+        with transaction.atomic():
+            bank_account = BankAccount.objects.create(
+                financial_banking=financial_banking,
+                account_number=account_number if account_number else None,
+                shaba_number=shaba_number,
+                bank_name=bank_name if bank_name else None,
+            )
+            
+            audit_logger.info(
+                f"حساب بانکی جدید برای مشتری {customer.name} ایجاد شد - حساب: {account_number} - توسط: {request.user.username}"
+            )
+            
+            display = str(bank_account)
+            return JsonResponse({
+                'success': True,
+                'account': {
+                    'id': bank_account.pk,
+                    'account_number': bank_account.account_number or '',
+                    'shaba_number': bank_account.shaba_number or '',
+                    'bank_name': bank_account.bank_name or '',
+                    'display': display,
+                }
+            })
+    except Exception as e:
+        bug_logger.error(f"خطا در ایجاد حساب بانکی مشتری: {e}", exc_info=True)
+        return JsonResponse({'error': f'خطا در ایجاد حساب بانکی: {str(e)}'}, status=500)
 
 
