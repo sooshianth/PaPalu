@@ -401,11 +401,41 @@
     .datepicker-plot-area {
         z-index: 10000 !important;
     }
-    /* زمان‌بندی: تقویم بالای بقیه و بدون برش (مثل تامین) */
+    /* زمان‌بندی: تقویم بالای بقیه و بدون برش (مثل صفحه مشتری) */
     .detail-card.schedule-card {
         position: relative;
         z-index: 100;
         overflow: visible;
+    }
+    /* استایل باکس تاریخ زمان‌بندی مثل فرم ایجاد مشتری */
+    .schedule-card .schedule-date-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .schedule-card .schedule-field {
+        margin-bottom: 0;
+    }
+    .schedule-card .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+        font-size: 0.95rem;
+    }
+    .schedule-card .form-control {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    .schedule-card .form-control:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
     }
 </style>
 <!-- Custom Jalali Datepicker Component -->
@@ -492,15 +522,13 @@
 							<input type="hidden" name="predicted_start_time" value="{{ form.predicted_start_time.value|default:'' }}" id="id_predicted_start_time">
 							<input type="hidden" name="predicted_end_date" value="{{ form.predicted_end_date.value|default:'' }}" id="id_predicted_end_date">
 							<input type="hidden" name="predicted_end_time" value="{{ form.predicted_end_time.value|default:'' }}" id="id_predicted_end_time">
-							<div class="detail-row" style="flex-direction: column; gap: 8px;">
-								<span class="detail-label">شروع پیشبینی شده:{% if form.predicted_start_date.field.required or form.predicted_start_time.field.required %}<span style="color: red;">*</span>{% endif %}</span>
-								<div style="flex: 1; min-width: 200px;">
+							<div class="schedule-date-fields">
+								<div class="schedule-field">
+									<label class="form-label">شروع پیشبینی شده{% if form.predicted_start_date.field.required or form.predicted_start_time.field.required %}<span style="color: #dc3545;">*</span>{% endif %}</label>
 									<input type="text" class="form-control jalali-datetime" data-datetime-mode="start" id="id_predicted_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.predicted_start_date.value %}{{ form.predicted_start_date.value }}{% if form.predicted_start_time.value %} {{ form.predicted_start_time.value }}{% endif %}{% endif %}" autocomplete="off">
 								</div>
-							</div>
-							<div class="detail-row" style="flex-direction: column; gap: 8px;">
-								<span class="detail-label">پایان پیشبینی شده:{% if form.predicted_end_date.field.required or form.predicted_end_time.field.required %}<span style="color: red;">*</span>{% endif %}</span>
-								<div style="flex: 1; min-width: 200px;">
+								<div class="schedule-field">
+									<label class="form-label">پایان پیشبینی شده{% if form.predicted_end_date.field.required or form.predicted_end_time.field.required %}<span style="color: #dc3545;">*</span>{% endif %}</label>
 									<input type="text" class="form-control jalali-datetime" data-datetime-mode="end" id="id_predicted_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.predicted_end_date.value %}{{ form.predicted_end_date.value }}{% if form.predicted_end_time.value %} {{ form.predicted_end_time.value }}{% endif %}{% endif %}" autocomplete="off">
 								</div>
 							</div>
@@ -510,11 +538,17 @@
 							<div class="detail-card-title">اطلاعات تکمیلی</div>
 							<div class="detail-row">
 								<span class="detail-label">{{ form.inventory_snapshot.label }}:</span>
-								<span class="detail-value">{{ form.inventory_snapshot }}</span>
+								<span class="detail-value">
+									<input type="hidden" name="inventory_snapshot" value="{{ form.inventory_snapshot.value|default:'' }}">
+									<span class="persian-number-display">{% if form.inventory_snapshot.value != None %}{{ form.inventory_snapshot.value|persian_number:3 }}{% else %}—{% endif %}</span>
+								</span>
 							</div>
 							<div class="detail-row">
 								<span class="detail-label">{{ form.net_unplanned_requirement.label }}:</span>
-								<span class="detail-value">{{ form.net_unplanned_requirement }}</span>
+								<span class="detail-value">
+									<input type="hidden" name="net_unplanned_requirement" value="{{ form.net_unplanned_requirement.value|default:'' }}">
+									<span class="persian-number-display">{% if form.net_unplanned_requirement.value != None %}{{ form.net_unplanned_requirement.value|persian_number:3 }}{% else %}—{% endif %}</span>
+								</span>
 							</div>
 						</div>
 					</div>
@@ -750,9 +784,9 @@
 								{% for flow in product_flow_status %}
 								<tr>
 									<td>{{ flow.product }}</td>
-									<td>{{ flow.inventory }}</td>
-									<td>{{ flow.planned_inventory }}</td>
-									<td>{{ flow.net_unplanned_requirement }}</td>
+									<td>{{ flow.inventory|persian_number:2 }}</td>
+									<td>{{ flow.planned_inventory|persian_number:2 }}</td>
+									<td>{{ flow.net_unplanned_requirement|persian_number:2 }}</td>
 									<td>{{ flow.status }}</td>
 								</tr>
 								{% empty %}
@@ -784,7 +818,7 @@
 								<tr class="parent-row">
 									<td>{{ alloc.id }}</td>
 									<td>{{ alloc.status }}</td>
-									<td>{{ alloc.total_weight }}</td>
+									<td>{{ alloc.total_weight|persian_number:2 }}</td>
 									<td>
 										<button type="button" class="btn btn-sm btn-primary" onclick="toggleChildRows('{{ alloc.id }}')">جزئیات</button>
 									</td>
@@ -792,7 +826,7 @@
 								{% for child in alloc.products %}
 								<tr class="child-row child-{{ alloc.id }}" style="display:none">
 									<td colspan="2">{{ child.product }}</td>
-									<td>{{ child.weight }}</td>
+									<td>{{ child.weight|persian_number:2 }}</td>
 									<td>{{ child.status }}</td>
 								</tr>
 								{% endfor %}
@@ -1213,6 +1247,11 @@ if (productFlowStatusData) {
 				inventorySnapshotInput.value = '0.000';
 				netUnplannedInput.value = '0.000';
 			}
+			// به‌روزرسانی نمایش فارسی
+			var invDisplay = inventorySnapshotInput.nextElementSibling;
+			var netDisplay = netUnplannedInput.nextElementSibling;
+			if (invDisplay) invDisplay.textContent = formatNumberToPersian(parseFloat(inventorySnapshotInput.value || 0), 3);
+			if (netDisplay) netDisplay.textContent = formatNumberToPersian(parseFloat(netUnplannedInput.value || 0), 3);
 		}
 		
 		// Filter production_info based on selected product
@@ -1564,6 +1603,11 @@ if (productFlowStatusData) {
 						const netUnplanned = parseFloat(data.net_unplanned_requirement || '0');
 						inventorySnapshotInput.value = inventory.toFixed(3);
 						netUnplannedInput.value = netUnplanned.toFixed(3);
+						// به‌روزرسانی نمایش فارسی
+						var invDisplay = inventorySnapshotInput.nextElementSibling;
+						var netDisplay = netUnplannedInput.nextElementSibling;
+						if (invDisplay) invDisplay.textContent = formatNumberToPersian(parseFloat(inventorySnapshotInput.value || 0), 3);
+						if (netDisplay) netDisplay.textContent = formatNumberToPersian(parseFloat(netUnplannedInput.value || 0), 3);
 						}
 					}
 				}
