@@ -58,7 +58,7 @@ class DeliveryAddressForm(forms.Form):
     )
     unique_delivery_id = forms.CharField(
         max_length=50,
-        required=False,
+        required=True,
         label='شناسه یکتا تحویل',
         widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
     )
