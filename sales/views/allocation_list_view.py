@@ -355,7 +355,7 @@ def allocation_create_view(request, order_number):
                 
                 total_product_allocation = existing_quantity + new_quantity
                 
-                if total_product_allocation > ordered_quantity + 0.001:  # مقایسه با خطای کوچک
+                if total_product_allocation > ordered_quantity + Decimal('0.001'):  # مقایسه با خطای کوچک
                     product_name = Product.objects.get(pk=product_id).name
                     excess = total_product_allocation - ordered_quantity
                     validation_error = (
@@ -385,7 +385,7 @@ def allocation_create_view(request, order_number):
                         
                         # بررسی برابری مقادیر
                         new_allocation_total = calculate_allocation_total_quantity(order)
-                        if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
+                        if abs(order_total - new_allocation_total) < Decimal('0.001'):  # مقایسه با خطای کوچک
                             # تغییر status همه allocation های این order به 'pending_approval'
                             Allocation.objects.filter(order=order).update(allocation_status='pending_approval')
                             
@@ -569,7 +569,7 @@ def allocation_edit_view(request, order_number, allocation_number):
                 
                 total_product_allocation = other_quantity + new_quantity
                 
-                if total_product_allocation > ordered_quantity + 0.001:  # مقایسه با خطای کوچک
+                if total_product_allocation > ordered_quantity + Decimal('0.001'):  # مقایسه با خطای کوچک
                     product_name = Product.objects.get(pk=product_id).name
                     excess = total_product_allocation - ordered_quantity
                     validation_error = (
@@ -632,7 +632,7 @@ def allocation_edit_view(request, order_number, allocation_number):
                         new_allocation_total = calculate_allocation_total_quantity(order)
                         # استفاده از allocation_number جدید (یا قدیمی اگر تغییر نکرده باشد)
                         final_allocation_number = allocation.allocation_number
-                        if abs(order_total - new_allocation_total) < 0.001:  # مقایسه با خطای کوچک
+                        if abs(order_total - new_allocation_total) < Decimal('0.001'):  # مقایسه با خطای کوچک
                             # تغییر status همه allocation های این order به 'pending_approval'
                             Allocation.objects.filter(order=order).update(allocation_status='pending_approval')
                             
