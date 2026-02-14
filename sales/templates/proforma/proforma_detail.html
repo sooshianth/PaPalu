@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -339,8 +340,7 @@
             </div>
             <div class="info-item">
                 <span class="info-label">شماره تلفن:</span>
-                <span class="info-value">{{ customer_info.phone_number }} {% if customer_info.phone_type != '-' %}({{
-                    customer_info.phone_type }}){% endif %}</span>
+                <span class="info-value">{{ customer_info.phone_number }}{% if customer_info.phone_type != '-' %} ({{ customer_info.phone_type }}){% endif %}</span>
             </div>
         </div>
     </div>
@@ -389,8 +389,7 @@
             </div>
             <div class="info-item">
                 <span class="info-label">شماره تلفن:</span>
-                <span class="info-value">{{ company_info.phone_number }} {% if company_info.phone_type != '-' %}({{
-                    company_info.phone_type }}){% endif %}</span>
+                <span class="info-value">{{ company_info.phone_number }}{% if company_info.phone_type != '-' %} ({{ company_info.phone_type }}){% endif %}</span>
             </div>
         </div>
     </div>
@@ -417,16 +416,16 @@
                 {% for item in order_items %}
                 <tr>
                     <td>{{ item.product.name|default:"-" }}</td>
-                    <td>{{ item.quantity|default:"-" }}</td>
+                    <td>{% if item.quantity != None %}{{ item.quantity|persian_number:2 }}{% else %}-{% endif %}</td>
                     <td>{{ item.requested_unit|default:"-" }}</td>
-                    <td>{{ item.unit_price|default:"-" }}</td>
-                    <td>{{ item.discount|default:"0" }}</td>
-                    <td>{{ item.additional_charges|default:"0" }}</td>
-                    <td>{{ item.vat|default:"0" }}</td>
+                    <td>{% if item.unit_price != None %}{{ item.unit_price|persian_number:0 }}{% else %}-{% endif %}</td>
+                    <td>{% if item.discount != None %}{{ item.discount|persian_number:0 }}{% else %}۰{% endif %}</td>
+                    <td>{% if item.additional_charges != None %}{{ item.additional_charges|persian_number:0 }}{% else %}۰{% endif %}</td>
+                    <td>{% if item.vat != None %}{{ item.vat|persian_number:0 }}{% else %}۰{% endif %}</td>
                     <td>
                         {% if item.quantity and item.unit_price %}
                         {% widthratio item.quantity 1 item.unit_price as total %}
-                        {{ total }}
+                        {{ total|persian_number:0 }}
                         {% else %}
                         -
                         {% endif %}

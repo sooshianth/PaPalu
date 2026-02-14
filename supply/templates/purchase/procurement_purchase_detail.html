@@ -330,9 +330,9 @@
             <div class="kv"><span>وضعیت</span><span class="status-badge status-{{ po.status }}">{{ po.get_status_display }}</span></div>
             <div class="kv"><span>تأمین‌کننده</span><strong>{{ po.customer.name|default:'—' }}</strong></div>
             <div class="kv"><span>نوع پرداخت کرایه</span><strong>{{ po.get_freight_payment_type_display|default:'—' }}</strong></div>
-            <div class="kv"><span>جمع بدون کرایه</span><strong>{% if po.subtotal_without_freight %}{{ po.subtotal_without_freight|persian_number:2 }}{% else %}—{% endif %}</strong></div>
-            <div class="kv"><span>هزینه کرایه</span><strong>{% if po.freight_cost %}{{ po.freight_cost|persian_number:2 }}{% else %}—{% endif %}</strong></div>
-            <div class="kv"><span>مالیات %</span><strong>{% if po.vat_percentage %}{{ po.vat_percentage|persian_number:2 }}{% else %}—{% endif %}</strong></div>
+            <div class="kv"><span>جمع بدون کرایه</span><strong>{% if po.subtotal_without_freight %}{{ po.subtotal_without_freight|persian_number:0 }}{% else %}—{% endif %}</strong></div>
+            <div class="kv"><span>هزینه کرایه</span><strong>{% if po.freight_cost %}{{ po.freight_cost|persian_number:0 }}{% else %}—{% endif %}</strong></div>
+            <div class="kv"><span>مالیات %</span><strong>{% if po.vat_percentage %}{{ po.vat_percentage|persian_number:0 }}{% else %}—{% endif %}</strong></div>
             <div class="kv"><span>پیش‌فاکتور تایید شد؟</span><strong>{{ po.pre_invoice_approved|yesno:'بله,خیر' }}</strong></div>
             <div class="kv"><span>پرداخت تایید شد؟</span><strong>{{ po.payment_confirmed|yesno:'بله,خیر' }}</strong></div>
             <div class="kv"><span>شناسه در سیستم خارجی</span><strong>{{ po.external_system_id|default:'—' }}</strong></div>
@@ -378,15 +378,15 @@
         <div class="detail-grid">
             <div class="kv" style="background: white;">
                 <span>قیمت اول پرداختی (ریال)</span>
-                <strong style="font-size: 1.1rem;">{{ final_unit_price_details.initial_payment|persian_number:2 }}</strong>
+                <strong style="font-size: 1.1rem;">{{ final_unit_price_details.initial_payment|persian_number:0 }}</strong>
             </div>
             <div class="kv" style="background: white;">
                 <span>مجموع کرایه‌های حمل‌ها (ریال)</span>
-                <strong style="font-size: 1.1rem;">{{ final_unit_price_details.total_freight|persian_number:2 }}</strong>
+                <strong style="font-size: 1.1rem;">{{ final_unit_price_details.total_freight|persian_number:0 }}</strong>
             </div>
             <div class="kv" style="background: white;">
                 <span>مجموع هزینه‌ها (ریال)</span>
-                <strong style="font-size: 1.1rem; color: #0b74c7;">{{ final_unit_price_details.total_cost|persian_number:2 }}</strong>
+                <strong style="font-size: 1.1rem; color: #0b74c7;">{{ final_unit_price_details.total_cost|persian_number:0 }}</strong>
             </div>
             <div class="kv" style="background: white;">
                 <span>وزن کل سفارش (کیلوگرم)</span>
@@ -414,7 +414,7 @@
             {% if final_unit_price_details.final_unit_price %}
             <div class="kv" style="grid-column: 1/-1; background: #e8f5e9; border: 3px solid var(--primary-green); padding: 20px;">
                 <span style="font-size: 1.1rem; color: var(--dark-green);">فی تمام شده خرید (ریال/کیلوگرم)</span>
-                <strong style="font-size: 1.5rem; color: var(--primary-green); font-weight: 700;">{{ final_unit_price_details.final_unit_price|persian_number:2 }}</strong>
+                <strong style="font-size: 1.5rem; color: var(--primary-green); font-weight: 700;">{{ final_unit_price_details.final_unit_price|persian_number:0 }}</strong>
             </div>
             {% else %}
             <div class="kv" style="grid-column: 1/-1; background: #fff3cd; border: 2px solid #ffc107; padding: 15px;">

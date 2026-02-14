@@ -1889,30 +1889,30 @@ class PurchaseOrderMaterialTable(tables.Table):
         return '—'
     
     def render_unit_price(self, value):
-        """نمایش قیمت واحد با فرمت فارسی و کاما"""
+        """نمایش قیمت واحد با فرمت فارسی و کاما (بدون اعشار)"""
         if value:
-            formatted_value = format_number_persian(value, decimal_places=2)
+            formatted_value = format_number_persian(value, decimal_places=0)
             return format_html('{}', formatted_value)
         return '—'
     
     def render_vat_percent(self, value):
-        """نمایش درصد مالیات با فرمت فارسی و کاما"""
+        """نمایش درصد مالیات با فرمت فارسی و کاما (بدون اعشار)"""
         if value:
-            formatted_value = format_number_persian(value, decimal_places=2)
+            formatted_value = format_number_persian(value, decimal_places=0)
             return format_html('{}', formatted_value)
         return '—'
     
     def render_freight_cost(self, value):
-        """نمایش بهای تمام شده کرایه با فرمت فارسی و کاما"""
+        """نمایش بهای تمام شده کرایه با فرمت فارسی و کاما (بدون اعشار)"""
         if value:
-            formatted_value = format_number_persian(value, decimal_places=2)
+            formatted_value = format_number_persian(value, decimal_places=0)
             return format_html('{}', formatted_value)
         return '—'
     
     def render_total_purchase_cost(self, value):
-        """نمایش بهای تمام شده خرید با فرمت فارسی و کاما"""
+        """نمایش بهای تمام شده خرید با فرمت فارسی و کاما (بدون اعشار)"""
         if value:
-            formatted_value = format_number_persian(value, decimal_places=2)
+            formatted_value = format_number_persian(value, decimal_places=0)
             return format_html('{}', formatted_value)
         return '—'
 
