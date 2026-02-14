@@ -24,6 +24,7 @@ class TransactionDocumentForm(forms.ModelForm):
             'document_amount',
             'due_date',
             'source_account',
+            'document_attachment',
             'payment_status',
             'check_receipt_date',
         ]
@@ -32,6 +33,7 @@ class TransactionDocumentForm(forms.ModelForm):
             'document_amount': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'due_date': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
             'source_account': forms.Select(attrs={'class': 'form-control'}),
+            'document_attachment': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'payment_status': forms.Select(attrs={'class': 'form-control'}),
             'check_receipt_date': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
         }
@@ -42,11 +44,13 @@ class TransactionDocumentForm(forms.ModelForm):
         
         super().__init__(*args, **kwargs)
 
-        # فیلدهای اجباری (پیوست سند در view با getlist('document_attachments') اعتبارسنجی می‌شود)
+        # فیلدهای اجباری (پیوست سند در view با getlist('document_attachments') اعتبارسنجی می‌شود؛ در ویرایش document_attachment اختیاری است)
         self.fields['payment_type'].required = True
         self.fields['document_amount'].required = True
         self.fields['due_date'].required = True
         self.fields['source_account'].required = True
+        # در ویرایش سند، پیوست اختیاری است (اگر خالی بماند فایل قبلی حفظ می‌شود)
+        self.fields['document_attachment'].required = False
 
         # فیلدهای اختیاری
         self.fields['payment_status'].required = False

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -162,7 +163,8 @@
         text-decoration: none;
         font-size: 0.9rem;
         border: 1px solid var(--gray-600);
-        color: var(--gray-600);
+        background-color: white;
+        color: #495057;
         transition: all 0.3s;
         display: inline-block;
     }
@@ -219,11 +221,11 @@
         </div>
         <div class="info-row">
             <span class="info-label">مقدار کل سفارش:</span>
-            <span class="info-value">{{ order_total|floatformat:2 }} کیلوگرم</span>
+            <span class="info-value">{{ order_total|persian_number:2 }} کیلوگرم</span>
         </div>
         <div class="info-row">
             <span class="info-label">مقدار تخصیص شده:</span>
-            <span class="info-value">{{ allocation_total|floatformat:2 }} کیلوگرم</span>
+            <span class="info-value">{{ allocation_total|persian_number:2 }} کیلوگرم</span>
         </div>
         <div class="info-row">
             <span class="info-label">وضعیت برابری:</span>
@@ -231,7 +233,7 @@
                 {% if is_balanced %}
                     <span class="status-badge status-inquired">برابر است</span>
                 {% else %}
-                    <span class="status-badge status-not-inquired">برابر نیست (تفاوت: {{ difference|floatformat:2 }} کیلوگرم)</span>
+                    <span class="status-badge status-not-inquired">برابر نیست (تفاوت: {{ difference|persian_number:2 }} کیلوگرم)</span>
                 {% endif %}
             </span>
         </div>
@@ -256,7 +258,7 @@
                 <div style="margin-top: 5px; color: var(--gray-600); font-size: 0.9rem;">
                     الویت: {{ item.allocation.allocation_priority }} | 
                     ماشین: {{ item.allocation.requested_machine|default:"-" }} | 
-                    مقدار: {{ item.quantity|floatformat:2 }} کیلوگرم | 
+                    مقدار: {{ item.quantity|persian_number:2 }} کیلوگرم | 
                     وضعیت: {{ item.allocation.get_allocation_status_display }}
                 </div>
             </div>
@@ -283,7 +285,7 @@
                 <tr>
                     <td>{{ product_info.product.name|default:"-" }}</td>
                     <td>{{ product_info.get_unit_display|default:"-" }}</td>
-                    <td>{{ product_info.quantity|default:"-" }}</td>
+                    <td>{% if product_info.quantity != None %}{{ product_info.quantity|persian_number:2 }}{% else %}-{% endif %}</td>
                 </tr>
                 {% endfor %}
             </tbody>

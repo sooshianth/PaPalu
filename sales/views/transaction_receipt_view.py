@@ -442,6 +442,13 @@ def transaction_receipt_edit_view(request, order_number, document_id):
                 else:
                     try:
                         with transaction.atomic():
+                            if request.POST.get('replace_attachments') == '1':
+                                if document.document_attachment:
+                                    document.document_attachment.delete(save=False)
+                                document.document_attachment = None
+                                for att in document.additional_attachments.all():
+                                    att.file.delete(save=False)
+                                    att.delete()
                             doc: TransactionDocument = form.save(commit=False)
                             # اگر شماره سند حسابداری وجود نداشته باشد، تولید کن
                             if not doc.accounting_document_number:

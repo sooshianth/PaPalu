@@ -137,7 +137,7 @@
         ویرایش سند تراکنش
     </div>
     <div class="form-section-body">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" id="transaction-receipt-edit-form">
             {% csrf_token %}
             
             <div class="form-grid">
@@ -149,6 +149,7 @@
                 <div class="form-group">
                     <label for="{{ form.document_amount.id_for_label }}">مبلغ سند <span style="color: #dc3545;">*</span></label>
                     {{ form.document_amount }}
+                    <small class="persian-number-display" id="id_document_amount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {{ form.document_amount.errors }}
                 </div>
                 <div class="form-group">
@@ -165,14 +166,41 @@
                     {{ form.source_account.errors }}
                 </div>
                 <div class="form-group">
-                    <label for="{{ form.document_attachment.id_for_label }}">پیوست سند <span style="color: #dc3545;">*</span></label>
-                    {{ form.document_attachment }}
-                    {{ form.document_attachment.errors }}
-                    {% if document.document_attachment %}
-                        <small style="color: var(--gray-600); margin-top: 0.5rem;">
-                            فایل فعلی: <a href="{{ document.document_attachment.url }}" target="_blank">{{ document.document_attachment.name }}</a>
-                        </small>
-                    {% endif %}
+                    <label>پیوست‌های سند <span style="color: #dc3545;">*</span></label>
+                    <input type="file" id="document_attachments_file_input_edit" accept="image/*,.pdf,.doc,.docx" multiple style="display: none;">
+                    <button type="button" id="btn-add-document-attachments-edit" class="btn btn-outline-secondary" style="margin-bottom: 8px;">افزودن فایل(ها)</button>
+                    <ul id="document_attachments_list_edit" style="list-style: none; padding: 0; margin: 0 0 1rem 0; border: 1px solid var(--gray-300); border-radius: 8px; max-height: 200px; overflow-y: auto;">
+                        {% for label, file in document.get_all_attachments %}
+                            <li data-existing="1" data-url="{{ file.url }}" data-name="{{ file.name }}" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--gray-200);">
+                                <a href="{{ file.url }}" target="_blank" style="font-size: 0.9rem; color: var(--primary-green); font-weight: 600; text-decoration: none;" title="مشاهده فایل">{{ file.name }}</a>
+                                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-attachment-edit">حذف</button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <small style="color: var(--gray-600); font-size: 0.85rem;">حداقل یک فایل الزامی است. با «افزودن فایل(ها)» می‌توانید چند پیوست اضافه کنید؛ با «حذف» هر کدام را جداگانه حذف کنید.</small>
+                    <input type="hidden" name="replace_attachments" id="id_replace_attachments_edit" value="">
+                    {% comment %} old UI removed - now using same as upload page
+                        {% with all_attachments=document.get_all_attachments %}
+                            {% if all_attachments %}
+                                {% if all_attachments|length == 1 %}
+                                    <a href="{{ all_attachments.0.1.url }}" target="_blank" title="مشاهده پیوست" style="color: var(--primary-green); display: inline-flex; align-items: center;">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    </a>
+                                {% else %}
+                                    <details class="attachment-view-dropdown" style="display: inline; position: relative;">
+                                        <summary style="list-style: none; cursor: pointer; display: inline-flex; align-items: center; color: var(--primary-green);" title="مشاهده پیوست‌ها">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                        </summary>
+                                        <div style="position: absolute; top: 100%; right: 0; margin-top: 4px; background: white; border: 1px solid var(--gray-300); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 8px; min-width: 120px; z-index: 10;">
+                                            {% for label, file in all_attachments %}
+                                                <a href="{{ file.url }}" target="_blank" style="display: block; padding: 6px 8px; color: var(--primary-green); font-weight: 600; font-size: 0.9rem; text-decoration: none; border-radius: 4px;" onmouseover="this.style.background='var(--gray-100)'" onmouseout="this.style.background='transparent'">{{ label }}</a>
+                                            {% endfor %}
+                                        </div>
+                                    </details>
+                                {% endif %}
+                            {% endif %}
+                        {% endwith %}
+                    {% endcomment %}
                 </div>
             </div>
 
@@ -209,6 +237,113 @@
 document.addEventListener('DOMContentLoaded', function() {
     // راه‌اندازی Custom Jalali Datepicker با تاخیر
     setTimeout(initializeDatePickers, 200);
+    
+    // نمایش عدد فارسی با ، زیر مبلغ سند (بدون اعشار)
+    (function () {
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        function formatNumberToPersian(num, decimalPlaces) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            var n = parseFloat(num);
+            var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : String(Math.round(n));
+            var parts = fixed.split('.');
+            var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+            var result = intPart + (parts[1] ? '.' + parts[1] : '');
+            return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+        }
+        var input = document.getElementById('id_document_amount');
+        var display = document.getElementById('id_document_amount_persian');
+        if (input && display) {
+            function update() {
+                var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+                var num = parseFloat(raw);
+                display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 0);
+            }
+            update();
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+        }
+    })();
+
+    // پیوست‌های سند در ویرایش: مثل صفحه ساخت — لیست با افزودن/حذف
+    (function () {
+        var form = document.getElementById('transaction-receipt-edit-form');
+        var fileInput = document.getElementById('document_attachments_file_input_edit');
+        var listEl = document.getElementById('document_attachments_list_edit');
+        var addBtn = document.getElementById('btn-add-document-attachments-edit');
+        var replaceInput = document.getElementById('id_replace_attachments_edit');
+        var newFiles = [];
+
+        if (!form || !fileInput || !listEl || !addBtn) return;
+
+        listEl.querySelectorAll('li[data-existing="1"]').forEach(function (li) {
+            var btn = li.querySelector('.btn-remove-attachment-edit');
+            if (btn) {
+                btn.addEventListener('click', function () {
+                    li.setAttribute('data-removed', '1');
+                    li.style.display = 'none';
+                    if (replaceInput) replaceInput.value = '1';
+                });
+            }
+        });
+
+        function appendNewFile(f) {
+            var li = document.createElement('li');
+            li.setAttribute('data-new', '1');
+            li.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--gray-200);';
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(f);
+            link.target = '_blank';
+            link.textContent = f.name;
+            link.style.cssText = 'font-size: 0.9rem; color: var(--primary-green); font-weight: 600; text-decoration: none;';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-outline-danger btn-remove-attachment-edit';
+            btn.textContent = 'حذف';
+            btn.addEventListener('click', function () {
+                var idx = newFiles.indexOf(f);
+                if (idx !== -1) newFiles.splice(idx, 1);
+                li.remove();
+            });
+            li.appendChild(link);
+            li.appendChild(btn);
+            listEl.appendChild(li);
+        }
+
+        addBtn.addEventListener('click', function () { fileInput.click(); });
+
+        fileInput.addEventListener('change', function () {
+            var files = this.files;
+            for (var i = 0; i < files.length; i++) {
+                newFiles.push(files[i]);
+                appendNewFile(files[i]);
+            }
+            this.value = '';
+        });
+
+        form.addEventListener('submit', function (e) {
+            var hasVisibleExisting = listEl.querySelectorAll('li[data-existing="1"]:not([data-removed="1"])').length > 0;
+            if (!hasVisibleExisting && newFiles.length === 0) {
+                e.preventDefault();
+                alert('حداقل یک پیوست سند الزامی است.');
+                return;
+            }
+            if (newFiles.length > 0) {
+                e.preventDefault();
+                var formData = new FormData(form);
+                formData.append('document_attachment', newFiles[0]);
+                if (replaceInput && replaceInput.value) formData.set('replace_attachments', '1');
+                fetch(form.action, { method: 'POST', body: formData, credentials: 'same-origin' })
+                    .then(function (r) {
+                        if (r.redirected) { window.location.href = r.url; return; }
+                        return r.text();
+                    })
+                    .then(function (html) {
+                        if (html) { document.open(); document.write(html); document.close(); }
+                    })
+                    .catch(function (err) { console.error(err); alert('خطا در ارسال فرم.'); });
+            }
+        });
+    })();
 });
 
 // Moved to global scope to avoid ReferenceError
@@ -259,6 +394,18 @@ function initializeDatePicker(inputId, fieldName) {
     // 5. قرار دادن فیلد مخفی کنار فیلد نمایشی
     dateInput.parentNode.appendChild(hiddenInput);
     
+    // 5.5. اگر مقدار فعلی ورودی به صورت تاریخ شمسی (مثلاً 1404-11-16) است، همین الان در hidden قرار بده تا موقع ارسال «این فیلد الزامی است» نگیرد
+    var initialVal = (dateInput.value || '').trim();
+    if (initialVal) {
+        var parts = initialVal.split(/[-/]/);
+        if (parts.length === 3) {
+            var y = parseInt(parts[0], 10);
+            if (y >= 1300 && y < 1500) {
+                hiddenInput.value = initialVal;
+            }
+        }
+    }
+    
     // 6. راه‌اندازی کامپوننت بدون پشتیبانی از ساعت
     JalaliDatepicker.init('#' + dateInput.id, { time: false });
     
@@ -296,20 +443,20 @@ function initializeDatePicker(inputId, fieldName) {
                     }
                     
                     // فرمت: YYYY-MM-DD (شمسی)
-                    const jalaliDateStr = `${jy}-${String(jm).padStart(2, '0')}-${String(jd).padStart(2, '0')}`;
+                    const jalaliDateStr = jy + '-' + String(jm).padStart(2, '0') + '-' + String(jd).padStart(2, '0');
                     hiddenInput.value = jalaliDateStr;
-                    console.log('Initial value converted - Gregorian:', gdate, 'Jalali:', jalaliDateStr);
                 }
             }
         } else if (dateInput.value) {
-            // اگر data-gdate وجود ندارد اما value وجود دارد، بررسی کن که آیا میلادی است یا شمسی
-            // اگر فرمت YYYY-MM-DD باشد (میلادی)، تبدیل کن
-            const valueParts = dateInput.value.trim().split(/[-/]/);
+            var val = dateInput.value.trim();
+            var valueParts = val.split(/[-/]/);
             if (valueParts.length === 3) {
-                const year = parseInt(valueParts[0]);
+                var year = parseInt(valueParts[0], 10);
                 if (year > 1900 && year < 2100) {
-                    // احتمالاً میلادی است
-                    hiddenInput.value = dateInput.value;
+                    hiddenInput.value = val;
+                } else if (year >= 1300 && year < 1500) {
+                    // تاریخ شمسی (مثلاً 1404-11-16) — همان را در hidden بگذار تا ارسال شود
+                    hiddenInput.value = val;
                 }
             }
         }
