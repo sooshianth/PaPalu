@@ -483,6 +483,15 @@
         ثبت سند تراکنش جدید
     </div>
     <div class="form-section-body">
+        {% if is_transaction_receipt_referred %}
+        <div class="alert alert-warning" style="margin-bottom: 1rem;">
+            ⚠️ این سفارش به مدیر ارجاع شده است. فقط مدیر می‌تواند بارگذاری رسید را تکمیل کرده و مرحله بعد را ببرد.
+            {% if transaction_receipt_referral_reason %}
+            <br><strong>دلیل ارجاع به مدیر:</strong><br>
+            <span style="white-space: pre-wrap;">{{ transaction_receipt_referral_reason }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
         <form id="transaction-receipt-upload-form" method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
@@ -538,11 +547,83 @@
 
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary">ثبت سند</button>
+                {% if show_refer_button %}
+                <button type="button" class="btn btn-warning" id="btnTxReferToManager" style="background: #856404; border-color: #856404; color: #fff;">ارجاع به مدیر</button>
+                {% endif %}
                 <a href="{% url 'sales:transaction_receipt_order_list' %}" class="btn btn-secondary">بازگشت به لیست سفارش‌ها</a>
             </div>
         </form>
+        {% if show_refer_button %}
+        <form method="post" id="transaction-receipt-refer-form" style="display: none;">
+            {% csrf_token %}
+            <input type="hidden" name="refer_to_manager" id="id_tx_refer_to_manager" value="">
+            <input type="hidden" name="transaction_receipt_referral_reason" id="id_tx_referral_reason" value="">
+            <input type="hidden" name="payment_type" id="refer_payment_type" value="">
+            <input type="hidden" name="document_amount" id="refer_document_amount" value="">
+            <input type="hidden" name="due_date" id="refer_due_date" value="">
+            <input type="hidden" name="source_account" id="refer_source_account" value="">
+            <input type="hidden" name="payment_status" id="refer_payment_status" value="">
+            <input type="hidden" name="check_receipt_date" id="refer_check_receipt_date" value="">
+        </form>
+        {% endif %}
     </div>
 </div>
+
+<!-- مودال دلیل ارجاع به مدیر (بارگذاری رسید تراکنش) -->
+{% if show_refer_button %}
+<script>window.txReferModalOpen = {{ refer_modal_open|yesno:"true,false" }};</script>
+<div id="txReferToManagerModal" role="dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.4);">
+    <div style="background: #fff; padding: 25px; border-radius: 12px; max-width: 500px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <h3 style="margin-top: 0;">ارجاع به مدیر</h3>
+        <p style="color: #666;">همان مقادیری که الان در فرم پر کرده‌اید ذخیره می‌شود و مدیر دقیقاً همان را می‌بیند. سفارش به مرحله بعد نمی‌رود؛ فقط مدیر با «ثبت سند» می‌تواند مرحله بعد را بفرستد.</p>
+        <label class="form-label">دلیل ارجاع (اجباری)</label>
+        <textarea id="id_tx_referral_reason_text" class="form-control" rows="4" placeholder="دلیل ارجاع به مدیر را بنویسید..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"></textarea>
+        <div id="txReferReasonError" class="text-danger mt-2" style="display: none;">لطفاً دلیل ارجاع را وارد کنید.</div>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="button" class="btn btn-primary" id="btnTxConfirmRefer">تایید ارجاع</button>
+            <button type="button" class="btn btn-secondary" id="btnTxCancelRefer">انصراف</button>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var referForm = document.getElementById('transaction-receipt-refer-form');
+    var modal = document.getElementById('txReferToManagerModal');
+    var btnRefer = document.getElementById('btnTxReferToManager');
+    var btnConfirm = document.getElementById('btnTxConfirmRefer');
+    var btnCancel = document.getElementById('btnTxCancelRefer');
+    var reasonInput = document.getElementById('id_tx_referral_reason_text');
+    var reasonError = document.getElementById('txReferReasonError');
+    var hidRefer = document.getElementById('id_tx_refer_to_manager');
+    var hidReason = document.getElementById('id_tx_referral_reason');
+    if (!modal || !referForm) return;
+    function showModal() { modal.style.display = 'flex'; }
+    function hideModal() { modal.style.display = 'none'; if (reasonError) reasonError.style.display = 'none'; }
+    if (btnRefer) btnRefer.addEventListener('click', showModal);
+    if (btnCancel) btnCancel.addEventListener('click', hideModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) hideModal(); });
+    if (btnConfirm && hidRefer && hidReason) {
+        btnConfirm.addEventListener('click', function() {
+            var reason = reasonInput ? reasonInput.value.trim() : '';
+            if (!reason) { if (reasonError) { reasonError.style.display = 'block'; reasonError.textContent = 'لطفاً دلیل ارجاع را وارد کنید.'; } return; }
+            hidRefer.value = '1';
+            hidReason.value = reason;
+            if (reasonError) reasonError.style.display = 'none';
+            var mainForm = document.getElementById('transaction-receipt-upload-form');
+            var fieldNames = ['payment_type', 'document_amount', 'due_date', 'source_account', 'payment_status', 'check_receipt_date'];
+            fieldNames.forEach(function(name) {
+                var mainEl = mainForm && mainForm.elements[name];
+                var referEl = referForm.elements[name];
+                if (mainEl && referEl) referEl.value = mainEl.value || '';
+            });
+            referForm.action = mainForm ? mainForm.action : '';
+            referForm.submit();
+        });
+    }
+    if (window.txReferModalOpen) showModal();
+})();
+</script>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}

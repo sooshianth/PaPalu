@@ -214,6 +214,27 @@ class Order(models.Model):
         blank=True,
         verbose_name='دلیل ارجاع تایید تسویه کامل خرید به مدیریت'
     )
+
+    # ارجاع بارگذاری رسید تراکنش فروش به مدیر (فقط مدیر می‌تواند باز کرده و مرحله بعد ببرد)
+    transaction_receipt_referred_to_manager = models.BooleanField(
+        default=False,
+        verbose_name='ارجاع بارگذاری رسید تراکنش به مدیریت'
+    )
+    transaction_receipt_referred_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان ارجاع بارگذاری رسید تراکنش به مدیریت'
+    )
+    transaction_receipt_referral_reason = models.TextField(
+        blank=True,
+        verbose_name='دلیل ارجاع بارگذاری رسید تراکنش به مدیریت'
+    )
+    # پیش‌نویس فرم بارگذاری رسید (وقتی کاربر با «ارجاع به مدیر» ارسال می‌کند، مقادیر فرم ذخیره می‌شود تا مدیر همان را ببیند)
+    transaction_receipt_draft_data = models.JSONField(
+        null=True,
+        blank=True,
+        verbose_name='پیش‌نویس داده‌های فرم بارگذاری رسید تراکنش'
+    )
     
     # فی تمام شده خرید (محاسبه شده پس از تکمیل سفارش)
     final_unit_price = models.DecimalField(

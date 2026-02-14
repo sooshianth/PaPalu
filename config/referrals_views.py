@@ -118,6 +118,23 @@ def _get_referrals(user):
             'description': f'سفارش {o.order_number} - ارجاع از تایید تسویه کامل خرید',
         })
 
+    # 2.9. بارگذاری رسید تراکنش فروش ارجاع‌شده به مدیر
+    tx_receipt_referred = Order.objects.filter(
+        order_type='sale',
+        status='pending_transaction_receipt_upload',
+        transaction_receipt_referred_to_manager=True
+    ).order_by('-transaction_receipt_referred_at')
+    for o in tx_receipt_referred:
+        dt = getattr(o, 'transaction_receipt_referred_at', None) or o.updated_at
+        referrals.append({
+            'type': 'transaction_receipt_upload',
+            'source': 'بارگذاری رسید تراکنش فروش',
+            'resolve_url': reverse('sales:transaction_receipt_upload', kwargs={'order_number': o.order_number}),
+            'identifier': o.order_number,
+            'created_at': dt,
+            'description': f'سفارش {o.order_number} - ارجاع از بارگذاری رسید تراکنش فروش',
+        })
+
     # 3. تخصیص‌های رد شده (از تایید تخصیص)
     orders_with_rejected = Order.objects.filter(
         allocations__is_rejected=True

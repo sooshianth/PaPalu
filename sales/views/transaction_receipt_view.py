@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render, redirect
+from django.utils import timezone
 import logging
 from core.logging_levels import *
 import django_tables2 as tables
@@ -55,7 +56,10 @@ def transaction_receipt_order_list_view(request):
         messages.error(request, 'شما دسترسی به مدیریت رسیدهای تراکنش فروش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    orders_qs = Order.objects.filter(status='pending_transaction_receipt_upload').order_by('-created_at')
+    # سفارش‌های ارجاع‌شده به مدیر فقط در صفحه ارجاعات دیده می‌شوند
+    orders_qs = Order.objects.filter(
+        status='pending_transaction_receipt_upload'
+    ).exclude(transaction_receipt_referred_to_manager=True).order_by('-created_at')
 
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
@@ -119,6 +123,12 @@ def transaction_receipt_upload_view(request, order_number):
         messages.error(request, 'این سفارش در وضعیت مناسب برای ثبت رسید تراکنش نیست.')
         return redirect('sales:transaction_receipt_order_list')
 
+    # اگر به مدیر ارجاع شده فقط سوپرادمین دسترسی دارد
+    if getattr(order, 'transaction_receipt_referred_to_manager', False) and not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای دسترسی به بارگذاری رسید تراکنش ارجاع‌شده به مدیر - سفارش {order_number}")
+        messages.error(request, 'این سفارش به مدیر ارجاع شده و فقط مدیر می‌تواند آن را مشاهده و مرحله بعد را ببرد.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
     # محاسبه مبلغ کل سفارش از اقلام
     order_total_amount = order.get_total_amount()
     
@@ -144,9 +154,59 @@ def transaction_receipt_upload_view(request, order_number):
     total_document_amount = documents.aggregate(total=Sum('document_amount'))['total'] or 0
 
     if request.method == 'POST':
-        form = TransactionDocumentForm(request.POST, request.FILES, customer=order.customer)
+        refer_modal_open = False
+        # ارجاع به مدیر (بدون ثبت سند)
+        is_refer_to_manager = request.POST.get('refer_to_manager') == '1'
+        referral_reason = (request.POST.get('transaction_receipt_referral_reason') or '').strip()
+        if is_refer_to_manager:
+            if not referral_reason:
+                messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
+                refer_modal_open = True
+            else:
+                try:
+                    # ذخیره پیش‌نویس مقادیر فرم تا مدیر همان را ببیند
+                    draft = {
+                        'payment_type': request.POST.get('payment_type', '').strip(),
+                        'document_amount': request.POST.get('document_amount', '').strip(),
+                        'due_date': request.POST.get('due_date', '').strip(),
+                        'source_account': request.POST.get('source_account', '').strip(),
+                        'payment_status': request.POST.get('payment_status', '').strip(),
+                        'check_receipt_date': request.POST.get('check_receipt_date', '').strip(),
+                    }
+                    order.transaction_receipt_draft_data = draft
+                    order.transaction_receipt_referred_to_manager = True
+                    order.transaction_receipt_referred_at = timezone.now()
+                    order.transaction_receipt_referral_reason = referral_reason
+                    order.save(update_fields=[
+                        'transaction_receipt_draft_data',
+                        'transaction_receipt_referred_to_manager',
+                        'transaction_receipt_referred_at',
+                        'transaction_receipt_referral_reason',
+                    ])
+                    bug_logger.info(f"سفارش {order_number} به مدیر ارجاع داده شد - بارگذاری رسید تراکنش")
+                    audit_logger.activity(
+                        f"بارگذاری رسید تراکنش برای سفارش {order_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {referral_reason[:100]}"
+                    )
+                    messages.warning(
+                        request,
+                        'اطلاعات فرم ذخیره شد و این سفارش به مدیر ارجاع داده شد. مدیر همان مقادیری که پر کرده بودید را می‌بیند و فقط او می‌تواند با «ثبت سند» مرحله بعد را بفرستد.'
+                    )
+                    return redirect('sales:transaction_receipt_order_list')
+                except Exception as e:
+                    bug_logger.error(f"خطا در ارجاع به مدیر برای سفارش {order_number}: {e}", exc_info=True)
+                    messages.error(request, f'خطا در ارجاع به مدیر: {str(e)}')
+            # اگر دلیل خالی بود، فرم را بدون POST می‌سازیم تا فقط مودال ارجاع نمایش داده شود (با پیش‌نویس اگر باشد)
+            if is_refer_to_manager and not referral_reason:
+                draft = getattr(order, 'transaction_receipt_draft_data', None) or {}
+                form = TransactionDocumentForm(customer=order.customer, initial=draft)
+            else:
+                form = TransactionDocumentForm(request.POST, request.FILES, customer=order.customer)
+        else:
+            refer_modal_open = False
+            form = TransactionDocumentForm(request.POST, request.FILES, customer=order.customer)
+
         doc_files = request.FILES.getlist('document_attachments')
-        if form.is_valid():
+        if not (is_refer_to_manager and not referral_reason) and form.is_valid():
             if not doc_files:
                 messages.error(request, 'حداقل یک پیوست سند الزامی است.')
             else:
@@ -225,6 +285,20 @@ def transaction_receipt_upload_view(request, order_number):
                                 settlement.save(update_fields=['settled_amount', 'settlement_status'])
 
                             bug_logger.info(f"سند تراکنش جدید برای سفارش {order_number} ثبت شد")
+                            # پس از ثبت سند: پیش‌نویس را پاک کن؛ اگر ارجاع‌شده بود و مدیر تایید کرد، پرچم ارجاع را هم پاک کن
+                            order.transaction_receipt_draft_data = None
+                            update_fields = ['transaction_receipt_draft_data']
+                            if getattr(order, 'transaction_receipt_referred_to_manager', False) and request.user.is_superuser:
+                                order.transaction_receipt_referred_to_manager = False
+                                order.transaction_receipt_referred_at = None
+                                order.transaction_receipt_referral_reason = ''
+                                update_fields.extend([
+                                    'transaction_receipt_referred_to_manager',
+                                    'transaction_receipt_referred_at',
+                                    'transaction_receipt_referral_reason',
+                                ])
+                                bug_logger.info(f"ارجاع بارگذاری رسید تراکنش برای سفارش {order_number} توسط مدیر برطرف شد")
+                            order.save(update_fields=update_fields)
                             messages.success(request, 'سند تراکنش با موفقیت ثبت شد.')
                             return redirect('sales:transaction_receipt_upload', order_number=order_number)
                         except Exception as e:
@@ -234,7 +308,8 @@ def transaction_receipt_upload_view(request, order_number):
             bug_logger.warning(f"فرم ثبت سند تراکنش سفارش {order_number} معتبر نیست")
             messages.error(request, 'اطلاعات فرم معتبر نیست. لطفاً خطاها را بررسی کنید.')
     else:
-        form = TransactionDocumentForm(customer=order.customer)
+        draft = getattr(order, 'transaction_receipt_draft_data', None) or {}
+        form = TransactionDocumentForm(customer=order.customer, initial=draft)
 
     from decimal import Decimal
     remaining_amount = Decimal('0')
@@ -270,6 +345,12 @@ def transaction_receipt_upload_view(request, order_number):
         }
         documents_with_persian.append(doc_dict)
     
+    is_transaction_receipt_referred = getattr(order, 'transaction_receipt_referred_to_manager', False)
+    show_refer_button = not is_transaction_receipt_referred and not request.user.is_superuser
+    transaction_receipt_referral_reason = getattr(order, 'transaction_receipt_referral_reason', '') or ''
+    if request.method != 'POST':
+        refer_modal_open = False
+
     context = {
         # داده دیدنی
         'order': order,
@@ -289,6 +370,11 @@ def transaction_receipt_upload_view(request, order_number):
         # فرم برای داده‌های پرکردنی
         'form': form,
         'page_title': f'ثبت رسید تراکنش - سفارش {order.order_number}',
+        # ارجاع به مدیر
+        'is_transaction_receipt_referred': is_transaction_receipt_referred,
+        'show_refer_button': show_refer_button,
+        'transaction_receipt_referral_reason': transaction_receipt_referral_reason,
+        'refer_modal_open': refer_modal_open,
     }
     return render(request, 'transaction/transaction_receipt_upload.html', context)
 
