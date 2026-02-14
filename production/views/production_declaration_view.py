@@ -768,7 +768,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.CONFIRMED,
                 is_denied=False,
                 is_archived=False
-            ).select_related('product', 'production_info')
+            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info')
             
             # Apply consolidated search filter for confirmed table
             if search_confirmed:
@@ -959,7 +959,7 @@ def production_declaration_view(request):
             'accessible_raw_material_fields': accessible_raw_material_fields,
             'accessible_warehouse_fields': accessible_warehouse_fields,
             # Action permissions
-            'can_deny': can_deny,
+            'can_refer': can_refer,
             'can_revert': can_revert,
             'can_archive': can_archive,
             # Product inventory snapshot + net unplanned requirement (for auto-fill)
@@ -980,7 +980,7 @@ def production_declaration_view(request):
                         'confirmed_programs': confirmed_programs,
                         'accessible_production_program_fields': accessible_production_program_fields,
                         'accessible_product_fields': accessible_product_fields,
-                        'can_deny': can_deny,
+                        'can_refer': can_refer,
                     },
                     request=request
                 )
@@ -1011,7 +1011,7 @@ def production_declaration_view(request):
                         'accessible_production_program_fields': accessible_production_program_fields,
                         'accessible_product_fields': accessible_product_fields,
                         'accessible_warehouse_fields': accessible_warehouse_fields,
-                        'can_deny': can_deny,
+                        'can_refer': can_refer,
                         'can_revert': can_revert,
                         'can_archive': can_archive,
                     },
@@ -1081,6 +1081,12 @@ def production_program_crud_view(request, program_id=None):
                     audit_logger.activity(f"Attempt to access denied production program {program_id}")
                     messages.error(request, 'این برنامه تولید رد شده و قابل دسترسی نیست')
                     return redirect(reverse('production:production_declaration'))
+
+                # برنامه ارجاع‌شده به مدیر را فقط سوپرادمین می‌تواند باز کند
+                if getattr(program, 'declaration_referred_to_manager', False) and not request.user.is_superuser:
+                    audit_logger.activity(f"تلاش برای دسترسی به برنامه تولید ارجاع‌شده به مدیر {program_id}")
+                    messages.error(request, 'این برنامه به مدیر ارجاع شده و فقط مدیر می‌تواند آن را باز کند.')
+                    return HttpResponseForbidden('شما دسترسی به این برنامه را ندارید.')
                 
                 bug_logger.debug(f"Production program {program_id} loaded successfully")
             except Exception as e:
@@ -1090,6 +1096,59 @@ def production_program_crud_view(request, program_id=None):
         # Process form
         if request.method == 'POST':
             action = request.POST.get('action', 'save')
+
+            # اکشن‌های ارجاع/حل ارجاع بدون نیاز به اعتبار فرم (از لیست یا مودال ارسال می‌شوند)
+            if not is_create and action == 'refer_to_manager':
+                if program.status != ProductionProgram.Status.CONFIRMED:
+                    messages.error(request, 'فقط برنامه‌های تایید شده قابل ارجاع به مدیر هستند')
+                    return redirect(reverse('production:program_crud', args=[program_id]))
+                reason = request.POST.get('referral_reason', '').strip() or request.POST.get('deny_reason', '').strip()
+                if not reason:
+                    messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید')
+                    return redirect(reverse('production:program_crud', args=[program_id]))
+                program.declaration_referred_to_manager = True
+                program.declaration_referred_at = timezone.now()
+                program.declaration_referral_reason = reason
+                program.save(update_fields=['declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
+                bug_logger.info(f"Production program {program_id} referred to manager")
+                audit_logger.activity(f"برنامه تولید {program_id} به مدیر ارجاع داده شد. دلیل: {reason[:100]}")
+                messages.success(request, 'برنامه تولید به مدیر ارجاع داده شد. مدیر از صفحه ارجاعات آن را حل می‌کند.')
+                return redirect(reverse('production:production_declaration'))
+            if not is_create and action == 'resolve_referral_deny':
+                if not request.user.is_superuser or not getattr(program, 'declaration_referred_to_manager', False):
+                    messages.error(request, 'فقط مدیر می‌تواند ارجاع را با رد برنامه حل کند.')
+                    return redirect(reverse('production:program_crud', args=[program_id]))
+                reason = request.POST.get('deny_reason', '').strip()
+                if not reason:
+                    messages.error(request, 'لطفاً دلیل رد برنامه را وارد کنید')
+                    return redirect(reverse('production:program_crud', args=[program_id]))
+                program.is_denied = True
+                program.declaration_referred_to_manager = False
+                program.declaration_referred_at = None
+                program.declaration_referral_reason = ''
+                program.save(update_fields=['is_denied', 'declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
+                ProductionRevertLog.objects.create(
+                    production_program=program,
+                    action_type='denied',
+                    reason=reason,
+                    created_by=request.user.username if request.user.is_authenticated else 'anonymous'
+                )
+                bug_logger.info(f"Production program {program_id} denied by manager (resolved referral)")
+                audit_logger.activity(f"برنامه تولید {program_id} توسط مدیر رد شد. دلیل: {reason[:100]}")
+                messages.success(request, 'برنامه تولید رد شد و از لیست ارجاعات خارج شد.')
+                return redirect(reverse('referrals_list'))
+            if not is_create and action == 'resolve_referral_clear':
+                if not request.user.is_superuser or not getattr(program, 'declaration_referred_to_manager', False):
+                    messages.error(request, 'فقط مدیر می‌تواند ارجاع را بردارد.')
+                    return redirect(reverse('production:program_crud', args=[program_id]))
+                program.declaration_referred_to_manager = False
+                program.declaration_referred_at = None
+                program.declaration_referral_reason = ''
+                program.save(update_fields=['declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
+                bug_logger.info(f"Production program {program_id} referral cleared by manager")
+                audit_logger.activity(f"ارجاع برنامه تولید {program_id} توسط مدیر برطرف شد (بدون رد)")
+                messages.success(request, 'برنامه از ارجاع خارج شد و به لیست اعلام تولید برمی‌گردد.')
+                return redirect(reverse('referrals_list'))
             
             if is_create:
                 form = ProductionForm(request.POST)
@@ -1552,37 +1611,6 @@ def production_program_crud_view(request, program_id=None):
                                 messages.warning(request, 'برنامه تکمیل شد اما خطا در ایجاد ثبت‌های انبار رخ داد')
                         else:
                             bug_logger.warning("Product warehouse or actual consumption not present - stock entry not created")
-                    elif action == 'deny':
-                        # Deny a confirmed program
-                        if not user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value):
-                            audit_logger.activity("تلاش برای دسترسی به صفحه رد برنامه تولید بدون دسترسی")
-                            messages.error(request, 'شما دسترسی به صفحه رد برنامه تولید ندارید.')
-                            return redirect(reverse('production:program_crud', args=[program_id]))
-
-                        if instance.status != ProductionProgram.Status.CONFIRMED:
-                            messages.error(request, 'فقط برنامه‌های تایید شده قابل رد هستند')
-                            return redirect(reverse('production:program_crud', args=[program_id]))
-                        
-                        reason = request.POST.get('deny_reason', '').strip()
-                        if not reason:
-                            messages.error(request, 'لطفاً دلیل رد برنامه را وارد کنید')
-                            return redirect(reverse('production:program_crud', args=[program_id]))
-                        
-                        instance.is_denied = True
-                        instance.save()
-                        
-                        # Create log
-                        ProductionRevertLog.objects.create(
-                            production_program=instance,
-                            action_type='denied',
-                            reason=reason,
-                            created_by=request.user.username if request.user.is_authenticated else 'anonymous'
-                        )
-                        
-                        bug_logger.debug(f"Production program {program_id} denied.")
-                        audit_logger.activity(f"Production program {program_id} denied by user. reason: {reason}")
-                        messages.success(request, 'برنامه تولید با موفقیت رد شد')
-                        return redirect(reverse('production:production_declaration'))
                     elif action == 'save':
                         # Save action - allow updating actual consumption for in_progress programs
                         if instance.status == ProductionProgram.Status.IN_PROGRESS:
@@ -1910,10 +1938,11 @@ def production_program_crud_view(request, program_id=None):
             warehouse_type='production'
         ).order_by('name')
         
-        # Check permissions for deny, revert, and archive actions
-        can_deny = user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value)
+        # Check permissions for revert and archive; ارجاع به مدیر بدون task است؛ حل ارجاع فقط سوپرادمین
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
         can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
+        declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False) if program else False
+        can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
         
         # Product inventory/requirement data (shared with program create view)
         dashboard_context = _get_dashboard_context()
@@ -1941,7 +1970,8 @@ def production_program_crud_view(request, program_id=None):
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
             'max_bom_error': Decimal(str(program.max_bom_error)) if program and program.max_bom_error else Decimal('5'),
-            'can_deny': can_deny,
+            'declaration_referred_to_manager': declaration_referred_to_manager,
+            'can_resolve_referral': can_resolve_referral,
             'can_revert': can_revert,
             'can_archive': can_archive,
             'accessible_production_program_fields': accessible_production_program_fields,
@@ -1979,8 +2009,7 @@ def production_program_crud_view(request, program_id=None):
             warehouse_type='production'
         ).order_by('name')
         
-        # Check permissions for deny, revert, and archive actions
-        can_deny = user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value)
+        # Check permissions for revert and archive
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
         can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
         
@@ -2003,7 +2032,8 @@ def production_program_crud_view(request, program_id=None):
             'program_status': 'draft',
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
-            'can_deny': can_deny,
+            'declaration_referred_to_manager': False,
+            'can_resolve_referral': False,
             'can_revert': can_revert,
             'can_archive': can_archive,
             'accessible_production_program_fields': {},

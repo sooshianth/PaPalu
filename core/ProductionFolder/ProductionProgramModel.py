@@ -191,6 +191,23 @@ class ProductionProgram(models.Model):
         verbose_name='دلیل عدم تایید توسط انبار',
         help_text='دلیل رد کردن برنامه تولید توسط انباردار'
     )
+
+    # ارجاع از اعلام تولید به مدیر (فقط مدیر از صفحه ارجاعات حل می‌کند)
+    declaration_referred_to_manager = models.BooleanField(
+        default=False,
+        verbose_name='ارجاع اعلام تولید به مدیریت',
+        help_text='اگر True باشد برنامه فقط در صفحه ارجاعات مدیر دیده می‌شود تا مدیر رد یا برگرداند.'
+    )
+    declaration_referred_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان ارجاع اعلام تولید به مدیریت'
+    )
+    declaration_referral_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name='دلیل ارجاع اعلام تولید به مدیریت'
+    )
     
     max_bom_error = models.DecimalField(
         max_digits=5,

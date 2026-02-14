@@ -786,8 +786,8 @@
                                     <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                         مشاهده
                                     </a>
-                                    <button type="button" class="btn-outline-warning" onclick="showDenyModal({{ program.id }})" title="رد کردن">
-                                        رد
+                                    <button type="button" class="btn-outline-warning" onclick="showReferModal({{ program.id }})" title="ارجاع به مدیر">
+                                        ارجاع
                                     </button>
                                 </div>
                             </td>
@@ -1276,28 +1276,28 @@
 </div>
 
 <!-- Deny / Revert / Archive Modals -->
-{% if can_deny %}
-<!-- Deny Modal -->
-<div id="denyModal" class="modal-overlay" style="display: none;">
+{% if can_refer %}
+<!-- مودال ارجاع به مدیر -->
+<div id="referModal" class="modal-overlay" style="display: none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
-            <h3>رد برنامه تولید</h3>
-            <button type="button" class="modal-close" onclick="closeModal('denyModal')">&times;</button>
+            <h3>ارجاع به مدیر</h3>
+            <button type="button" class="modal-close" onclick="closeModal('referModal')">&times;</button>
         </div>
         <div class="modal-body">
-            <p style="margin-bottom: 16px; color: #dc3545;">
-                <i class="fas fa-exclamation-triangle"></i>
-                با رد این برنامه، دیگر قابل دسترسی نخواهد بود. لطفاً دلیل رد را وارد کنید.
+            <p style="margin-bottom: 16px; color: #856404;">
+                <i class="fas fa-share-alt"></i>
+                این برنامه به مدیر ارجاع داده می‌شود و فقط مدیر از صفحه ارجاعات می‌تواند آن را حل کند. لطفاً دلیل ارجاع را وارد کنید.
             </p>
             <div class="modal-form-field">
-                <label for="denyReason">دلیل رد: <span style="color: red;">*</span></label>
-                <textarea id="denyReason" class="form-control" rows="4" placeholder="دلیل رد برنامه را وارد کنید..." required></textarea>
+                <label for="referralReason">دلیل ارجاع: <span style="color: red;">*</span></label>
+                <textarea id="referralReason" class="form-control" rows="4" placeholder="دلیل ارجاع به مدیر را وارد کنید..." required></textarea>
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('denyModal')">انصراف</button>
-            <button type="button" class="btn btn-danger" onclick="confirmDeny()">
-                <i class="fas fa-ban"></i> رد برنامه
+            <button type="button" class="btn btn-secondary" onclick="closeModal('referModal')">انصراف</button>
+            <button type="button" class="btn btn-warning" onclick="confirmRefer()">
+                <i class="fas fa-share-alt"></i> ارجاع به مدیر
             </button>
         </div>
     </div>
@@ -1360,10 +1360,9 @@
 </div>
 {% endif %}
 
-<!-- Hidden form for rejecting programs -->
-<form id="rejectForm" method="post" style="display: none;">
+<!-- فرم ارجاع به مدیر -->
+<form id="referForm" method="post" style="display: none;">
     {% csrf_token %}
-    <input type="hidden" name="reject" value="true">
     <input type="hidden" name="origin" value="list">
 </form>
 
@@ -1386,7 +1385,7 @@
 {% block extra_js %}
 <script>
 // Permission variables for frontend
-const CAN_DENY = '{{ can_deny|yesno:"true,false" }}' === 'true';
+const CAN_REFER = '{{ can_refer|yesno:"true,false" }}' === 'true';
 const CAN_REVERT = '{{ can_revert|yesno:"true,false" }}' === 'true';
 const CAN_ARCHIVE = '{{ can_archive|yesno:"true,false" }}' === 'true';
 </script>
@@ -1683,13 +1682,13 @@ function closeModal(modalId) {
 }
 
 // Show deny modal for a specific program (list view)
-function showDenyModal(programId) {
-    if (!CAN_DENY) return;
-    const textarea = document.getElementById('denyReason');
+function showReferModal(programId) {
+    if (!CAN_REFER) return;
+    const textarea = document.getElementById('referralReason');
     if (textarea) textarea.value = '';
-    const modal = document.getElementById('denyModal');
+    const modal = document.getElementById('referModal');
     if (modal) modal.dataset.programId = programId;
-    showModal('denyModal');
+    showModal('referModal');
 }
 
 // Show revert modal
@@ -1711,20 +1710,19 @@ function showArchiveModal(programId) {
     if (modal) modal.dataset.programId = programId;
 }
 
-// Confirm deny - collect reason and submit via list form
-function confirmDeny() {
-    const reason = document.getElementById('denyReason').value.trim();
+// Confirm refer - submit referral to manager
+function confirmRefer() {
+    const reason = document.getElementById('referralReason').value.trim();
     if (!reason) {
-        alert('لطفاً دلیل رد برنامه را وارد کنید');
+        alert('لطفاً دلیل ارجاع به مدیر را وارد کنید');
         return;
     }
-    const modal = document.getElementById('denyModal');
+    const modal = document.getElementById('referModal');
     const programId = modal ? modal.dataset.programId : null;
     if (!programId) return;
 
-    const form = document.getElementById('rejectForm');
-    // remove existing action/reason inputs if any
-    ['action','deny_reason'].forEach(name => {
+    const form = document.getElementById('referForm');
+    ['action','referral_reason'].forEach(name => {
         const ex = form.querySelector(`input[name="${name}"]`);
         if (ex) ex.remove();
     });
@@ -1732,12 +1730,12 @@ function confirmDeny() {
     const actionInput = document.createElement('input');
     actionInput.type = 'hidden';
     actionInput.name = 'action';
-    actionInput.value = 'deny';
+    actionInput.value = 'refer_to_manager';
     form.appendChild(actionInput);
 
     const reasonInput = document.createElement('input');
     reasonInput.type = 'hidden';
-    reasonInput.name = 'deny_reason';
+    reasonInput.name = 'referral_reason';
     reasonInput.value = reason;
     form.appendChild(reasonInput);
 
