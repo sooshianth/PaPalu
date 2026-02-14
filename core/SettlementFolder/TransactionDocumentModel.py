@@ -256,17 +256,18 @@ class TransactionDocument(models.Model):
 
     def generate_accounting_document_number(self):
         """
-        تولید خودکار شماره سند حسابداری
-        فرمت: TRX-{settlement_id}-{timestamp}-{random}
+        تولید خودکار شماره سند حسابداری (فرمت کوتاه)
+        فرمت: TRX-{settlement_id}-{YYMMDD}{4hex}
+        مثال: TRX-12-250214A1B2
         """
         import uuid
         from datetime import datetime
         
         if not self.accounting_document_number:
-            settlement_id = self.settlement.id if self.settlement else '000'
-            timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            unique_id = str(uuid.uuid4())[:8].upper()
-            self.accounting_document_number = f"TRX-{settlement_id}-{timestamp}-{unique_id}"
+            settlement_id = self.settlement.id if self.settlement else '0'
+            date_part = datetime.now().strftime('%y%m%d')  # YYMMDD
+            rand_part = str(uuid.uuid4().hex)[:4].upper()
+            self.accounting_document_number = f"TRX-{settlement_id}-{date_part}{rand_part}"
         
         return self.accounting_document_number
 

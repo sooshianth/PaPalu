@@ -124,11 +124,12 @@ def shipping_announcement_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
     # دریافت تخصیص‌های در انتظار اعلام بار
+    # مرتب‌سازی: اول بر اساس سفارش، سپس بر اساس اولویت (اولویت ۱ بالاتر از ۲)
     allocations = Allocation.objects.filter(
         allocation_status='pending_shipping'
     ).select_related('order', 'order__customer').prefetch_related(
         'product_infos__product'
-    ).order_by('-allocation_priority', '-created_at')
+    ).order_by('order_id', 'allocation_priority', '-created_at')
     
     # آماده‌سازی اطلاعات تخصیص‌ها
     allocations_with_info = []
