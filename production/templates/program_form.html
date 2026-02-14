@@ -1395,6 +1395,37 @@ if (productFlowStatusData) {
 		form.reset();
 	}
 
+	/** در صفحه ایجاد، بعد از ذخیره موفق فرم را خالی و آماده ثبت بعدی می‌کند */
+	function resetPaneForNewEntry(pane){
+		const form = pane.querySelector('form');
+		if (!form) return;
+		// حذف چیپ وضعیت (تأیید شد / پیش‌نویس)
+		const chip = pane.querySelector('.status-chip');
+		if (chip) chip.remove();
+		// فعال کردن دوباره فیلدها
+		pane.querySelectorAll('input, select, textarea, button').forEach(el => { el.disabled = false; });
+		// مخفی کردن بخش BOM
+		const bomSection = pane.querySelector('.bom-details-section');
+		if (bomSection) bomSection.style.display = 'none';
+		// خالی کردن فرم
+		form.reset();
+		// به‌روزرسانی نمایش فارسی تناژ و فیلدهای وابسته
+		const plannedWeightInput = pane.querySelector('[name="planned_weight_ton"]');
+		if (plannedWeightInput) plannedWeightInput.dispatchEvent(new Event('input'));
+		const invDisplay = pane.querySelector('[name="inventory_snapshot"]')?.nextElementSibling;
+		const netDisplay = pane.querySelector('[name="net_unplanned_requirement"]')?.nextElementSibling;
+		if (invDisplay) invDisplay.textContent = '';
+		if (netDisplay) netDisplay.textContent = '';
+		// خالی کردن انتخاب محصول/فرمول تا لیست دوباره بار شود
+		const productSelect = pane.querySelector('[name="product"]');
+		const productionInfoSelect = pane.querySelector('[name="production_info"]');
+		if (productionInfoSelect) {
+			productionInfoSelect.innerHTML = '<option value="">---------</option>';
+			productionInfoSelect.disabled = true;
+		}
+		if (productSelect) productSelect.value = '';
+	}
+
 
 	async function sendForm(pane, action){
 		const form = pane.querySelector('form');
@@ -1450,11 +1481,13 @@ if (productFlowStatusData) {
 				if (payload.status === 'confirmed') { markPaneConfirmed(pane, payload); }
 				else if (payload.status === 'draft') { markPaneDraft(pane, payload); }
 				alert('ذخیره شد.');
+				if (!IS_EDIT_MODE) resetPaneForNewEntry(pane);
 			} else if (resp.ok) {
 				// Fallback: mark by requested action
 				if (action === 'confirm') { markPaneConfirmed(pane, {}); }
 				else if (action === 'draft') { markPaneDraft(pane, {}); }
 				alert('ذخیره شد.');
+				if (!IS_EDIT_MODE) resetPaneForNewEntry(pane);
 			} else if (ct.includes('application/json')) {
 				const payload = await resp.json();
 				showErrors(pane, payload.errors || {});
