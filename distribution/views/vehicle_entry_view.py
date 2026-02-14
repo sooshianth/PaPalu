@@ -418,6 +418,7 @@ def register_vehicle_entry_view(request, waybill_number):
         plate_part1 = None
         plate_part2 = None
         plate_part3 = None
+        plate_part4 = None
         vehicle_type = None
         loading_type = None
         

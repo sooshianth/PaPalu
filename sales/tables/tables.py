@@ -290,6 +290,7 @@ class OrderTable(tables.Table):
         if user.is_superuser:
             return {
                 'order_number': True,
+                'customer': True,
                 'status': True,
                 'total_purchase_cost': True,
                 'total_order_weight': True,
@@ -298,8 +299,10 @@ class OrderTable(tables.Table):
             }
         
         # فیلدهایی که در لیست نمایش داده می‌شوند
+        from core.PersonFolder.PersonModel import Person as PersonModel
         field_mapping = {
             'order_number': None,  # همیشه نمایش داده می‌شود
+            'customer': (PersonModel, 'name'),  # نام مشتری از مدل Person
             'status': (OrderModel, 'status'),
             'total_purchase_cost': (OrderItemModel, 'total_purchase_cost'),
             'total_order_weight': None,  # محاسبه شده، همیشه نمایش داده می‌شود
@@ -326,6 +329,17 @@ class OrderTable(tables.Table):
     order_number = tables.Column(
         verbose_name='شماره سفارش',
         orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    customer = tables.Column(
+        verbose_name='مشتری',
+        accessor='customer.name',
+        orderable=True,
+        order_by='customer__name',
         attrs={
             'td': {'class': 'text-right'},
             'th': {'class': 'text-right'}
@@ -384,16 +398,22 @@ class OrderTable(tables.Table):
     class Meta:
         model = Order
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
+        fields = ('order_number', 'customer', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('order_number', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
+        sequence = ('order_number', 'customer', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
     
     def render_order_number(self, value, record):
         """نمایش شماره سفارش به صورت عدد bold و واضح"""
         return format_html('<span style="font-weight: 700; color: #000; font-size: 1rem;">{}</span>', value)
+    
+    def render_customer(self, value, record):
+        """نمایش نام مشتری"""
+        if value:
+            return value
+        return '-'
     
     def render_status(self, value, record):
         """نمایش وضعیت به صورت badge"""
