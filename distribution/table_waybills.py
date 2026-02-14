@@ -6,6 +6,7 @@ from core.PersonFolder.PersonModel import Person
 from core.TransportFolder.TruckInfoModel import TruckInfo
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
+from distribution.plate_display import render_iran_plate_html
 
 
 def convert_to_persian_numbers(text):
@@ -303,10 +304,9 @@ class WaybillTable(tables.Table):
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_plate_number(self, value, record):
-        """نمایش پلاک خودرو"""
+        """نمایش پلاک خودرو به سبک پلاک ایران"""
         if value and value != 'نامشخص':
-            persian_plate = convert_to_persian_numbers(value)
-            return format_html('<span class="code-badge">{}</span>', persian_plate)
+            return render_iran_plate_html(value)
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_driver_national_id(self, value, record):
@@ -443,10 +443,9 @@ class ExitTable(tables.Table):
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_plate_number(self, value, record):
-        """نمایش پلاک خودرو"""
+        """نمایش پلاک خودرو به سبک پلاک ایران"""
         if value and value != 'نامشخص':
-            persian_plate = convert_to_persian_numbers(value)
-            return format_html('<span class="code-badge">{}</span>', persian_plate)
+            return render_iran_plate_html(value)
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_product_name(self, value, record):

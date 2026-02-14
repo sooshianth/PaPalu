@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django.utils.html import format_html, mark_safe
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from distribution.plate_display import render_iran_plate_html
 
 
 def convert_to_persian_numbers(text):
@@ -119,10 +120,9 @@ class ExitTable(tables.Table):
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_plate_number(self, value, record):
-        """نمایش پلاک خودرو"""
+        """نمایش پلاک خودرو به سبک پلاک ایران"""
         if value and value != 'نامشخص':
-            persian_plate = convert_to_persian_numbers(value)
-            return format_html('<span class="code-badge">{}</span>', persian_plate)
+            return render_iran_plate_html(value)
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_product_name(self, value, record):

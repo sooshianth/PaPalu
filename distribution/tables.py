@@ -17,6 +17,12 @@ def convert_to_persian_numbers(text):
     return str(text).translate(translation_table)
 
 
+def render_iran_plate(plate_number):
+    """نمایش پلاک به سبک پلاک ایران (فراخوانی ماژول plate_display)."""
+    from distribution.plate_display import render_iran_plate_html
+    return render_iran_plate_html(plate_number)
+
+
 class VehicleRecruitmentTable(tables.Table):
     """جدول لیست تخصیص‌های در انتظار جذب خودرو با استفاده از django-tables2"""
     
@@ -524,15 +530,9 @@ class VehicleEntryTable(tables.Table):
         return '-'
     
     def render_plate_number(self, value, record):
-        """نمایش پلاک خودرو"""
+        """نمایش پلاک خودرو به سبک پلاک ایران"""
         plate_number = getattr(record, 'plate_number', None)
-        if plate_number:
-            # فرمت پلاک: 11|345ح12 -> نمایش: 11|345ح12
-            # اگر به صورت | جدا شده باشد، همان را نمایش بده
-            if '|' in plate_number:
-                return format_html('<span class="code-badge">{}</span>', plate_number)
-            return format_html('<span class="code-badge">{}</span>', plate_number)
-        return format_html('<span style="color: var(--gray-400);">-</span>')
+        return render_iran_plate(plate_number)
     
     def render_driver_name(self, value, record):
         """نمایش نام راننده"""
@@ -778,13 +778,8 @@ class LoadingExitTable(tables.Table):
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_plate_number(self, value, record):
-        """نمایش پلاک خودرو"""
-        if value:
-            # تبدیل اعداد انگلیسی به فارسی
-            persian_plate = convert_to_persian_numbers(value)
-            # فرمت پلاک: 11|345ح12 -> نمایش: ۱۱|۳۴۵ح۱۲
-            return format_html('<span class="code-badge">{}</span>', persian_plate)
-        return format_html('<span style="color: var(--gray-400);">-</span>')
+        """نمایش پلاک خودرو به سبک پلاک ایران"""
+        return render_iran_plate(value)
     
     def render_vehicle_type(self, value, record):
         """نمایش نوع ماشین"""
