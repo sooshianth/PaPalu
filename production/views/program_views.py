@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Q
 from django.db import OperationalError
 from django.http import JsonResponse
@@ -455,8 +456,13 @@ def _prepare_bom_data(request):
         }
 
 
+@login_required
 def create_program_view(request):
     """ایجاد / پیش نویس / تایید برنامه تولید"""
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
+        audit_logger.activity("تلاش برای ایجاد برنامه تولید بدون دسترسی")
+        messages.error(request, 'شما دسترسی به ثبت برنامه تولید جدید ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     audit_logger.info("دسترسی به ایجاد برنامه تولید")
     try:
         if request.method == 'POST':
@@ -539,7 +545,12 @@ def create_program_view(request):
         return render(request, 'program_form.html', context)
 
 
+@login_required
 def edit_program_view(request, program_id):
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
+        audit_logger.activity("تلاش برای ویرایش برنامه تولید بدون دسترسی")
+        messages.error(request, 'شما دسترسی به ویرایش برنامه تولید ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     audit_logger.info("دسترسی به ویرایش برنامه تولید")
     program = get_object_or_404(ProductionProgram, id=program_id)
     try:
@@ -637,6 +648,7 @@ def edit_program_view(request, program_id):
         return render(request, 'program_form.html', context)
 
 
+@login_required
 def program_list_view(request):
     if not user_has_task(request.user, TaskChoices.PRODUCTION_PROGRAM_LIST.value):
         audit_logger.activity("تلاش برای مشاهده لیست برنامه‌های تولید بدون دسترسی")
@@ -664,7 +676,12 @@ def program_list_view(request):
         return render(request, 'program_list.html', {'table': None, 'search_query': ''})
 
 
+@login_required
 def program_drafts_view(request):
     """Redirect to main program list - drafts are shown there with status"""
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_PROGRAM_LIST.value):
+        audit_logger.activity("تلاش برای مشاهده پیش‌نویس‌های برنامه تولید بدون دسترسی")
+        messages.error(request, 'شما دسترسی به مشاهده لیست برنامه‌های تولید ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     audit_logger.info("ریدایرکت از صفحه پیش‌نویس به لیست اصلی")
     return redirect(reverse('production:program_list'))
