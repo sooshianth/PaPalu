@@ -81,15 +81,20 @@
     .form-section.collapsed .form-section-content {
         max-height: 0;
         padding: 0 25px;
+        overflow: hidden !important;
+        visibility: hidden;
     }
     
-    /* بخش‌هایی که فیلد تاریخ دارند: تقویم از پشت کارت پایینی نیفته (overflow + z-index) */
-    .form-section.form-section-with-date {
+    /* بخش‌هایی که فیلد تاریخ دارند: تقویم از پشت کارت پایینی نیفته (فقط وقتی باز است) */
+    .form-section.form-section-with-date:not(.collapsed) {
         z-index: 100;
         overflow: visible;
     }
-    .form-section.form-section-with-date .form-section-content {
+    .form-section.form-section-with-date:not(.collapsed) .form-section-content {
         overflow: visible;
+    }
+    .form-section.collapsed.form-section-with-date {
+        overflow: hidden;
     }
     
     .form-label {
@@ -231,40 +236,52 @@
         background-color: #f8f9fa;
     }
     
-    /* استایل برای چک‌باکس‌های حیطه فعالیت */
+    /* استایل جمع‌وجور برای چک‌باکس‌های حیطه فعالیت */
+    .activity-fields-container {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 12px;
+        background: white;
+        max-height: 200px;
+        overflow-y: auto;
+    }
     .activity-fields-container ul {
         list-style: none;
         padding: 0;
         margin: 0;
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 4px 12px;
     }
-    
     .activity-fields-container li {
         margin: 0;
-        padding: 8px 12px;
-        border-radius: 6px;
+        padding: 4px 8px;
+        border-radius: 4px;
         transition: background-color 0.2s;
     }
-    
     .activity-fields-container li:hover {
-        background-color: #f8f9fa;
+        background-color: #f0f4f0;
     }
-    
     .activity-fields-container label {
         display: flex;
         align-items: center;
         cursor: pointer;
         margin: 0;
         font-weight: normal;
+        font-size: 0.9rem;
     }
-    
     .activity-fields-container input[type="checkbox"] {
-        margin-left: 8px;
-        width: 18px;
-        height: 18px;
+        margin-left: 6px;
+        width: 16px;
+        height: 16px;
         cursor: pointer;
+        flex-shrink: 0;
+    }
+    .birth-date-hint {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.8rem;
+        color: #6c757d;
     }
 </style>
 <!-- تقویم شمسی (همان کامپوننت تامین) -->
@@ -440,7 +457,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setupPersianToEnglishConverter(input);
         });
         document.querySelectorAll('input[name*="shaba_number"]').forEach(input => {
-            setupPersianToEnglishConverter(input, true); // allowNonNumeric = true برای IR
+            setupPersianToEnglishConverter(input); // فقط ۲۴ رقم، IR هنگام ذخیره اضافه می‌شود
         });
     }
     
@@ -845,7 +862,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             
                             <!-- بخش اطلاعات پایه (شامل فیلد تاریخ - تقویم overflow ندارد) -->
-                            <div class="form-section form-section-with-date">
+                            <div class="form-section form-section-with-date collapsed">
                                 <div class="form-section-header">
                                     <h5>اطلاعات پایه </h5>
                                     <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -878,6 +895,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <div class="col-md-6 mb-3">
                                         <label class="form-label">{{ form.birth_date.label }}</label>
                                         {{ form.birth_date }}
+                                        {% if form.birth_date.help_text %}
+                                            <small class="form-text text-muted birth-date-hint">{{ form.birth_date.help_text }}</small>
+                                        {% endif %}
                                         {% if form.birth_date.errors %}
                                             <div class="text-danger">{{ form.birth_date.errors.0 }}</div>
                                         {% endif %}
@@ -897,7 +917,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     {% if accessible_fields.activity_fields %}
                                     <div class="col-12 mb-3">
                                         <label class="form-label">{{ form.activity_fields.label }}</label>
-                                        <div class="activity-fields-container" style="border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; background: white;">
+                                        <div class="activity-fields-container">
                                             {{ form.activity_fields }}
                                         </div>
                                         {% if form.activity_fields.errors %}
@@ -923,7 +943,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             
                             <!-- بخش اطلاعات مالیاتی -->
-                            <div class="form-section">
+                            <div class="form-section collapsed">
                                 <div class="form-section-header">
                                     <h5>اطلاعات مالیاتی </h5>
                                     <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1052,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             
                             <!-- بخش آدرس تحویل -->
-                            <div class="form-section">
+                            <div class="form-section collapsed">
                                 <div class="form-section-header">
                                     <h5>آدرس تحویل </h5>
                                     <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1198,7 +1218,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             
                             <!-- بخش نماینده -->
-                            <div class="form-section">
+                            <div class="form-section collapsed">
                                 <div class="form-section-header">
                                     <h5>اطلاعات نماینده </h5>
                                     <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

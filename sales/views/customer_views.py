@@ -1249,10 +1249,13 @@ def edit_customer_view(request, national_id):
         
         bank_initial = []
         for bank in bank_accounts:
+            shaba_display = bank.shaba_number or ''
+            if shaba_display.upper().startswith('IR') and len(shaba_display) > 2:
+                shaba_display = shaba_display[2:]
             bank_initial.append({
                 'id': bank.id,
                 'account_number': bank.account_number,
-                'shaba_number': bank.shaba_number,
+                'shaba_number': shaba_display,
                 'bank_name': bank.bank_name,
             })
         

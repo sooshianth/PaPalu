@@ -243,16 +243,26 @@ class BankAccountForm(forms.Form):
     id = forms.IntegerField(required=False, widget=forms.HiddenInput())
     
     account_number = forms.CharField(
-        max_length=100,
+        max_length=16,
         required=False,
         label='شماره حساب بانکی',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'dir': 'ltr',
+            'maxlength': '16',
+            'placeholder': 'حداکثر ۱۶ رقم'
+        })
     )
     shaba_number = forms.CharField(
-        max_length=26,
+        max_length=24,
         required=False,
         label='شماره شبا',
-        widget=forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'dir': 'ltr',
+            'maxlength': '24',
+            'placeholder': '۲۴ رقم (بدون IR)'
+        })
     )
     bank_name = forms.CharField(
         max_length=50,
@@ -262,35 +272,32 @@ class BankAccountForm(forms.Form):
     )
     
     def clean_account_number(self):
-        """اعتبارسنجی شماره حساب بانکی - بدون محدودیت"""
+        """اعتبارسنجی شماره حساب بانکی - حداکثر ۱۶ رقم"""
         account_number = self.cleaned_data.get('account_number')
-        return clean_empty_to_none(account_number)
-    
+        if not account_number:
+            return None
+        account_number = account_number.replace(' ', '').strip()
+        if not account_number:
+            return None
+        if not account_number.isdigit():
+            raise forms.ValidationError('شماره حساب بانکی باید فقط شامل اعداد باشد.')
+        if len(account_number) > 16:
+            raise forms.ValidationError('شماره حساب بانکی حداکثر ۱۶ رقم است.')
+        return account_number
+
     def clean_shaba_number(self):
-        """اعتبارسنجی شماره شبا"""
+        """اعتبارسنجی شماره شبا: کاربر فقط ۲۴ رقم وارد می‌کند، IR هنگام ذخیره اضافه می‌شود."""
         shaba_number = self.cleaned_data.get('shaba_number')
-        
-        if shaba_number:
-            # حذف فاصله‌ها و کاراکترهای خاص
-            shaba_clean = shaba_number.replace(' ', '').replace('-', '').replace('IR', '').replace('ir', '')
-            
-            # باید با IR شروع شود و سپس 24 رقم داشته باشد
-            if shaba_number.upper().startswith('IR'):
-                # اگر با IR شروع شده، باید 26 کاراکتر کل داشته باشد (IR + 24 رقم)
-                if len(shaba_clean) != 24:
-                    raise forms.ValidationError('شماره شبا باید 24 رقم باشد (بعد از IR).')
-                if not shaba_clean.isdigit():
-                    raise forms.ValidationError('شماره شبا باید فقط شامل اعداد باشد (بعد از IR).')
-            else:
-                # اگر با IR شروع نشده، باید 24 رقم باشد
-                if len(shaba_clean) != 24:
-                    raise forms.ValidationError('شماره شبا باید 24 رقم باشد یا با IR شروع شود.')
-                if not shaba_clean.isdigit():
-                    raise forms.ValidationError('شماره شبا باید فقط شامل اعداد باشد.')
-                # اضافه کردن IR به ابتدا
-                shaba_number = 'IR' + shaba_clean
-        
-        return shaba_number
+        if not shaba_number or not shaba_number.strip():
+            return None
+        # حذف فاصله، خط تیره و پیشوند IR (در صورت وارد کردن توسط کاربر)
+        shaba_clean = shaba_number.replace(' ', '').replace('-', '').strip().upper()
+        if shaba_clean.startswith('IR'):
+            shaba_clean = shaba_clean[2:]
+        shaba_digits = ''.join(c for c in shaba_clean if c.isdigit())
+        if len(shaba_digits) != 24:
+            raise forms.ValidationError('شماره شبا باید دقیقاً ۲۴ رقم باشد (بدون IR).')
+        return 'IR' + shaba_digits
 
 
 def build_bank_account_formset(data=None, files=None, accessible_fields: Optional[Dict[str, bool]] = None, initial=None, instance=None, prefix='bank'):
@@ -394,6 +401,7 @@ class CreateCustomerForm(forms.Form):
     birth_date = jDateField(
         required=False,
         label='تاریخ تولد شخص',
+        help_text='فرمت: روز-ماه-سال مثال (21-04-1361)',
         widget=jDateInput(attrs={
             'class': 'form-control jalali-date',
             'placeholder': 'انتخاب تاریخ',
