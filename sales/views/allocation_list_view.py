@@ -70,6 +70,7 @@ def get_delivery_address_info(postal_code):
             'mobile_phone': mobile_phone.number if mobile_phone else '-',
             'delivery_limit': delivery_address.delivery_limit or '-',
             'recipient_type': delivery_address.get_recipient_type_display() if delivery_address.recipient_type else '-',
+            'recipient_type_raw': delivery_address.recipient_type or '',
         }
     except DeliveryAddress.DoesNotExist:
         bug_logger.debug(f"آدرس تحویل برای کد پستی {postal_code} یافت نشد")
@@ -857,10 +858,29 @@ def get_delivery_info_rendered_api(request, order_number, postal_code):
     </div>
     """
     
+    # داده‌های ویرایش برای پاپ‌اپ ویرایش آدرس (مقادیر خالی به جای -)
+    def to_edit_value(val):
+        return '' if val == '-' else (val or '')
+
+    edit_data = {
+        'postal_code': postal_code,
+        'recipient_name': to_edit_value(delivery_info.get('recipient_name')),
+        'recipient_national_id': to_edit_value(delivery_info.get('recipient_national_id')),
+        'unique_delivery_id': to_edit_value(delivery_info.get('unique_delivery_id')),
+        'province': to_edit_value(delivery_info.get('province')),
+        'city': to_edit_value(delivery_info.get('city')),
+        'address': to_edit_value(delivery_info.get('address')),
+        'landline_phone': to_edit_value(delivery_info.get('landline_phone')),
+        'mobile_phone': to_edit_value(delivery_info.get('mobile_phone')),
+        'delivery_limit': to_edit_value(delivery_info.get('delivery_limit')),
+        'recipient_type': delivery_info.get('recipient_type_raw', ''),
+    }
+
     bug_logger.debug(f"اطلاعات آدرس تحویل برای کد پستی {postal_code} به صورت HTML رندر شد")
     return JsonResponse({
         'success': True,
-        'html': html_content.strip()
+        'html': html_content.strip(),
+        'edit_data': edit_data
     })
 
 
@@ -1015,6 +1035,9 @@ def create_delivery_address_api(request, order_number):
         return JsonResponse({'error': 'شهر الزامی است'}, status=400)
     if not address:
         return JsonResponse({'error': 'آدرس پستی الزامی است'}, status=400)
+    unique_delivery_id = form.cleaned_data.get('unique_delivery_id', '').strip()
+    if not unique_delivery_id:
+        return JsonResponse({'error': 'شناسه یکتا تحویل الزامی است'}, status=400)
     
     # اعتبارسنجی کد پستی: باید دقیقاً 10 رقم باشد
     if not postal_code.isdigit() or len(postal_code) != 10:
@@ -1051,7 +1074,7 @@ def create_delivery_address_api(request, order_number):
                 postal_code=postal_code,
                 recipient_name=recipient_name,
                 recipient_national_id=recipient_national_id or None,
-                unique_delivery_id=form.cleaned_data.get('unique_delivery_id', '').strip() or None,
+                unique_delivery_id=unique_delivery_id,
                 province=province,
                 city=city,
                 address=address,
@@ -1092,6 +1115,144 @@ def create_delivery_address_api(request, order_number):
     except Exception as e:
         bug_logger.error(f"خطا در ایجاد آدرس تحویل برای سفارش {order_number}: {str(e)}", exc_info=True)
         return JsonResponse({'error': f'خطا در ایجاد آدرس تحویل: {str(e)}'}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_delivery_address_api(request, order_number, postal_code):
+    """
+    API endpoint برای ویرایش آدرس تحویل مشتری
+    """
+    audit_logger.info(f"درخواست ویرایش آدرس تحویل برای سفارش {order_number} - کد پستی: {postal_code}")
+
+    # بررسی دسترسی TaskPermission
+    if not user_has_task(request.user, TaskChoices.SALES_ALLOCATION.value):
+        audit_logger.activity(f"تلاش برای دسترسی به API ویرایش آدرس تحویل بدون دسترسی - سفارش: {order_number}")
+        return JsonResponse({'error': 'شما دسترسی به این بخش ندارید'}, status=403)
+
+    # دریافت سفارش
+    try:
+        order = Order.objects.get(order_number=order_number)
+    except Order.DoesNotExist:
+        audit_logger.warning(f"سفارش {order_number} برای ویرایش آدرس تحویل یافت نشد")
+        return JsonResponse({'error': 'سفارش یافت نشد'}, status=404)
+
+    # بررسی دسترسی به سفارش
+    if not request.user.is_superuser and order.registered_by != request.user:
+        audit_logger.activity(f"تلاش برای ویرایش آدرس تحویل سفارش {order_number} متعلق به کاربر دیگر")
+        return JsonResponse({'error': 'دسترسی غیرمجاز'}, status=403)
+
+    # بررسی وجود مشتری
+    if not order.customer:
+        return JsonResponse({'error': 'سفارش مشتری ندارد'}, status=400)
+
+    # دریافت آدرس تحویل - باید متعلق به مشتری سفارش باشد
+    try:
+        delivery_address = DeliveryAddress.objects.get(postal_code=postal_code, person=order.customer)
+    except DeliveryAddress.DoesNotExist:
+        audit_logger.warning(f"آدرس تحویل با کد پستی {postal_code} برای مشتری سفارش یافت نشد")
+        return JsonResponse({'error': 'آدرس تحویل یافت نشد یا متعلق به مشتری این سفارش نیست'}, status=404)
+
+    # دریافت داده‌های JSON
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'داده‌های نامعتبر'}, status=400)
+
+    form_data = {
+        'postal_code': postal_code,
+        'recipient_name': data.get('recipient_name', '').strip(),
+        'recipient_national_id': data.get('recipient_national_id', '').strip(),
+        'unique_delivery_id': data.get('unique_delivery_id', '').strip(),
+        'province': data.get('province', '').strip(),
+        'city': data.get('city', '').strip(),
+        'address': data.get('address', '').strip(),
+        'delivery_limit': data.get('delivery_limit', '').strip(),
+        'recipient_type': data.get('recipient_type', '').strip(),
+        'delivery_landline': data.get('landline_phone', '').strip(),
+        'delivery_mobile': data.get('mobile_phone', '').strip(),
+    }
+
+    form = DeliveryAddressForm(form_data)
+    if not form.is_valid():
+        errors = {f: (e[0] if e else 'مقدار نامعتبر') for f, e in form.errors.items()}
+        return JsonResponse({'error': 'داده‌های نامعتبر', 'errors': errors}, status=400)
+
+    recipient_name = form.cleaned_data.get('recipient_name', '').strip()
+    province = form.cleaned_data.get('province', '').strip()
+    city = form.cleaned_data.get('city', '').strip()
+    address = form.cleaned_data.get('address', '').strip()
+    delivery_mobile = form.cleaned_data.get('delivery_mobile', '').strip()
+    delivery_landline = form.cleaned_data.get('delivery_landline', '').strip()
+
+    if not recipient_name:
+        return JsonResponse({'error': 'نام تحویل گیرنده الزامی است'}, status=400)
+    if not province:
+        return JsonResponse({'error': 'استان الزامی است'}, status=400)
+    if not city:
+        return JsonResponse({'error': 'شهر الزامی است'}, status=400)
+    if not address:
+        return JsonResponse({'error': 'آدرس پستی الزامی است'}, status=400)
+    unique_delivery_id_val = form.cleaned_data.get('unique_delivery_id', '').strip()
+    if not unique_delivery_id_val:
+        return JsonResponse({'error': 'شناسه یکتا تحویل الزامی است'}, status=400)
+
+    if delivery_mobile and (not delivery_mobile.isdigit() or len(delivery_mobile) != 11 or not delivery_mobile.startswith('09')):
+        return JsonResponse({'error': 'شماره همراه باید با 09 شروع شود و 11 رقم باشد'}, status=400)
+    if delivery_landline and (not delivery_landline.isdigit() or len(delivery_landline) != 11 or not delivery_landline.startswith('0')):
+        return JsonResponse({'error': 'شماره ثابت باید با 0 شروع شود و 11 رقم باشد'}, status=400)
+
+    try:
+        with transaction.atomic():
+            delivery_address.recipient_name = recipient_name
+            delivery_address.recipient_national_id = form.cleaned_data.get('recipient_national_id', '').strip() or None
+            delivery_address.unique_delivery_id = unique_delivery_id_val
+            delivery_address.province = province
+            delivery_address.city = city
+            delivery_address.address = address
+            delivery_address.delivery_limit = form.cleaned_data.get('delivery_limit', '').strip() or None
+            delivery_address.recipient_type = form.cleaned_data.get('recipient_type', '').strip() or None
+            delivery_address.save()
+
+            delivery_content_type = ContentType.objects.get_for_model(DeliveryAddress)
+            postal_code_int = int(postal_code) if postal_code.isdigit() else None
+
+            # به‌روزرسانی/ایجاد شماره تلفن‌ها
+            if postal_code_int:
+                PhoneNumber.objects.filter(
+                    content_type=delivery_content_type,
+                    object_id=postal_code_int
+                ).delete()
+
+                if delivery_mobile:
+                    PhoneNumber.objects.create(
+                        content_type=delivery_content_type,
+                        object_id=postal_code_int,
+                        phone_type='mobile',
+                        number=delivery_mobile,
+                        is_primary=True
+                    )
+                if delivery_landline:
+                    PhoneNumber.objects.create(
+                        content_type=delivery_content_type,
+                        object_id=postal_code_int,
+                        phone_type='landline',
+                        number=delivery_landline,
+                        is_primary=False
+                    )
+
+            bug_logger.info(f"آدرس تحویل با کد پستی {postal_code} برای مشتری {order.customer.name} ویرایش شد")
+            audit_logger.activity(f"آدرس تحویل با کد پستی {postal_code} برای سفارش {order_number} ویرایش شد")
+
+            return JsonResponse({
+                'success': True,
+                'postal_code': delivery_address.postal_code,
+                'message': 'آدرس تحویل با موفقیت ذخیره شد'
+            })
+
+    except Exception as e:
+        bug_logger.error(f"خطا در ویرایش آدرس تحویل: {str(e)}", exc_info=True)
+        return JsonResponse({'error': f'خطا در ذخیره آدرس: {str(e)}'}, status=500)
 
 
 @login_required

@@ -206,12 +206,17 @@
         display: flex;
     }
 
+    /* ناحیه امن کلیک: کلیک در این حاشیه پاپ‌آپ را نبندد */
+    .popup-click-safe {
+        padding: 60px;
+    }
+
     .popup-content {
         background: white;
         border-radius: 12px;
         padding: 30px;
-        max-width: 600px;
-        width: 90%;
+        max-width: 800px;
+        width: 95%;
         max-height: 90vh;
         overflow-y: auto;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -489,8 +494,12 @@
             <div class="info-box" id="delivery-info-box">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <h6 style="margin: 0;">اطلاعات آدرس تحویل</h6>
-                    <button type="button" class="btn btn-sm btn-secondary" id="hide-delivery-info-btn"
-                        title="مخفی کردن اطلاعات">بستن</button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-sm btn-warning" id="edit-delivery-address-btn"
+                            title="ویرایش آدرس تحویل">ویرایش</button>
+                        <button type="button" class="btn btn-sm btn-secondary" id="hide-delivery-info-btn"
+                            title="مخفی کردن اطلاعات">بستن</button>
+                    </div>
                 </div>
                 <div id="delivery-info-content"></div>
             </div>
@@ -554,6 +563,7 @@
 
     <!-- Popup برای ایجاد آدرس جدید (خارج از فرم اصلی) -->
     <div id="create-address-popup" class="popup-overlay">
+        <div class="popup-click-safe">
         <div class="popup-content">
             <div class="popup-header">
                 <h5>ایجاد آدرس تحویل جدید</h5>
@@ -588,8 +598,8 @@
                             pattern="[0-9]{10}" title="کد ملی باید دقیقاً 10 رقم باشد">
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">شناسه یکتا تحویل</label>
-                        <input type="text" name="unique_delivery_id" class="form-control" dir="ltr" maxlength="50">
+                        <label class="form-label required-field">شناسه یکتا تحویل</label>
+                        <input type="text" name="unique_delivery_id" class="form-control" dir="ltr" maxlength="50" required>
                     </div>
                 </div>
 
@@ -652,6 +662,101 @@
                 </div>
             </form>
         </div>
+        </div>
+    </div>
+
+    <!-- Popup ویرایش آدرس تحویل -->
+    <div id="edit-address-popup" class="popup-overlay">
+        <div class="popup-click-safe">
+        <div class="popup-content">
+            <div class="popup-header">
+                <h5>ویرایش آدرس تحویل</h5>
+                <button type="button" class="popup-close" id="close-edit-address-popup-btn">&times;</button>
+            </div>
+            <form id="edit-address-form">
+                <input type="hidden" name="postal_code" id="edit-popup-postal-code">
+                <div class="mb-3">
+                    <label class="form-label">مشتری:</label>
+                    <input type="text" class="form-control" value="{{ order.customer.name|default:'' }}" readonly
+                        style="background-color: #f5f5f5;">
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">کد پستی</label>
+                        <input type="text" name="postal_code_display" id="edit-popup-postal-code-display" class="form-control"
+                            dir="ltr" readonly style="background-color: #f5f5f5;">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">نام تحویل گیرنده</label>
+                        <input type="text" name="recipient_name" id="edit-recipient-name" class="form-control" required maxlength="100"
+                            minlength="2" title="نام تحویل گیرنده باید حداقل 2 کاراکتر باشد">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">کد ملی تحویل گیرنده</label>
+                        <input type="text" name="recipient_national_id" id="edit-recipient-national-id" class="form-control" dir="ltr" maxlength="10"
+                            pattern="[0-9]{10}" title="کد ملی باید دقیقاً 10 رقم باشد">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">شناسه یکتا تحویل</label>
+                        <input type="text" name="unique_delivery_id" id="edit-unique-delivery-id" class="form-control" dir="ltr" maxlength="50" required>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">نوع تحویل گیرنده</label>
+                        <select name="recipient_type" id="edit-recipient-type" class="form-control">
+                            <option value="">انتخاب کنید</option>
+                            <option value="person">شخص</option>
+                            <option value="company">شرکت</option>
+                            <option value="warehouse">انبار</option>
+                            <option value="other">سایر</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">استان</label>
+                        <input type="text" name="province" id="edit-province" class="form-control" required maxlength="50">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">شهر</label>
+                        <input type="text" name="city" id="edit-city" class="form-control" required maxlength="50">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label required-field">آدرس پستی</label>
+                        <textarea name="address" id="edit-address" class="form-control" rows="2" required></textarea>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">شماره ثابت هماهنگی تحویل</label>
+                        <input type="text" name="landline_phone" id="edit-landline-phone" class="form-control" dir="ltr"
+                            placeholder="02112345678" maxlength="11" pattern="0[0-9]{10}"
+                            title="شماره ثابت باید با 0 شروع شود و 11 رقم باشد">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">شماره همراه هماهنگی تحویل</label>
+                        <input type="text" name="mobile_phone" id="edit-mobile-phone" class="form-control" dir="ltr" placeholder="09123456789"
+                            maxlength="11" pattern="09[0-9]{9}" title="شماره همراه باید با 09 شروع شود و 11 رقم باشد">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">محدودیت تحویل</label>
+                        <input type="text" name="delivery_limit" id="edit-delivery-limit" class="form-control" maxlength="200">
+                    </div>
+                </div>
+                <div class="form-actions" style="margin-top: 20px;">
+                    <button type="submit" class="btn btn-success">ذخیره تغییرات</button>
+                    <button type="button" class="btn btn-secondary" id="close-edit-address-popup-btn-2">انصراف</button>
+                </div>
+            </form>
+        </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -664,13 +769,15 @@
     const postalCodeSearchUrl = '{% url "sales:postal_code_search_api" order_number="000000" %}'.replace('000000', orderNumber);
     const createAddressUrl = '{% url "sales:create_delivery_address_api" order_number="000000" %}'.replace('000000', orderNumber);
     const baseDeliveryInfoRenderedUrl = '{% url "sales:get_delivery_info_rendered_api" order_number="000000" postal_code="PLACEHOLDER" %}'.replace('000000', orderNumber);
+    const updateAddressUrl = '{% url "sales:update_delivery_address_api" order_number="000000" postal_code="PLACEHOLDER" %}'.replace('000000', orderNumber);
     let validPostalCode = null; // برای ذخیره کد پستی معتبر
+    let currentDeliveryEditData = null; // داده‌های ویرایش آدرس نمایش داده شده
 
     // تابع برای پاک کردن اطلاعات آدرس
     function clearDeliveryInfo() {
         const container = document.getElementById('delivery-info-container');
         const content = document.getElementById('delivery-info-content');
-
+        currentDeliveryEditData = null;
         if (container) {
             container.style.display = 'none';
         }
@@ -716,7 +823,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.html) {
-                    // نمایش اطلاعات
+                    currentDeliveryEditData = data.edit_data || null;
                     const container = document.getElementById('delivery-info-container');
                     const content = document.getElementById('delivery-info-content');
                     if (content) {
@@ -1024,12 +1131,10 @@
                 closePopupBtn2.addEventListener('click', closeCreateAddressPopup);
             }
 
-            // بستن popup با کلیک روی overlay
+            // بستن popup فقط با کلیک روی overlay (نه با درگ/سلکت متنی که موز بیرون میره)
             if (popup) {
-                popup.addEventListener('click', function (e) {
-                    if (e.target === popup) {
-                        closeCreateAddressPopup();
-                    }
+                popup.addEventListener('mousedown', function (e) {
+                    if (e.target === popup) closeCreateAddressPopup();
                 });
             }
 
@@ -1043,6 +1148,7 @@
                     const popupPostalCodeInput = document.getElementById('popup-postal-code-input');
                     const postalCode = popupPostalCodeInput ? popupPostalCodeInput.value.trim() : '';
                     const recipientName = createAddressForm.querySelector('[name="recipient_name"]').value.trim();
+                    const uniqueDeliveryId = createAddressForm.querySelector('[name="unique_delivery_id"]').value.trim();
                     const recipientNationalId = createAddressForm.querySelector('[name="recipient_national_id"]').value.trim();
                     const mobilePhone = createAddressForm.querySelector('[name="mobile_phone"]').value.trim();
                     const landlinePhone = createAddressForm.querySelector('[name="landline_phone"]').value.trim();
@@ -1076,6 +1182,13 @@
                     if (recipientName.length < 2) {
                         alert('نام تحویل گیرنده باید حداقل 2 کاراکتر باشد.');
                         createAddressForm.querySelector('[name="recipient_name"]').focus();
+                        return;
+                    }
+
+                    // اعتبارسنجی شناسه یکتا تحویل
+                    if (!uniqueDeliveryId) {
+                        alert('شناسه یکتا تحویل الزامی است.');
+                        createAddressForm.querySelector('[name="unique_delivery_id"]').focus();
                         return;
                     }
 
@@ -1370,7 +1483,7 @@
                     .then(response => response.json())
                     .then(data => {
                         if (data.success && data.html) {
-                            // نمایش اطلاعات
+                            currentDeliveryEditData = data.edit_data || null;
                             const container = document.getElementById('delivery-info-container');
                             const content = document.getElementById('delivery-info-content');
                             if (content) {
@@ -1396,6 +1509,100 @@
             hideDeliveryInfoBtn.addEventListener('click', function (e) {
                 e.preventDefault();
                 clearDeliveryInfo();
+            });
+        }
+
+        // مدیریت دکمه ویرایش آدرس و پاپ‌اپ ویرایش
+        function openEditAddressPopup() {
+            if (!currentDeliveryEditData) {
+                alert('اطلاعات آدرس برای ویرایش در دسترس نیست.');
+                return;
+            }
+            const popup = document.getElementById('edit-address-popup');
+            const d = currentDeliveryEditData;
+            document.getElementById('edit-popup-postal-code').value = d.postal_code || '';
+            document.getElementById('edit-popup-postal-code-display').value = d.postal_code || '';
+            document.getElementById('edit-recipient-name').value = d.recipient_name || '';
+            document.getElementById('edit-recipient-national-id').value = d.recipient_national_id || '';
+            document.getElementById('edit-unique-delivery-id').value = d.unique_delivery_id || '';
+            document.getElementById('edit-province').value = d.province || '';
+            document.getElementById('edit-city').value = d.city || '';
+            document.getElementById('edit-address').value = d.address || '';
+            document.getElementById('edit-landline-phone').value = d.landline_phone || '';
+            document.getElementById('edit-mobile-phone').value = d.mobile_phone || '';
+            document.getElementById('edit-delivery-limit').value = d.delivery_limit || '';
+            document.getElementById('edit-recipient-type').value = d.recipient_type || '';
+            if (popup) popup.classList.add('active');
+        }
+
+        function closeEditAddressPopup() {
+            const popup = document.getElementById('edit-address-popup');
+            if (popup) popup.classList.remove('active');
+        }
+
+        const editAddressBtn = document.getElementById('edit-delivery-address-btn');
+        if (editAddressBtn) {
+            editAddressBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                openEditAddressPopup();
+            });
+        }
+
+        document.getElementById('close-edit-address-popup-btn')?.addEventListener('click', closeEditAddressPopup);
+        document.getElementById('close-edit-address-popup-btn-2')?.addEventListener('click', closeEditAddressPopup);
+        document.getElementById('edit-address-popup')?.addEventListener('mousedown', function (e) {
+            if (e.target === this) closeEditAddressPopup();
+        });
+
+        const editAddressForm = document.getElementById('edit-address-form');
+        if (editAddressForm) {
+            editAddressForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const postalCode = document.getElementById('edit-popup-postal-code').value;
+                const uniqueDeliveryId = document.getElementById('edit-unique-delivery-id').value.trim();
+                if (!uniqueDeliveryId) {
+                    alert('شناسه یکتا تحویل الزامی است.');
+                    document.getElementById('edit-unique-delivery-id').focus();
+                    return;
+                }
+                const url = updateAddressUrl.replace('PLACEHOLDER', encodeURIComponent(postalCode));
+                const formData = {
+                    postal_code: postalCode,
+                    recipient_name: document.getElementById('edit-recipient-name').value.trim(),
+                    recipient_national_id: document.getElementById('edit-recipient-national-id').value.trim(),
+                    unique_delivery_id: document.getElementById('edit-unique-delivery-id').value.trim(),
+                    province: document.getElementById('edit-province').value.trim(),
+                    city: document.getElementById('edit-city').value.trim(),
+                    address: document.getElementById('edit-address').value.trim(),
+                    landline_phone: document.getElementById('edit-landline-phone').value.trim(),
+                    mobile_phone: document.getElementById('edit-mobile-phone').value.trim(),
+                    delivery_limit: document.getElementById('edit-delivery-limit').value.trim(),
+                    recipient_type: document.getElementById('edit-recipient-type').value.trim(),
+                };
+                fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(formData)
+                })
+                    .then(r => r.json())
+                    .then(result => {
+                        if (result.error) {
+                            alert('خطا: ' + result.error);
+                        } else {
+                            closeEditAddressPopup();
+                            if (validPostalCode === postalCode) {
+                                loadDeliveryInfo(postalCode);
+                            }
+                            alert('آدرس تحویل با موفقیت ذخیره شد.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        alert('خطا در ذخیره آدرس.');
+                    });
             });
         }
     });

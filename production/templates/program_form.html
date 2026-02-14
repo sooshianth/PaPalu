@@ -401,6 +401,12 @@
     .datepicker-plot-area {
         z-index: 10000 !important;
     }
+    /* زمان‌بندی: تقویم بالای بقیه و بدون برش (مثل تامین) */
+    .detail-card.schedule-card {
+        position: relative;
+        z-index: 100;
+        overflow: visible;
+    }
 </style>
 <!-- Custom Jalali Datepicker Component -->
 {% include "components/jalali_datepicker.html" %}
@@ -469,7 +475,10 @@
 							<div class="detail-card-title">اطلاعات تولید</div>
 							<div class="detail-row">
 								<span class="detail-label">{{ form.planned_weight_ton.label }}:{% if form.planned_weight_ton.field.required %}<span style="color: red;">*</span>{% endif %}</span>
-								<span class="detail-value">{{ form.planned_weight_ton }}</span>
+								<span class="detail-value">
+									{{ form.planned_weight_ton }}
+									<small class="planned-weight-persian persian-number-display" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
+								</span>
 							</div>
 							<div class="detail-row">
 								<span class="detail-label">{{ form.packaging_type.label }}:{% if form.packaging_type.field.required %}<span style="color: red;">*</span>{% endif %}</span>
@@ -477,20 +486,22 @@
 							</div>
 						</div>
 						
-						<div class="detail-card">
+						<div class="detail-card schedule-card">
 							<div class="detail-card-title">زمان‌بندی</div>
+							<input type="hidden" name="predicted_start_date" value="{{ form.predicted_start_date.value|default:'' }}" id="id_predicted_start_date">
+							<input type="hidden" name="predicted_start_time" value="{{ form.predicted_start_time.value|default:'' }}" id="id_predicted_start_time">
+							<input type="hidden" name="predicted_end_date" value="{{ form.predicted_end_date.value|default:'' }}" id="id_predicted_end_date">
+							<input type="hidden" name="predicted_end_time" value="{{ form.predicted_end_time.value|default:'' }}" id="id_predicted_end_time">
 							<div class="detail-row" style="flex-direction: column; gap: 8px;">
 								<span class="detail-label">شروع پیشبینی شده:{% if form.predicted_start_date.field.required or form.predicted_start_time.field.required %}<span style="color: red;">*</span>{% endif %}</span>
-								<div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-									<div style="flex: 1; min-width: 150px;">{{ form.predicted_start_date }}</div>
-									<div style="flex: 1; min-width: 120px;">{{ form.predicted_start_time }}</div>
+								<div style="flex: 1; min-width: 200px;">
+									<input type="text" class="form-control jalali-datetime" data-datetime-mode="start" id="id_predicted_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.predicted_start_date.value %}{{ form.predicted_start_date.value }}{% if form.predicted_start_time.value %} {{ form.predicted_start_time.value }}{% endif %}{% endif %}" autocomplete="off">
 								</div>
 							</div>
 							<div class="detail-row" style="flex-direction: column; gap: 8px;">
 								<span class="detail-label">پایان پیشبینی شده:{% if form.predicted_end_date.field.required or form.predicted_end_time.field.required %}<span style="color: red;">*</span>{% endif %}</span>
-								<div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-									<div style="flex: 1; min-width: 150px;">{{ form.predicted_end_date }}</div>
-									<div style="flex: 1; min-width: 120px;">{{ form.predicted_end_time }}</div>
+								<div style="flex: 1; min-width: 200px;">
+									<input type="text" class="form-control jalali-datetime" data-datetime-mode="end" id="id_predicted_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.predicted_end_date.value %}{{ form.predicted_end_date.value }}{% if form.predicted_end_time.value %} {{ form.predicted_end_time.value }}{% endif %}{% endif %}" autocomplete="off">
 								</div>
 							</div>
 						</div>
@@ -813,10 +824,68 @@
 	// ---- Tabbed multi-form management ----
 	let tabCounter = 0;
 
+	// نمایش عدد فارسی با کاما زیر فیلد تناژ (وزن) — مشابه تامین
+	var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+	function formatNumberToPersian(num, decimalPlaces) {
+		if (num === null || num === undefined || isNaN(num)) return '';
+		var n = parseFloat(num);
+		var fixed = (decimalPlaces !== undefined && decimalPlaces >= 0) ? n.toFixed(decimalPlaces) : (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+		var parts = fixed.split('.');
+		var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+		var result = intPart + (parts[1] ? '.' + parts[1] : '');
+		return result.replace(/[0-9]/g, function(d) { return persianDigits[parseInt(d, 10)]; });
+	}
+	function attachPersianPlannedWeight(pane) {
+		var input = pane.querySelector('[name="planned_weight_ton"]');
+		var displayEl = pane.querySelector('.planned-weight-persian');
+		if (!input || !displayEl) return;
+		function update() {
+			var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+			var num = parseFloat(raw);
+			displayEl.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 3);
+		}
+		update();
+		input.addEventListener('input', update);
+		input.addEventListener('change', update);
+	}
+
 	function initJalaliPickers(rootEl){
+		// زمان‌بندی: دو فیلد تقویم-ساعتی (شروع/پایان) که مقدار را در ۴ فیلد مخفی می‌ریزند
+		const scheduleDatetimeInputs = rootEl.querySelectorAll('.jalali-datetime[data-datetime-mode]');
+		scheduleDatetimeInputs.forEach(function(input) {
+			if (input.hasAttribute('data-jdp-initialized')) return;
+			const form = input.closest('form');
+			if (!form) return;
+			const mode = input.getAttribute('data-datetime-mode');
+			const dateName = mode === 'start' ? 'predicted_start_date' : 'predicted_end_date';
+			const timeName = mode === 'start' ? 'predicted_start_time' : 'predicted_end_time';
+			const hiddenDate = form.querySelector('[name="' + dateName + '"]');
+			const hiddenTime = form.querySelector('[name="' + timeName + '"]');
+			if (!hiddenDate || !hiddenTime) return;
+			// id یکتا در هر تب (جلوگیری از تداخل در چند فرم)
+			const paneId = (rootEl.id || 'pane');
+			input.id = paneId + '_' + dateName.replace('_date','_datetime');
+			input.classList.add('form-control');
+			// مقدار اولیه از فیلدهای مخفی
+			const d = (hiddenDate.value || '').trim();
+			const t = (hiddenTime.value || '').trim();
+			if (d && t) input.value = d + ' ' + t.replace(/:\d{2}$/, '');
+			JalaliDatepicker.init('#' + input.id, { time: true });
+			input.addEventListener('jdp:change', function(e) {
+				const jy = e.detail.year;
+				const jm = String(e.detail.month).padStart(2, '0');
+				const jd = String(e.detail.day).padStart(2, '0');
+				const hh = String(e.detail.hour != null ? e.detail.hour : 0).padStart(2, '0');
+				const mm = String(e.detail.minute != null ? e.detail.minute : 0).padStart(2, '0');
+				hiddenDate.value = jy + '-' + jm + '-' + jd;
+				hiddenTime.value = hh + ':' + mm + ':00';
+			});
+			input.setAttribute('data-jdp-initialized', 'true');
+		});
+
 		// راه‌اندازی Custom Jalali Datepicker برای فیلدهای با کلاس jalali-date و jalali-datetime
 		const dateInputs = rootEl.querySelectorAll('.jalali-date');
-		const datetimeInputs = rootEl.querySelectorAll('.jalali-datetime');
+		const datetimeInputs = rootEl.querySelectorAll('.jalali-datetime:not([data-datetime-mode])');
 		
 		// راه‌اندازی فیلدهای تاریخ (بدون زمان)
 		dateInputs.forEach(function(input) {
@@ -1240,6 +1309,8 @@ if (productFlowStatusData) {
 		document.getElementById('tabContents').appendChild(pane);
 		// Init Jalali for this pane
 		initJalaliPickers(pane);
+		// نمایش عدد فارسی زیر تناژ برنامه (مثل تامین)
+		attachPersianPlannedWeight(pane);
 		
 		// Set today's Jalali date as default for date fields if they're empty
 		// Note: After initJalaliPickers, the visible fields no longer have name attributes
