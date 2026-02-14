@@ -803,9 +803,10 @@
             // نمایش اطلاعات وزن
             if (data.weight_info) {
                 const weightInfo = data.weight_info;
-                document.getElementById('total-allocation-weight').textContent = weightInfo.total_allocation_weight.toFixed(3) + ' کیلوگرم';
-                document.getElementById('total-transports-weight').textContent = weightInfo.total_transports_weight.toFixed(3) + ' کیلوگرم';
-                document.getElementById('remaining-weight').textContent = weightInfo.remaining_weight.toFixed(3) + ' کیلوگرم';
+                const toNum = (v) => (typeof v === 'number' && !isNaN(v)) ? v : parseFloat(v) || 0;
+                document.getElementById('total-allocation-weight').textContent = toNum(weightInfo.total_allocation_weight).toFixed(3) + ' کیلوگرم';
+                document.getElementById('total-transports-weight').textContent = toNum(weightInfo.total_transports_weight).toFixed(3) + ' کیلوگرم';
+                document.getElementById('remaining-weight').textContent = toNum(weightInfo.remaining_weight).toFixed(3) + ' کیلوگرم';
                 document.getElementById('weight-info-container').style.display = 'block';
             }
         })

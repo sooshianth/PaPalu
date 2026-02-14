@@ -16,6 +16,7 @@ from core.OrderFolder.OrderModel import Order
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from core.PersonFolder.PersonModel import Person
+from core.PersonFolder.AttachmentModel import Attachment
 from core.TransportFolder.TransportModel import Transport
 from core.TransportFolder.TransportAttachmentModel import TransportAttachment
 from core.TransportFolder.LoadingScheduleInfoModel import LoadingScheduleInfo
@@ -410,11 +411,24 @@ def create_transport_view(request, allocation_number):
                 official_gazette_file = request.FILES.get('official_gazette_file')
                 
                 if national_card_file:
-                    TransportAttachment.objects.create(
+                    transport_national_card = TransportAttachment.objects.create(
                         transport=transport,
                         attachment_type='national_card',
                         file=national_card_file
                     )
+                    # ذخیره کارت ملی در Attachment مربوط به Person (راننده) تا در مراحل بعدی قابل استفاده باشد
+                    if driver_person:
+                        person_national_card, created = Attachment.objects.get_or_create(
+                            person=driver_person,
+                            description='کارت ملی',
+                            defaults={
+                                'file': transport_national_card.file,
+                                'doc_type': 'other'
+                            }
+                        )
+                        if not created:
+                            person_national_card.file = transport_national_card.file
+                            person_national_card.save()
                 
                 if official_gazette_file:
                     TransportAttachment.objects.create(
@@ -511,9 +525,9 @@ def create_transport_view(request, allocation_number):
             'delivery_info': delivery_info,
             'products': products_data,
             'weight_info': {
-                'total_allocation_weight': str(total_allocation_weight),
-                'total_transports_weight': str(total_transports_weight),
-                'remaining_weight': str(remaining_weight),
+                'total_allocation_weight': float(total_allocation_weight),
+                'total_transports_weight': float(total_transports_weight),
+                'remaining_weight': float(remaining_weight),
                 'remaining_product_weights': remaining_product_weights,
             }
         })

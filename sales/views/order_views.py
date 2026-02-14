@@ -194,6 +194,7 @@ def get_accessible_order_list_fields(user):
     # superuser به همه فیلدها دسترسی دارد
     if user.is_superuser:
         return {
+            'customer': True,
             'status': True,
             'total_purchase_cost': True,
             'total_order_weight': True,
@@ -202,8 +203,10 @@ def get_accessible_order_list_fields(user):
     # مدل‌ها
     from core.OrderFolder.OrderModel import Order as OrderModel
     from core.OrderFolder.OrderItemModel import OrderItem as OrderItemModel
+    from core.PersonFolder.PersonModel import Person as PersonModel
 
     mapping = {
+        'customer': (PersonModel, 'name'),
         'status': (OrderModel, 'status'),
         'total_purchase_cost': (OrderItemModel, 'total_purchase_cost'),
         'total_order_weight': None,  # محاسبه شده، همیشه نمایش داده می‌شود
@@ -306,7 +309,6 @@ def order_list_view(request):
     except Exception as e:
         bug_logger.error(f"خطا در ایجاد جدول سفارش‌ها: {e}")
         # در صورت خطا، یک queryset خالی برمی‌گردانیم
-        from django.db.models import Q
         orders_qs = Order.objects.none()
         table = OrderTable(orders_qs, user=request.user, accessible_fields=accessible_fields)
         RequestConfig(request, paginate={'per_page': 25}).configure(table)
