@@ -649,9 +649,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 attachmentFiles.forEach(function (f, i) {
                     var li = document.createElement('li');
                     li.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--gray-200);';
-                    var span = document.createElement('span');
-                    span.textContent = f.name;
-                    span.style.cssText = 'font-size: 0.9rem;';
+                    var link = document.createElement('a');
+                    link.href = URL.createObjectURL(f);
+                    link.target = '_blank';
+                    link.textContent = f.name;
+                    link.style.cssText = 'font-size: 0.9rem; color: var(--primary-green); font-weight: 600; text-decoration: none;';
+                    link.title = 'مشاهده فایل';
                     var btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'btn btn-sm btn-outline-danger';
@@ -660,7 +663,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         attachmentFiles.splice(i, 1);
                         renderList();
                     });
-                    li.appendChild(span);
+                    li.appendChild(link);
                     li.appendChild(btn);
                     listEl.appendChild(li);
                 });
@@ -826,14 +829,16 @@ function initializeDatePicker(inputId, fieldName) {
                 }
             }
         } else if (dateInput.value) {
-            // اگر data-gdate وجود ندارد اما value وجود دارد، بررسی کن که آیا میلادی است یا شمسی
-            // اگر فرمت YYYY-MM-DD باشد (میلادی)، تبدیل کن
-            const valueParts = dateInput.value.trim().split(/[-/]/);
+            // اگر data-gdate وجود ندارد اما value وجود دارد، بررسی کن میلادی است یا شمسی
+            const val = dateInput.value.trim();
+            const valueParts = val.split(/[-/]/);
             if (valueParts.length === 3) {
                 const year = parseInt(valueParts[0]);
                 if (year > 1900 && year < 2100) {
-                    // احتمالاً میلادی است
-                    hiddenInput.value = dateInput.value;
+                    hiddenInput.value = val;
+                } else if (year >= 1300 && year < 1500) {
+                    // احتمالاً شمسی است (از پیش‌نویس ارجاع یا مقدار قبلی)
+                    hiddenInput.value = val;
                 }
             }
         }

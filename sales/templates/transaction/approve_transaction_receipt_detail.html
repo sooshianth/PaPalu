@@ -75,7 +75,7 @@
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        overflow: hidden;
+        overflow: visible;
     }
     
     .form-section-header {
@@ -88,6 +88,7 @@
     
     .form-section-body {
         padding: 1.5rem;
+        overflow: visible;
     }
     
     .form-grid {
@@ -127,8 +128,18 @@
         box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.1);
     }
     
-    #id_transfer_time {
+    /* نگه‌داری فیلد ساعت واریز و جلوگیری از رفتن تقویم زیر کارت پایین */
+    .form-group-date {
+        overflow: visible;
         position: relative;
+        z-index: 10;
+    }
+    .form-group-date:has(.jdp-container.jdp-open) {
+        z-index: 99999;
+    }
+    .form-group-date .jdp-container {
+        position: relative;
+        z-index: 1;
     }
     
     .errorlist {
@@ -357,6 +368,7 @@
                 <div class="form-group">
                     <label for="{{ form.inquiry_amount.id_for_label }}">مبلغ استعلام گرفته شده <span style="color: #dc3545;">*</span></label>
                     {{ form.inquiry_amount }}
+                    <small class="persian-number-display" id="id_inquiry_amount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {{ form.inquiry_amount.errors }}
                     {% if settlement.original_document_amount %}
                         <small style="color: var(--gray-600); margin-top: 0.25rem;">مبلغ کل تسویه: {{ original_document_amount_persian }} ریال | باقیمانده: {{ remaining_amount_persian }} ریال</small>
@@ -402,7 +414,7 @@
                         {{ form.inquiry_name_other.errors }}
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group form-group-date">
                     <label for="{{ form.transfer_time.id_for_label }}">ساعت واریز <span style="color: #dc3545;">*</span></label>
                     {{ form.transfer_time }}
                     {{ form.transfer_time.errors }}
@@ -553,6 +565,32 @@ document.getElementById('{{ form.bank_account.id_for_label }}').addEventListener
 document.addEventListener('DOMContentLoaded', function() {
     // راه‌اندازی Custom Jalali Datepicker با تاخیر
     setTimeout(initializeTransferTimePicker, 200);
+
+    // نمایش عدد فارسی با ، زیر مبلغ استعلام گرفته شده (بدون اعشار، مشابه تامین)
+    (function () {
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        function formatNumberToPersian(num, decimalPlaces) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            var n = parseFloat(num);
+            var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : String(Math.round(n));
+            var parts = fixed.split('.');
+            var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+            var result = intPart + (parts[1] ? '.' + parts[1] : '');
+            return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+        }
+        var input = document.getElementById('id_inquiry_amount');
+        var display = document.getElementById('id_inquiry_amount_persian');
+        if (input && display) {
+            function update() {
+                var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+                var num = parseFloat(raw);
+                display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 0);
+            }
+            update();
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+        }
+    })();
 });
 
 // Moved to global scope to avoid ReferenceError
