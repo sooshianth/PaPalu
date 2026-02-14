@@ -1,6 +1,7 @@
 from django.db import models
 from django_jalali.db import models as jmodels
 from core.WarehouseFolder.WarehouseModel import Warehouse
+from core.file_upload_utils import safe_media_upload_to_flat
 
 
 class PhysicalShape(models.Model):
@@ -143,7 +144,7 @@ class Product(models.Model):
     )
     
     image = models.ImageField(
-        upload_to='products/',
+        upload_to=safe_media_upload_to_flat('products'),
         blank=True,
         null=True,
         verbose_name='تصویر محصول'

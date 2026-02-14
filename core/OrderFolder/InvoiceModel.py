@@ -3,6 +3,7 @@ from django_jalali.db import models as jmodels
 from .OrderModel import Order
 from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
+from core.file_upload_utils import safe_media_upload_to_flat
 
 
 class Invoice(models.Model):
@@ -50,7 +51,7 @@ class Invoice(models.Model):
     
     # فایل فاکتور (اختیاری)
     invoice_file = models.FileField(
-        upload_to='invoices/',
+        upload_to=safe_media_upload_to_flat('invoices'),
         verbose_name='فایل فاکتور',
         null=True,
         blank=True,

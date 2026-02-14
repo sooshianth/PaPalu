@@ -1,9 +1,11 @@
 from django.db import models
 from . import RawMaterial
+from core.file_upload_utils import safe_media_upload_to_flat
+
 
 class RawMaterialAttachment(models.Model):
     attachment = models.FileField(
-        upload_to='raw_material_attachments/',
+        upload_to=safe_media_upload_to_flat('raw_material_attachments'),
         verbose_name="فایل پیوست"        
     )
 

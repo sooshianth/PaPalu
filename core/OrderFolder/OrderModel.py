@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.conf import settings
 from django_jalali.db import models as jmodels
 from core.PersonFolder import Person
+from core.file_upload_utils import safe_media_upload_to
 
 
 class Order(models.Model):
@@ -184,7 +185,7 @@ class Order(models.Model):
         verbose_name='پرداخت تایید شده'
     )
     pre_invoice_file = models.FileField(
-        upload_to='procurement/preinvoices/%Y/%m/',
+        upload_to=safe_media_upload_to('procurement/preinvoices'),
         null=True,
         blank=True,
         verbose_name='فایل پیش‌فاکتور'
