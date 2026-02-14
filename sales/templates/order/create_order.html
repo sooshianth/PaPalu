@@ -191,6 +191,63 @@
         opacity: 0.5;
         background-color: #f8f9fa;
     }
+    
+    /* پاپ‌آپ جزئیات قیمت‌گذاری */
+    .price-details-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+    }
+    .price-details-modal-overlay.show {
+        display: flex;
+    }
+    .price-details-modal {
+        background: white;
+        border-radius: 12px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        padding: 24px;
+    }
+    .price-details-modal h4 {
+        color: var(--primary-green);
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    .price-detail-item {
+        margin-bottom: 12px;
+    }
+    .price-detail-item label {
+        font-weight: 600;
+        color: var(--gray-700);
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.9rem;
+    }
+    .price-detail-item .value {
+        color: var(--gray-800);
+        padding: 8px 12px;
+        background: var(--gray-100);
+        border-radius: 6px;
+        white-space: pre-wrap;
+    }
+    .price-single-card {
+        border: 1px solid var(--gray-200);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+    .price-single-card:last-child { margin-bottom: 0; }
 </style>
 {% endblock %}
 
@@ -230,6 +287,68 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // اعمال به تمام فرم‌های موجود
     document.querySelectorAll('.item-form-row').forEach(setupBagWeightToggle);
+    
+    // تابع برای نمایش دکمه جزئیات قیمت‌گذاری
+    function showPriceDetailsButton(formRow, prices) {
+        const wrapper = formRow.querySelector('.price-details-btn-wrapper');
+        if (!wrapper) return;
+        
+        wrapper.innerHTML = '';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-info price-details-btn';
+        btn.textContent = 'مشاهده جزئیات قیمت‌گذاری';
+        btn.dataset.prices = JSON.stringify(prices);
+        btn.addEventListener('click', function() {
+            showPriceDetailsModal(JSON.parse(this.dataset.prices));
+        });
+        wrapper.appendChild(btn);
+        wrapper.style.display = 'block';
+    }
+    
+    function hidePriceDetailsButton(formRow) {
+        const wrapper = formRow.querySelector('.price-details-btn-wrapper');
+        if (wrapper) {
+            wrapper.innerHTML = '';
+            wrapper.style.display = 'none';
+        }
+    }
+    
+    // تابع برای نمایش پاپ‌آپ جزئیات قیمت
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function showPriceDetailsModal(prices) {
+        const overlay = document.getElementById('price-details-modal-overlay');
+        const content = document.getElementById('price-details-modal-content');
+        if (!overlay || !content) return;
+        
+        let html = '<h4>جزئیات قیمت‌گذاری</h4>';
+        prices.forEach(function(price, idx) {
+            const priceFormatted = price.price ? parseInt(price.price).toLocaleString('fa-IR') + ' ریال' : '—';
+            html += '<div class="price-single-card">';
+            html += '<div class="price-detail-item"><label>قیمت:</label><div class="value">' + escapeHtml(priceFormatted) + '</div></div>';
+            html += '<div class="price-detail-item"><label>شرط:</label><div class="value">' + escapeHtml(price.condition || '—') + '</div></div>';
+            html += '<div class="price-detail-item"><label>توضیحات شرایط:</label><div class="value">' + escapeHtml(price.condition_description || '—') + '</div></div>';
+            html += '<div class="price-detail-item"><label>توضیحات:</label><div class="value">' + escapeHtml(price.description || '—') + '</div></div>';
+            html += '<div class="price-detail-item"><label>مدت زمان بارگیری:</label><div class="value">' + escapeHtml(price.loading_date || '—') + '</div></div>';
+            html += '<div class="price-detail-item"><label>اعتبار تا:</label><div class="value">' + escapeHtml(price.deadline || '—') + '</div></div>';
+            html += '</div>';
+        });
+        
+        content.innerHTML = html;
+        overlay.classList.add('show');
+        
+        overlay.onclick = function(e) {
+            if (e.target === overlay) {
+                overlay.classList.remove('show');
+            }
+        };
+    }
     
     // تابع برای ایجاد/حذف dropdown قیمت
     function createPriceDropdown(formRow, prices, unitPriceInput) {
@@ -337,11 +456,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (vatPercentInput) {
                         vatPercentInput.value = '0';
                     }
-                    // حذف dropdown قیمت
+                    // حذف dropdown قیمت و دکمه جزئیات
                     const existingDropdown = formRow.querySelector('.price-dropdown-container');
                     if (existingDropdown) {
                         existingDropdown.remove();
                     }
+                    hidePriceDetailsButton(formRow);
                     return;
                 }
                 
@@ -413,6 +533,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (data.prices.length === 1 && unitPriceInput) {
                                 unitPriceInput.value = data.prices[0].price;
                             }
+                            
+                            // نمایش دکمه جزئیات قیمت‌گذاری
+                            showPriceDetailsButton(formRow, data.prices);
                         } else {
                             // حذف dropdown قیمت اگر قیمتی وجود نداشت
                             const existingDropdown = formRow.querySelector('.price-dropdown-container');
@@ -422,6 +545,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (unitPriceInput) {
                                 unitPriceInput.value = '';
                             }
+                            // حذف دکمه جزئیات قیمت
+                            hidePriceDetailsButton(formRow);
                         }
                     })
                     .catch(error => {
@@ -831,9 +956,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="row">
                             <!-- اجباری های قلم -->
                             {% if accessible_fields_item.product %}
-                            <div class="col-md-3 mb-3">
+                            <div class="col-md-3 mb-3 product-select-col">
                                 <label class="form-label required-field">{{ f.product.label }}</label>
                                 {{ f.product }}
+                                <div class="price-details-btn-wrapper" style="margin-top: 8px;"></div>
                                 {% if f.product.errors %}
                                     <div class="text-danger">{{ f.product.errors.0 }}</div>
                                 {% endif %}
@@ -948,5 +1074,15 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
     </form>
+
+    <!-- پاپ‌آپ جزئیات قیمت‌گذاری محصول -->
+    <div id="price-details-modal-overlay" class="price-details-modal-overlay">
+        <div class="price-details-modal">
+            <div id="price-details-modal-content"></div>
+            <div style="margin-top: 16px; text-align: left;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('price-details-modal-overlay').classList.remove('show')">بستن</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
