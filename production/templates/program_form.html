@@ -1184,8 +1184,9 @@ if (productFlowStatusData) {
 				html += `<strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>`;
 			}
 			if (showMinBatch) {
-				// Display as kg (no conversion, just change unit)
-				const minBatchKg = data.min_batch_production ? parseFloat(data.min_batch_production).toFixed(2) : '-';
+				// Display as kg (no conversion, just change unit) — عدد و واحد فارسی
+				const minBatchVal = data.min_batch_production ? parseFloat(data.min_batch_production) : null;
+				const minBatchKg = minBatchVal !== null ? formatNumberToPersian(minBatchVal, 2) : '-';
 				html += `<strong>حداقل وزن تولید:</strong> ${minBatchKg} کیلوگرم<br>`;
 			}
 			if (showSpecificInstruction) {
@@ -1207,15 +1208,18 @@ if (productFlowStatusData) {
 			data.bom_items.forEach(item => {
 				// Calculate total consumption: percentage * plannedWeight / 100
 				const percentage = parseFloat(item.percentage || '0');
-				const totalConsumption = plannedWeight > 0 ? ((percentage * plannedWeight) / 100).toFixed(3) : '-';
+				const totalConsumptionNum = plannedWeight > 0 ? (percentage * plannedWeight) / 100 : null;
+				const totalConsumption = totalConsumptionNum !== null ? formatNumberToPersian(totalConsumptionNum, 3) : '-';
+				const percentStr = formatNumberToPersian(percentage, 3) + '٪';
+				const unitDisplay = (item.unit_used && (item.unit_used === 'kg' || item.unit_used.toLowerCase() === 'kg')) ? 'کیلوگرم' : (item.unit_used || '-');
 				
 				html += `
 					<tr>
 						${showRawMaterialId ? `<td>${item.raw_material_id || '-'}</td>` : ''}
 						${showRawMaterialName ? `<td>${item.raw_material_name || '-'}</td>` : ''}
-						<td>${percentage.toFixed(3)}%</td>
+						<td>${percentStr}</td>
 						<td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
-						${showUnit ? `<td>${item.unit_used || '-'}</td>` : ''}
+						${showUnit ? `<td>${unitDisplay}</td>` : ''}
 					</tr>
 				`;
 			});
