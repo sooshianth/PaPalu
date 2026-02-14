@@ -486,7 +486,10 @@ def product_info_api(request, product_id):
                 'price': str(price_info.price),
                 'display': price_display,
                 'deadline': price_info.deadline.strftime('%Y/%m/%d') if price_info.deadline else '',
-                'condition': price_info.condition[:100] if price_info.condition else '',
+                'condition': price_info.condition or '',
+                'condition_description': price_info.condition_description or '',
+                'description': price_info.description or '',
+                'loading_date': price_info.loading_date or '',
             })
         
         # دریافت درصد مالیات - اول از Product.tax_percentage، سپس از ProductSales.price_with_tax
