@@ -97,8 +97,12 @@
     }
     
     .table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+    
+    /* فقط جدول برنامه تایید شده overflow مخفی - جدول مواد اولیه همیشه کامل دیده شود */
+    #confirmed-section .table-wrap {
+        overflow-x: hidden;
     }
     
     table.data-table {
@@ -123,6 +127,18 @@
         color: var(--gray-800);
         border-bottom: 2px solid var(--primary-green);
         white-space: nowrap;
+    }
+    
+    /* جلوگیری از overflow جدول برنامه تایید شده */
+    #confirmed-section .data-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+    
+    #confirmed-section .data-table th,
+    #confirmed-section .data-table td {
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     table.data-table tbody tr {
@@ -615,6 +631,17 @@
         gap: 20px;
     }
     
+    @media (max-width: 1200px) {
+        .declaration-layout {
+            flex-direction: column;
+        }
+        .raw-materials-sidebar {
+            flex: 1 1 auto !important;
+            max-width: 100% !important;
+            position: static !important;
+        }
+    }
+    
     @media (max-width: 1024px) {
         .grid-2 {
             grid-template-columns: 1fr;
@@ -670,9 +697,9 @@
 </div>
 
 <!-- برنامه‌های تایید شده با موجودی مواد اولیه -->
-<div style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px;">
+<div class="declaration-layout" style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px; overflow-x: hidden; max-width: 100%;">
     <!-- برنامه‌های تایید شده (چپ، 70%) -->
-    <div class="section" style="flex: 1;" id="confirmed-section">
+    <div class="section" style="flex: 1; min-width: 0;" id="confirmed-section">
         <div class="section-title">
             <span>برنامه‌های تایید شده</span>
             <span class="section-badge">{{ confirmed_programs.count }}</span>
@@ -695,12 +722,6 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            {% if accessible_production_program_fields.id %}
-                            <th class="sortable {% if sort_by_confirmed == 'id' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
-                                onclick="sortTable('id', 'confirmed')">
-                                شناسه
-                            </th>
-                            {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <th>محصول</th>
                             {% endif %}
@@ -728,21 +749,12 @@
                             {% if accessible_production_program_fields.packaging_type %}
                             <th>نوع بسته‌بندی</th>
                             {% endif %}
-                            {% if accessible_production_program_fields.status %}
-                            <th class="sortable {% if sort_by_confirmed == 'status' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
-                                onclick="sortTable('status', 'confirmed')">
-                                وضعیت
-                            </th>
-                            {% endif %}
                             <th>عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for program in confirmed_programs %}
                         <tr>
-                            {% if accessible_production_program_fields.id %}
-                            <td>{{ program.id }}</td>
-                            {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
@@ -768,9 +780,6 @@
                             {% endif %}
                             {% if accessible_production_program_fields.packaging_type %}
                             <td>{{ program.get_packaging_type_display|default:"-" }}</td>
-                            {% endif %}
-                            {% if accessible_production_program_fields.status %}
-                            <td><span class="status-badge status-confirmed">{{ program.get_status_display }}</span></td>
                             {% endif %}
                             <td>
                                 <div class="action-buttons">
@@ -801,7 +810,7 @@
     </div>
     
     <!-- موجودی مواد اولیه (راست، 30%) - sticky -->
-    <div class="section" style="flex: 0 0 30%; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto;" id="raw-materials-sidebar">
+    <div class="section raw-materials-sidebar" style="flex: 0 0 30%; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto; overflow-x: visible;" id="raw-materials-sidebar">
         <div class="section-title">
             <span>موجودی مواد اولیه</span>
             <span class="section-badge">{{ raw_materials_inventory|length }}</span>
@@ -853,11 +862,37 @@
                         padding-right: 32px !important;
                     }
                     
-                    .warehouse-indent {
-                        display: inline-block;
-                        margin-left: 16px;
-                        color: #6c757d;
-                    }
+    .warehouse-indent {
+        display: inline-block;
+        margin-left: 16px;
+        color: #6c757d;
+    }
+    
+    /* جدول مواد اولیه فشرده - فاصله ستون‌ها کمتر تا کل جدول دیده شود */
+    #raw-materials-sidebar .data-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+    #raw-materials-sidebar .data-table th,
+    #raw-materials-sidebar .data-table td {
+        padding: 6px 8px !important;
+        font-size: 0.85rem !important;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    #raw-materials-sidebar .data-table .warehouse-row td {
+        padding: 4px 8px 4px 32px !important;
+    }
+    
+    #raw-materials-sidebar .table-wrap {
+        overflow-x: visible !important;
+        overflow-y: visible;
+    }
+    
+    #raw-materials-sidebar .card-body {
+        padding: 12px !important;
+    }
                     
                     .total-badge {
                         display: inline-block;
@@ -1382,7 +1417,7 @@ let searchTimers = {
 // Track current sort state for each table
 let sortState = {
     confirmed: {
-        column: '{{ sort_by_confirmed|default:"id" }}',
+        column: '{{ sort_by_confirmed|default:"predicted_start_date" }}',
         direction: '{{ sort_dir_confirmed|default:"desc" }}'
     },
     progress: {
