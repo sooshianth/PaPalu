@@ -518,6 +518,9 @@
                 <div class="form-group">
                     <label for="{{ form.source_account.id_for_label }}">حساب مبدا <span style="color: #dc3545;">*</span></label>
                     {{ form.source_account }}
+                    <button type="button" class="btn btn-outline-success btn-sm" id="btn-create-bank-account" style="margin-top: 8px;">
+                        + ایجاد حساب برای مشتری
+                    </button>
                     {{ form.source_account.errors }}
                 </div>
                 <div class="form-group">
@@ -566,6 +569,33 @@
             <input type="hidden" name="check_receipt_date" id="refer_check_receipt_date" value="">
         </form>
         {% endif %}
+    </div>
+</div>
+
+<!-- مودال ایجاد حساب بانکی مشتری -->
+<div id="createBankAccountModal" role="dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.4);">
+    <div style="background: #fff; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <h3 style="margin-top: 0; margin-bottom: 20px;">ایجاد حساب بانکی برای مشتری</h3>
+        <form id="createBankAccountForm">
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="new_account_number">شماره حساب</label>
+                <input type="text" id="new_account_number" name="account_number" class="form-control" placeholder="حداکثر ۱۶ رقم" maxlength="16" inputmode="numeric" pattern="[0-9]*" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--gray-300);" dir="ltr">
+            </div>
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="new_shaba_number">شماره شبا</label>
+                <input type="text" id="new_shaba_number" name="shaba_number" class="form-control" placeholder="۲۴ رقم (IR لازم نیست)" maxlength="24" inputmode="numeric" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--gray-300);" dir="ltr">
+                <small style="color: var(--gray-600); font-size: 0.8rem; display: block; margin-top: 4px;">IR لازم نیست وارد شود، حداکثر ۲۴ رقم. IR هنگام ذخیره خودکار اضافه می‌شود.</small>
+            </div>
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label for="new_bank_name">نام بانک</label>
+                <input type="text" id="new_bank_name" name="bank_name" class="form-control" placeholder="نام بانک" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--gray-300);">
+            </div>
+            <div id="createBankAccountError" class="text-danger" style="display: none; margin-bottom: 1rem;"></div>
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primary" id="btnSubmitBankAccount">ثبت حساب</button>
+                <button type="button" class="btn btn-secondary" id="btnCancelBankAccount">انصراف</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -709,6 +739,132 @@ document.addEventListener('DOMContentLoaded', function() {
                     .catch(function (err) { console.error(err); alert('خطا در ارسال فرم.'); });
             });
         }
+    })();
+
+    // ایجاد حساب بانکی برای مشتری - پاپ‌آپ
+    (function () {
+        var orderNumber = '{{ order.order_number }}';
+        var modal = document.getElementById('createBankAccountModal');
+        var btnOpen = document.getElementById('btn-create-bank-account');
+        var btnCancel = document.getElementById('btnCancelBankAccount');
+        var form = document.getElementById('createBankAccountForm');
+        var errorDiv = document.getElementById('createBankAccountError');
+        var sourceAccountSelect = document.getElementById('id_source_account');
+        
+        if (!modal || !btnOpen || !form || !sourceAccountSelect) return;
+        
+        function showModal() {
+            modal.style.display = 'flex';
+            errorDiv.style.display = 'none';
+            form.reset();
+        }
+        function hideModal() {
+            modal.style.display = 'none';
+        }
+        
+        btnOpen.addEventListener('click', showModal);
+        btnCancel.addEventListener('click', hideModal);
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) hideModal();
+        });
+        
+        // محدودسازی شماره شبا: فقط ارقام، حداکثر ۲۴ رقم، IR حذف می‌شود
+        var shabaInput = document.getElementById('new_shaba_number');
+        if (shabaInput) {
+            shabaInput.addEventListener('input', function () {
+                var v = this.value.toUpperCase().replace(/\s/g, '');
+                if (v.indexOf('IR') === 0) v = v.slice(2);
+                var digits = v.replace(/\D/g, '');
+                if (digits.length > 24) digits = digits.slice(0, 24);
+                this.value = digits;
+            });
+            shabaInput.addEventListener('paste', function (e) {
+                var _this = this;
+                setTimeout(function () {
+                    var v = _this.value.toUpperCase().replace(/\s/g, '');
+                    if (v.indexOf('IR') === 0) v = v.slice(2);
+                    var digits = v.replace(/\D/g, '');
+                    if (digits.length > 24) digits = digits.slice(0, 24);
+                    _this.value = digits;
+                }, 0);
+            });
+        }
+        
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var accountNumber = (document.getElementById('new_account_number').value || '').trim().replace(/\s/g, '');
+            var shabaRaw = (document.getElementById('new_shaba_number').value || '').trim().toUpperCase().replace(/\s/g, '');
+            var bankName = (document.getElementById('new_bank_name').value || '').trim();
+            
+            if (accountNumber && !/^\d+$/.test(accountNumber)) {
+                errorDiv.textContent = 'شماره حساب باید فقط شامل اعداد باشد.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            if (accountNumber && accountNumber.length > 16) {
+                errorDiv.textContent = 'شماره حساب حداکثر ۱۶ رقم است.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            var shabaNumber = '';
+            if (shabaRaw) {
+                if (shabaRaw.indexOf('IR') === 0) shabaRaw = shabaRaw.slice(2);
+                var shabaDigits = shabaRaw.replace(/\D/g, '');
+                if (shabaDigits.length > 24) {
+                    errorDiv.textContent = 'شماره شبا حداکثر ۲۴ رقم دارد.';
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+                shabaNumber = shabaDigits;
+            }
+            
+            if (!accountNumber && !shabaNumber) {
+                errorDiv.textContent = 'حداقل شماره حساب یا شماره شبا الزامی است.';
+                errorDiv.style.display = 'block';
+                return;
+            }
+            
+            errorDiv.style.display = 'none';
+            var submitBtn = document.getElementById('btnSubmitBankAccount');
+            submitBtn.disabled = true;
+            
+            var formData = new FormData();
+            formData.append('account_number', accountNumber);
+            formData.append('shaba_number', shabaNumber);  // سرور IR را اضافه می‌کند
+            formData.append('bank_name', bankName);
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            
+            fetch('{% url "sales:create_customer_bank_account_api" order_number="ORDER_PLACEHOLDER" %}'.replace('ORDER_PLACEHOLDER', orderNumber), {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success && data.account) {
+                    var opt = document.createElement('option');
+                    opt.value = data.account.id;
+                    opt.textContent = data.account.display;
+                    sourceAccountSelect.appendChild(opt);
+                    sourceAccountSelect.value = data.account.id;
+                    hideModal();
+                } else {
+                    errorDiv.textContent = data.error || 'خطا در ایجاد حساب.';
+                    errorDiv.style.display = 'block';
+                }
+            })
+            .catch(function (err) {
+                errorDiv.textContent = 'خطا در ارتباط با سرور.';
+                errorDiv.style.display = 'block';
+            })
+            .finally(function () {
+                submitBtn.disabled = false;
+            });
+        });
     })();
 
     // نمایش عدد فارسی با ، زیر مبلغ سند (مشابه تامین)

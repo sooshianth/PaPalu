@@ -1098,12 +1098,12 @@ class ProductPriceTable(tables.Table):
             
             # ایجاد یک دکمه که پاپ‌آپ را باز می‌کند
             return format_html(
-                '<button type="button" class="btn-view-price-info" '
+                '<button type="button" class="btn-view-price-info btn-outline-info" '
                 'data-price-id="{}" '
                 'data-condition="{}" '
                 'data-condition-description="{}" '
                 'data-description="{}" '
-                'style="padding: 5px 15px; border-radius: 6px; border: 1px solid #17a2b8; background-color: transparent; color: #17a2b8; cursor: pointer; font-size: 0.875rem; transition: all 0.3s;" '
+                'style="padding: 5px 10px; border-radius: 6px; border: 1px solid #17a2b8; background-color: transparent; color: #17a2b8; cursor: pointer; font-size: 0.875rem; font-weight: 500; font-family: inherit; transition: all 0.3s; text-decoration: none; display: inline-block;" '
                 'onmouseover="this.style.backgroundColor=\'#17a2b8\'; this.style.color=\'white\';" '
                 'onmouseout="this.style.backgroundColor=\'transparent\'; this.style.color=\'#17a2b8\';" '
                 'title="مشاهده اطلاعات قیمت‌گذاری">'
