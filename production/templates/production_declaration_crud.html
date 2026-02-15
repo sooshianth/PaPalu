@@ -570,6 +570,36 @@
         z-index: 100;
         overflow: visible;
     }
+    /* استایل باکس تاریخ زمان‌بندی مثل فرم ایجاد برنامه تولید */
+    .schedule-card .schedule-date-fields {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    .schedule-card .schedule-field {
+        margin-bottom: 0;
+    }
+    .schedule-card .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+        font-size: 0.95rem;
+    }
+    .schedule-card .form-control {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+        font-family: inherit;
+    }
+    .schedule-card .form-control:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
 </style>
 <!-- Persian Datepicker CSS -->
 <!-- Custom Jalali Datepicker Component -->
@@ -858,64 +888,44 @@
         
         <div class="detail-card schedule-card">
             <div class="detail-card-title">زمان‌بندی</div>
-            {% if accessible_production_program_fields.predicted_start_time %}
-            <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">شروع پیشبینی شده: <span style="color: red;">*</span></span>
-                {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' %}
-                    <input type="hidden" name="predicted_start_date" value="{{ form.predicted_start_date.value|default:'' }}" id="id_predicted_start_date">
-                    <input type="hidden" name="predicted_start_time" value="{{ form.predicted_start_time.value|default:'' }}" id="id_predicted_start_time">
-                    <div class="schedule-date-fields" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 200px;">
-                            <input type="text" class="form-control jalali-datetime" data-datetime-mode="start" id="id_predicted_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.predicted_start_date.value %}{{ form.predicted_start_date.value }}{% if form.predicted_start_time.value %} {{ form.predicted_start_time.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.predicted_start_date %}{{ program.predicted_start_date|jdatetime_to_gregorian:program.predicted_start_time }}{% endif %}" autocomplete="off">
-                        </div>
-                    </div>
-                {% else %}
-                    <div style="width: 100%;">
-                        {% if program and program.predicted_start_date and program.predicted_start_time %}
-                            <span class="persian-number-display">{{ program.predicted_start_date|jalali_datetime_display:program.predicted_start_time }}</span>
-                        {% else %}—{% endif %}
-                    </div>
+            <input type="hidden" name="predicted_start_date" value="{{ form.predicted_start_date.value|default:'' }}" id="id_predicted_start_date">
+            <input type="hidden" name="predicted_start_time" value="{{ form.predicted_start_time.value|default:'' }}" id="id_predicted_start_time">
+            <input type="hidden" name="predicted_end_date" value="{{ form.predicted_end_date.value|default:'' }}" id="id_predicted_end_date">
+            <input type="hidden" name="predicted_end_time" value="{{ form.predicted_end_time.value|default:'' }}" id="id_predicted_end_time">
+            <div class="schedule-date-fields">
+                {% if accessible_production_program_fields.predicted_start_time %}
+                <div class="schedule-field">
+                    <label class="form-label">شروع پیشبینی شده: <span style="color: #dc3545;">*</span></label>
+                    {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' %}
+                        <input type="text" class="form-control jalali-datetime" data-datetime-mode="start" id="id_predicted_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.predicted_start_date.value %}{{ form.predicted_start_date.value }}{% if form.predicted_start_time.value %} {{ form.predicted_start_time.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.predicted_start_date %}{{ program.predicted_start_date|jdatetime_to_gregorian:program.predicted_start_time }}{% endif %}" autocomplete="off">
+                    {% else %}
+                        <div style="padding: 10px 0; color: #343a40;">{% if program and program.predicted_start_date and program.predicted_start_time %}<span class="persian-number-display">{{ program.predicted_start_date|jalali_datetime_display:program.predicted_start_time }}</span>{% else %}—{% endif %}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% if accessible_production_program_fields.predicted_end_time %}
+                <div class="schedule-field">
+                    <label class="form-label">پایان پیشبینی شده: <span style="color: #dc3545;">*</span></label>
+                    {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' %}
+                        <input type="text" class="form-control jalali-datetime" data-datetime-mode="end" id="id_predicted_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.predicted_end_date.value %}{{ form.predicted_end_date.value }}{% if form.predicted_end_time.value %} {{ form.predicted_end_time.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.predicted_end_date %}{{ program.predicted_end_date|jdatetime_to_gregorian:program.predicted_end_time }}{% endif %}" autocomplete="off">
+                    {% else %}
+                        <div style="padding: 10px 0; color: #343a40;">{% if program and program.predicted_end_date and program.predicted_end_time %}<span class="persian-number-display">{{ program.predicted_end_date|jalali_datetime_display:program.predicted_end_time }}</span>{% else %}—{% endif %}</div>
+                    {% endif %}
+                </div>
                 {% endif %}
             </div>
-            {% endif %}
-            {% if accessible_production_program_fields.predicted_end_time %}
-            <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">پایان پیشبینی شده: <span style="color: red;">*</span></span>
-                {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' %}
-                    <input type="hidden" name="predicted_end_date" value="{{ form.predicted_end_date.value|default:'' }}" id="id_predicted_end_date">
-                    <input type="hidden" name="predicted_end_time" value="{{ form.predicted_end_time.value|default:'' }}" id="id_predicted_end_time">
-                    <div class="schedule-date-fields" style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 200px;">
-                            <input type="text" class="form-control jalali-datetime" data-datetime-mode="end" id="id_predicted_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.predicted_end_date.value %}{{ form.predicted_end_date.value }}{% if form.predicted_end_time.value %} {{ form.predicted_end_time.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.predicted_end_date %}{{ program.predicted_end_date|jdatetime_to_gregorian:program.predicted_end_time }}{% endif %}" autocomplete="off">
-                        </div>
-                    </div>
-                {% else %}
-                    <div style="width: 100%;">
-                        {% if program and program.predicted_end_date and program.predicted_end_time %}
-                            <span class="persian-number-display">{{ program.predicted_end_date|jalali_datetime_display:program.predicted_end_time }}</span>
-                        {% else %}—{% endif %}
-                    </div>
-                {% endif %}
-            </div>
-            {% endif %}
             
             <!-- تاریخ و زمان شروع واقعی (visible when in_progress or completed) -->
             {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
             {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
-            <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">شروع واقعی:</span>
+            <div class="schedule-field" style="margin-top: 1rem;">
+                <label class="form-label">شروع واقعی:</label>
                 {% if accessible_production_program_fields.actual_start_date_edit and accessible_production_program_fields.started_at_edit and program.status != 'completed' %}
                     <input type="hidden" name="actual_start_date" value="{{ form.actual_start_date.value|default:'' }}" id="id_actual_start_date">
                     <input type="hidden" name="started_at" value="{{ form.started_at.value|default:'' }}" id="id_started_at">
-                    <div style="flex: 1; min-width: 200px;">
-                        <input type="text" class="form-control jalali-datetime" data-datetime-mode="actual_start" id="id_actual_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.actual_start_date.value %}{{ form.actual_start_date.value }}{% if form.started_at.value %} {{ form.started_at.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.actual_start_date %}{{ program.actual_start_date|jdatetime_to_gregorian:program.started_at }}{% endif %}" autocomplete="off">
-                    </div>
+                    <input type="text" class="form-control jalali-datetime" data-datetime-mode="actual_start" id="id_actual_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.actual_start_date.value %}{{ form.actual_start_date.value }}{% if form.started_at.value %} {{ form.started_at.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.actual_start_date %}{{ program.actual_start_date|jdatetime_to_gregorian:program.started_at }}{% endif %}" autocomplete="off">
                 {% else %}
-                    <div style="width: 100%;">
-                        {% if program and program.actual_start_date and program.started_at %}
-                            <span class="persian-number-display">{{ program.actual_start_date|jalali_datetime_display:program.started_at }}</span>
-                        {% else %}—{% endif %}
-                    </div>
+                    <div style="padding: 10px 0; color: #343a40;">{% if program and program.actual_start_date and program.started_at %}<span class="persian-number-display">{{ program.actual_start_date|jalali_datetime_display:program.started_at }}</span>{% else %}—{% endif %}</div>
                 {% endif %}
             </div>
             {% endif %}
@@ -924,22 +934,14 @@
             <!-- تاریخ و زمان پایان واقعی (visible only when completed) -->
             {% if not is_create and program and program.status == 'completed' %}
             {% if accessible_production_program_fields.actual_end_date and accessible_production_program_fields.completed_at %}
-            <div class="detail-row" style="flex-direction: column; gap: 8px;">
-                <span class="detail-label">پایان واقعی:</span>
+            <div class="schedule-field" style="margin-top: 1rem;">
+                <label class="form-label">پایان واقعی:</label>
                 {% if accessible_production_program_fields.actual_end_date_edit and accessible_production_program_fields.completed_at_edit and program.status != 'completed' %}
-                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-                        <input type="hidden" name="actual_end_date" value="{{ form.actual_end_date.value|default:'' }}" id="id_actual_end_date">
-                        <input type="hidden" name="completed_at" value="{{ form.completed_at.value|default:'' }}" id="id_completed_at">
-                        <div style="flex: 1; min-width: 200px;">
-                            <input type="text" class="form-control jalali-datetime" data-datetime-mode="actual_end" id="id_actual_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.actual_end_date.value %}{{ form.actual_end_date.value }}{% if form.completed_at.value %} {{ form.completed_at.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.actual_end_date %}{{ program.actual_end_date|jdatetime_to_gregorian:program.completed_at }}{% endif %}" autocomplete="off">
-                        </div>
-                    </div>
+                    <input type="hidden" name="actual_end_date" value="{{ form.actual_end_date.value|default:'' }}" id="id_actual_end_date">
+                    <input type="hidden" name="completed_at" value="{{ form.completed_at.value|default:'' }}" id="id_completed_at">
+                    <input type="text" class="form-control jalali-datetime" data-datetime-mode="actual_end" id="id_actual_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.actual_end_date.value %}{{ form.actual_end_date.value }}{% if form.completed_at.value %} {{ form.completed_at.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.actual_end_date %}{{ program.actual_end_date|jdatetime_to_gregorian:program.completed_at }}{% endif %}" autocomplete="off">
                 {% else %}
-                    <div style="width: 100%;">
-                        {% if program and program.actual_end_date and program.completed_at %}
-                            <span class="persian-number-display">{{ program.actual_end_date|jalali_datetime_display:program.completed_at }}</span>
-                        {% else %}—{% endif %}
-                    </div>
+                    <div style="padding: 10px 0; color: #343a40;">{% if program and program.actual_end_date and program.completed_at %}<span class="persian-number-display">{{ program.actual_end_date|jalali_datetime_display:program.completed_at }}</span>{% else %}—{% endif %}</div>
                 {% endif %}
             </div>
             {% endif %}
