@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load number_filters %}
+{% load custom_filters %}
 {% block title %}اعلام تولید | سیمرغ افزار{% endblock %}
 
 {% block extra_css %}
@@ -762,19 +763,19 @@
                             <td>{{ program.program_id|default:"-" }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
-                            <td>{{ program.planned_weight_ton|default:"-" }}</td>
+                            <td><span class="persian-number-display">{% if program.planned_weight_ton is not None %}{{ program.planned_weight_ton|persian_number:3 }}{% else %}-{% endif %}</span></td>
                             {% endif %}
                             {% if accessible_production_program_fields.predicted_start_date and accessible_production_program_fields.predicted_start_time %}
                             <td>
                                 {% if program.predicted_start_date and program.predicted_start_time %}
-                                    {{ program.predicted_start_date|date:"Y/m/d" }} {{ program.predicted_start_time|date:"H:i" }}
+                                    <span class="persian-number-display">{{ program.predicted_start_date|jalali_datetime_display:program.predicted_start_time }}</span>
                                 {% else %}-{% endif %}
                             </td>
                             {% endif %}
                             {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
                             <td>
                                 {% if program.predicted_end_date and program.predicted_end_time %}
-                                    {{ program.predicted_end_date|date:"Y/m/d" }} {{ program.predicted_end_time|date:"H:i" }}
+                                    <span class="persian-number-display">{{ program.predicted_end_date|jalali_datetime_display:program.predicted_end_time }}</span>
                                 {% else %}-{% endif %}
                             </td>
                             {% endif %}
@@ -1060,19 +1061,19 @@
                             <td>{{ program.program_id|default:"-" }}</td>
                             {% endif %}
                             {% if accessible_production_program_fields.planned_weight_ton %}
-                            <td>{{ program.planned_weight_ton|default:"-" }}</td>
+                            <td><span class="persian-number-display">{% if program.planned_weight_ton is not None %}{{ program.planned_weight_ton|persian_number:3 }}{% else %}-{% endif %}</span></td>
                             {% endif %}
                             {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
                             <td>
                                 {% if program.actual_start_date and program.started_at %}
-                                    {{ program.actual_start_date|date:"Y/m/d" }} {{ program.started_at|date:"H:i" }}
+                                    <span class="persian-number-display">{{ program.actual_start_date|jalali_datetime_display:program.started_at }}</span>
                                 {% else %}-{% endif %}
                             </td>
                             {% endif %}
                             {% if accessible_production_program_fields.predicted_end_date and accessible_production_program_fields.predicted_end_time %}
                             <td>
                                 {% if program.predicted_end_date and program.predicted_end_time %}
-                                    {{ program.predicted_end_date|date:"Y/m/d" }} {{ program.predicted_end_time|date:"H:i" }}
+                                    <span class="persian-number-display">{{ program.predicted_end_date|jalali_datetime_display:program.predicted_end_time }}</span>
                                 {% else %}-{% endif %}
                             </td>
                             {% endif %}
@@ -1207,12 +1208,14 @@
                                 <td>{{ program.product.packaging_type|default:"-" }}</td>
                                 {% endif %}
                                 {% if accessible_production_program_fields.planned_weight_ton %}
-                                <td>{{ program.planned_weight_ton|default:"-" }}</td>
+                                <td><span class="persian-number-display">{% if program.planned_weight_ton is not None %}{{ program.planned_weight_ton|persian_number:3 }}{% else %}-{% endif %}</span></td>
                                 {% endif %}
                                 {% if accessible_production_program_fields.planned_weight_ton and accessible_production_program_fields.produced_weight_ton %}
                                 <td>
-                                    {% if program.planned_weight_ton and program.produced_weight_ton %}
-                                        {% widthratio program.produced_weight_ton program.planned_weight_ton 100 %}%
+                                    {% if program.fulfillment_percentage is not None %}
+                                        <span class="persian-number-display">{{ program.fulfillment_percentage|persian_number:0 }}%</span>
+                                    {% elif program.planned_weight_ton and program.produced_weight_ton %}
+                                        <span class="persian-number-display">{% widthratio program.produced_weight_ton program.planned_weight_ton 100 %}</span>%
                                     {% else %}
                                         -
                                     {% endif %}
@@ -1230,14 +1233,14 @@
                                 {% if accessible_production_program_fields.actual_start_date and accessible_production_program_fields.started_at %}
                                 <td>
                                     {% if program.actual_start_date and program.started_at %}
-                                        {{ program.actual_start_date|date:"Y/m/d" }} {{ program.started_at|date:"H:i" }}
+                                        <span class="persian-number-display">{{ program.actual_start_date|jalali_datetime_display:program.started_at }}</span>
                                     {% else %}-{% endif %}
                                 </td>
                                 {% endif %}
                                 {% if accessible_production_program_fields.actual_end_date and accessible_production_program_fields.completed_at %}
                                 <td>
                                     {% if program.actual_end_date and program.completed_at %}
-                                        {{ program.actual_end_date|date:"Y/m/d" }} {{ program.completed_at|date:"H:i" }}
+                                        <span class="persian-number-display">{{ program.actual_end_date|jalali_datetime_display:program.completed_at }}</span>
                                     {% else %}-{% endif %}
                                 </td>
                                 {% endif %}

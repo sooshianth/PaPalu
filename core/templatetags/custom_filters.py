@@ -257,4 +257,96 @@ def mul(value, arg):
         from decimal import Decimal
         return Decimal(str(value)) * Decimal(str(arg))
     except (ValueError, TypeError):
-        return Decimal('0') 
+        return Decimal('0')
+
+
+# نام ماه‌های شمسی (مطابق تقویم جلالی در کامپوننت)
+JALALI_MONTH_NAMES = [
+    'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+    'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'
+]
+
+
+@register.filter
+def jalali_date_display(value):
+    """
+    نمایش تاریخ شمسی به صورت «روز ماه سال» مثلاً 15 بهمن 1404
+    value: jdatetime.date یا None
+    """
+    if value is None:
+        return '—'
+    try:
+        import jdatetime
+        if isinstance(value, jdatetime.date):
+            jd = value
+        else:
+            return str(value)
+        if jd.month < 1 or jd.month > 12:
+            return str(value)
+        month_name = JALALI_MONTH_NAMES[jd.month - 1]
+        day = jd.day
+        year = jd.year
+        return f"{day} {month_name} {year}"
+    except (AttributeError, TypeError, IndexError):
+        return str(value)
+
+
+@register.filter
+def jalali_datetime_display(value, time_arg=None):
+    """
+    نمایش تاریخ و زمان شمسی به صورت «روز ماه سال HH:MM» مثلاً 15 بهمن 1404 14:49
+    value: jdatetime.date یا None
+    time_arg: زمان (time object یا str) اختیاری
+    """
+    base = jalali_date_display(value)
+    if base == '—':
+        return base
+    if time_arg is None:
+        return base
+    try:
+        if hasattr(time_arg, 'hour') and hasattr(time_arg, 'minute'):
+            hour, minute = time_arg.hour, time_arg.minute
+        elif isinstance(time_arg, str) and ':' in time_arg:
+            parts = time_arg.split(':')
+            hour = int(parts[0]) if parts else 0
+            minute = int(parts[1]) if len(parts) > 1 else 0
+        else:
+            return base
+        return f"{base} {hour:02d}:{minute:02d}"
+    except (TypeError, ValueError):
+        return base
+
+
+@register.filter
+def jdate_to_gregorian(value):
+    """
+    تبدیل jdatetime.date به رشته تاریخ میلادی YYYY-MM-DD برای data-gdate در datepicker
+    """
+    if value is None:
+        return ''
+    try:
+        import jdatetime
+        if isinstance(value, jdatetime.date):
+            g = value.togregorian()
+            return g.strftime('%Y-%m-%d')
+        return ''
+    except (AttributeError, TypeError):
+        return ''
+
+
+@register.filter
+def jdatetime_to_gregorian(value, time_arg=None):
+    """
+    ترکیب تاریخ شمسی و زمان به رشته میلادی YYYY-MM-DD HH:MM برای data-gdate در datepicker با زمان
+    """
+    date_str = jdate_to_gregorian(value)
+    if not date_str:
+        return ''
+    if time_arg is None:
+        return date_str + ' 00:00'
+    try:
+        hour = getattr(time_arg, 'hour', 0)
+        minute = getattr(time_arg, 'minute', 0)
+        return f"{date_str} {hour:02d}:{minute:02d}"
+    except (TypeError, ValueError):
+        return date_str + ' 00:00' 

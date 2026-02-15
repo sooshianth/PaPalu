@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load number_filters %}
+{% load custom_filters %}
 {% block title %}{% if is_create %}ایجاد{% else %}ویرایش{% endif %} برنامه تولید | سیمرغ افزار{% endblock %}
 
 {% block extra_css %}
@@ -547,13 +548,27 @@
         transform: none !important;
     }
     
-    /* Persian Datepicker z-index fix */
+    /* Persian Datepicker z-index and overflow (مثل تامین) */
     .pwt-datepicker-view-container {
         z-index: 10000 !important;
         position: absolute !important;
     }
     .datepicker-plot-area {
         z-index: 10000 !important;
+    }
+    .jdp-wrapper {
+        overflow: visible !important;
+        position: relative;
+        z-index: 1;
+    }
+    .detail-card .jdp-container.jdp-open {
+        z-index: 10000;
+    }
+    /* زمان‌بندی: تقویم بدون برش (مثل program/create) */
+    .detail-card.schedule-card {
+        position: relative;
+        z-index: 100;
+        overflow: visible;
     }
 </style>
 <!-- Persian Datepicker CSS -->
@@ -754,10 +769,10 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.product.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.product_edit and is_create or accessible_production_program_fields.product_edit and program.status == 'draft' or accessible_production_program_fields.product_edit and program.status == 'confirmed' and program.status != 'completed' %}
+                    {% if accessible_production_program_fields.product_edit and is_create or accessible_production_program_fields.product_edit and program.status == 'draft' %}
                         {{ form.product }}
                     {% else %}
-                        {% if program and program.product and accessible_product_fields.name %}{{ program.product.name|default:"-" }}{% else %}-{% endif %}
+                        {% if program and program.product and accessible_product_fields.name %}{{ program.product.name|default:"—" }}{% else %}—{% endif %}
                     {% endif %}
                 </span>
             </div>
@@ -766,10 +781,10 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.production_info.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.production_info_edit and is_create or accessible_production_program_fields.production_info_edit and program.status == 'draft' or accessible_production_program_fields.production_info_edit and program.status == 'confirmed' and program.status != 'completed' %}
+                    {% if accessible_production_program_fields.production_info_edit and is_create or accessible_production_program_fields.production_info_edit and program.status == 'draft' %}
                         {{ form.production_info }}
                     {% else %}
-                        {% if program and program.production_info and accessible_production_info_fields.formula_id %}{{ program.production_info.formula_id|default:"-" }}{% else %}-{% endif %}
+                        {% if program and program.production_info and accessible_production_info_fields.formula_id %}{{ program.production_info.formula_id|default:"—" }}{% else %}—{% endif %}
                     {% endif %}
                 </span>
             </div>
@@ -778,10 +793,10 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.program_id.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.program_id_edit and is_create or accessible_production_program_fields.program_id_edit and program.status == 'draft' or accessible_production_program_fields.program_id_edit and program.status == 'confirmed' and program.status != 'completed' %}
+                    {% if accessible_production_program_fields.program_id_edit and is_create or accessible_production_program_fields.program_id_edit and program.status == 'draft' %}
                         {{ form.program_id }}
                     {% else %}
-                        {% if program and accessible_production_program_fields.program_id %}{{ program.program_id|default:"-" }}{% else %}-{% endif %}
+                        {% if program and accessible_production_program_fields.program_id %}{{ program.program_id|default:"—" }}{% else %}—{% endif %}
                     {% endif %}
                 </span>
             </div>
@@ -794,10 +809,12 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.planned_weight_ton.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.planned_weight_ton_edit and is_create or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'draft' or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'confirmed' and program.status != 'completed' %}
+                    {% if accessible_production_program_fields.planned_weight_ton_edit and is_create or accessible_production_program_fields.planned_weight_ton_edit and program.status == 'draft' %}
                         {{ form.planned_weight_ton }}
+                        <small class="persian-number-display" id="id_planned_weight_ton_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% else %}
-                        {% if program %}{{ program.planned_weight_ton|default:"-" }}{% else %}-{% endif %}
+                        {% if program.planned_weight_ton is not None %}<input type="hidden" id="id_planned_weight_ton" value="{{ program.planned_weight_ton }}">{% endif %}
+                        <span class="persian-number-display">{% if program.planned_weight_ton is not None %}{{ program.planned_weight_ton|persian_number:3 }}{% else %}—{% endif %}</span>
                     {% endif %}
                 </span>
             </div>
@@ -809,8 +826,9 @@
                 <span class="detail-value">
                     {% if accessible_production_program_fields.produced_weight_ton_edit and program.status != 'completed' %}
                         {{ form.produced_weight_ton }}
+                        <small class="persian-number-display" id="id_produced_weight_ton_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% else %}
-                        {{ program.produced_weight_ton|default:"-" }}
+                        <span class="persian-number-display">{% if program.produced_weight_ton is not None %}{{ program.produced_weight_ton|persian_number:3 }}{% else %}—{% endif %}</span>
                     {% endif %}
                 </span>
             </div>
@@ -820,7 +838,7 @@
             {% if accessible_production_program_fields.fulfillment_percentage %}
             <div class="detail-row">
                 <span class="detail-label">درصد تحقق:</span>
-                <span class="detail-value">{{ program.fulfillment_percentage|default:"-" }}%</span>
+                <span class="detail-value"><span class="persian-number-display">{% if program.fulfillment_percentage is not None %}{{ program.fulfillment_percentage|persian_number:2 }}%{% else %}—{% endif %}</span></span>
             </div>
             {% endif %}
             {% endif %}
@@ -828,31 +846,34 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.packaging_type.label }}:{% if is_create or program.status == 'draft' %}<span style="color: red;">*</span>{% endif %}</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.packaging_type_edit and is_create or accessible_production_program_fields.packaging_type_edit and program.status == 'draft' or accessible_production_program_fields.packaging_type_edit and program.status == 'confirmed' and program.status != 'completed' %}
+                    {% if accessible_production_program_fields.packaging_type_edit and is_create or accessible_production_program_fields.packaging_type_edit and program.status == 'draft' %}
                         {{ form.packaging_type }}
                     {% else %}
-                        {% if program %}{{ program.get_packaging_type_display|default:"-" }}{% else %}-{% endif %}
+                        {% if program %}{{ program.get_packaging_type_display|default:"—" }}{% else %}—{% endif %}
                     {% endif %}
                 </span>
             </div>
             {% endif %}
         </div>
         
-        <div class="detail-card">
+        <div class="detail-card schedule-card">
             <div class="detail-card-title">زمان‌بندی</div>
             {% if accessible_production_program_fields.predicted_start_time %}
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">شروع پیشبینی شده: <span style="color: red;">*</span></span>
-                {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_start_time_edit and program.status == 'confirmed' and program.status != 'completed' %}
-                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 150px;">{{ form.predicted_start_date }}</div>
-                        <div style="flex: 1; min-width: 120px;">{{ form.predicted_start_time }}</div>
+                {% if accessible_production_program_fields.predicted_start_time_edit and is_create or accessible_production_program_fields.predicted_start_time_edit and program.status == 'draft' %}
+                    <input type="hidden" name="predicted_start_date" value="{{ form.predicted_start_date.value|default:'' }}" id="id_predicted_start_date">
+                    <input type="hidden" name="predicted_start_time" value="{{ form.predicted_start_time.value|default:'' }}" id="id_predicted_start_time">
+                    <div class="schedule-date-fields" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" class="form-control jalali-datetime" data-datetime-mode="start" id="id_predicted_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.predicted_start_date.value %}{{ form.predicted_start_date.value }}{% if form.predicted_start_time.value %} {{ form.predicted_start_time.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.predicted_start_date %}{{ program.predicted_start_date|jdatetime_to_gregorian:program.predicted_start_time }}{% endif %}" autocomplete="off">
+                        </div>
                     </div>
                 {% else %}
                     <div style="width: 100%;">
                         {% if program and program.predicted_start_date and program.predicted_start_time %}
-                            {{ program.predicted_start_date.year }}-{{ program.predicted_start_date.month|stringformat:"02d" }}-{{ program.predicted_start_date.day|stringformat:"02d" }} {{ program.predicted_start_time|time:"H:i" }}
-                        {% else %}-{% endif %}
+                            <span class="persian-number-display">{{ program.predicted_start_date|jalali_datetime_display:program.predicted_start_time }}</span>
+                        {% else %}—{% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -860,16 +881,19 @@
             {% if accessible_production_program_fields.predicted_end_time %}
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">پایان پیشبینی شده: <span style="color: red;">*</span></span>
-                {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' or accessible_production_program_fields.predicted_end_time_edit and program.status == 'confirmed' and program.status != 'completed' %}
-                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 150px;">{{ form.predicted_end_date }}</div>
-                        <div style="flex: 1; min-width: 120px;">{{ form.predicted_end_time }}</div>
+                {% if accessible_production_program_fields.predicted_end_time_edit and is_create or accessible_production_program_fields.predicted_end_time_edit and program.status == 'draft' %}
+                    <input type="hidden" name="predicted_end_date" value="{{ form.predicted_end_date.value|default:'' }}" id="id_predicted_end_date">
+                    <input type="hidden" name="predicted_end_time" value="{{ form.predicted_end_time.value|default:'' }}" id="id_predicted_end_time">
+                    <div class="schedule-date-fields" style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" class="form-control jalali-datetime" data-datetime-mode="end" id="id_predicted_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.predicted_end_date.value %}{{ form.predicted_end_date.value }}{% if form.predicted_end_time.value %} {{ form.predicted_end_time.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.predicted_end_date %}{{ program.predicted_end_date|jdatetime_to_gregorian:program.predicted_end_time }}{% endif %}" autocomplete="off">
+                        </div>
                     </div>
                 {% else %}
                     <div style="width: 100%;">
                         {% if program and program.predicted_end_date and program.predicted_end_time %}
-                            {{ program.predicted_end_date.year }}-{{ program.predicted_end_date.month|stringformat:"02d" }}-{{ program.predicted_end_date.day|stringformat:"02d" }} {{ program.predicted_end_time|time:"H:i" }}
-                        {% else %}-{% endif %}
+                            <span class="persian-number-display">{{ program.predicted_end_date|jalali_datetime_display:program.predicted_end_time }}</span>
+                        {% else %}—{% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -881,15 +905,16 @@
             <div class="detail-row" style="flex-direction: column; gap: 8px;">
                 <span class="detail-label">شروع واقعی:</span>
                 {% if accessible_production_program_fields.actual_start_date_edit and accessible_production_program_fields.started_at_edit and program.status != 'completed' %}
-                    <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 150px;">{{ form.actual_start_date }}</div>
-                        <div style="flex: 1; min-width: 120px;">{{ form.started_at }}</div>
+                    <input type="hidden" name="actual_start_date" value="{{ form.actual_start_date.value|default:'' }}" id="id_actual_start_date">
+                    <input type="hidden" name="started_at" value="{{ form.started_at.value|default:'' }}" id="id_started_at">
+                    <div style="flex: 1; min-width: 200px;">
+                        <input type="text" class="form-control jalali-datetime" data-datetime-mode="actual_start" id="id_actual_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.actual_start_date.value %}{{ form.actual_start_date.value }}{% if form.started_at.value %} {{ form.started_at.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.actual_start_date %}{{ program.actual_start_date|jdatetime_to_gregorian:program.started_at }}{% endif %}" autocomplete="off">
                     </div>
                 {% else %}
                     <div style="width: 100%;">
                         {% if program and program.actual_start_date and program.started_at %}
-                            {{ program.actual_start_date.year }}-{{ program.actual_start_date.month|stringformat:"02d" }}-{{ program.actual_start_date.day|stringformat:"02d" }} {{ program.started_at|time:"H:i" }}
-                        {% else %}-{% endif %}
+                            <span class="persian-number-display">{{ program.actual_start_date|jalali_datetime_display:program.started_at }}</span>
+                        {% else %}—{% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -903,14 +928,17 @@
                 <span class="detail-label">پایان واقعی:</span>
                 {% if accessible_production_program_fields.actual_end_date_edit and accessible_production_program_fields.completed_at_edit and program.status != 'completed' %}
                     <div style="display: flex; gap: 8px; width: 100%; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 150px;">{{ form.actual_end_date }}</div>
-                        <div style="flex: 1; min-width: 120px;">{{ form.completed_at }}</div>
+                        <input type="hidden" name="actual_end_date" value="{{ form.actual_end_date.value|default:'' }}" id="id_actual_end_date">
+                        <input type="hidden" name="completed_at" value="{{ form.completed_at.value|default:'' }}" id="id_completed_at">
+                        <div style="flex: 1; min-width: 200px;">
+                            <input type="text" class="form-control jalali-datetime" data-datetime-mode="actual_end" id="id_actual_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.actual_end_date.value %}{{ form.actual_end_date.value }}{% if form.completed_at.value %} {{ form.completed_at.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.actual_end_date %}{{ program.actual_end_date|jdatetime_to_gregorian:program.completed_at }}{% endif %}" autocomplete="off">
+                        </div>
                     </div>
                 {% else %}
                     <div style="width: 100%;">
                         {% if program and program.actual_end_date and program.completed_at %}
-                            {{ program.actual_end_date.year }}-{{ program.actual_end_date.month|stringformat:"02d" }}-{{ program.actual_end_date.day|stringformat:"02d" }} {{ program.completed_at|time:"H:i" }}
-                        {% else %}-{% endif %}
+                            <span class="persian-number-display">{{ program.actual_end_date|jalali_datetime_display:program.completed_at }}</span>
+                        {% else %}—{% endif %}
                     </div>
                 {% endif %}
             </div>
@@ -924,10 +952,11 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.inventory_snapshot.label }}:</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.inventory_snapshot_edit and is_create or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'draft' or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'confirmed' and program.status != 'completed' %}
+                    {% if accessible_production_program_fields.inventory_snapshot_edit and is_create or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'draft' %}
                         {{ form.inventory_snapshot }}
+                        <small class="persian-number-display" id="id_inventory_snapshot_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% else %}
-                        {% if program %}{{ program.inventory_snapshot|default:"-" }}{% else %}-{% endif %}
+                        <span class="persian-number-display">{% if program.inventory_snapshot is not None %}{{ program.inventory_snapshot|persian_number:3 }}{% else %}—{% endif %}</span>
                     {% endif %}
                 </span>
             </div>
@@ -936,10 +965,11 @@
             <div class="detail-row">
                 <span class="detail-label">{{ form.net_unplanned_requirement.label }}:</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.net_unplanned_requirement_edit and is_create or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'draft' or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'confirmed' and program.status != 'completed' %}
+                    {% if accessible_production_program_fields.net_unplanned_requirement_edit and is_create or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'draft' %}
                         {{ form.net_unplanned_requirement }}
+                        <small class="persian-number-display" id="id_net_unplanned_requirement_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% else %}
-                        {% if program %}{{ program.net_unplanned_requirement|default:"-" }}{% else %}-{% endif %}
+                        <span class="persian-number-display">{% if program.net_unplanned_requirement is not None %}{{ program.net_unplanned_requirement|persian_number:3 }}{% else %}—{% endif %}</span>
                     {% endif %}
                 </span>
             </div>
@@ -1119,6 +1149,7 @@
             <div class="modal-form-field">
                 <label for="producedWeight">وزن تولید شده (کیلوگرم): <span style="color: red;">*</span></label>
                 <input type="number" id="producedWeight" class="form-control" step="0.001" min="0" required>
+                <small class="persian-number-display" id="producedWeight_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
             </div>
             
             <div class="modal-form-field">
@@ -1294,6 +1325,100 @@ const accessibleRawMaterialFields = JSON.parse('{{ accessible_raw_material_field
 const accessibleWarehouseFields = JSON.parse('{{ accessible_warehouse_fields_json|escapejs }}');
 const accessibleProductionInfoFields = JSON.parse('{{ accessible_production_info_fields_json|escapejs }}');
 const accessibleBomFields = JSON.parse('{{ accessible_bom_fields_json|escapejs }}');
+
+// نمایش عدد فارسی با جداکننده هزارگان (،) زیر اینپوت‌های وزن (مثل تامین)
+(function () {
+    var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    function formatNumberToPersian(num, decimalPlaces) {
+        if (num === null || num === undefined || isNaN(num)) return '';
+        var n = parseFloat(num);
+        var fixed;
+        if (decimalPlaces === 0) {
+            fixed = String(Math.round(n));
+        } else if (decimalPlaces !== undefined && decimalPlaces > 0) {
+            fixed = n.toFixed(decimalPlaces);
+        } else {
+            fixed = (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+        }
+        var parts = fixed.split('.');
+        var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+        var result = intPart + (parts[1] ? '.' + parts[1] : '');
+        return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+    }
+    function updatePersianDisplay(inputId, displayId, decimals) {
+        var input = document.getElementById(inputId);
+        var display = document.getElementById(displayId);
+        if (!input || !display) return;
+        var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+        var num = parseFloat(raw);
+        display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, decimals);
+    }
+    function attachPersianDisplay(inputId, displayId, decimals) {
+        decimals = decimals !== undefined ? decimals : 3;
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        updatePersianDisplay(inputId, displayId, decimals);
+        input.addEventListener('input', function () { updatePersianDisplay(inputId, displayId, decimals); });
+        input.addEventListener('change', function () { updatePersianDisplay(inputId, displayId, decimals); });
+    }
+    document.addEventListener('DOMContentLoaded', function () {
+        attachPersianDisplay('id_planned_weight_ton', 'id_planned_weight_ton_persian', 3);
+        attachPersianDisplay('id_produced_weight_ton', 'id_produced_weight_ton_persian', 3);
+        attachPersianDisplay('id_inventory_snapshot', 'id_inventory_snapshot_persian', 3);
+        attachPersianDisplay('id_net_unplanned_requirement', 'id_net_unplanned_requirement_persian', 3);
+        attachPersianDisplay('producedWeight', 'producedWeight_persian', 3);
+    });
+})();
+
+// راه‌اندازی فیلدهای تاریخ-ساعت (تاریخ و زمان در یک اینپوت مثل program/create)
+document.addEventListener('DOMContentLoaded', function () {
+    function initScheduleDatetime() {
+        var form = document.getElementById('productionForm');
+        if (!form) return;
+        var datetimeInputs = form.querySelectorAll('.jalali-datetime[data-datetime-mode]');
+        datetimeInputs.forEach(function (input) {
+            if (input.hasAttribute('data-jdp-initialized')) return;
+            var mode = input.getAttribute('data-datetime-mode');
+            var gdate = input.getAttribute('data-gdate') || '';
+            if (gdate) {
+                input.value = gdate;
+            }
+            JalaliDatepicker.init('#' + input.id, { time: true });
+            input.addEventListener('jdp:change', function (e) {
+                var jy = e.detail.year;
+                var jm = String(e.detail.month).padStart(2, '0');
+                var jd = String(e.detail.day).padStart(2, '0');
+                var hh = String(e.detail.hour || 0).padStart(2, '0');
+                var mm = String(e.detail.minute || 0).padStart(2, '0');
+                var dateStr = jy + '-' + jm + '-' + jd;
+                var timeStr = hh + ':' + mm + ':00';
+                if (mode === 'start') {
+                    var hd = document.getElementById('id_predicted_start_date');
+                    var ht = document.getElementById('id_predicted_start_time');
+                    if (hd) hd.value = dateStr;
+                    if (ht) ht.value = timeStr;
+                } else if (mode === 'end') {
+                    var hd = document.getElementById('id_predicted_end_date');
+                    var ht = document.getElementById('id_predicted_end_time');
+                    if (hd) hd.value = dateStr;
+                    if (ht) ht.value = timeStr;
+                } else if (mode === 'actual_start') {
+                    var hd = document.getElementById('id_actual_start_date');
+                    var ht = document.getElementById('id_started_at');
+                    if (hd) hd.value = dateStr;
+                    if (ht) ht.value = timeStr;
+                } else if (mode === 'actual_end') {
+                    var hd = document.getElementById('id_actual_end_date');
+                    var ht = document.getElementById('id_completed_at');
+                    if (hd) hd.value = dateStr;
+                    if (ht) ht.value = timeStr;
+                }
+            });
+            input.setAttribute('data-jdp-initialized', 'true');
+        });
+    }
+    setTimeout(initScheduleDatetime, 200);
+});
 
 // Modal functions
 function showModal(modalId) {
@@ -2308,6 +2433,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    function formatBomNumber(num, decimals) {
+        if (num === null || num === undefined || num === '' || isNaN(parseFloat(num))) return '-';
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        var n = parseFloat(num);
+        var fixed = (decimals !== undefined && decimals > 0) ? n.toFixed(decimals) : String(Math.round(n));
+        var parts = fixed.split('.');
+        var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+        var result = intPart + (parts[1] ? '.' + parts[1] : '');
+        return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+    }
     function displayBOMDetails(data) {
         // Debug: log when BOM render is attempted
         try { console.debug('displayBOMDetails called', { dataPreview: data && { id: data.id }, bomItemsLength: data && data.bom_items ? data.bom_items.length : 0 }); } catch(e) {}
@@ -2350,8 +2485,7 @@ document.addEventListener('DOMContentLoaded', function() {
             html += `                <strong>شناسه برنامه:</strong> ${data.program_id || '-'}<br>\n`;
         }
         if (showMinBatch) {
-            // Display as kg (no conversion, just change unit)
-            const minBatchKg = data.min_batch_production ? new Decimal(data.min_batch_production).toFixed(2) : '-';
+            const minBatchKg = data.min_batch_production ? formatBomNumber(data.min_batch_production, 2) : '—';
             html += `                <strong>حداقل وزن تولید:</strong> ${minBatchKg} کیلوگرم<br>\n`;
         }
         if (showSpecificInstruction) {
@@ -2378,20 +2512,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (warehousesWithAmount.length > 0) {
                 // Show one row per warehouse
                 warehousesWithAmount.forEach((wh, whIndex) => {
-                    const plannedAmount = new Decimal(wh.amount || '0').toFixed(3);
+                    const plannedAmountRaw = new Decimal(wh.amount || '0').toFixed(3);
+                    const plannedAmount = formatBomNumber(wh.amount || '0', 3);
                     
                     // Get actual consumption for this warehouse
                     let actualAmount = '';
                     if (existingActualConsumption && existingActualConsumption[bomIdStr]) {
                         actualAmount = existingActualConsumption[bomIdStr][wh.warehouse] || '';
                     }
+                    const actualAmountDisplay = actualAmount ? formatBomNumber(actualAmount, 3) : '—';
+                    const percentageDisplay = formatBomNumber(item.percentage || '0', 3);
                     
                     html += `
                         <tr>
                             ${whIndex === 0 && showRawMaterialId ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_id || '-'}</td>` : ''}
                             ${whIndex === 0 && showRawMaterialName ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_name || '-'}</td>` : ''}
                             ${showWarehouseName ? `<td style="background: #f0f8ff; font-weight: 600;">${wh.warehouse}</td>` : ''}
-                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${percentage.toFixed(3)}%</td>` : ''}
+                            ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${percentageDisplay}%</td>` : ''}
                             <td style="font-weight: 600; color: var(--primary-green);">${plannedAmount}</td>
                     `;
                     
@@ -2414,7 +2551,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         } else {
                             html += `
                                 <td style="background: #fff6db;">
-                                    <span style="font-weight: 600; color: #b95c00;">${actualAmount || '-'}</span>
+                                    <span style="font-weight: 600; color: #b95c00;">${actualAmountDisplay}</span>
                                 </td>
                             `;
                         }
@@ -2427,27 +2564,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             } else {
                 // No warehouse distribution - show single row
-                // Calculate total consumption: percentage * plannedWeight / 100
-                const totalConsumption = plannedWeight.gt(new Decimal('0')) ? percentage.mul(plannedWeight).div(new Decimal('100')).toFixed(3) : '-';
+                const totalConsumptionRaw = plannedWeight.gt(new Decimal('0')) ? percentage.mul(plannedWeight).div(new Decimal('100')).toFixed(3) : '-';
+                const totalConsumption = totalConsumptionRaw !== '-' ? formatBomNumber(totalConsumptionRaw, 3) : '—';
+                const percentageDisplay = formatBomNumber(item.percentage || '0', 3);
                 // Check for existing actual consumption (global) and prefill if available
                 let existingGlobalActual = '';
                 if (existingActualConsumption && existingActualConsumption[bomIdStr]) {
                     existingGlobalActual = existingActualConsumption[bomIdStr]['global'] || existingActualConsumption[bomIdStr]['none'] || '';
                 }
+                const defaultValue = existingGlobalActual || (totalConsumptionRaw !== '-' ? totalConsumptionRaw : '');
+                const defaultValueDisplay = defaultValue ? formatBomNumber(defaultValue, 3) : '—';
                 
                 html += `
                     <tr>
                         ${showRawMaterialId ? `<td>${item.raw_material_id || '-'}</td>` : ''}
                         ${showRawMaterialName ? `<td>${item.raw_material_name || '-'}</td>` : ''}
                         ${showWarehouseName ? `<td style="color: #6c757d; font-style: italic;">-</td>` : ''}
-                        <td>${percentage.toFixed(3)}%</td>
+                        <td>${percentageDisplay}%</td>
                         <td style="font-weight: 600; color: var(--primary-green);">${totalConsumption}</td>
                 `;
                 
                 if (showActualConsumption) {
-                    // For BOM items without warehouse distribution, present a single global actual consumption input so user can enter real use
-                    const defaultValue = existingGlobalActual || totalConsumption || '';
-                    // در وضعیت in_progress قابل ویرایش، در completed فقط نمایش
                     if (currentStatus === 'in_progress' && hasActualConsumptionPermission) {
                         html += `<td style="background: #f8f9fa; text-align: center;">
                             <input type="number" 
@@ -2462,7 +2599,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </td>`;
                     } else {
                         html += `<td style="background: #f8f9fa; text-align: center;">
-                            <span style="font-weight: 600; color: #b95c00;">${defaultValue || '-'}</span>
+                            <span style="font-weight: 600; color: #b95c00;">${defaultValueDisplay}</span>
                         </td>`;
                     }
                 }
@@ -2617,32 +2754,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     let hasErrors = false;
                     const errors = [];
                     
-                    // Check datetime fields (date + time combinations)
+                    // Check datetime fields (hidden های تاریخ-ساعت)
                     const startDateField = document.getElementById('id_predicted_start_date');
                     const startTimeField = document.getElementById('id_predicted_start_time');
-                    if (startDateField && startTimeField && startDateField.offsetParent !== null && !startDateField.disabled) {
+                    const startDatetimeVisible = document.getElementById('id_predicted_start_datetime');
+                    if (startDateField && startTimeField && startDatetimeVisible) {
                         if (!startDateField.value.trim() || !startTimeField.value.trim()) {
                             hasErrors = true;
                             errors.push('شروع پیشبینی شده الزامی است.');
-                            if (startDateField) startDateField.style.borderColor = '#dc3545';
-                            if (startTimeField) startTimeField.style.borderColor = '#dc3545';
+                            startDatetimeVisible.style.borderColor = '#dc3545';
                         } else {
-                            if (startDateField) startDateField.style.borderColor = '';
-                            if (startTimeField) startTimeField.style.borderColor = '';
+                            startDatetimeVisible.style.borderColor = '';
                         }
                     }
-                    
                     const endDateField = document.getElementById('id_predicted_end_date');
                     const endTimeField = document.getElementById('id_predicted_end_time');
-                    if (endDateField && endTimeField && endDateField.offsetParent !== null && !endDateField.disabled) {
+                    const endDatetimeVisible = document.getElementById('id_predicted_end_datetime');
+                    if (endDateField && endTimeField && endDatetimeVisible) {
                         if (!endDateField.value.trim() || !endTimeField.value.trim()) {
                             hasErrors = true;
                             errors.push('پایان پیشبینی شده الزامی است.');
-                            if (endDateField) endDateField.style.borderColor = '#dc3545';
-                            if (endTimeField) endTimeField.style.borderColor = '#dc3545';
+                            endDatetimeVisible.style.borderColor = '#dc3545';
                         } else {
-                            if (endDateField) endDateField.style.borderColor = '';
-                            if (endTimeField) endTimeField.style.borderColor = '';
+                            endDatetimeVisible.style.borderColor = '';
                         }
                     }
                     

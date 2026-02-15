@@ -24,6 +24,7 @@ def persian_number(value, decimal_places=0):
             formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         else:
             formatted = f"{d.quantize(Decimal('1')):,.0f}"
+        formatted = formatted.replace(',', '،')
         return convert_to_persian_numbers(formatted)
     except (ValueError, TypeError):
         return str(value)
