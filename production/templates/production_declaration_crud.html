@@ -1103,13 +1103,8 @@
             <p style="margin-bottom: 20px; font-weight: 600;">آیا از شروع تولید این برنامه اطمینان دارید؟</p>
             
             <div class="modal-form-field">
-                <label for="actualStartDate">تاریخ شروع واقعی: <span style="color: red;">*</span></label>
-                <input type="text" id="actualStartDate" class="form-control jalali-date-modal" dir="ltr" required>
-            </div>
-            
-            <div class="modal-form-field">
-                <label for="actualStartTime">زمان شروع واقعی: <span style="color: red;">*</span></label>
-                <input type="time" id="actualStartTime" class="form-control" required>
+                <label for="modalActualStartDatetime">تاریخ و زمان شروع واقعی: <span style="color: red;">*</span></label>
+                <input type="text" id="modalActualStartDatetime" class="form-control jalali-datetime" data-datetime-mode="modal_actual_start" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" autocomplete="off" required>
             </div>
             
             <div class="modal-form-field">
@@ -1155,13 +1150,8 @@
             </div>
             
             <div class="modal-form-field">
-                <label for="completionDate">تاریخ پایان واقعی: <span style="color: red;">*</span></label>
-                <input type="text" id="completionDate" class="form-control jalali-date-input" dir="ltr" placeholder="1403-08-29" required>
-            </div>
-            
-            <div class="modal-form-field">
-                <label for="completionTime">زمان تکمیل: <span style="color: red;">*</span></label>
-                <input type="time" id="completionTime" class="form-control" required>
+                <label for="modalCompletionDatetime">تاریخ و زمان پایان واقعی: <span style="color: red;">*</span></label>
+                <input type="text" id="modalCompletionDatetime" class="form-control jalali-datetime" data-datetime-mode="modal_actual_end" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" autocomplete="off" required>
             </div>
             
             <div class="modal-form-field">
@@ -1667,10 +1657,20 @@ function closeModal(modalId) {
     
     // Clear form fields
     if (modalId === 'startProductionModal') {
-        document.getElementById('actualStartTime').value = '';
+        const startDt = document.getElementById('modalActualStartDatetime');
+        if (startDt) {
+            startDt.value = '';
+            startDt.removeAttribute('data-jalali-date');
+            startDt.removeAttribute('data-jalali-time');
+        }
     } else if (modalId === 'completeProductionModal') {
         document.getElementById('producedWeight').value = '';
-        document.getElementById('completionTime').value = '';
+        const endDt = document.getElementById('modalCompletionDatetime');
+        if (endDt) {
+            endDt.value = '';
+            endDt.removeAttribute('data-jalali-date');
+            endDt.removeAttribute('data-jalali-time');
+        }
         // Clear BOM inputs
         const bomInputs = document.querySelectorAll('.modal-bom-input');
         bomInputs.forEach(input => input.value = '');
@@ -1820,66 +1820,38 @@ function showStartProductionModal() {
     
     showModal('startProductionModal');
     
-    // Initialize Custom Jalali date picker for modal (date only, no time)
-    const actualStartDateInput = document.getElementById('actualStartDate');
-    if (actualStartDateInput && !actualStartDateInput.hasAttribute('data-jdp-initialized')) {
-        // ایجاد فیلد مخفی برای actualStartDateField
-        const hiddenInput = document.getElementById('actualStartDateField');
-        if (!hiddenInput) {
-            const newHiddenInput = document.createElement('input');
-            newHiddenInput.type = 'hidden';
-            newHiddenInput.id = 'actualStartDateField';
-            newHiddenInput.name = 'actual_start_date';
-            actualStartDateInput.parentNode.appendChild(newHiddenInput);
-        }
-        
-        // حذف name از فیلد نمایشی (اگر وجود دارد)
-        actualStartDateInput.removeAttribute('name');
-        const originalId = actualStartDateInput.id;
-        actualStartDateInput.id = 'visual_actualStartDate';
-        
-        // راه‌اندازی datepicker
-        JalaliDatepicker.init('#' + actualStartDateInput.id, { time: false });
-        
-        // گوش دادن به تغییرات
-        actualStartDateInput.addEventListener('jdp:change', function (e) {
+    // Initialize Jalali datetime picker for modal (same as scheduling section)
+    const modalStartDatetimeInput = document.getElementById('modalActualStartDatetime');
+    if (modalStartDatetimeInput && !modalStartDatetimeInput.hasAttribute('data-jdp-initialized')) {
+        JalaliDatepicker.init('#modalActualStartDatetime', { time: true });
+        modalStartDatetimeInput.addEventListener('jdp:change', function (e) {
             const jy = e.detail.year;
             const jm = String(e.detail.month).padStart(2, '0');
             const jd = String(e.detail.day).padStart(2, '0');
-            const jalaliDateStr = `${jy}-${jm}-${jd}`;
-            const hiddenField = document.getElementById('actualStartDateField');
-            if (hiddenField) {
-                hiddenField.value = jalaliDateStr;
-            }
+            const hh = String(e.detail.hour || 0).padStart(2, '0');
+            const mm = String(e.detail.minute || 0).padStart(2, '0');
+            modalStartDatetimeInput.setAttribute('data-jalali-date', `${jy}-${jm}-${jd}`);
+            modalStartDatetimeInput.setAttribute('data-jalali-time', `${hh}:${mm}:00`);
         });
-        
-        actualStartDateInput.setAttribute('data-jdp-initialized', 'true');
+        modalStartDatetimeInput.setAttribute('data-jdp-initialized', 'true');
     }
 }
 
 function showCompleteProductionModal() {
-    // Initialize Custom Jalali datepicker for completion date
-    const completionDateInput = document.getElementById('completionDate');
-    if (completionDateInput && !completionDateInput.hasAttribute('data-jdp-initialized')) {
-        // حذف name از فیلد نمایشی (اگر وجود دارد)
-        completionDateInput.removeAttribute('name');
-        const originalId = completionDateInput.id;
-        completionDateInput.id = 'visual_completionDate';
-        
-        // راه‌اندازی datepicker
-        JalaliDatepicker.init('#' + completionDateInput.id, { time: false });
-        
-        // گوش دادن به تغییرات - مقدار در confirmCompleteProduction استفاده می‌شود
-        completionDateInput.addEventListener('jdp:change', function (e) {
+    // Initialize Jalali datetime picker for completion (same as scheduling section)
+    const modalCompletionInput = document.getElementById('modalCompletionDatetime');
+    if (modalCompletionInput && !modalCompletionInput.hasAttribute('data-jdp-initialized')) {
+        JalaliDatepicker.init('#modalCompletionDatetime', { time: true });
+        modalCompletionInput.addEventListener('jdp:change', function (e) {
             const jy = e.detail.year;
             const jm = String(e.detail.month).padStart(2, '0');
             const jd = String(e.detail.day).padStart(2, '0');
-            const jalaliDateStr = `${jy}-${jm}-${jd}`;
-            // ذخیره در data attribute برای استفاده در confirmCompleteProduction
-            completionDateInput.setAttribute('data-jalali-value', jalaliDateStr);
+            const hh = String(e.detail.hour || 0).padStart(2, '0');
+            const mm = String(e.detail.minute || 0).padStart(2, '0');
+            modalCompletionInput.setAttribute('data-jalali-date', `${jy}-${jm}-${jd}`);
+            modalCompletionInput.setAttribute('data-jalali-time', `${hh}:${mm}:00`);
         });
-        
-        completionDateInput.setAttribute('data-jdp-initialized', 'true');
+        modalCompletionInput.setAttribute('data-jdp-initialized', 'true');
     }
     
     // Get current production info ID
@@ -2035,33 +2007,19 @@ function showCompleteProductionModal() {
 }
 
 function confirmStartProduction() {
-    // دریافت مقدار از hidden field (که توسط jdp:change event تنظیم شده)
-    const hiddenField = document.getElementById('actualStartDateField');
-    let startDate = hiddenField ? hiddenField.value : '';
-    
-    // اگر hidden field خالی است، از input اصلی بگیر (fallback)
-    if (!startDate) {
-        const actualStartDateInput = document.getElementById('visual_actualStartDate') || document.getElementById('actualStartDate');
-        if (actualStartDateInput) {
-            const jalaliValue = actualStartDateInput.getAttribute('data-jalali-value');
-            if (jalaliValue) {
-                startDate = jalaliValue;
-                if (hiddenField) hiddenField.value = jalaliValue;
-            } else {
-                startDate = actualStartDateInput.value;
-            }
-        }
-    }
-    const startTime = document.getElementById('actualStartTime').value;
+    // دریافت تاریخ و زمان از فیلد تاریخ-ساعت مودال
+    const modalStartInput = document.getElementById('modalActualStartDatetime');
+    const startDate = modalStartInput ? (modalStartInput.getAttribute('data-jalali-date') || '').trim() : '';
+    const startTime = modalStartInput ? (modalStartInput.getAttribute('data-jalali-time') || '').trim() : '';
     const productionWarehouse = document.getElementById('productionWarehouse').value;
     
     if (!startDate) {
-        alert('لطفاً تاریخ شروع واقعی را وارد کنید.');
+        alert('لطفاً تاریخ و زمان شروع واقعی را وارد کنید.');
         return;
     }
     
     if (!startTime) {
-        alert('لطفاً زمان شروع واقعی را وارد کنید.');
+        alert('لطفاً تاریخ و زمان شروع واقعی را وارد کنید.');
         return;
     }
     
@@ -2173,10 +2131,10 @@ function confirmStartProduction() {
 
 function confirmCompleteProduction() {
     const weight = document.getElementById('producedWeight').value;
-    // دریافت مقدار از data attribute (که توسط jdp:change event تنظیم شده)
-    const completionDateInput = document.getElementById('visual_completionDate') || document.getElementById('completionDate');
-    const completionDate = completionDateInput ? (completionDateInput.getAttribute('data-jalali-value') || completionDateInput.value) : '';
-    const completionTime = document.getElementById('completionTime').value;
+    // دریافت تاریخ و زمان از فیلد تاریخ-ساعت مودال
+    const modalCompletionInput = document.getElementById('modalCompletionDatetime');
+    const completionDate = modalCompletionInput ? (modalCompletionInput.getAttribute('data-jalali-date') || '').trim() : '';
+    const completionTime = modalCompletionInput ? (modalCompletionInput.getAttribute('data-jalali-time') || '').trim() : '';
     // Grab stored start datetime for validation
     const startDateStr = document.getElementById('actualStartDateField') ? document.getElementById('actualStartDateField').value : '';
     const startTimeStr = document.getElementById('startedAtField') ? document.getElementById('startedAtField').value : '';
@@ -2187,12 +2145,12 @@ function confirmCompleteProduction() {
     }
     
     if (!completionDate) {
-        alert('لطفاً تاریخ پایان واقعی را وارد کنید.');
+        alert('لطفاً تاریخ و زمان پایان واقعی را وارد کنید.');
         return;
     }
     
     if (!completionTime) {
-        alert('لطفاً زمان تکمیل را وارد کنید.');
+        alert('لطفاً تاریخ و زمان پایان واقعی را وارد کنید.');
         return;
     }
 
