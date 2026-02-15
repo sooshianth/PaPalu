@@ -24,7 +24,7 @@ from core.PersonFolder.SocialNetworkModel import SocialNetwork
 from core.PersonFolder.AttachmentModel import Attachment
 from core.WarehouseFolder.WarehouseModel import Warehouse
 
-from supply.views.forms import (
+from supply.forms.forms import (
 	SupplierPersonForm, FinancialBankingForm,
 	RepresentativeFormSet, BankAccountFormSet,
 	PaymentPreferenceFormSet, SocialNetworkFormSet, AttachmentFormSet

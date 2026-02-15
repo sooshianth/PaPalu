@@ -19,7 +19,7 @@ from core.SupplyFolder.RawMaterialPriceInquiryModel import RawMaterialPriceInqui
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from core.PersonFolder.PersonModel import Person
 
-from supply.views.forms import (
+from supply.forms.forms import (
 	RawMaterialDefineForm,
 	PurchaseInfoInlineForm,
 	RawMaterialPriceInquiryForm
