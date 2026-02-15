@@ -64,7 +64,7 @@ def _get_referrals(user):
         referrals.append({
             'type': 'production_declaration_referral',
             'source': 'اعلام تولید',
-            'resolve_url': reverse('production:program_crud', kwargs={'program_id': p.id}),
+            'resolve_url': reverse('production:program_edit', kwargs={'program_id': p.id}),
             'identifier': p.program_id or str(p.id),
             'created_at': dt,
             'description': f'برنامه تولید {p.program_id or p.id} - {product_name} - ارجاع از اعلام تولید',

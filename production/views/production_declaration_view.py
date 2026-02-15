@@ -926,8 +926,8 @@ def production_declaration_view(request):
         accessible_raw_material_fields = get_accessible_raw_material_fields(request.user)
         accessible_warehouse_fields = get_accessible_warehouse_fields(request.user)
         
-        # Check permissions for deny, revert, and archive actions
-        can_deny = user_has_task(request.user, TaskChoices.PRODUCTION_REJECT_SCHEDULE.value)
+        # ارجاع به مدیر بدون task permission
+        can_refer = True
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
         can_archive = user_has_task(request.user, TaskChoices.PRODUCTION_ARCHIVE.value)
         
@@ -1102,7 +1102,7 @@ def production_program_crud_view(request, program_id=None):
                 if program.status != ProductionProgram.Status.CONFIRMED:
                     messages.error(request, 'فقط برنامه‌های تایید شده قابل ارجاع به مدیر هستند')
                     return redirect(reverse('production:program_crud', args=[program_id]))
-                reason = request.POST.get('referral_reason', '').strip() or request.POST.get('deny_reason', '').strip()
+                reason = request.POST.get('referral_reason', '').strip()
                 if not reason:
                     messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید')
                     return redirect(reverse('production:program_crud', args=[program_id]))
@@ -1114,29 +1114,6 @@ def production_program_crud_view(request, program_id=None):
                 audit_logger.activity(f"برنامه تولید {program_id} به مدیر ارجاع داده شد. دلیل: {reason[:100]}")
                 messages.success(request, 'برنامه تولید به مدیر ارجاع داده شد. مدیر از صفحه ارجاعات آن را حل می‌کند.')
                 return redirect(reverse('production:production_declaration'))
-            if not is_create and action == 'resolve_referral_deny':
-                if not request.user.is_superuser or not getattr(program, 'declaration_referred_to_manager', False):
-                    messages.error(request, 'فقط مدیر می‌تواند ارجاع را با رد برنامه حل کند.')
-                    return redirect(reverse('production:program_crud', args=[program_id]))
-                reason = request.POST.get('deny_reason', '').strip()
-                if not reason:
-                    messages.error(request, 'لطفاً دلیل رد برنامه را وارد کنید')
-                    return redirect(reverse('production:program_crud', args=[program_id]))
-                program.is_denied = True
-                program.declaration_referred_to_manager = False
-                program.declaration_referred_at = None
-                program.declaration_referral_reason = ''
-                program.save(update_fields=['is_denied', 'declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
-                ProductionRevertLog.objects.create(
-                    production_program=program,
-                    action_type='denied',
-                    reason=reason,
-                    created_by=request.user.username if request.user.is_authenticated else 'anonymous'
-                )
-                bug_logger.info(f"Production program {program_id} denied by manager (resolved referral)")
-                audit_logger.activity(f"برنامه تولید {program_id} توسط مدیر رد شد. دلیل: {reason[:100]}")
-                messages.success(request, 'برنامه تولید رد شد و از لیست ارجاعات خارج شد.')
-                return redirect(reverse('referrals_list'))
             if not is_create and action == 'resolve_referral_clear':
                 if not request.user.is_superuser or not getattr(program, 'declaration_referred_to_manager', False):
                     messages.error(request, 'فقط مدیر می‌تواند ارجاع را بردارد.')
@@ -1146,7 +1123,7 @@ def production_program_crud_view(request, program_id=None):
                 program.declaration_referral_reason = ''
                 program.save(update_fields=['declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
                 bug_logger.info(f"Production program {program_id} referral cleared by manager")
-                audit_logger.activity(f"ارجاع برنامه تولید {program_id} توسط مدیر برطرف شد (بدون رد)")
+                audit_logger.activity(f"ارجاع برنامه تولید {program_id} توسط مدیر برطرف شد")
                 messages.success(request, 'برنامه از ارجاع خارج شد و به لیست اعلام تولید برمی‌گردد.')
                 return redirect(reverse('referrals_list'))
             

@@ -547,13 +547,55 @@ def create_program_view(request):
 
 @login_required
 def edit_program_view(request, program_id):
-    if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
-        audit_logger.activity("تلاش برای ویرایش برنامه تولید بدون دسترسی")
-        messages.error(request, 'شما دسترسی به ویرایش برنامه تولید ندارید.')
-        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     audit_logger.info("دسترسی به ویرایش برنامه تولید")
     program = get_object_or_404(ProductionProgram, id=program_id)
+
+    # برنامه ارجاع‌شده به مدیر را فقط سوپرادمین می‌تواند باز کند (از صفحه ارجاعات)
+    if getattr(program, 'declaration_referred_to_manager', False):
+        if not request.user.is_superuser:
+            audit_logger.activity(f"تلاش برای دسترسی به برنامه تولید ارجاع‌شده به مدیر {program_id}")
+            messages.error(request, 'این برنامه به مدیر ارجاع شده و فقط مدیر می‌تواند آن را باز کند.')
+            return HttpResponseForbidden('شما دسترسی به این برنامه را ندارید.')
+    else:
+        if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
+            audit_logger.activity("تلاش برای ویرایش برنامه تولید بدون دسترسی")
+            messages.error(request, 'شما دسترسی به ویرایش برنامه تولید ندارید.')
+            return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
     try:
+        # حل توسط مدیر: ذخیره تغییرات + برداشتن ارجاع (فقط سوپرادمین)
+        if request.method == 'POST' and request.POST.get('action') == 'save_and_resolve_referral':
+            if not (request.user.is_superuser and getattr(program, 'declaration_referred_to_manager', False)):
+                messages.error(request, 'فقط مدیر می‌تواند ارجاع را حل کند.')
+                return redirect(reverse('production:program_edit', args=[program.id]))
+            form = ProductionProgramForm(request.POST, instance=program)
+            if form.is_valid():
+                instance = form.save(commit=False)
+                if instance.product:
+                    inventory_snapshot, net_unplanned = _calculate_product_inventory_and_requirement(instance.product)
+                    instance.inventory_snapshot = inventory_snapshot
+                    instance.net_unplanned_requirement = net_unplanned
+                instance.save()
+                instance.declaration_referred_to_manager = False
+                instance.declaration_referred_at = None
+                instance.declaration_referral_reason = ''
+                instance.save(update_fields=['declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
+                bug_logger.info(f"Production program {program_id} resolved by manager (save + clear referral)")
+                audit_logger.activity(f"برنامه تولید {program_id} توسط مدیر حل شد (ذخیره و برداشتن ارجاع)")
+                messages.success(request, 'تغییرات ذخیره شد و برنامه از ارجاع خارج شد. برنامه در لیست برنامه‌ها و اعلام تولید نمایش داده می‌شود.')
+                return redirect(reverse('referrals_list'))
+            # فرم نامعتبر: نمایش خطاها
+            declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False)
+            can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
+            context = {'form': form, 'program': program, 'mode': 'edit', 'declaration_referred_to_manager': declaration_referred_to_manager, 'can_resolve_referral': can_resolve_referral}
+            context.update(_get_dashboard_context())
+            context.update(_prepare_bom_data(request))
+            context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
+            safe_flow = context.get('product_flow_status', [])
+            context['product_flow_status_json'] = json.dumps(safe_flow, default=str)
+            messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید و دوباره «حل توسط مدیر» را بزنید.')
+            return render(request, 'program_form.html', context)
+
         # Hard guard: no edits allowed when in progress or completed
         if request.method == 'POST' and program.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
             msg = 'ویرایش در این وضعیت مجاز نیست.'
@@ -590,7 +632,8 @@ def edit_program_view(request, program_id):
                         error_msg = f'تناژ برنامه ({instance.planned_weight_ton} کیلوگرم) کمتر از حداقل وزن تولید ({min_batch} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.'
                         bug_logger.warning(f"Validation failed: {error_msg}")
                         messages.error(request, error_msg)
-                        context = {'form': form, 'program': program, 'mode': 'edit'}
+                        declaration_referred = getattr(program, 'declaration_referred_to_manager', False)
+                        context = {'form': form, 'program': program, 'mode': 'edit', 'declaration_referred_to_manager': declaration_referred, 'can_resolve_referral': request.user.is_superuser and declaration_referred}
                         context.update(_get_dashboard_context())
                         context.update(_prepare_bom_data(request))
                         context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
@@ -628,7 +671,9 @@ def edit_program_view(request, program_id):
         else:
             form = ProductionProgramForm(instance=program)
 
-        context = {'form': form, 'program': program, 'mode': 'edit'}
+        declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False)
+        can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
+        context = {'form': form, 'program': program, 'mode': 'edit', 'declaration_referred_to_manager': declaration_referred_to_manager, 'can_resolve_referral': can_resolve_referral}
         context.update(_get_dashboard_context())
         context.update(_prepare_bom_data(request))
         # Add field access permissions
@@ -640,7 +685,9 @@ def edit_program_view(request, program_id):
     except Exception as e:
         bug_logger.error(f"Edit program error: {e}")
         messages.error(request, 'خطا در بروزرسانی برنامه.')
-        context = {'form': ProductionProgramForm(instance=program), 'program': program, 'mode': 'edit'}
+        declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False)
+        can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
+        context = {'form': ProductionProgramForm(instance=program), 'program': program, 'mode': 'edit', 'declaration_referred_to_manager': declaration_referred_to_manager, 'can_resolve_referral': can_resolve_referral}
         context.update(_get_dashboard_context())
         context.update(_prepare_bom_data(request))
         # Add field access permissions
@@ -656,7 +703,7 @@ def program_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     audit_logger.info("نمایش لیست برنامه‌های تولید")
     try:
-        programs = ProductionProgram.objects.all().select_related('product', 'production_info')
+        programs = ProductionProgram.objects.exclude(declaration_referred_to_manager=True).select_related('product', 'production_info')
 
         search_query = request.GET.get('q', '').strip()
         if search_query:

@@ -453,6 +453,15 @@
     </a>
 </div>
 
+{% if can_resolve_referral and program %}
+<div class="alert alert-warning mb-3" role="alert" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+	<strong>این برنامه به مدیر ارجاع شده است.</strong> در صورت نیاز تغییرات را اعمال کنید، سپس دکمه «حل توسط مدیر» را بزنید تا ذخیره شود و برنامه از ارجاعات خارج شود.
+	<button type="button" class="btn btn-warning btn-sm" onclick="submitResolveByManager()">
+		<i class="fas fa-check-double"></i> حل توسط مدیر
+	</button>
+</div>
+{% endif %}
+
 <div id="program-form">
 	<div class="card-body">
 			<!-- Tabs navbar and bulk actions -->
@@ -1522,6 +1531,21 @@ if (productFlowStatusData) {
 		} catch(err){
 			alert('خطای شبکه در حذف پیش‌نویس');
 		}
+	}
+
+	function submitResolveByManager(){
+		const form = document.querySelector('#tabContents form.program-form') || document.querySelector('form.program-form');
+		if (!form) { alert('فرم یافت نشد.'); return; }
+		if (!confirm('تغییرات ذخیره شده و برنامه از ارجاعات خارج می‌شود. ادامه می‌دهید؟')) return;
+		let actionInput = form.querySelector('input[name="action"]');
+		if (!actionInput) {
+			actionInput = document.createElement('input');
+			actionInput.type = 'hidden';
+			actionInput.name = 'action';
+			form.appendChild(actionInput);
+		}
+		actionInput.value = 'save_and_resolve_referral';
+		form.submit();
 	}
 
 	function clearErrors(pane){
