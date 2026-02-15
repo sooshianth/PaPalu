@@ -24,6 +24,7 @@ from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
 from core.PersonFolder.BankAccountModel import BankAccount
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
+from supply.forms.car_entrance_form import CarEntranceDriverForm
 from django.contrib.auth import get_user_model
 from supply.tables import TransportTable
 import django_tables2 as tables
@@ -196,122 +197,6 @@ def get_accessible_user_fields_for_carentrance(user):
     }
 
 # ==================== End Field Access Helper Functions ====================
-
-
-class CarEntranceDriverForm(forms.Form):
-    """فرم ثبت اطلاعات راننده برای ورود خودرو
-    
-    فیلدهای اجباری:
-    - نام راننده
-    - شماره تلفن راننده
-    - پلاک
-    - کد ملی راننده
-    - وزن بارنامه
-    - تصویر بارنامه
-    - شماره حساب راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
-    - شماره شبا راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
-    """
-    phone = forms.CharField(
-        label='شماره تلفن راننده',
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '09123456789'})
-    )
-    name = forms.CharField(
-        label='نام راننده',
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'نام و نام خانوادگی راننده'})
-    )
-    national_id = forms.CharField(
-        label='کد ملی راننده',
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'کد ملی 10 رقمی'})
-    )
-    plate_number = forms.CharField(
-        label='پلاک',
-        required=True,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12الف34567'})
-    )
-    waybill_weight = forms.DecimalField(
-        label='وزن بارنامه (کیلوگرم)',
-        required=True,
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': '0.000',
-            'step': '0.001',
-            'min': '0'
-        })
-    )
-    waybill_gross_weight = forms.DecimalField(
-        label='وزن پر بارنامه (کیلوگرم)',
-        required=True,
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': '0.000',
-            'step': '0.001',
-            'min': '0'
-        }),
-        help_text='وزن پر (ناخالص) که روی بارنامه ثبت شده - برای مقایسه با باسکول کارخانه'
-    )
-    waybill_date = forms.DateField(
-        label='تاریخ بارنامه',
-        required=False,
-        widget=forms.DateInput(attrs={
-            'class': 'form-control',
-            'type': 'text',
-            'placeholder': '1403/09/15',
-            'id': 'id_waybill_date'
-        })
-    )
-    bill_of_lading_file = forms.FileField(
-        label='تصویر بارنامه',
-        required=True,
-        widget=forms.FileInput(attrs={
-            'class': 'form-control',
-            'accept': 'image/*,.pdf'
-        })
-    )
-
-    account = forms.CharField(
-        label='شماره حساب راننده',
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'شماره حساب بانکی'})
-    )
-    sheba = forms.CharField(
-        label='شماره شبا راننده',
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'IR123456789012345678901234'})
-    )
-    
-    def __init__(self, *args, freight_payment_type=None, driver=None, has_existing_waybill=False, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.freight_payment_type = freight_payment_type
-        self.driver = driver
-        self.has_existing_waybill = has_existing_waybill
-
-        # اگر حمل از قبل تصویر بارنامه دارد، آپلود مجدد اجباری نیست
-        if has_existing_waybill:
-            self.fields['bill_of_lading_file'].required = False
-
-        # اگر نوع کرایه "پرداخت به راننده" باشد، فیلدهای حساب و شبا را required می‌کنیم
-        if freight_payment_type == 'pay_to_driver':
-            self.fields['account'].required = True
-            self.fields['sheba'].required = True
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        # بررسی اینکه اگر نوع کرایه "پرداخت به راننده" باشد، فیلدهای حساب و شبا باید پر شوند
-        if self.freight_payment_type == 'pay_to_driver':
-            account = cleaned_data.get('account')
-            sheba = cleaned_data.get('sheba')
-            if not account:
-                self.add_error('account', 'این فیلد برای نوع کرایه "پرداخت به راننده" اجباری است.')
-            if not sheba:
-                self.add_error('sheba', 'این فیلد برای نوع کرایه "پرداخت به راننده" اجباری است.')
-        return cleaned_data
 
 
 class CarEntranceTable(TransportTable):
