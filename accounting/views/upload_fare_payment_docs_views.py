@@ -215,28 +215,6 @@ def upload_fare_payment_docs_detail_view(request, transport_number):
                                 f"تعداد فایل: {len(doc_files)}"
                             )
                             
-                            try:
-                                if transport.driver and transport.driver.phone_number:
-                                    driver_name = transport.driver.name if transport.driver.name else "راننده محترم"
-                                    transport_num = to_persian_digits(transport.transport_number or transport_number)
-                                    amount = transport.freight_payment if transport.freight_payment else transport.total_freight
-                                    amount_text = f"مبلغ {format_currency_persian(amount)} ریال" if amount else "مبلغ کرایه"
-                                    bank_info = ""
-                                    if transport.driver_bank_account and transport.driver_bank_account.account_number:
-                                        account_num = to_persian_digits(transport.driver_bank_account.account_number[-4:])
-                                        bank_name = transport.driver_bank_account.bank_name or "بانک"
-                                        bank_info = f" به حساب {bank_name} به شماره کارت *{account_num}"
-                                    sms_message = (
-                                        f"{driver_name} گرامی،\n{amount_text} بابت کرایه حمل شماره {transport_num}{bank_info} واریز گردید.\n"
-                                        f"با تشکر از همکاری شما\nشرکت تأمین نهاده سیمرغ (هاشمی)"
-                                    )
-                                    queue_sms(number=transport.driver.phone_number, message=sms_message, notification_type='freight_payment_notification')
-                                    bug_logger.info(f"پیامک اطلاع‌رسانی پرداخت کرایه برای راننده (حمل {transport_number}) به صف اضافه شد")
-                                else:
-                                    bug_logger.warning(f"راننده یا شماره تلفن برای حمل {transport_number} موجود نیست - پیامک ارسال نشد")
-                            except Exception as sms_error:
-                                bug_logger.error(f"خطا در ارسال پیامک پرداخت کرایه - حمل {transport_number}: {str(sms_error)}", exc_info=True)
-                        
                         messages.success(request, status_message)
                         return redirect('accounting:upload_fare_payment_docs_list')
                     
