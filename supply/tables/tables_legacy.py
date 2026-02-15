@@ -1,6 +1,7 @@
 import django_tables2 as tables
 from django.utils.html import format_html, format_html_join
 from django.urls import reverse
+from distribution.plate_display import render_iran_plate_html
 from core.PersonFolder.PersonModel import Person
 from core.PersonFolder.RepresentativeModel import Representative
 from core.PersonFolder.BankAccountModel import BankAccount
@@ -732,42 +733,8 @@ class TransportTable(tables.Table):
         )
     
     def render_plate_number(self, value):
-        """نمایش پلاک با فرمت جدید: 11|345ب12"""
-        if not value:
-            return '—'
-        try:
-            # فرمت جدید: 11|345ب12
-            if '|' in str(value):
-                parts = str(value).split('|')
-                if len(parts) == 2:
-                    iran = parts[0]
-                    rest = parts[1]
-                    # استخراج 3 رقم، 1 حرف، 2 رقم از rest
-                    import re
-                    match = re.match(r'(\d{3})([آ-یA-Za-z])(\d{2})', rest)
-                    if match:
-                        middle, letter, last = match.groups()
-                        display = f"{iran}|{middle}{letter}{last}"
-                    else:
-                        display = value
-                else:
-                    display = value
-            # فرمت قدیمی: 11-345-ب-12
-            elif '-' in str(value):
-                parts = str(value).split('-')
-                if len(parts) == 4:
-                    iran, middle, letter, last = parts
-                    display = f"{iran}|{middle}{letter}{last}"
-                elif len(parts) == 3:
-                    first, letter, last = parts
-                    display = f"{last} | {letter} | {first}"
-                else:
-                    display = value
-            else:
-                display = value
-            return format_html('<span class="plate-badge"><span class="ir-flag"></span><span class="seg">{}</span></span>', display)
-        except Exception:
-            return value or '—'
+        """نمایش پلاک به سبک پلاک ایران (همان فرمت distribution.plate_display)"""
+        return render_iran_plate_html(value or '')
     
     def render_expected_arrival_date(self, value):
         """نمایش تاریخ پیش‌بینی"""

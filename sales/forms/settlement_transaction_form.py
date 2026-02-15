@@ -32,7 +32,6 @@ class SettlementTransactionForm(forms.ModelForm):
             'document_amount',
             'due_date',
             'source_account',
-            'document_attachment',
             'accounting_document_number',
             'tracking_number',
             'source_bank',
@@ -61,9 +60,6 @@ class SettlementTransactionForm(forms.ModelForm):
                 'placeholder': 'تاریخ سررسید'
             }),
             'source_account': forms.Select(attrs={
-                'class': 'form-control'
-            }),
-            'document_attachment': forms.ClearableFileInput(attrs={
                 'class': 'form-control'
             }),
             'accounting_document_number': forms.TextInput(attrs={
@@ -161,13 +157,12 @@ class SettlementTransactionForm(forms.ModelForm):
             # اگر difference_amount صفر باشد
             self.fields['source_account'].queryset = BankAccount.objects.none()
         
-        # تنظیم فیلدهای اجباری
+        # تنظیم فیلدهای اجباری (پیوست سند در view با getlist('document_attachments') اعتبارسنجی می‌شود)
         required_fields = [
             'payment_type',
             'document_amount',
             'due_date',
             'source_account',
-            'document_attachment',
             'accounting_document_number',
             'tracking_number',
             'source_bank',
@@ -195,7 +190,6 @@ class SettlementTransactionForm(forms.ModelForm):
         else:
             self.fields['source_account'].label = 'حساب مبدا'
             self.fields['approval_account_number'].label = 'شماره حساب'
-        self.fields['document_attachment'].label = 'پیوست سند'
         self.fields['accounting_document_number'].label = 'شماره سند حسابداری'
         self.fields['tracking_number'].label = 'شماره پیگیری واریز'
         self.fields['source_bank'].label = 'بانک مقصد'

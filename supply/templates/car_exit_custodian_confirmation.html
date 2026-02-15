@@ -149,7 +149,7 @@
     </div>
     <div class="info-item">
       <label>پلاک</label>
-      <div class="value">{% if pt.plate_number %}{{ pt.plate_number|persian_digits }}{% else %}ثبت نشده{% endif %}</div>
+      <div class="value">{% if plate_display_html %}{{ plate_display_html|safe }}{% else %}ثبت نشده{% endif %}</div>
     </div>
     <div class="info-item">
       <label>نوع ماشین</label>

@@ -433,11 +433,11 @@
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
-                            {% if transaction.document_attachment %}
-                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
-                            {% else %}
+                            {% for label, file in transaction.get_all_attachments %}
+                            <a href="{{ file.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">{{ label }}</a>{% if not forloop.last %} | {% endif %}
+                            {% empty %}
                             -
-                            {% endif %}
+                            {% endfor %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -481,11 +481,11 @@
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
-                            {% if transaction.document_attachment %}
-                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
-                            {% else %}
+                            {% for label, file in transaction.get_all_attachments %}
+                            <a href="{{ file.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">{{ label }}</a>{% if not forloop.last %} | {% endif %}
+                            {% empty %}
                             -
-                            {% endif %}
+                            {% endfor %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -532,11 +532,11 @@
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
-                            {% if transaction.document_attachment %}
-                            <a href="{{ transaction.document_attachment.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">دانلود</a>
-                            {% else %}
+                            {% for label, file in transaction.get_all_attachments %}
+                            <a href="{{ file.url }}" target="_blank" style="color: var(--primary-green); font-weight: 600;">{{ label }}</a>{% if not forloop.last %} | {% endif %}
+                            {% empty %}
                             -
-                            {% endif %}
+                            {% endfor %}
                         </td>
                     </tr>
                     {% endfor %}

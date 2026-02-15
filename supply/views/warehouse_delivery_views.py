@@ -35,6 +35,7 @@ from supply.tables import TransportTable, WarehouseDeliveryTable
 import django_tables2 as tables
 from django.utils.html import format_html
 from django.utils import timezone
+from distribution.plate_display import render_iran_plate_html
 
 User = get_user_model()
 
@@ -957,6 +958,7 @@ def guard_vehicle_exit_view(request, transport_number):
                 'carexit_referral_reason': getattr(pt, 'carexit_referral_reason', '') or '',
                 'refer_modal_open': True,
                 'delivery_items': _guard_exit_delivery_items(pt),
+                'plate_display_html': render_iran_plate_html(pt.plate_number or ''),
             })
             return render(request, 'car_exit_custodian_confirmation.html', ctx)
         if is_refer and carexit_reason:
@@ -1009,6 +1011,7 @@ def guard_vehicle_exit_view(request, transport_number):
                 messages.error(request, f'خطا در تایید خروج خودرو: {str(e)}')
     
     is_carexit_referred = getattr(pt, 'carexit_referred_to_manager', False)
+    plate_display_html = render_iran_plate_html(pt.plate_number or '')
     context = {
         'pt': pt,
         'accessible_transport_fields': accessible_transport_fields,
@@ -1018,6 +1021,7 @@ def guard_vehicle_exit_view(request, transport_number):
         'carexit_referral_reason': getattr(pt, 'carexit_referral_reason', '') or '',
         'refer_modal_open': False,
         'delivery_items': _guard_exit_delivery_items(pt),
+        'plate_display_html': plate_display_html,
         **_carexit_secondary_context(pt),
     }
     return render(request, 'car_exit_custodian_confirmation.html', context)

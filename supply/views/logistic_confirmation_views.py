@@ -465,10 +465,11 @@ def logistic_confirmation_detail_view(request, transport_number):
             total_net_weight = Decimal('0')
             materials_with_high_discrepancy = []
             has_material_weight_discrepancy = False
+            waybill_weight = (Decimal(str(transport.waybill_weight)) if transport.waybill_weight is not None else None)
             for rmi in raw_material_infos:
                 allocated = Decimal(str(rmi.allocated_quantity)) if rmi.allocated_quantity else Decimal('0')
                 net_weight = Decimal(str(rmi.net_weight)) if rmi.net_weight else Decimal('0')
-                diff = net_weight - allocated
+                diff = net_weight - allocated  # اختلاف تحویل و سفارش
                 diff_percent = Decimal('0')
                 if allocated > 0:
                     diff_percent = abs((diff / allocated) * 100)
@@ -488,17 +489,32 @@ def logistic_confirmation_detail_view(request, transport_number):
                     'raw_material': rmi.raw_material,
                     'order_item': rmi.order_item,
                     'allocated_quantity': allocated,  # وزن تخصیص یافته برای این حمل
-                    'net_weight': net_weight,  # وزن خالص از تخلیه
-                    'difference': diff,
+                    'net_weight': net_weight,  # وزن خالص از تخلیه (تحویلی)
+                    'difference': diff,  # اختلاف تحویل و سفارش
                     'diff_percent': diff_percent,  # درصد اختلاف
                 })
                 
                 total_allocated += allocated
                 total_net_weight += net_weight
             
+            # افزودن وزن خالص بارنامه (سهم هر ماده) و اختلاف بارنامه و تحویلی به هر سطر
+            for mw in material_weights:
+                allocated = mw['allocated_quantity']
+                net_weight = mw['net_weight']
+                if waybill_weight is not None and total_allocated and total_allocated > 0:
+                    waybill_portion = (allocated / total_allocated) * waybill_weight
+                else:
+                    waybill_portion = None
+                mw['waybill_portion'] = waybill_portion
+                if waybill_portion is not None:
+                    mw['diff_waybill_delivery'] = waybill_portion - net_weight  # اختلاف بارنامه و تحویلی
+                else:
+                    mw['diff_waybill_delivery'] = None
+            
             # محاسبه وزن خالص کل از RawMaterialInfo
             calculated_total_net_weight = transport.get_total_net_weight_from_materials()
-            total_difference = total_net_weight - total_allocated
+            total_difference = total_net_weight - total_allocated  # اختلاف تحویل و سفارش (جمع)
+            total_diff_waybill_delivery = (waybill_weight - total_net_weight) if (waybill_weight is not None and total_net_weight is not None) else None
             
             context = {
                 'transport': transport,
@@ -508,6 +524,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                 'total_allocated': total_allocated,
                 'total_net_weight': total_net_weight,
                 'total_difference': total_difference,
+                'total_waybill_weight': waybill_weight,  # وزن خالص بارنامه (کل)
+                'total_diff_waybill_delivery': total_diff_waybill_delivery,  # اختلاف بارنامه و تحویلی (جمع)
                 'calculated_total_net_weight': Decimal(str(calculated_total_net_weight)) if calculated_total_net_weight is not None else Decimal('0'),
                 'materials_with_high_discrepancy': materials_with_high_discrepancy,  # مواد اولیه با اختلاف بیشتر از 10%
                 'has_material_weight_discrepancy': has_material_weight_discrepancy,  # آیا اختلاف وزن ماده اولیه وجود دارد؟

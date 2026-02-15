@@ -386,8 +386,10 @@
                 <tr style="background: var(--primary-green); color: white;">
                     <th style="padding: 12px 15px; text-align: right; font-weight: 600; font-size: 0.9rem;">ماده اولیه</th>
                     <th style="padding: 12px 15px; text-align: right; font-weight: 600; font-size: 0.9rem;">وزن سفارش (کیلوگرم)</th>
+                    <th style="padding: 12px 15px; text-align: right; font-weight: 600; font-size: 0.9rem;">وزن خالص بارنامه (کیلوگرم)</th>
                     <th style="padding: 12px 15px; text-align: right; font-weight: 600; font-size: 0.9rem;">وزن خالص محاسبه شده (کیلوگرم)</th>
-                    <th style="padding: 12px 15px; text-align: right; font-weight: 600; font-size: 0.9rem;">اختلاف (کیلوگرم)</th>
+                    <th style="padding: 12px 15px; text-align: right; font-weight: 600; font-size: 0.9rem;">اختلاف بارنامه و تحویلی (کیلوگرم)</th>
+                    <th style="padding: 12px 15px; text-align: right; font-weight: 600; font-size: 0.9rem;">اختلاف تحویل و سفارش (کیلوگرم)</th>
                 </tr>
             </thead>
             <tbody>
@@ -395,7 +397,11 @@
                 <tr style="border-bottom: 1px solid var(--gray-200);">
                     <td style="padding: 12px 15px; text-align: right;">{{ mw.raw_material.name }}</td>
                     <td style="padding: 12px 15px; text-align: right;">{{ mw.allocated_quantity|persian_number:3 }}</td>
+                    <td style="padding: 12px 15px; text-align: right;">{% if mw.waybill_portion is not None %}{{ mw.waybill_portion|persian_number:3 }}{% else %}—{% endif %}</td>
                     <td style="padding: 12px 15px; text-align: right;">{{ mw.net_weight|persian_number:3 }}</td>
+                    <td style="padding: 12px 15px; text-align: right; font-weight: 600; {% if mw.diff_waybill_delivery is not None %}{% if mw.diff_waybill_delivery > 0.01 %}color: #28a745;{% elif mw.diff_waybill_delivery < -0.01 %}color: #dc3545;{% else %}color: var(--gray-600);{% endif %}{% endif %}">
+                        {% if mw.diff_waybill_delivery is not None %}{{ mw.diff_waybill_delivery|persian_number:3 }}{% else %}—{% endif %}
+                    </td>
                     <td style="padding: 12px 15px; text-align: right; font-weight: 600; {% if mw.difference > 0.01 %}color: #28a745;{% elif mw.difference < -0.01 %}color: #dc3545;{% else %}color: var(--gray-600);{% endif %}">
                         {{ mw.difference|persian_number:3 }}
                     </td>
@@ -404,7 +410,11 @@
                 <tr style="background: var(--gray-100); font-weight: 600; border-top: 2px solid var(--gray-300);">
                     <td style="padding: 12px 15px; text-align: right;"><strong>جمع کل</strong></td>
                     <td style="padding: 12px 15px; text-align: right;"><strong>{{ total_allocated|persian_number:3 }}</strong></td>
+                    <td style="padding: 12px 15px; text-align: right;"><strong>{% if total_waybill_weight is not None %}{{ total_waybill_weight|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                     <td style="padding: 12px 15px; text-align: right;"><strong>{{ total_net_weight|persian_number:3 }}</strong></td>
+                    <td style="padding: 12px 15px; text-align: right; {% if total_diff_waybill_delivery is not None %}{% if total_diff_waybill_delivery > 0.01 %}color: #28a745;{% elif total_diff_waybill_delivery < -0.01 %}color: #dc3545;{% else %}color: var(--gray-600);{% endif %}{% endif %}">
+                        <strong>{% if total_diff_waybill_delivery is not None %}{{ total_diff_waybill_delivery|persian_number:3 }}{% else %}—{% endif %}</strong>
+                    </td>
                     <td style="padding: 12px 15px; text-align: right; {% if total_difference > 0.01 %}color: #28a745;{% elif total_difference < -0.01 %}color: #dc3545;{% else %}color: var(--gray-600);{% endif %}">
                         <strong>{{ total_difference|persian_number:3 }}</strong>
                     </td>
