@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from ..PersonFolder.PersonModel import Person
 from django_jalali.db import models as jmodels
+from core.file_upload_utils import safe_media_upload_to
 
 
 class RawMaterial(models.Model):
@@ -98,7 +99,7 @@ class RawMaterial(models.Model):
         blank=True
     )
     attachments = models.FileField(
-        upload_to='raw_materials/attachments/%Y/%m/',
+        upload_to=safe_media_upload_to('raw_materials/attachments'),
         verbose_name="پیوست‌ها",
         null=True,
         blank=True

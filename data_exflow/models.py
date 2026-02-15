@@ -6,6 +6,8 @@ from django.contrib.contenttypes.models import ContentType
 import uuid
 import json
 
+from core.file_upload_utils import safe_media_upload_to_flat
+
 User = get_user_model()
 
 class ImportExportSession(models.Model):
@@ -39,7 +41,7 @@ class ImportExportSession(models.Model):
     session_type = models.CharField(max_length=10, choices=SESSION_TYPES)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='import_export_sessions')
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    file = models.FileField(upload_to='data_exflow/files/')
+    file = models.FileField(upload_to=safe_media_upload_to_flat('data_exflow/files'))
     file_name = models.CharField(max_length=255)
     file_type = models.CharField(max_length=10)
     created_at = models.DateTimeField(auto_now_add=True)

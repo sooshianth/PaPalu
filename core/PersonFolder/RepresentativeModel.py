@@ -1,5 +1,6 @@
 from django.db import models
 from .PersonModel import Person
+from core.file_upload_utils import safe_media_upload_to
 
 
 class Representative(models.Model):
@@ -16,7 +17,7 @@ class Representative(models.Model):
     mobile_number = models.CharField(max_length=20, verbose_name='شماره موبایل نماینده', null=True, blank=True)
     phone_number = models.CharField(max_length=20, verbose_name='شماره ثابت نماینده', null=True, blank=True)
     confirmation_letter = models.FileField(
-        upload_to='representative_letters/%Y/%m/%d/',
+        upload_to=safe_media_upload_to('representative_letters', date_include_day=True),
         verbose_name='نامه تایید نماینده',
         null=True,
         blank=True

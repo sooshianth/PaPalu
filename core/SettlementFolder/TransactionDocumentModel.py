@@ -2,6 +2,7 @@ from django.db import models
 from django_jalali.db import models as jmodels
 from .SettlementModel import Settlement
 from core.PersonFolder import BankAccount
+from core.file_upload_utils import safe_media_upload_to
 
 
 class TransactionDocument(models.Model):
@@ -119,7 +120,7 @@ class TransactionDocument(models.Model):
 
     # پیوست سند
     document_attachment = models.FileField(
-        upload_to='transaction_documents/%Y/%m/%d/',
+        upload_to=safe_media_upload_to('transaction_documents', date_include_day=True),
         verbose_name='پیوست سند',
         null=True,
         blank=True
@@ -281,7 +282,7 @@ class TransactionDocumentAttachment(models.Model):
         verbose_name='سند تراکنش',
     )
     file = models.FileField(
-        upload_to='transaction_documents/attachments/%Y/%m/%d/',
+        upload_to=safe_media_upload_to('transaction_documents/attachments', date_include_day=True),
         verbose_name='فایل پیوست',
     )
 

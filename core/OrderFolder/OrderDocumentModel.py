@@ -1,6 +1,7 @@
 from django.db import models
 from django_jalali.db import models as jmodels
 from .OrderModel import Order
+from core.file_upload_utils import safe_media_upload_to_flat
 
 
 class OrderDocument(models.Model):
@@ -18,7 +19,7 @@ class OrderDocument(models.Model):
     
     # پیوست پیش فاکتور
     proforma_attachment = models.FileField(
-        upload_to='order_documents/proforma/',
+        upload_to=safe_media_upload_to_flat('order_documents/proforma'),
         null=True,
         blank=True,
         verbose_name='پیوست پیش فاکتور'
@@ -26,7 +27,7 @@ class OrderDocument(models.Model):
     
     # پیوست تاییدیه پیش فاکتور
     proforma_confirmation_attachment = models.FileField(
-        upload_to='order_documents/proforma_confirmation/',
+        upload_to=safe_media_upload_to_flat('order_documents/proforma_confirmation'),
         null=True,
         blank=True,
         verbose_name='پیوست تاییدیه پیش فاکتور'

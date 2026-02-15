@@ -1,5 +1,6 @@
 from django.db import models
 from .PersonModel import Person
+from core.file_upload_utils import safe_media_upload_to
 
 
 class Attachment(models.Model):
@@ -28,7 +29,7 @@ class Attachment(models.Model):
     )
 
     file = models.FileField(
-        upload_to='person_attachments/%Y/%m/%d/',
+        upload_to=safe_media_upload_to('person_attachments', date_include_day=True),
         verbose_name='فایل پیوست',
         null=True,
         blank=True,

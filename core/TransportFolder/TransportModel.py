@@ -5,6 +5,7 @@ from django.core.validators import MinValueValidator
 from core.PersonFolder import Person, DeliveryAddress
 from core.AllocationFolder.AllocationModel import Allocation
 from core.PersonFolder.BankAccountModel import BankAccount
+from core.file_upload_utils import safe_media_upload_to
 
 
 class Transport(models.Model):
@@ -391,7 +392,7 @@ class Transport(models.Model):
     
     # فیلدهای بارنامه
     bill_of_lading_file = models.FileField(
-        upload_to='bill_of_lading/%Y/%m/',
+        upload_to=safe_media_upload_to('bill_of_lading'),
         verbose_name='فایل بارنامه',
         null=True,
         blank=True,
@@ -406,7 +407,7 @@ class Transport(models.Model):
     
     # اسناد پرداخت کرایه
     freight_payment_document = models.FileField(
-        upload_to='freight_payment_documents/%Y/%m/',
+        upload_to=safe_media_upload_to('freight_payment_documents'),
         verbose_name='سند پرداخت کرایه',
         null=True,
         blank=True,

@@ -97,8 +97,12 @@
     }
     
     .table-wrap {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        max-width: 100%;
+    }
+    
+    /* فقط جدول برنامه تایید شده overflow مخفی - جدول مواد اولیه همیشه کامل دیده شود */
+    #confirmed-section .table-wrap {
+        overflow-x: hidden;
     }
     
     table.data-table {
@@ -123,6 +127,18 @@
         color: var(--gray-800);
         border-bottom: 2px solid var(--primary-green);
         white-space: nowrap;
+    }
+    
+    /* جلوگیری از overflow جدول برنامه تایید شده */
+    #confirmed-section .data-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+    
+    #confirmed-section .data-table th,
+    #confirmed-section .data-table td {
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     table.data-table tbody tr {
@@ -615,6 +631,17 @@
         gap: 20px;
     }
     
+    @media (max-width: 1200px) {
+        .declaration-layout {
+            flex-direction: column;
+        }
+        .raw-materials-sidebar {
+            flex: 1 1 auto !important;
+            max-width: 100% !important;
+            position: static !important;
+        }
+    }
+    
     @media (max-width: 1024px) {
         .grid-2 {
             grid-template-columns: 1fr;
@@ -670,9 +697,9 @@
 </div>
 
 <!-- برنامه‌های تایید شده با موجودی مواد اولیه -->
-<div style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px;">
+<div class="declaration-layout" style="display: flex; gap: 24px; align-items: flex-start; margin-bottom: 32px; overflow-x: hidden; max-width: 100%;">
     <!-- برنامه‌های تایید شده (چپ، 70%) -->
-    <div class="section" style="flex: 1;" id="confirmed-section">
+    <div class="section" style="flex: 1; min-width: 0;" id="confirmed-section">
         <div class="section-title">
             <span>برنامه‌های تایید شده</span>
             <span class="section-badge">{{ confirmed_programs.count }}</span>
@@ -695,12 +722,6 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            {% if accessible_production_program_fields.id %}
-                            <th class="sortable {% if sort_by_confirmed == 'id' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
-                                onclick="sortTable('id', 'confirmed')">
-                                شناسه
-                            </th>
-                            {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <th>محصول</th>
                             {% endif %}
@@ -728,21 +749,12 @@
                             {% if accessible_production_program_fields.packaging_type %}
                             <th>نوع بسته‌بندی</th>
                             {% endif %}
-                            {% if accessible_production_program_fields.status %}
-                            <th class="sortable {% if sort_by_confirmed == 'status' %}sorted-{{ sort_dir_confirmed }}{% endif %}" 
-                                onclick="sortTable('status', 'confirmed')">
-                                وضعیت
-                            </th>
-                            {% endif %}
                             <th>عملیات</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for program in confirmed_programs %}
                         <tr>
-                            {% if accessible_production_program_fields.id %}
-                            <td>{{ program.id }}</td>
-                            {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
@@ -769,16 +781,13 @@
                             {% if accessible_production_program_fields.packaging_type %}
                             <td>{{ program.get_packaging_type_display|default:"-" }}</td>
                             {% endif %}
-                            {% if accessible_production_program_fields.status %}
-                            <td><span class="status-badge status-confirmed">{{ program.get_status_display }}</span></td>
-                            {% endif %}
                             <td>
                                 <div class="action-buttons">
                                     <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                         مشاهده
                                     </a>
-                                    <button type="button" class="btn-outline-warning" onclick="showDenyModal({{ program.id }})" title="رد کردن">
-                                        رد
+                                    <button type="button" class="btn-outline-warning" onclick="showReferModal({{ program.id }})" title="ارجاع به مدیر">
+                                        ارجاع
                                     </button>
                                 </div>
                             </td>
@@ -801,7 +810,7 @@
     </div>
     
     <!-- موجودی مواد اولیه (راست، 30%) - sticky -->
-    <div class="section" style="flex: 0 0 30%; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto;" id="raw-materials-sidebar">
+    <div class="section raw-materials-sidebar" style="flex: 0 0 30%; position: sticky; top: 80px; align-self: flex-start; max-height: calc(100vh - 100px); overflow-y: auto; overflow-x: visible;" id="raw-materials-sidebar">
         <div class="section-title">
             <span>موجودی مواد اولیه</span>
             <span class="section-badge">{{ raw_materials_inventory|length }}</span>
@@ -853,11 +862,37 @@
                         padding-right: 32px !important;
                     }
                     
-                    .warehouse-indent {
-                        display: inline-block;
-                        margin-left: 16px;
-                        color: #6c757d;
-                    }
+    .warehouse-indent {
+        display: inline-block;
+        margin-left: 16px;
+        color: #6c757d;
+    }
+    
+    /* جدول مواد اولیه فشرده - فاصله ستون‌ها کمتر تا کل جدول دیده شود */
+    #raw-materials-sidebar .data-table {
+        table-layout: fixed;
+        width: 100%;
+    }
+    #raw-materials-sidebar .data-table th,
+    #raw-materials-sidebar .data-table td {
+        padding: 6px 8px !important;
+        font-size: 0.85rem !important;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    #raw-materials-sidebar .data-table .warehouse-row td {
+        padding: 4px 8px 4px 32px !important;
+    }
+    
+    #raw-materials-sidebar .table-wrap {
+        overflow-x: visible !important;
+        overflow-y: visible;
+    }
+    
+    #raw-materials-sidebar .card-body {
+        padding: 12px !important;
+    }
                     
                     .total-badge {
                         display: inline-block;
@@ -1241,28 +1276,28 @@
 </div>
 
 <!-- Deny / Revert / Archive Modals -->
-{% if can_deny %}
-<!-- Deny Modal -->
-<div id="denyModal" class="modal-overlay" style="display: none;">
+{% if can_refer %}
+<!-- مودال ارجاع به مدیر -->
+<div id="referModal" class="modal-overlay" style="display: none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
-            <h3>رد برنامه تولید</h3>
-            <button type="button" class="modal-close" onclick="closeModal('denyModal')">&times;</button>
+            <h3>ارجاع به مدیر</h3>
+            <button type="button" class="modal-close" onclick="closeModal('referModal')">&times;</button>
         </div>
         <div class="modal-body">
-            <p style="margin-bottom: 16px; color: #dc3545;">
-                <i class="fas fa-exclamation-triangle"></i>
-                با رد این برنامه، دیگر قابل دسترسی نخواهد بود. لطفاً دلیل رد را وارد کنید.
+            <p style="margin-bottom: 16px; color: #856404;">
+                <i class="fas fa-share-alt"></i>
+                این برنامه به مدیر ارجاع داده می‌شود و فقط مدیر از صفحه ارجاعات می‌تواند آن را حل کند. لطفاً دلیل ارجاع را وارد کنید.
             </p>
             <div class="modal-form-field">
-                <label for="denyReason">دلیل رد: <span style="color: red;">*</span></label>
-                <textarea id="denyReason" class="form-control" rows="4" placeholder="دلیل رد برنامه را وارد کنید..." required></textarea>
+                <label for="referralReason">دلیل ارجاع: <span style="color: red;">*</span></label>
+                <textarea id="referralReason" class="form-control" rows="4" placeholder="دلیل ارجاع به مدیر را وارد کنید..." required></textarea>
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('denyModal')">انصراف</button>
-            <button type="button" class="btn btn-danger" onclick="confirmDeny()">
-                <i class="fas fa-ban"></i> رد برنامه
+            <button type="button" class="btn btn-secondary" onclick="closeModal('referModal')">انصراف</button>
+            <button type="button" class="btn btn-warning" onclick="confirmRefer()">
+                <i class="fas fa-share-alt"></i> ارجاع به مدیر
             </button>
         </div>
     </div>
@@ -1325,10 +1360,9 @@
 </div>
 {% endif %}
 
-<!-- Hidden form for rejecting programs -->
-<form id="rejectForm" method="post" style="display: none;">
+<!-- فرم ارجاع به مدیر -->
+<form id="referForm" method="post" style="display: none;">
     {% csrf_token %}
-    <input type="hidden" name="reject" value="true">
     <input type="hidden" name="origin" value="list">
 </form>
 
@@ -1351,7 +1385,7 @@
 {% block extra_js %}
 <script>
 // Permission variables for frontend
-const CAN_DENY = '{{ can_deny|yesno:"true,false" }}' === 'true';
+const CAN_REFER = '{{ can_refer|yesno:"true,false" }}' === 'true';
 const CAN_REVERT = '{{ can_revert|yesno:"true,false" }}' === 'true';
 const CAN_ARCHIVE = '{{ can_archive|yesno:"true,false" }}' === 'true';
 </script>
@@ -1382,7 +1416,7 @@ let searchTimers = {
 // Track current sort state for each table
 let sortState = {
     confirmed: {
-        column: '{{ sort_by_confirmed|default:"id" }}',
+        column: '{{ sort_by_confirmed|default:"predicted_start_date" }}',
         direction: '{{ sort_dir_confirmed|default:"desc" }}'
     },
     progress: {
@@ -1648,13 +1682,13 @@ function closeModal(modalId) {
 }
 
 // Show deny modal for a specific program (list view)
-function showDenyModal(programId) {
-    if (!CAN_DENY) return;
-    const textarea = document.getElementById('denyReason');
+function showReferModal(programId) {
+    if (!CAN_REFER) return;
+    const textarea = document.getElementById('referralReason');
     if (textarea) textarea.value = '';
-    const modal = document.getElementById('denyModal');
+    const modal = document.getElementById('referModal');
     if (modal) modal.dataset.programId = programId;
-    showModal('denyModal');
+    showModal('referModal');
 }
 
 // Show revert modal
@@ -1676,20 +1710,19 @@ function showArchiveModal(programId) {
     if (modal) modal.dataset.programId = programId;
 }
 
-// Confirm deny - collect reason and submit via list form
-function confirmDeny() {
-    const reason = document.getElementById('denyReason').value.trim();
+// Confirm refer - submit referral to manager
+function confirmRefer() {
+    const reason = document.getElementById('referralReason').value.trim();
     if (!reason) {
-        alert('لطفاً دلیل رد برنامه را وارد کنید');
+        alert('لطفاً دلیل ارجاع به مدیر را وارد کنید');
         return;
     }
-    const modal = document.getElementById('denyModal');
+    const modal = document.getElementById('referModal');
     const programId = modal ? modal.dataset.programId : null;
     if (!programId) return;
 
-    const form = document.getElementById('rejectForm');
-    // remove existing action/reason inputs if any
-    ['action','deny_reason'].forEach(name => {
+    const form = document.getElementById('referForm');
+    ['action','referral_reason'].forEach(name => {
         const ex = form.querySelector(`input[name="${name}"]`);
         if (ex) ex.remove();
     });
@@ -1697,12 +1730,12 @@ function confirmDeny() {
     const actionInput = document.createElement('input');
     actionInput.type = 'hidden';
     actionInput.name = 'action';
-    actionInput.value = 'deny';
+    actionInput.value = 'refer_to_manager';
     form.appendChild(actionInput);
 
     const reasonInput = document.createElement('input');
     reasonInput.type = 'hidden';
-    reasonInput.name = 'deny_reason';
+    reasonInput.name = 'referral_reason';
     reasonInput.value = reason;
     form.appendChild(reasonInput);
 

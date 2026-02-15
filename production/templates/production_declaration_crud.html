@@ -1004,12 +1004,19 @@
         {% if program.status == 'draft' or is_create %}
             <button class="btn btn-primary" type="button" onclick="showConfirmModal('confirm', 'تایید برنامه', 'آیا از تایید این برنامه تولید اطمینان دارید؟')">تایید برنامه</button>
         {% elif program.status == 'confirmed' %}
-            <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
-            <button class="btn btn-primary" type="button" onclick="showStartProductionModal()">شروع تولید</button>
-            {% if can_deny %}
-            <button class="btn btn-danger" type="button" onclick="showDenyModal()" style="margin-right: auto;">
+            {% if can_resolve_referral %}
+            <div style="flex: 1 1 100%; padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; margin-bottom: 8px;">
+                <strong>این برنامه به مدیر ارجاع شده است.</strong> برای حل ارجاع یکی از گزینه‌ها را انتخاب کنید.
+            </div>
+            <button class="btn btn-danger" type="button" onclick="showDenyModal()">
                 <i class="fas fa-ban"></i> رد برنامه
             </button>
+            <button class="btn btn-warning" type="button" onclick="confirmResolveReferralClear()">
+                <i class="fas fa-undo"></i> برگرداندن از ارجاع
+            </button>
+            {% else %}
+            <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
+            <button class="btn btn-primary" type="button" onclick="showStartProductionModal()">شروع تولید</button>
             {% endif %}
         {% elif program.status == 'in_progress' %}
             <button class="btn btn-secondary" type="submit" name="action" value="save">ذخیره تغییرات</button>
@@ -1149,8 +1156,8 @@
     </div>
 </div>
 
-{% if can_deny %}
-<!-- Deny Modal -->
+{% if can_resolve_referral %}
+<!-- مودال رد برنامه (حل ارجاع توسط مدیر) -->
 <div id="denyModal" class="modal-overlay" style="display: none;">
     <div class="modal-content" style="max-width: 500px;">
         <div class="modal-header">
@@ -1169,13 +1176,22 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeModal('denyModal')">انصراف</button>
-            <button type="button" class="btn btn-danger" onclick="confirmDeny()">
+            <button type="button" class="btn btn-danger" onclick="confirmResolveReferralDeny()">
                 <i class="fas fa-ban"></i> رد برنامه
             </button>
         </div>
     </div>
 </div>
-
+<!-- فرم‌های حل ارجاع (خارج از فرم اصلی) -->
+<form id="resolveReferralDenyForm" method="post" action="{% url 'production:program_crud' program.id %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="resolve_referral_deny">
+    <input type="hidden" name="deny_reason" id="resolveDenyReasonInput">
+</form>
+<form id="resolveReferralClearForm" method="post" action="{% url 'production:program_crud' program.id %}" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="resolve_referral_clear">
+</form>
 {% endif %}
 {% if can_revert %}
 <!-- Revert Modal -->
@@ -1242,7 +1258,7 @@
 
 <script>
 // Permission variables for frontend
-const CAN_DENY = '{{ can_deny|yesno:"true,false" }}' === 'true';
+const CAN_RESOLVE_REFERRAL = '{{ can_resolve_referral|yesno:"true,false" }}' === 'true';
 const CAN_REVERT = '{{ can_revert|yesno:"true,false" }}' === 'true';
 const CAN_ARCHIVE = '{{ can_archive|yesno:"true,false" }}' === 'true';
 
@@ -2690,10 +2706,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 });
 
-// Deny, Revert, Archive functions
+// Deny (resolve referral), Revert, Archive functions
 function showDenyModal() {
-    if (!CAN_DENY) return;
-    document.getElementById('denyReason').value = '';
+    if (!CAN_RESOLVE_REFERRAL) return;
+    const el = document.getElementById('denyReason');
+    if (el) el.value = '';
     showModal('denyModal');
 }
 
@@ -2709,38 +2726,19 @@ function showArchiveModal() {
     showModal('archiveModal');
 }
 
-function confirmDeny() {
+function confirmResolveReferralDeny() {
     const reason = document.getElementById('denyReason').value.trim();
-    
     if (!reason) {
         alert('لطفاً دلیل رد برنامه را وارد کنید');
         return;
     }
-    
-    // Create hidden inputs for deny action
-    const form = document.getElementById('productionForm');
-    
-    // Remove any existing action/reason inputs
-    const existingAction = form.querySelector('input[name="action"]');
-    if (existingAction) existingAction.remove();
-    const existingReason = form.querySelector('input[name="deny_reason"]');
-    if (existingReason) existingReason.remove();
-    
-    // Add new inputs
-    const actionInput = document.createElement('input');
-    actionInput.type = 'hidden';
-    actionInput.name = 'action';
-    actionInput.value = 'deny';
-    form.appendChild(actionInput);
-    
-    const reasonInput = document.createElement('input');
-    reasonInput.type = 'hidden';
-    reasonInput.name = 'deny_reason';
-    reasonInput.value = reason;
-    form.appendChild(reasonInput);
-    
-    // Submit form
-    form.submit();
+    document.getElementById('resolveDenyReasonInput').value = reason;
+    document.getElementById('resolveReferralDenyForm').submit();
+}
+
+function confirmResolveReferralClear() {
+    if (!confirm('آیا از برگرداندن این برنامه از ارجاع (بدون رد) اطمینان دارید؟ برنامه به لیست اعلام تولید برمی‌گردد.')) return;
+    document.getElementById('resolveReferralClearForm').submit();
 }
 
 function confirmRevert() {

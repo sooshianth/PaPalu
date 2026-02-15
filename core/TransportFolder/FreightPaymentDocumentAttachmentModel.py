@@ -1,5 +1,6 @@
 from django.db import models
 from .TransportModel import Transport
+from core.file_upload_utils import safe_media_upload_to
 
 
 class FreightPaymentDocumentAttachment(models.Model):
@@ -11,7 +12,7 @@ class FreightPaymentDocumentAttachment(models.Model):
         verbose_name='حمل',
     )
     file = models.FileField(
-        upload_to='freight_payment_documents/attachments/%Y/%m/%d/',
+        upload_to=safe_media_upload_to('freight_payment_documents/attachments', date_include_day=True),
         verbose_name='فایل سند',
     )
 

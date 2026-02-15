@@ -1,8 +1,5 @@
 {% for program in confirmed_programs %}
 <tr>
-    {% if accessible_production_program_fields.id %}
-    <td>{{ program.id }}</td>
-    {% endif %}
     {% if accessible_production_program_fields.product and accessible_product_fields.name %}
     <td>{{ program.product.name|default:"-" }}</td>
     {% endif %}
@@ -29,16 +26,13 @@
     {% if accessible_production_program_fields.packaging_type %}
     <td>{{ program.get_packaging_type_display|default:"-" }}</td>
     {% endif %}
-    {% if accessible_production_program_fields.status %}
-    <td><span class="status-badge status-confirmed">{{ program.get_status_display }}</span></td>
-    {% endif %}
     <td>
         <div class="action-buttons">
             <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                 مشاهده
             </a>
-            <button type="button" class="btn-outline-warning" onclick="showDenyModal({{ program.id }})" title="رد کردن">
-                رد
+            <button type="button" class="btn-outline-warning" onclick="showReferModal({{ program.id }})" title="ارجاع به مدیر">
+                ارجاع
             </button>
         </div>
     </td>

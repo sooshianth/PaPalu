@@ -53,6 +53,23 @@ def _get_referrals(user):
             'description': f'برنامه تولید {p.program_id or p.id} - {product_name}',
         })
 
+    # 2.4. ارجاع اعلام تولید به مدیر (از صفحه اعلام تولید)
+    declaration_referred = ProductionProgram.objects.filter(
+        status=ProductionProgram.Status.CONFIRMED,
+        declaration_referred_to_manager=True
+    ).select_related('product').order_by('-declaration_referred_at')
+    for p in declaration_referred:
+        product_name = p.product.name if p.product else (p.program_id or '-')
+        dt = getattr(p, 'declaration_referred_at', None) or p.updated_at
+        referrals.append({
+            'type': 'production_declaration_referral',
+            'source': 'اعلام تولید',
+            'resolve_url': reverse('production:program_crud', kwargs={'program_id': p.id}),
+            'identifier': p.program_id or str(p.id),
+            'created_at': dt,
+            'description': f'برنامه تولید {p.program_id or p.id} - {product_name} - ارجاع از اعلام تولید',
+        })
+
     # 2.5. ثبت ورود خودرو ارجاع‌شده به مدیر (از نگهبان)
     carentrance_referred = Transport.objects.filter(
         carentrance_referred_to_manager=True,
