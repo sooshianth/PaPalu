@@ -128,13 +128,13 @@ class ProductionProgramForm(forms.ModelForm):
             self.fields['net_unplanned_requirement'].widget.attrs['readonly'] = True
             self.fields['net_unplanned_requirement'].widget.attrs['disabled'] = True
         
-        # Lock fields only when status is in progress or completed; confirmed remains editable
+        # Lock fields when status is in progress or completed (no editing after production start)
         instance: ProductionProgram | None = getattr(self, 'instance', None)
         if instance and instance.pk and instance.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
             lock_names = [
                 'production_info', 'product', 'program_id', 'planned_weight_ton',
                 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time', 'packaging_type',
-                'extra_description'
+                'extra_description', 'produced_weight_ton'
             ]
             for name in lock_names:
                 if name in self.fields:
@@ -193,7 +193,7 @@ class ProductionProgramForm(forms.ModelForm):
             for attr in [
                 'production_info', 'product', 'program_id', 'planned_weight_ton',
                 'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
-                'packaging_type', 'extra_description'
+                'packaging_type', 'extra_description', 'produced_weight_ton'
             ]:
                 setattr(instance, attr, getattr(orig, attr))
             # inventory_snapshot and net_unplanned_requirement are always auto-calculated in views

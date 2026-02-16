@@ -461,6 +461,11 @@
 	</button>
 </div>
 {% endif %}
+{% if program and program.status == 'in_progress' or program and program.status == 'completed' %}
+<div class="alert alert-info mb-3" role="alert">
+	<strong>این برنامه شروع یا تکمیل شده است و قابل ویرایش نیست.</strong> تنها مشاهده اطلاعات امکان‌پذیر است.
+</div>
+{% endif %}
 
 <div id="program-form">
 	<div class="card-body">
@@ -534,11 +539,11 @@
 							<div class="schedule-date-fields">
 								<div class="schedule-field">
 									<label class="form-label">شروع پیشبینی شده{% if form.predicted_start_date.field.required or form.predicted_start_time.field.required %}<span style="color: #dc3545;">*</span>{% endif %}</label>
-									<input type="text" class="form-control jalali-datetime" data-datetime-mode="start" id="id_predicted_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.predicted_start_date.value %}{{ form.predicted_start_date.value }}{% if form.predicted_start_time.value %} {{ form.predicted_start_time.value }}{% endif %}{% endif %}" autocomplete="off">
+									<input type="text" class="form-control jalali-datetime" data-datetime-mode="start" id="id_predicted_start_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۴:۳۰" value="{% if form.predicted_start_date.value %}{{ form.predicted_start_date.value }}{% if form.predicted_start_time.value %} {{ form.predicted_start_time.value }}{% endif %}{% endif %}" autocomplete="off"{% if program and program.status == 'in_progress' or program and program.status == 'completed' %} readonly disabled{% endif %}>
 								</div>
 								<div class="schedule-field">
 									<label class="form-label">پایان پیشبینی شده{% if form.predicted_end_date.field.required or form.predicted_end_time.field.required %}<span style="color: #dc3545;">*</span>{% endif %}</label>
-									<input type="text" class="form-control jalali-datetime" data-datetime-mode="end" id="id_predicted_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.predicted_end_date.value %}{{ form.predicted_end_date.value }}{% if form.predicted_end_time.value %} {{ form.predicted_end_time.value }}{% endif %}{% endif %}" autocomplete="off">
+									<input type="text" class="form-control jalali-datetime" data-datetime-mode="end" id="id_predicted_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.predicted_end_date.value %}{{ form.predicted_end_date.value }}{% if form.predicted_end_time.value %} {{ form.predicted_end_time.value }}{% endif %}{% endif %}" autocomplete="off"{% if program and program.status == 'in_progress' or program and program.status == 'completed' %} readonly disabled{% endif %}>
 								</div>
 							</div>
 						</div>
