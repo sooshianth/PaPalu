@@ -700,6 +700,152 @@ def revert_production_stock_entry(production_program, request):
         return None
 
 
+def create_actual_consumption_correction_entries(program_old, instance, request):
+    """
+    وقتی مدیر برداشت واقعی (actual_consumption) را در برنامه تکمیل‌شده تغییر می‌دهد،
+    ثبت‌های انبار اصلاحی ایجاد می‌کند.
+    بعد از تکمیل تولید، مواد اولیه از انبار تولید خارج شده‌اند؛ پس فقط انبار اولیه (مبدأ) را
+    اصلاح می‌کنیم: در کاهش مصرف فقط به اولیه اضافه می‌کنیم، در افزایش مصرف فقط از اولیه کم می‌کنیم.
+    از انبار تولید چیزی کم نمی‌کنیم.
+    """
+    if instance.status != ProductionProgram.Status.COMPLETED or not program_old.production_info:
+        return []
+    production_warehouse = program_old.production_warehouse or Warehouse.objects.filter(warehouse_type='production').first()
+    if not production_warehouse:
+        return []
+    raw_material_ct = ContentType.objects.get_for_model(RawMaterial)
+    old_ac = program_old.actual_consumption or {}
+    new_ac = instance.actual_consumption or {}
+    entries_created = []
+    try:
+        for bom in program_old.production_info.bom_items.all():
+            bom_id_str = str(bom.id)
+            old_dist = old_ac.get(bom_id_str, {})
+            new_dist = new_ac.get(bom_id_str, {})
+            if production_warehouse:
+                def norm(d):
+                    out = {}
+                    for k, v in d.items():
+                        key = str(production_warehouse.id) if str(k) in ('global', 'none') else str(k)
+                        try:
+                            out[key] = Decimal(str(v))
+                        except (ValueError, TypeError):
+                            out[key] = Decimal('0')
+                    return out
+                old_dist = norm(old_dist)
+                new_dist = norm(new_dist)
+            all_wh = set(old_dist.keys()) | set(new_dist.keys())
+            for wh_id in all_wh:
+                old_amt = old_dist.get(wh_id, Decimal('0'))
+                new_amt = new_dist.get(wh_id, Decimal('0'))
+                diff = new_amt - old_amt
+                if diff == 0:
+                    continue
+                try:
+                    source_warehouse = Warehouse.objects.get(id=int(wh_id))
+                except (ValueError, Warehouse.DoesNotExist):
+                    continue
+                with transaction.atomic():
+                    entry = StockEntry.objects.create(
+                        transaction_date=timezone.now(),
+                        entry_type=StockEntry.StockEntryType.ADJUSTMENT,
+                        notes=f'تصحیح برداشت واقعی توسط مدیر - برنامه {instance.program_id or instance.id} - {bom.raw_material.name if bom.raw_material else "ماده اولیه"} - انبار {wh_id}',
+                        is_committed=False
+                    )
+                    if diff > 0:
+                        # مصرف بیشتر شده: فقط از انبار اولیه کم می‌کنیم (از تولید چیزی کم نمی‌کنیم)
+                        SourceStock.objects.create(
+                            stock_entry=entry,
+                            from_content_type=raw_material_ct,
+                            from_object_id=bom.raw_material.id,
+                            from_warehouse=source_warehouse,
+                            quantity=diff,
+                        )
+                    else:
+                        # مصرف کمتر شده: فقط به انبار اولیه اضافه می‌کنیم (از تولید برنمی‌گردونیم)
+                        qty = abs(diff)
+                        TargetStock.objects.create(
+                            stock_entry=entry,
+                            to_content_type=raw_material_ct,
+                            to_object_id=bom.raw_material.id,
+                            to_warehouse=source_warehouse,
+                            quantity=qty,
+                        )
+                    entry.commit()
+                    entries_created.append(entry)
+    except Exception as e:
+        bug_logger.error(f"Error creating actual consumption correction entries: {str(e)}")
+        bug_logger.error(traceback.format_exc())
+    return entries_created
+
+
+def create_produced_weight_correction_entry(program_old, instance, request):
+    """
+    وقتی مدیر وزن تولید شده یا انبار محصول را در برنامه تکمیل‌شده تغییر می‌دهد،
+    ثبت انبار اصلاحی ایجاد می‌کند تا موجودی با مقدار جدید همخوان باشد.
+    - اگر وزن کم شده (مثلاً 1010 → 1000): از انبار محصول قبلی به اندازه اختلاف کم می‌شود.
+    - اگر وزن زیاد شده: به انبار محصول به اندازه اختلاف اضافه می‌شود.
+    """
+    if instance.status != ProductionProgram.Status.COMPLETED or not instance.product:
+        return None
+    old_weight = (program_old.produced_weight_ton or Decimal('0'))
+    new_weight = (instance.produced_weight_ton or Decimal('0'))
+    diff = new_weight - old_weight
+    if diff == 0:
+        return None
+    product_ct = ContentType.objects.get_for_model(Product)
+    try:
+        with transaction.atomic():
+            if diff < 0:
+                # کاهش وزن: از انبار محصول قبلی کم می‌کنیم
+                from_warehouse = program_old.product_warehouse
+                if not from_warehouse:
+                    bug_logger.warning("Program has no product_warehouse for weight correction (decrease)")
+                    return None
+                qty = abs(diff)
+                entry = StockEntry.objects.create(
+                    transaction_date=timezone.now(),
+                    entry_type=StockEntry.StockEntryType.ADJUSTMENT,
+                    notes=f'تصحیح وزن تولید توسط مدیر - برنامه {instance.program_id or instance.id} - کاهش {qty} تن از انبار محصول',
+                    is_committed=False
+                )
+                SourceStock.objects.create(
+                    stock_entry=entry,
+                    from_content_type=product_ct,
+                    from_object_id=instance.product.id,
+                    from_warehouse=from_warehouse,
+                    quantity=qty,
+                )
+                entry.commit()
+                bug_logger.info(f"Weight correction (decrease) stock entry {entry.id} created for program {instance.id}")
+                return entry
+            else:
+                # افزایش وزن: به انبار محصول اضافه می‌کنیم
+                to_warehouse = instance.product_warehouse
+                if not to_warehouse:
+                    bug_logger.warning("Program has no product_warehouse for weight correction (increase)")
+                    return None
+                entry = StockEntry.objects.create(
+                    transaction_date=timezone.now(),
+                    entry_type=StockEntry.StockEntryType.ADJUSTMENT,
+                    notes=f'تصحیح وزن تولید توسط مدیر - برنامه {instance.program_id or instance.id} - افزایش {diff} تن به انبار محصول',
+                    is_committed=False
+                )
+                TargetStock.objects.create(
+                    stock_entry=entry,
+                    to_content_type=product_ct,
+                    to_object_id=instance.product.id,
+                    to_warehouse=to_warehouse,
+                    quantity=diff,
+                )
+                entry.commit()
+                bug_logger.info(f"Weight correction (increase) stock entry {entry.id} created for program {instance.id}")
+                return entry
+    except Exception as e:
+        bug_logger.error(f"Error creating produced weight correction entry: {str(e)}")
+        bug_logger.error(traceback.format_exc())
+        return None
+
 
 @login_required
 def production_declaration_view(request):
@@ -789,7 +935,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.IN_PROGRESS,
                 is_denied=False,
                 is_archived=False
-            ).select_related('product', 'production_info')
+            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info')
             
             # Apply consolidated search filter for in-progress table
             if search_progress:
@@ -811,7 +957,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.COMPLETED,
                 is_denied=False,
                 is_archived=False
-            ).select_related('product', 'production_info', 'product_warehouse')
+            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info', 'product_warehouse')
             
             # Apply consolidated search filter for completed table
             if search_completed:
@@ -1053,6 +1199,8 @@ def production_program_crud_view(request, program_id=None):
     If program_id is None, it's in create mode
     """
     is_create = program_id is None
+    declaration_referred_to_manager = False
+    can_resolve_referral = False
     
     # Check permission for creating new production program
     if is_create:
@@ -1088,6 +1236,8 @@ def production_program_crud_view(request, program_id=None):
                     messages.error(request, 'این برنامه به مدیر ارجاع شده و فقط مدیر می‌تواند آن را باز کند.')
                     return HttpResponseForbidden('شما دسترسی به این برنامه را ندارید.')
                 
+                declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False)
+                can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
                 bug_logger.debug(f"Production program {program_id} loaded successfully")
             except Exception as e:
                 bug_logger.error(f"Error loading production program {program_id}: {str(e)}")
@@ -1099,8 +1249,13 @@ def production_program_crud_view(request, program_id=None):
 
             # اکشن‌های ارجاع/حل ارجاع بدون نیاز به اعتبار فرم (از لیست یا مودال ارسال می‌شوند)
             if not is_create and action == 'refer_to_manager':
-                if program.status != ProductionProgram.Status.CONFIRMED:
-                    messages.error(request, 'فقط برنامه‌های تایید شده قابل ارجاع به مدیر هستند')
+                # ارجاع به مدیر در هر مرحله (تایید شده، در حال اجرا، تکمیل شده) - برنامه‌های تایید شده بدون تغییر
+                if program.status not in (
+                    ProductionProgram.Status.CONFIRMED,
+                    ProductionProgram.Status.IN_PROGRESS,
+                    ProductionProgram.Status.COMPLETED,
+                ):
+                    messages.error(request, 'فقط برنامه‌های تایید شده، در حال اجرا یا تکمیل‌شده قابل ارجاع به مدیر هستند.')
                     return redirect(reverse('production:program_crud', args=[program_id]))
                 reason = request.POST.get('referral_reason', '').strip()
                 if not reason:
@@ -1131,7 +1286,7 @@ def production_program_crud_view(request, program_id=None):
                 form = ProductionForm(request.POST)
                 audit_logger.info("Submitting form to create new production program")
             else:
-                form = ProductionForm(request.POST, instance=program)
+                form = ProductionForm(request.POST, instance=program, manager_resolving_referral=can_resolve_referral)
                 audit_logger.info(f"Submitting form to edit production program {program_id}")
             
             if form.is_valid():
@@ -1588,7 +1743,7 @@ def production_program_crud_view(request, program_id=None):
                                 messages.warning(request, 'برنامه تکمیل شد اما خطا در ایجاد ثبت‌های انبار رخ داد')
                         else:
                             bug_logger.warning("Product warehouse or actual consumption not present - stock entry not created")
-                    elif action == 'save':
+                    elif action in ('save', 'save_and_resolve_referral'):
                         # Save action - allow updating actual consumption and تکمیل fields for in_progress programs
                         if instance.status == ProductionProgram.Status.IN_PROGRESS:
                             # Parse actual consumption data from form
@@ -1633,8 +1788,66 @@ def production_program_crud_view(request, program_id=None):
                                 instance.completed_at = completed_at_str
                                 bug_logger.debug(f"Completed at saved from page: {instance.completed_at}")
                         
+                        # مدیر در حالت ارجاع می‌تواند انبار محصول نهایی و برداشت واقعی را برای برنامه تکمیل‌شده تغییر دهد
+                        if can_resolve_referral and instance.status == ProductionProgram.Status.COMPLETED:
+                            pw_id = request.POST.get('product_warehouse')
+                            if pw_id:
+                                try:
+                                    instance.product_warehouse = Warehouse.objects.get(id=int(pw_id))
+                                except (ValueError, Warehouse.DoesNotExist):
+                                    pass
+                            # برداشت واقعی را از POST بخوان (مثل در حال اجرا)
+                            actual_consumption_from_post = {}
+                            for key in request.POST.keys():
+                                if key.startswith('actual_consumption_'):
+                                    parts = key.replace('actual_consumption_', '').split('_', 1)
+                                    if len(parts) == 2:
+                                        bom_id, warehouse = parts[0], parts[1]
+                                        amount_str = request.POST.get(key, '').strip()
+                                        if amount_str:
+                                            try:
+                                                amount = Decimal(str(amount_str))
+                                                if amount >= 0:
+                                                    if bom_id not in actual_consumption_from_post:
+                                                        actual_consumption_from_post[bom_id] = {}
+                                                    actual_consumption_from_post[bom_id][warehouse] = str(amount)
+                                            except (ValueError, TypeError):
+                                                pass
+                            if can_resolve_referral and instance.status == ProductionProgram.Status.COMPLETED and actual_consumption_from_post:
+                                instance.actual_consumption = actual_consumption_from_post
+                        # اصلاح انبار وقتی مدیر برنامه تکمیل‌شده را ویرایش می‌کند: مقدار قدیمی را از DB بخوان (program و instance یکی هستند)
+                        if can_resolve_referral and instance.status == ProductionProgram.Status.COMPLETED and not is_create:
+                            program_old_from_db = ProductionProgram.objects.filter(pk=program_id).select_related('product', 'product_warehouse', 'production_warehouse', 'production_info').first()
+                            if program_old_from_db:
+                                # اصلاح برداشت واقعی (مواد اولیه)
+                                old_consumption = program_old_from_db.actual_consumption or {}
+                                new_consumption = instance.actual_consumption or {}
+                                if old_consumption != new_consumption:
+                                    consumption_entries = create_actual_consumption_correction_entries(program_old_from_db, instance, request)
+                                    if consumption_entries:
+                                        audit_logger.activity(f"ثبت انبار اصلاح برداشت واقعی برنامه {program_id} توسط مدیر - {len(consumption_entries)} ثبت")
+                                    else:
+                                        messages.warning(request, 'تغییرات برداشت واقعی ذخیره شد اما ثبت انبار اصلاحی ایجاد نشد.')
+                                # اصلاح وزن تولید شده (محصول نهایی)
+                                old_w = program_old_from_db.produced_weight_ton or Decimal('0')
+                                new_w = instance.produced_weight_ton or Decimal('0')
+                                if old_w != new_w:
+                                    corr = create_produced_weight_correction_entry(program_old_from_db, instance, request)
+                                    if corr:
+                                        audit_logger.activity(f"ثبت انبار اصلاح وزن تولید برنامه {program_id} توسط مدیر - ثبت {corr.id}")
+                                    else:
+                                        messages.warning(request, 'تغییرات ذخیره شد اما ثبت انبار اصلاح وزن ایجاد نشد. لطفاً موجودی انبار را دستی بررسی کنید.')
                         instance.save()
                         bug_logger.info(f"Production program {program_id} saved")
+                        if action == 'save_and_resolve_referral' and can_resolve_referral:
+                            instance.declaration_referred_to_manager = False
+                            instance.declaration_referred_at = None
+                            instance.declaration_referral_reason = ''
+                            instance.save(update_fields=['declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
+                            bug_logger.info(f"Production program {program_id} referral cleared by manager after save")
+                            audit_logger.activity(f"ارجاع برنامه تولید {program_id} توسط مدیر برطرف شد (پس از ذخیره تغییرات)")
+                            messages.success(request, 'تغییرات ذخیره شد و برنامه به لیست اعلام تولید برگردانده شد.')
+                            return redirect(reverse('referrals_list'))
                         messages.success(request, 'برنامه تولید با موفقیت ذخیره شد.')
                         return redirect(reverse('production:program_crud', args=[program_id]))
                     elif action == 'revert':
@@ -1767,7 +1980,7 @@ def production_program_crud_view(request, program_id=None):
             if is_create:
                 form = ProductionForm()
             else:
-                form = ProductionForm(instance=program)
+                form = ProductionForm(instance=program, manager_resolving_referral=can_resolve_referral)
         
         # Get raw material inventory from primary warehouses
         raw_materials_inventory = []

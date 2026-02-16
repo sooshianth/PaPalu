@@ -492,7 +492,8 @@
     </div>
 </div>
 
-<!-- Disapproved Programs Section -->
+<!-- Disapproved Programs Section - فقط سوپر ادمین (مدیر) -->
+{% if user_can_see_referred_to_manager %}
 <div class="section">
     <div class="section-title">
         <span>برنامه‌های ارسال شده به مدیر</span>
@@ -585,4 +586,5 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}

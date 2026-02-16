@@ -124,7 +124,14 @@ class ProductionForm(forms.ModelForm):
         ]
     
     def __init__(self, *args, **kwargs):
+        self._manager_resolving_referral = kwargs.pop('manager_resolving_referral', False)
         super().__init__(*args, **kwargs)
+        # وقتی مدیر در حال حل ارجاع است، همه فیلدها قابل ویرایش هستند
+        if self._manager_resolving_referral:
+            for name in list(self.fields.keys()):
+                self.fields[name].widget.attrs.pop('readonly', None)
+                self.fields[name].widget.attrs.pop('disabled', None)
+            return
         # Get the current status
         instance: ProductionProgram | None = getattr(self, 'instance', None)
         status = instance.status if instance and instance.pk else ProductionProgram.Status.DRAFT
@@ -292,6 +299,11 @@ class ProductionForm(forms.ModelForm):
 
     def save(self, commit=True):
         instance: ProductionProgram = super().save(commit=False)
+        # وقتی مدیر ارجاع را حل می‌کند، مقادیر ارسالی را ذخیره می‌کنیم و از بازیابی از DB صرف‌نظر می‌کنیم
+        if getattr(self, '_manager_resolving_referral', False):
+            if commit:
+                instance.save()
+            return instance
         # Preserve original locked values if form disabled fields dropped from POST
         if instance.pk:
             # Re-fetch from DB for locked fields to avoid accidental overwrite to None
