@@ -252,7 +252,7 @@ class WaybillTable(tables.Table):
         fields = ('order_number', 'allocation_number', 'vehicle_entry_time', 'empty_weight', 'gross_weight', 
                  'driver_name', 'driver_mobile', 'plate_number', 'driver_national_id', 'carrier_name', 'actions')
         attrs = {
-            'class': 'data-table',
+            'class': 'data-table searchable-table',
             'thead': {'class': ''}
         }
         sequence = ('order_number', 'allocation_number', 'vehicle_entry_time', 'empty_weight', 'gross_weight',

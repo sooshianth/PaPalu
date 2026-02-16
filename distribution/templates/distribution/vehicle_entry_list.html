@@ -516,6 +516,20 @@
             </div>
         {% endfor %}
     {% endif %}
+
+    <!-- بخش جستجوی لحظه‌ای -->
+    <div style="background: var(--gray-100); padding: 20px; border-radius: 10px; margin-bottom: 25px; border-right: 4px solid var(--primary-green);">
+        <h5 style="color: var(--primary-green); font-size: 1.1rem; font-weight: 600; margin-bottom: 15px;">جستجو و فیلتر</h5>
+        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <input type="text"
+                       id="liveSearchInput"
+                       placeholder="جستجو در شماره بارنامه، شماره تخصیص، پلاک، راننده و..."
+                       style="width: 100%; padding: 10px 14px; border: 1px solid #ced4da; border-radius: 8px; font-size: 0.95rem;">
+            </div>
+            <button type="button" id="clearSearchBtn" style="padding: 10px 18px; font-size: 0.9rem; background-color: var(--gray-600); color: white; border: none; border-radius: 8px; cursor: pointer; display: none;">پاک کردن</button>
+        </div>
+    </div>
     
     {% if table %}
         <div class="table-container">
@@ -1207,6 +1221,60 @@
         
         return true;
     });
+
+    // جستجوی آنی روی جدول
+    (function() {
+        const searchInput = document.getElementById('liveSearchInput');
+        const clearBtn = document.getElementById('clearSearchBtn');
+
+        function normalizeForSearch(text) {
+            if (!text) return '';
+            var s = String(text).replace(/\s+/g, ' ').trim().toLowerCase();
+            var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+            var arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+            for (var i = 0; i < 10; i++) {
+                s = s.replace(new RegExp(persianDigits[i], 'g'), i);
+                s = s.replace(new RegExp(arabicDigits[i], 'g'), i);
+            }
+            return s;
+        }
+
+        function applyLiveSearch() {
+            const query = normalizeForSearch(searchInput?.value || '');
+            clearBtn.style.display = query ? 'block' : 'none';
+
+            document.querySelectorAll('.searchable-table tbody tr').forEach(function(row) {
+                const rowText = normalizeForSearch(row.textContent);
+                const match = !query || rowText.includes(query);
+                row.style.display = match ? '' : 'none';
+            });
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(this, args), wait);
+            };
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', debounce(applyLiveSearch, 150));
+            searchInput.addEventListener('keyup', function() {
+                if (this.value === '') applyLiveSearch();
+            });
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.focus();
+                    applyLiveSearch();
+                }
+            });
+        }
+    })();
 </script>
 {% endblock %}
 

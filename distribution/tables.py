@@ -192,7 +192,7 @@ class VehicleRecruitmentTable(tables.Table):
         template_name = 'django_tables2/bootstrap.html'
         fields = ('allocation_number', 'order_number', 'shipping_method', 'delivery_info', 'transports_count', 'actions')
         attrs = {
-            'class': 'data-table',
+            'class': 'data-table searchable-table',
             'thead': {'class': ''}
         }
         sequence = ('allocation_number', 'order_number', 'shipping_method', 'delivery_info', 'transports_count', 'actions')
@@ -497,7 +497,7 @@ class VehicleEntryTable(tables.Table):
         template_name = 'django_tables2/bootstrap.html'
         fields = ('waybill_number', 'allocation_number', 'vehicle_type', 'plate_number', 'driver_name', 'driver_national_id', 'actions')
         attrs = {
-            'class': 'data-table',
+            'class': 'data-table searchable-table',
             'thead': {'class': ''}
         }
         sequence = ('waybill_number', 'allocation_number', 'vehicle_type', 'plate_number', 'driver_name', 'driver_national_id', 'actions')
@@ -748,7 +748,7 @@ class LoadingExitTable(tables.Table):
         template_name = 'django_tables2/bootstrap.html'
         fields = ('order_number', 'product_name', 'allocated_quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
         attrs = {
-            'class': 'data-table',
+            'class': 'data-table searchable-table',
             'thead': {'class': ''}
         }
         sequence = ('order_number', 'product_name', 'allocated_quantity', 'unit', 'plate_number', 'vehicle_type', 'actions')
