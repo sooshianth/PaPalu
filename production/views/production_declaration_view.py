@@ -1589,7 +1589,7 @@ def production_program_crud_view(request, program_id=None):
                         else:
                             bug_logger.warning("Product warehouse or actual consumption not present - stock entry not created")
                     elif action == 'save':
-                        # Save action - allow updating actual consumption for in_progress programs
+                        # Save action - allow updating actual consumption and تکمیل fields for in_progress programs
                         if instance.status == ProductionProgram.Status.IN_PROGRESS:
                             # Parse actual consumption data from form
                             actual_consumption = {}
@@ -1610,11 +1610,28 @@ def production_program_crud_view(request, program_id=None):
                                                     actual_consumption[bom_id][warehouse] = str(amount)
                                             except (ValueError, TypeError) as e:
                                                 bug_logger.warning(f"Error parsing actual consumption amount for {key}: {str(e)}")
-                            
+                                            
                             # Update actual consumption if provided
                             if actual_consumption:
                                 instance.actual_consumption = actual_consumption
                                 bug_logger.debug(f"Actual consumption updated for program {program_id}: {len(actual_consumption)} BOM items")
+                            
+                            # ذخیره وزن تولید شده و پایان واقعی از صفحه (تا در پاپ‌آپ تکمیل از قبل لود شوند)
+                            produced_weight_str = request.POST.get('produced_weight_ton')
+                            if produced_weight_str is not None and produced_weight_str != '':
+                                try:
+                                    instance.produced_weight_ton = Decimal(produced_weight_str)
+                                    bug_logger.debug(f"Produced weight saved from page: {instance.produced_weight_ton}")
+                                except (ValueError, TypeError):
+                                    pass
+                            actual_end_date_str = request.POST.get('actual_end_date')
+                            if actual_end_date_str:
+                                instance.actual_end_date = actual_end_date_str
+                                bug_logger.debug(f"Actual end date saved from page: {instance.actual_end_date}")
+                            completed_at_str = request.POST.get('completed_at')
+                            if completed_at_str:
+                                instance.completed_at = completed_at_str
+                                bug_logger.debug(f"Completed at saved from page: {instance.completed_at}")
                         
                         instance.save()
                         bug_logger.info(f"Production program {program_id} saved")

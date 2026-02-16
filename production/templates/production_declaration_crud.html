@@ -935,12 +935,12 @@
             {% endif %}
             {% endif %}
             
-            <!-- تاریخ و زمان پایان واقعی (visible only when completed) -->
-            {% if not is_create and program and program.status == 'completed' %}
+            <!-- تاریخ و زمان پایان واقعی (وقتی تولید شروع شده یا تکمیل شده تا با ذخیره تغییرات قابل پر کردن و بعد در پاپ‌آپ تکمیل لود شوند) -->
+            {% if not is_create and program and program.status != 'draft' and program.status != 'confirmed' %}
             {% if accessible_production_program_fields.actual_end_date and accessible_production_program_fields.completed_at %}
             <div class="schedule-field" style="margin-top: 1rem;">
                 <label class="form-label">پایان واقعی:</label>
-                {% if accessible_production_program_fields.actual_end_date_edit and accessible_production_program_fields.completed_at_edit and program.status != 'completed' %}
+                {% if accessible_production_program_fields.actual_end_date_edit and accessible_production_program_fields.completed_at_edit %}
                     <input type="hidden" name="actual_end_date" value="{{ form.actual_end_date.value|default:'' }}" id="id_actual_end_date">
                     <input type="hidden" name="completed_at" value="{{ form.completed_at.value|default:'' }}" id="id_completed_at">
                     <input type="text" class="form-control jalali-datetime" data-datetime-mode="actual_end" id="id_actual_end_datetime" dir="ltr" placeholder="۱۴۰۳-۰۶-۱۵ ۱۸:۰۰" value="{% if form.actual_end_date.value %}{{ form.actual_end_date.value }}{% if form.completed_at.value %} {{ form.completed_at.value|time:'H:i' }}{% endif %}{% endif %}" data-gdate="{% if program.actual_end_date %}{{ program.actual_end_date|jdatetime_to_gregorian:program.completed_at }}{% endif %}" autocomplete="off">
@@ -1299,6 +1299,8 @@ const warehouseDistributionData = JSON.parse('{{ warehouse_distribution_json|esc
 const actualConsumptionGlobal = JSON.parse('{{ actual_consumption_json|escapejs }}');
 const primaryWarehousesList = JSON.parse('{{ primary_warehouses_json|escapejs }}');
 const maxBomError = {{ max_bom_error|default:5.0 }};
+const programProducedWeight = '{{ program.produced_weight_ton|default:"" }}';
+const programActualEndDisplay = '{% if program.actual_end_date and program.completed_at %}{{ program.actual_end_date|jalali_datetime_display:program.completed_at }}{% endif %}';
 // Safely parse product flow data; fallback to empty array when not provided
 const _productFlowRaw = '{{ product_flow_status_json|escapejs }}';
 const productFlowStatusData = _productFlowRaw ? JSON.parse(_productFlowRaw) : [];
@@ -1366,6 +1368,52 @@ const accessibleBomFields = JSON.parse('{{ accessible_bom_fields_json|escapejs }
         attachPersianDisplay('producedWeight', 'producedWeight_persian', 3);
     });
 })();
+
+// محدودیت حداکثر ۳ رقم اعشار برای تمام ورودی‌های وزن (کارت‌ها، پاپ‌آپ‌ها، برداشت واقعی، مقدار برداشت و ...)
+document.addEventListener('DOMContentLoaded', function () {
+    function isWeightInput(el) {
+        if (!el || el.type !== 'number') return false;
+        var step = el.getAttribute('step');
+        if (step === '0.001') return true;
+        if (el.id === 'producedWeight') return true;
+        if (el.classList.contains('warehouse-amount-input') || el.classList.contains('warehouse-actual-input')) return true;
+        var name = (el.getAttribute('name') || '').toLowerCase();
+        if (name.indexOf('weight') !== -1 || name === 'inventory_snapshot' || name === 'net_unplanned_requirement') return true;
+        return false;
+    }
+    function roundToThreeDecimals(val) {
+        if (val === '' || val === null || val === undefined) return '';
+        var n = parseFloat(String(val).replace(/،/g, '').replace(/,/g, ''));
+        if (isNaN(n)) return val;
+        return parseFloat(n.toFixed(3)).toString();
+    }
+    document.addEventListener('blur', function (e) {
+        if (!isWeightInput(e.target)) return;
+        var input = e.target;
+        var raw = input.value.trim();
+        if (raw === '') return;
+        var rounded = roundToThreeDecimals(raw);
+        if (rounded !== raw) {
+            input.value = rounded;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }, true);
+    document.addEventListener('input', function (e) {
+        if (!isWeightInput(e.target)) return;
+        var input = e.target;
+        var raw = input.value.trim();
+        if (raw === '') return;
+        var dotIndex = raw.indexOf('.');
+        if (dotIndex !== -1 && raw.length - dotIndex - 1 > 3) {
+            var rounded = roundToThreeDecimals(raw);
+            if (rounded !== raw) {
+                input.value = rounded;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    }, true);
+});
 
 // راه‌اندازی فیلدهای تاریخ-ساعت (تاریخ و زمان در یک اینپوت مثل program/create)
 document.addEventListener('DOMContentLoaded', function () {
@@ -1917,6 +1965,33 @@ function showStartProductionModal() {
 }
 
 function showCompleteProductionModal() {
+    // پیش‌بارگذاری وزن تولید شده و پایان واقعی از صفحه (ذخیره شده با ذخیره تغییرات) یا از برنامه
+    var pwPage = document.getElementById('id_produced_weight_ton');
+    var pwModal = document.getElementById('producedWeight');
+    if (pwModal) {
+        if (pwPage && pwPage.value) pwModal.value = pwPage.value;
+        else if (typeof programProducedWeight !== 'undefined' && programProducedWeight) pwModal.value = programProducedWeight;
+        if (typeof updatePersianDisplay === 'function') {
+            var persianEl = document.getElementById('producedWeight_persian');
+            if (persianEl) persianEl.textContent = typeof formatWarehouseActualToPersian === 'function' ? formatWarehouseActualToPersian(pwModal.value, 3) : '';
+        }
+    }
+    var endDtPage = document.getElementById('id_actual_end_datetime');
+    var modalEnd = document.getElementById('modalCompletionDatetime');
+    if (modalEnd) {
+        if (endDtPage && endDtPage.value) {
+            modalEnd.value = endDtPage.value;
+            var hd = document.getElementById('id_actual_end_date');
+            var ht = document.getElementById('id_completed_at');
+            if (hd && ht) {
+                modalEnd.setAttribute('data-jalali-date', hd.value || '');
+                modalEnd.setAttribute('data-jalali-time', ht.value || '');
+            }
+        } else if (typeof programActualEndDisplay !== 'undefined' && programActualEndDisplay) {
+            modalEnd.value = programActualEndDisplay;
+        }
+    }
+    
     // Initialize Jalali datetime picker for completion (same as scheduling section)
     const modalCompletionInput = document.getElementById('modalCompletionDatetime');
     if (modalCompletionInput && !modalCompletionInput.hasAttribute('data-jdp-initialized')) {
@@ -2515,6 +2590,18 @@ document.addEventListener('DOMContentLoaded', function() {
         const existingWarehouseDist = programId ? (warehouseDistributionData || {}) : {};
         const existingActualConsumption = actualConsumptionGlobal || {};
         
+        // نقشهٔ شناسه انبار → نام انبار (برای نمایش نام به‌جای ID)
+        const warehouseIdToName = {};
+        if (typeof primaryWarehousesList !== 'undefined' && primaryWarehousesList.length) {
+            primaryWarehousesList.forEach(function(w) {
+                warehouseIdToName[String(w.id)] = w.name || w.warehouse_id || '-';
+            });
+        }
+        function getWarehouseDisplayName(whKey) {
+            if (whKey === 'global' || whKey === 'none') return '—';
+            return warehouseIdToName[String(whKey)] || whKey;
+        }
+        
         // Determine which columns to show based on permissions
         const showRawMaterialId = (accessibleBomFields && accessibleBomFields.raw_material) && (accessibleRawMaterialFields && accessibleRawMaterialFields.raw_material_id);
         const showRawMaterialName = (accessibleBomFields && accessibleBomFields.raw_material) && (accessibleRawMaterialFields && accessibleRawMaterialFields.name);
@@ -2567,11 +2654,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const actualAmountDisplay = actualAmount ? formatBomNumber(actualAmount, 3) : '—';
                     const percentageDisplay = formatBomNumber(item.percentage || '0', 3);
                     
+                    const warehouseDisplayName = getWarehouseDisplayName(wh.warehouse);
                     html += `
                         <tr>
                             ${whIndex === 0 && showRawMaterialId ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_id || '-'}</td>` : ''}
                             ${whIndex === 0 && showRawMaterialName ? `<td rowspan="${warehousesWithAmount.length}">${item.raw_material_name || '-'}</td>` : ''}
-                            ${showWarehouseName ? `<td style="background: #f0f8ff; font-weight: 600;">${wh.warehouse}</td>` : ''}
+                            ${showWarehouseName ? `<td style="background: #f0f8ff; font-weight: 600;">${warehouseDisplayName}</td>` : ''}
                             ${whIndex === 0 ? `<td rowspan="${warehousesWithAmount.length}">${percentageDisplay}%</td>` : ''}
                             <td style="font-weight: 600; color: var(--primary-green);">${plannedAmount}</td>
                     `;
