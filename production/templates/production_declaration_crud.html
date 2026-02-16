@@ -844,7 +844,7 @@
                         <small class="persian-number-display" id="id_planned_weight_ton_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% else %}
                         {% if program.planned_weight_ton is not None %}<input type="hidden" id="id_planned_weight_ton" value="{{ program.planned_weight_ton }}">{% endif %}
-                        <span class="persian-number-display">{% if program.planned_weight_ton is not None %}{{ program.planned_weight_ton|persian_number:3 }}{% else %}—{% endif %}</span>
+                        <span class="persian-number-display" style="font-weight: bold;">{% if program.planned_weight_ton is not None %}{{ program.planned_weight_ton|persian_number:3 }}{% else %}—{% endif %}</span>
                     {% endif %}
                 </span>
             </div>
