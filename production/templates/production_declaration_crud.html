@@ -2154,6 +2154,13 @@ function showCompleteProductionModal() {
             
             // Setup event listeners for actual consumption inputs
             setupActualConsumptionListeners();
+            // محاسبه و نمایش درصد واقعی و محدوده مجاز از روی وزن و مقادیر از پیش‌پر شده
+            bomItems.forEach(function(item) {
+                updateActualPercentage(item.id);
+            });
+            if (typeof validateBomError === 'function') {
+                validateBomError();
+            }
                 } else {
                     try { console.debug(`BOM ${item.id} has no distribution; totalConsumption=${totalConsumption}, existingGlobalActual=${existingGlobalActual}`); } catch(e) {}
             bomSection.style.display = 'none';
