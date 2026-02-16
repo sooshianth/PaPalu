@@ -96,7 +96,7 @@ class ExitTable(tables.Table):
         template_name = 'django_tables2/bootstrap.html'
         fields = ('waybill_number', 'order_number', 'allocation_number', 'plate_number', 'product_name', 'quantity', 'actions')
         attrs = {
-            'class': 'data-table',
+            'class': 'data-table searchable-table',
             'thead': {'class': ''}
         }
         sequence = ('waybill_number', 'order_number', 'allocation_number', 'plate_number', 'product_name', 'quantity', 'actions')
