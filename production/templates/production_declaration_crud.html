@@ -956,27 +956,19 @@
             <div class="detail-card-title">اطلاعات تکمیلی</div>
             {% if accessible_production_program_fields.inventory_snapshot %}
             <div class="detail-row">
-                <span class="detail-label">{{ form.inventory_snapshot.label }}:</span>
+                <span class="detail-label">موجودی لحظه ثبت (کیلوگرم):</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.inventory_snapshot_edit and is_create or accessible_production_program_fields.inventory_snapshot_edit and program.status == 'draft' or can_resolve_referral %}
-                        {{ form.inventory_snapshot }}
-                        <small class="persian-number-display" id="id_inventory_snapshot_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
-                    {% else %}
-                        <span class="persian-number-display">{% if program.inventory_snapshot is not None %}{{ program.inventory_snapshot|persian_number:3 }}{% else %}—{% endif %}</span>
-                    {% endif %}
+                    <input type="hidden" name="inventory_snapshot" id="id_inventory_snapshot" value="{% if form.inventory_snapshot.value != None %}{{ form.inventory_snapshot.value }}{% endif %}">
+                    <span class="persian-number-display" id="id_inventory_snapshot_display" dir="ltr">{% if program and program.inventory_snapshot is not None %}{{ program.inventory_snapshot|persian_number:3 }}{% else %}—{% endif %}</span>
                 </span>
             </div>
             {% endif %}
             {% if accessible_production_program_fields.net_unplanned_requirement %}
             <div class="detail-row">
-                <span class="detail-label">{{ form.net_unplanned_requirement.label }}:</span>
+                <span class="detail-label">نیاز برنامه‌ریزی نشده (کیلوگرم):</span>
                 <span class="detail-value">
-                    {% if accessible_production_program_fields.net_unplanned_requirement_edit and is_create or accessible_production_program_fields.net_unplanned_requirement_edit and program.status == 'draft' or can_resolve_referral %}
-                        {{ form.net_unplanned_requirement }}
-                        <small class="persian-number-display" id="id_net_unplanned_requirement_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
-                    {% else %}
-                        <span class="persian-number-display">{% if program.net_unplanned_requirement is not None %}{{ program.net_unplanned_requirement|persian_number:3 }}{% else %}—{% endif %}</span>
-                    {% endif %}
+                    <input type="hidden" name="net_unplanned_requirement" id="id_net_unplanned_requirement" value="{% if form.net_unplanned_requirement.value != None %}{{ form.net_unplanned_requirement.value }}{% endif %}">
+                    <span class="persian-number-display" id="id_net_unplanned_requirement_display" dir="ltr">{% if program and program.net_unplanned_requirement is not None %}{{ program.net_unplanned_requirement|persian_number:3 }}{% else %}—{% endif %}</span>
                 </span>
             </div>
             {% endif %}
@@ -1377,8 +1369,6 @@ const accessibleBomFields = JSON.parse('{{ accessible_bom_fields_json|escapejs }
     document.addEventListener('DOMContentLoaded', function () {
         attachPersianDisplay('id_planned_weight_ton', 'id_planned_weight_ton_persian', 3);
         attachPersianDisplay('id_produced_weight_ton', 'id_produced_weight_ton_persian', 3);
-        attachPersianDisplay('id_inventory_snapshot', 'id_inventory_snapshot_persian', 3);
-        attachPersianDisplay('id_net_unplanned_requirement', 'id_net_unplanned_requirement_persian', 3);
         attachPersianDisplay('producedWeight', 'producedWeight_persian', 3);
     });
 })();
@@ -2486,23 +2476,33 @@ document.addEventListener('DOMContentLoaded', function() {
         productionInfoSelect.style.cursor = 'not-allowed';
     }
     
-    // Function to update inventory fields based on selected product
+    // تبدیل عدد به متن فارسی (ارقام و جداکننده هزارگان)
+    function formatToPersianDisplay(num) {
+        if (num === null || num === undefined || isNaN(num)) return '—';
+        var n = parseFloat(num);
+        var fixed = n.toFixed(3);
+        var parts = fixed.split('.');
+        var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+        var str = intPart + (parts[1] ? '.' + parts[1] : '');
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        return str.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+    }
+    // Function to update inventory fields based on selected product (مقادیر فقط نمایشی؛ اینپوت مخفی برای ارسال فرم)
     function updateInventoryFields() {
         if (!inventorySnapshotInput || !netUnplannedInput || !productSelect) return;
-        
+        var displayInv = document.getElementById('id_inventory_snapshot_display');
+        var displayNet = document.getElementById('id_net_unplanned_requirement_display');
         const productId = productSelect.value;
-        
+        var inventoryVal = '0', netVal = '0';
         if (productId && productInventoryMap[productId]) {
             const data = productInventoryMap[productId];
-            // Values arrive as strings (Decimal); format to 3 decimals for display
-            const inventory = parseFloat(data.inventory || '0');
-            const netUnplanned = parseFloat(data.net_unplanned_requirement || '0');
-            inventorySnapshotInput.value = inventory.toFixed(3);
-            netUnplannedInput.value = netUnplanned.toFixed(3);
-        } else {
-            inventorySnapshotInput.value = '0.000';
-            netUnplannedInput.value = '0.000';
+            inventoryVal = (data.inventory || '0').toString();
+            netVal = (data.net_unplanned_requirement || '0').toString();
         }
+        inventorySnapshotInput.value = parseFloat(inventoryVal).toFixed(3);
+        netUnplannedInput.value = parseFloat(netVal).toFixed(3);
+        if (displayInv) displayInv.textContent = formatToPersianDisplay(inventoryVal);
+        if (displayNet) displayNet.textContent = formatToPersianDisplay(netVal);
     }
     
     // Filter production_info based on selected product
