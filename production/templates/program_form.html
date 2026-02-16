@@ -834,6 +834,7 @@
 									<td>{{ alloc.status }}</td>
 									<td>{{ alloc.total_weight|persian_number:2 }}</td>
 									<td>
+										<a href="{% url 'sales:allocation_edit' alloc.order_number alloc.allocation_number %}" class="btn btn-sm btn-secondary" target="_blank" title="مشاهده تخصیص">مشاهده</a>
 										<button type="button" class="btn btn-sm btn-primary" onclick="toggleChildRows('{{ alloc.id }}')">جزئیات</button>
 									</td>
 								</tr>

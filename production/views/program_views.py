@@ -357,6 +357,8 @@ def _get_dashboard_context():
                     
                     allocations.append({
                         'id': allocation.allocation_number or str(allocation.pk),
+                        'order_number': order.order_number,
+                        'allocation_number': allocation.allocation_number or str(allocation.pk),
                         'status': allocation.get_allocation_status_display() if allocation.allocation_status else '-',
                         'total_weight': str(total_weight_kg),
                         'products': products_list
