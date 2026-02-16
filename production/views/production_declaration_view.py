@@ -789,7 +789,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.IN_PROGRESS,
                 is_denied=False,
                 is_archived=False
-            ).select_related('product', 'production_info')
+            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info')
             
             # Apply consolidated search filter for in-progress table
             if search_progress:
@@ -811,7 +811,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.COMPLETED,
                 is_denied=False,
                 is_archived=False
-            ).select_related('product', 'production_info', 'product_warehouse')
+            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info', 'product_warehouse')
             
             # Apply consolidated search filter for completed table
             if search_completed:
@@ -1053,6 +1053,8 @@ def production_program_crud_view(request, program_id=None):
     If program_id is None, it's in create mode
     """
     is_create = program_id is None
+    declaration_referred_to_manager = False
+    can_resolve_referral = False
     
     # Check permission for creating new production program
     if is_create:
@@ -1088,6 +1090,8 @@ def production_program_crud_view(request, program_id=None):
                     messages.error(request, 'این برنامه به مدیر ارجاع شده و فقط مدیر می‌تواند آن را باز کند.')
                     return HttpResponseForbidden('شما دسترسی به این برنامه را ندارید.')
                 
+                declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False)
+                can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
                 bug_logger.debug(f"Production program {program_id} loaded successfully")
             except Exception as e:
                 bug_logger.error(f"Error loading production program {program_id}: {str(e)}")
@@ -1099,8 +1103,13 @@ def production_program_crud_view(request, program_id=None):
 
             # اکشن‌های ارجاع/حل ارجاع بدون نیاز به اعتبار فرم (از لیست یا مودال ارسال می‌شوند)
             if not is_create and action == 'refer_to_manager':
-                if program.status != ProductionProgram.Status.CONFIRMED:
-                    messages.error(request, 'فقط برنامه‌های تایید شده قابل ارجاع به مدیر هستند')
+                # ارجاع به مدیر در هر مرحله (تایید شده، در حال اجرا، تکمیل شده) - برنامه‌های تایید شده بدون تغییر
+                if program.status not in (
+                    ProductionProgram.Status.CONFIRMED,
+                    ProductionProgram.Status.IN_PROGRESS,
+                    ProductionProgram.Status.COMPLETED,
+                ):
+                    messages.error(request, 'فقط برنامه‌های تایید شده، در حال اجرا یا تکمیل‌شده قابل ارجاع به مدیر هستند.')
                     return redirect(reverse('production:program_crud', args=[program_id]))
                 reason = request.POST.get('referral_reason', '').strip()
                 if not reason:
@@ -1131,7 +1140,7 @@ def production_program_crud_view(request, program_id=None):
                 form = ProductionForm(request.POST)
                 audit_logger.info("Submitting form to create new production program")
             else:
-                form = ProductionForm(request.POST, instance=program)
+                form = ProductionForm(request.POST, instance=program, manager_resolving_referral=can_resolve_referral)
                 audit_logger.info(f"Submitting form to edit production program {program_id}")
             
             if form.is_valid():
@@ -1588,7 +1597,7 @@ def production_program_crud_view(request, program_id=None):
                                 messages.warning(request, 'برنامه تکمیل شد اما خطا در ایجاد ثبت‌های انبار رخ داد')
                         else:
                             bug_logger.warning("Product warehouse or actual consumption not present - stock entry not created")
-                    elif action == 'save':
+                    elif action in ('save', 'save_and_resolve_referral'):
                         # Save action - allow updating actual consumption and تکمیل fields for in_progress programs
                         if instance.status == ProductionProgram.Status.IN_PROGRESS:
                             # Parse actual consumption data from form
@@ -1633,8 +1642,25 @@ def production_program_crud_view(request, program_id=None):
                                 instance.completed_at = completed_at_str
                                 bug_logger.debug(f"Completed at saved from page: {instance.completed_at}")
                         
+                        # مدیر در حالت ارجاع می‌تواند انبار محصول نهایی را برای برنامه تکمیل‌شده تغییر دهد
+                        if can_resolve_referral and instance.status == ProductionProgram.Status.COMPLETED:
+                            pw_id = request.POST.get('product_warehouse')
+                            if pw_id:
+                                try:
+                                    instance.product_warehouse = Warehouse.objects.get(id=int(pw_id))
+                                except (ValueError, Warehouse.DoesNotExist):
+                                    pass
                         instance.save()
                         bug_logger.info(f"Production program {program_id} saved")
+                        if action == 'save_and_resolve_referral' and can_resolve_referral:
+                            instance.declaration_referred_to_manager = False
+                            instance.declaration_referred_at = None
+                            instance.declaration_referral_reason = ''
+                            instance.save(update_fields=['declaration_referred_to_manager', 'declaration_referred_at', 'declaration_referral_reason'])
+                            bug_logger.info(f"Production program {program_id} referral cleared by manager after save")
+                            audit_logger.activity(f"ارجاع برنامه تولید {program_id} توسط مدیر برطرف شد (پس از ذخیره تغییرات)")
+                            messages.success(request, 'تغییرات ذخیره شد و برنامه به لیست اعلام تولید برگردانده شد.')
+                            return redirect(reverse('referrals_list'))
                         messages.success(request, 'برنامه تولید با موفقیت ذخیره شد.')
                         return redirect(reverse('production:program_crud', args=[program_id]))
                     elif action == 'revert':
@@ -1767,7 +1793,7 @@ def production_program_crud_view(request, program_id=None):
             if is_create:
                 form = ProductionForm()
             else:
-                form = ProductionForm(instance=program)
+                form = ProductionForm(instance=program, manager_resolving_referral=can_resolve_referral)
         
         # Get raw material inventory from primary warehouses
         raw_materials_inventory = []
