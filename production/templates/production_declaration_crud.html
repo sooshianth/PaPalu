@@ -3079,6 +3079,23 @@ function confirmResolveReferralClear() {
     var actionField = document.getElementById('actionField');
     if (form && actionField) {
         actionField.value = 'save_and_resolve_referral';
+        // با form.submit() رویداد submit اجرا نمیشه؛ برداشت واقعی رو خودمون به فرم اضافه می‌کنیم
+        var actualInputs = document.querySelectorAll('.warehouse-actual-input');
+        if (typeof Decimal !== 'undefined' && actualInputs.length) {
+            actualInputs.forEach(function(input) {
+                var bomId = input.dataset.bomId;
+                var warehouse = input.dataset.warehouse;
+                if (bomId && warehouse) {
+                    var amount = new Decimal(input.value || '0');
+                    var hiddenInput = document.createElement('input');
+                    hiddenInput.type = 'hidden';
+                    hiddenInput.name = 'actual_consumption_' + bomId + '_' + warehouse;
+                    hiddenInput.value = amount.toFixed(3);
+                    form.appendChild(hiddenInput);
+                }
+            });
+        }
+        if (typeof combineDateTimeFields === 'function') combineDateTimeFields();
         form.submit();
     } else {
         document.getElementById('resolveReferralClearForm').submit();
