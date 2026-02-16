@@ -151,6 +151,14 @@
         background-color: var(--light-green);
     }
     
+    /* سطرهای ارجاع‌شده به مدیر — پس‌زمینه قرمز کمرنگ */
+    table.data-table tbody tr.referred-to-manager-row {
+        background-color: rgba(255, 182, 182, 0.35);
+    }
+    table.data-table tbody tr.referred-to-manager-row:hover {
+        background-color: rgba(255, 160, 160, 0.5);
+    }
+    
     table.data-table tbody td {
         color: var(--gray-600);
     }
@@ -755,7 +763,7 @@
                     </thead>
                     <tbody>
                         {% for program in confirmed_programs %}
-                        <tr>
+                        <tr{% if program.declaration_referred_to_manager %} class="referred-to-manager-row"{% endif %}>
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
@@ -787,9 +795,11 @@
                                     <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                         مشاهده
                                     </a>
+                                    {% if not program.declaration_referred_to_manager %}
                                     <button type="button" class="btn-outline-warning" onclick="showReferModal({{ program.id }})" title="ارجاع به مدیر">
                                         ارجاع
                                     </button>
+                                    {% endif %}
                                 </div>
                             </td>
                         </tr>
@@ -1044,7 +1054,7 @@
                     </thead>
                     <tbody>
                         {% for program in in_progress_programs %}
-                        <tr>
+                        <tr{% if program.declaration_referred_to_manager %} class="referred-to-manager-row"{% endif %}>
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
@@ -1076,7 +1086,7 @@
                                     <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                         مشاهده
                                     </a>
-                                    {% if can_revert %}
+                                    {% if can_revert and not program.declaration_referred_to_manager %}
                                     <button type="button" class="btn-outline-warning" onclick="showRevertModal({{ program.id }})" title="برگشت به تایید شده">
                                         برگشت به تایید
                                     </button>
@@ -1179,7 +1189,7 @@
                         </thead>
                         <tbody id="completed-tbody">
                             {% for program in completed_page.object_list %}
-                            <tr>
+                            <tr{% if program.declaration_referred_to_manager %} class="referred-to-manager-row"{% endif %}>
                                 {% if accessible_production_program_fields.program_id %}
                                 <td>{{ program.program_id|default:"-" }}</td>
                                 {% endif %}
@@ -1234,7 +1244,7 @@
                                         <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                                             مشاهده
                                         </a>
-                                        {% if can_archive %}
+                                        {% if can_archive and not program.declaration_referred_to_manager %}
                                         <button type="button" class="btn-outline-warning" onclick="showArchiveModal({{ program.id }})" title="آرشیو کردن">
                                             آرشیو
                                         </button>

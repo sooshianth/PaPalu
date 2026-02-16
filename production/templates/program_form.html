@@ -460,6 +460,20 @@
 		<i class="fas fa-check-double"></i> حل توسط مدیر
 	</button>
 </div>
+{% elif declaration_referred_to_manager and program %}
+<div id="referral-readonly-alert" class="alert alert-danger mb-3" role="alert" style="background: #ffe6e6; border: 1px solid #ffb3b3; color: #721c24;">
+	<strong><i class="fas fa-share-alt"></i> این برنامه ارجاع داده شده به مدیر</strong> — مدیر در حال بررسی است. امکان تغییر وضعیت وجود ندارد.
+</div>
+<script>
+document.addEventListener('submit', function(e) {
+	if (e.target && e.target.classList && e.target.classList.contains('program-form') && document.getElementById('referral-readonly-alert')) {
+		e.preventDefault();
+		e.stopPropagation();
+		alert('مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.');
+		return false;
+	}
+}, true);
+</script>
 {% endif %}
 {% if program and program.status == 'in_progress' or program and program.status == 'completed' %}
 <div class="alert alert-info mb-3" role="alert">

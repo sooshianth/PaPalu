@@ -1,5 +1,5 @@
 {% for program in confirmed_programs %}
-<tr>
+<tr{% if program.declaration_referred_to_manager %} class="referred-to-manager-row"{% endif %}>
     {% if accessible_production_program_fields.product and accessible_product_fields.name %}
     <td>{{ program.product.name|default:"-" }}</td>
     {% endif %}
@@ -31,9 +31,11 @@
             <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                 مشاهده
             </a>
+            {% if not program.declaration_referred_to_manager %}
             <button type="button" class="btn-outline-warning" onclick="showReferModal({{ program.id }})" title="ارجاع به مدیر">
                 ارجاع
             </button>
+            {% endif %}
         </div>
     </td>
 </tr>

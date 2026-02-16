@@ -1046,6 +1046,21 @@
             <button class="btn btn-warning" type="button" onclick="confirmResolveReferralClear()">
                 <i class="fas fa-check-double"></i> تایید مدیر و برگرداندن به اوپراتور
             </button>
+        {% elif declaration_referred_to_manager %}
+            <div style="flex: 1 1 100%; padding: 12px; background: #ffe6e6; border: 1px solid #ffb3b3; border-radius: 8px; margin-bottom: 8px;">
+                <strong><i class="fas fa-share-alt"></i> این برنامه ارجاع داده شده به مدیر</strong> — مدیر در حال بررسی است. امکان تغییر وضعیت وجود ندارد.
+            </div>
+            <button class="btn btn-secondary btn-disabled" type="button" onclick="alert('مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.'); return false;" style="opacity: 0.7; cursor: not-allowed;">ذخیره تغییرات</button>
+            {% if program.status == 'confirmed' %}
+            <button class="btn btn-primary btn-disabled" type="button" onclick="alert('مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.'); return false;" style="opacity: 0.7; cursor: not-allowed;">شروع تولید</button>
+            {% elif program.status == 'in_progress' %}
+            <button class="btn btn-primary btn-disabled" type="button" onclick="alert('مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.'); return false;" style="opacity: 0.7; cursor: not-allowed;">تکمیل برنامه</button>
+            {% if can_revert %}
+            <button class="btn btn-warning btn-disabled" type="button" onclick="alert('مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.'); return false;" style="opacity: 0.7; cursor: not-allowed;"><i class="fas fa-undo"></i> برگشت به تایید شده</button>
+            {% endif %}
+            {% elif program.status == 'completed' and can_archive %}
+            <button class="btn btn-info btn-disabled" type="button" onclick="alert('مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.'); return false;" style="opacity: 0.7; cursor: not-allowed;"><i class="fas fa-archive"></i> آرشیو</button>
+            {% endif %}
         {% elif program.status == 'draft' or is_create %}
             <button class="btn btn-primary" type="button" onclick="showConfirmModal('confirm', 'تایید برنامه', 'آیا از تایید این برنامه تولید اطمینان دارید؟')">تایید برنامه</button>
         {% elif program.status == 'confirmed' %}

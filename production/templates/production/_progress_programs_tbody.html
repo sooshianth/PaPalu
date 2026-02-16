@@ -1,5 +1,5 @@
 {% for program in in_progress_programs %}
-<tr>
+<tr{% if program.declaration_referred_to_manager %} class="referred-to-manager-row"{% endif %}>
     {% if accessible_production_program_fields.product and accessible_product_fields.name %}
     <td>{{ program.product.name|default:"-" }}</td>
     {% endif %}
@@ -31,9 +31,11 @@
             <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                 مشاهده
             </a>
+            {% if can_revert and not program.declaration_referred_to_manager %}
             <button type="button" class="btn-outline-warning" onclick="showRevertModal({{ program.id }})" title="برگشت به تایید شده">
                 برگشت به تایید
             </button>
+            {% endif %}
         </div>
     </td>
 </tr>

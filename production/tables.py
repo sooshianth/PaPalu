@@ -20,6 +20,9 @@ class ProductionProgramTable(tables.Table):
         attrs = {
             "class": "data-table",
         }
+        row_attrs = {
+            "class": lambda record: "referred-to-manager-row" if getattr(record, "declaration_referred_to_manager", False) else ""
+        }
 
     def render_id(self, value):
         """نمایش شناسه با اعداد فارسی"""

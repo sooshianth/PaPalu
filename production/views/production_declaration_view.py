@@ -914,7 +914,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.CONFIRMED,
                 is_denied=False,
                 is_archived=False
-            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info')
+            ).select_related('product', 'production_info')
             
             # Apply consolidated search filter for confirmed table
             if search_confirmed:
@@ -935,7 +935,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.IN_PROGRESS,
                 is_denied=False,
                 is_archived=False
-            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info')
+            ).select_related('product', 'production_info')
             
             # Apply consolidated search filter for in-progress table
             if search_progress:
@@ -957,7 +957,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.COMPLETED,
                 is_denied=False,
                 is_archived=False
-            ).exclude(declaration_referred_to_manager=True).select_related('product', 'production_info', 'product_warehouse')
+            ).select_related('product', 'production_info', 'product_warehouse')
             
             # Apply consolidated search filter for completed table
             if search_completed:
@@ -1230,12 +1230,7 @@ def production_program_crud_view(request, program_id=None):
                     messages.error(request, 'این برنامه تولید رد شده و قابل دسترسی نیست')
                     return redirect(reverse('production:production_declaration'))
 
-                # برنامه ارجاع‌شده به مدیر را فقط سوپرادمین می‌تواند باز کند
-                if getattr(program, 'declaration_referred_to_manager', False) and not request.user.is_superuser:
-                    audit_logger.activity(f"تلاش برای دسترسی به برنامه تولید ارجاع‌شده به مدیر {program_id}")
-                    messages.error(request, 'این برنامه به مدیر ارجاع شده و فقط مدیر می‌تواند آن را باز کند.')
-                    return HttpResponseForbidden('شما دسترسی به این برنامه را ندارید.')
-                
+                # برنامه ارجاع‌شده به مدیر: غیرمدیر می‌تواند صفحه را ببیند ولی دکمه‌های تغییر وضعیت غیرفعال است
                 declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False)
                 can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
                 bug_logger.debug(f"Production program {program_id} loaded successfully")
@@ -1281,6 +1276,13 @@ def production_program_crud_view(request, program_id=None):
                 audit_logger.activity(f"ارجاع برنامه تولید {program_id} توسط مدیر برطرف شد")
                 messages.success(request, 'برنامه از ارجاع خارج شد و به لیست اعلام تولید برمی‌گردد.')
                 return redirect(reverse('referrals_list'))
+            
+            # وقتی برنامه ارجاع شده و کاربر مدیر نیست، اکشن‌های تغییر وضعیت مسدود است
+            if not is_create and declaration_referred_to_manager and not can_resolve_referral:
+                status_change_actions = ['save', 'save_draft', 'confirm', 'start', 'complete', 'revert', 'archive', 'unarchive', 'save_and_resolve_referral']
+                if action in status_change_actions:
+                    messages.error(request, 'مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.')
+                    return redirect(reverse('production:program_crud', args=[program_id]))
             
             if is_create:
                 form = ProductionForm(request.POST)

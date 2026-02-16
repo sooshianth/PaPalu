@@ -1,5 +1,5 @@
 {% for program in completed_page.object_list %}
-<tr>
+<tr{% if program.declaration_referred_to_manager %} class="referred-to-manager-row"{% endif %}>
     {% if accessible_production_program_fields.program_id %}
     <td>{{ program.program_id|default:"-" }}</td>
     {% endif %}
@@ -52,7 +52,7 @@
             <a href="{% url 'production:program_crud' program.id %}" class="btn-outline-info" title="مشاهده جزئیات">
                 مشاهده
             </a>
-            {% if can_archive %}
+            {% if can_archive and not program.declaration_referred_to_manager %}
             <button type="button" class="btn-outline-warning" onclick="showArchiveModal({{ program.id }})" title="آرشیو کردن">
                 آرشیو
             </button>

@@ -552,17 +552,14 @@ def edit_program_view(request, program_id):
     audit_logger.info("دسترسی به ویرایش برنامه تولید")
     program = get_object_or_404(ProductionProgram, id=program_id)
 
-    # برنامه ارجاع‌شده به مدیر را فقط سوپرادمین می‌تواند باز کند (از صفحه ارجاعات)
+    # بررسی دسترسی: برنامه ارجاع‌شده به مدیر را غیرمدیر هم می‌بیند (فقط مشاهده بدون امکان تغییر وضعیت)
     if getattr(program, 'declaration_referred_to_manager', False):
         if not request.user.is_superuser:
-            audit_logger.activity(f"تلاش برای دسترسی به برنامه تولید ارجاع‌شده به مدیر {program_id}")
-            messages.error(request, 'این برنامه به مدیر ارجاع شده و فقط مدیر می‌تواند آن را باز کند.')
-            return HttpResponseForbidden('شما دسترسی به این برنامه را ندارید.')
-    else:
-        if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
-            audit_logger.activity("تلاش برای ویرایش برنامه تولید بدون دسترسی")
-            messages.error(request, 'شما دسترسی به ویرایش برنامه تولید ندارید.')
-            return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+            pass  # اجازه مشاهده صفحه داده می‌شود؛ دکمه‌های تغییر وضعیت در قالب غیرفعال هستند
+    elif not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
+        audit_logger.activity("تلاش برای ویرایش برنامه تولید بدون دسترسی")
+        messages.error(request, 'شما دسترسی به ویرایش برنامه تولید ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     try:
         # حل توسط مدیر: ذخیره تغییرات + برداشتن ارجاع (فقط سوپرادمین)
@@ -597,6 +594,16 @@ def edit_program_view(request, program_id):
             context['product_flow_status_json'] = json.dumps(safe_flow, default=str)
             messages.error(request, 'لطفاً خطاهای فرم را برطرف کنید و دوباره «حل توسط مدیر» را بزنید.')
             return render(request, 'program_form.html', context)
+
+        # وقتی برنامه ارجاع شده و کاربر مدیر نیست، اکشن‌های تغییر وضعیت مسدود است
+        declaration_referred_to_manager = getattr(program, 'declaration_referred_to_manager', False)
+        can_resolve_referral = request.user.is_superuser and declaration_referred_to_manager
+        if request.method == 'POST' and declaration_referred_to_manager and not can_resolve_referral:
+            msg = 'مدیر داره ادیت میکنه و نمیشه به مرحله بعد یا قبل بردش.'
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                return JsonResponse({'ok': False, 'errors': {'__all__': [msg]}}, status=403)
+            messages.error(request, msg)
+            return redirect(reverse('production:program_edit', args=[program.id]))
 
         # Hard guard: no edits allowed when in progress or completed
         if request.method == 'POST' and program.status in [ProductionProgram.Status.IN_PROGRESS, ProductionProgram.Status.COMPLETED]:
@@ -705,7 +712,7 @@ def program_list_view(request):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     audit_logger.info("نمایش لیست برنامه‌های تولید")
     try:
-        programs = ProductionProgram.objects.exclude(declaration_referred_to_manager=True).select_related('product', 'production_info')
+        programs = ProductionProgram.objects.select_related('product', 'production_info')
 
         search_query = request.GET.get('q', '').strip()
         if search_query:
