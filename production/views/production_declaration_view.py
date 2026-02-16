@@ -703,7 +703,10 @@ def revert_production_stock_entry(production_program, request):
 def create_actual_consumption_correction_entries(program_old, instance, request):
     """
     وقتی مدیر برداشت واقعی (actual_consumption) را در برنامه تکمیل‌شده تغییر می‌دهد،
-    ثبت‌های انبار اصلاحی برای هر اختلاف (انبار × ماده اولیه) ایجاد می‌کند.
+    ثبت‌های انبار اصلاحی ایجاد می‌کند.
+    بعد از تکمیل تولید، مواد اولیه از انبار تولید خارج شده‌اند؛ پس فقط انبار اولیه (مبدأ) را
+    اصلاح می‌کنیم: در کاهش مصرف فقط به اولیه اضافه می‌کنیم، در افزایش مصرف فقط از اولیه کم می‌کنیم.
+    از انبار تولید چیزی کم نمی‌کنیم.
     """
     if instance.status != ProductionProgram.Status.COMPLETED or not program_old.production_info:
         return []
@@ -719,7 +722,6 @@ def create_actual_consumption_correction_entries(program_old, instance, request)
             bom_id_str = str(bom.id)
             old_dist = old_ac.get(bom_id_str, {})
             new_dist = new_ac.get(bom_id_str, {})
-            # نرمال‌سازی کلیدهای global/none به production_warehouse و مقدار عددی
             if production_warehouse:
                 def norm(d):
                     out = {}
@@ -751,6 +753,7 @@ def create_actual_consumption_correction_entries(program_old, instance, request)
                         is_committed=False
                     )
                     if diff > 0:
+                        # مصرف بیشتر شده: فقط از انبار اولیه کم می‌کنیم (از تولید چیزی کم نمی‌کنیم)
                         SourceStock.objects.create(
                             stock_entry=entry,
                             from_content_type=raw_material_ct,
@@ -758,22 +761,9 @@ def create_actual_consumption_correction_entries(program_old, instance, request)
                             from_warehouse=source_warehouse,
                             quantity=diff,
                         )
-                        TargetStock.objects.create(
-                            stock_entry=entry,
-                            to_content_type=raw_material_ct,
-                            to_object_id=bom.raw_material.id,
-                            to_warehouse=production_warehouse,
-                            quantity=diff,
-                        )
                     else:
+                        # مصرف کمتر شده: فقط به انبار اولیه اضافه می‌کنیم (از تولید برنمی‌گردونیم)
                         qty = abs(diff)
-                        SourceStock.objects.create(
-                            stock_entry=entry,
-                            from_content_type=raw_material_ct,
-                            from_object_id=bom.raw_material.id,
-                            from_warehouse=production_warehouse,
-                            quantity=qty,
-                        )
                         TargetStock.objects.create(
                             stock_entry=entry,
                             to_content_type=raw_material_ct,

@@ -2686,11 +2686,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     `;
                     
                     if (showActualConsumption) {
-                        // در وضعیت in_progress قابل ویرایش، در completed فقط نمایش
-                        if (currentStatus === 'in_progress' && hasActualConsumptionPermission) {
+                        // در وضعیت in_progress یا ارجاع به مدیر (canResolveReferral) قابل ویرایش، در غیر این صورت فقط نمایش
+                        const showDeleteBtn = typeof CAN_RESOLVE_REFERRAL !== 'undefined' && CAN_RESOLVE_REFERRAL;
+                        if ((currentStatus === 'in_progress' || (typeof CAN_RESOLVE_REFERRAL !== 'undefined' && CAN_RESOLVE_REFERRAL)) && hasActualConsumptionPermission) {
                             html += `
                                 <td style="background: #fff6db; text-align: center;">
-                                    <div>
+                                    <div style="display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;">
                                         <input type="number" 
                                                class="warehouse-actual-input form-control" 
                                                data-bom-id="${item.id}"
@@ -2700,8 +2701,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                                value="${actualAmount || ''}"
                                                placeholder="برداشت واقعی"
                                                style="width: 120px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
-                                        <small class="persian-number-display warehouse-actual-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
+                                        ${showDeleteBtn ? `<button type="button" class="btn btn-sm btn-outline-danger warehouse-actual-clear-btn" title="حذف (صفر)" style="padding: 4px 8px; font-size: 0.8rem;"><i class="fas fa-times"></i> حذف</button>` : ''}
                                     </div>
+                                    <small class="persian-number-display warehouse-actual-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                                 </td>
                             `;
                         } else {
@@ -2741,9 +2743,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 
                 if (showActualConsumption) {
-                    if (currentStatus === 'in_progress' && hasActualConsumptionPermission) {
+                    const showDeleteBtnGlobal = typeof CAN_RESOLVE_REFERRAL !== 'undefined' && CAN_RESOLVE_REFERRAL;
+                    if ((currentStatus === 'in_progress' || (typeof CAN_RESOLVE_REFERRAL !== 'undefined' && CAN_RESOLVE_REFERRAL)) && hasActualConsumptionPermission) {
                         html += `<td style="background: #f8f9fa; text-align: center;">
-                            <div>
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;">
                                 <input type="number" 
                                        class="warehouse-actual-input form-control" 
                                        data-bom-id="${item.id}"
@@ -2753,8 +2756,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                        value="${defaultValue}"
                                        placeholder="برداشت واقعی"
                                        style="width: 140px; padding: 8px; text-align: center; border: 2px solid #ffc107; border-radius: 6px; font-weight: 600;">
-                                <small class="persian-number-display warehouse-actual-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
+                                ${showDeleteBtnGlobal ? `<button type="button" class="btn btn-sm btn-outline-danger warehouse-actual-clear-btn" title="حذف (صفر)" style="padding: 4px 8px; font-size: 0.8rem;"><i class="fas fa-times"></i> حذف</button>` : ''}
                             </div>
+                            <small class="persian-number-display warehouse-actual-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                         </td>`;
                     } else {
                         html += `<td style="background: #f8f9fa; text-align: center;">
@@ -2776,10 +2780,12 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         if (showActualConsumption) {
+            const isReferralEditable = typeof CAN_RESOLVE_REFERRAL !== 'undefined' && CAN_RESOLVE_REFERRAL && currentStatus === 'completed';
+            const msgCompleted = isReferralEditable ? 'در حالت ارجاع می‌توانید برداشت واقعی را ویرایش و با «ذخیره تغییرات» یا «تایید مدیر» ثبت کنید.' : 'مقادیر برداشت واقعی از انبارها ثبت شده است.';
             html += `
-                <div style="margin-top: 12px; padding: 10px; background: ${currentStatus === 'completed' ? '#d1fadd' : '#fff3cd'}; border-radius: 8px; font-size: 0.9rem;">
+                <div style="margin-top: 12px; padding: 10px; background: ${currentStatus === 'completed' ? (isReferralEditable ? '#fff3cd' : '#d1fadd') : '#fff3cd'}; border-radius: 8px; font-size: 0.9rem;">
                     <strong>${currentStatus === 'completed' ? '✓ برنامه تکمیل شده' : 'توجه'}:</strong> 
-                    ${currentStatus === 'completed' ? 'مقادیر برداشت واقعی از انبارها ثبت شده است.' : 'برای تکمیل برنامه، از دکمه "تکمیل تولید" استفاده کنید.'}
+                    ${currentStatus === 'completed' ? msgCompleted : 'برای تکمیل برنامه، از دکمه "تکمیل تولید" استفاده کنید.'}
                 </div>
             `;
         }
@@ -2791,15 +2797,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         bomDetailsContent.querySelectorAll('.warehouse-actual-input').forEach(function(input) {
             input.addEventListener('input', function() {
-                var small = this.nextElementSibling;
-                if (small && small.classList.contains('warehouse-actual-persian')) {
+                var td = this.closest('td');
+                var small = td ? td.querySelector('.warehouse-actual-persian') : null;
+                if (small) {
                     small.textContent = typeof formatWarehouseActualToPersian === 'function' ? formatWarehouseActualToPersian(this.value, 3) : '';
                 }
             });
             input.addEventListener('change', function() {
-                var small = this.nextElementSibling;
-                if (small && small.classList.contains('warehouse-actual-persian')) {
+                var td = this.closest('td');
+                var small = td ? td.querySelector('.warehouse-actual-persian') : null;
+                if (small) {
                     small.textContent = typeof formatWarehouseActualToPersian === 'function' ? formatWarehouseActualToPersian(this.value, 3) : '';
+                }
+            });
+        });
+        // دکمه حذف (صفر کردن) برداشت واقعی — فقط در صفحه ارجاع
+        bomDetailsContent.querySelectorAll('.warehouse-actual-clear-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var td = this.closest('td');
+                var input = td ? td.querySelector('.warehouse-actual-input') : null;
+                var small = td ? td.querySelector('.warehouse-actual-persian') : null;
+                if (input) {
+                    input.value = '0';
+                    if (small && typeof formatWarehouseActualToPersian === 'function') {
+                        small.textContent = formatWarehouseActualToPersian('0', 3);
+                    }
                 }
             });
         });
@@ -2875,21 +2897,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Get program status
                 const programStatus = '{{ program.status|default:"draft" }}';
                 
-                // Collect actual consumption data for in_progress status
-                if (programStatus === 'in_progress') {
+                // Collect actual consumption data for in_progress or when manager is resolving referral (completed + ارجاع)
+                const shouldCollectActualConsumption = programStatus === 'in_progress' || (typeof CAN_RESOLVE_REFERRAL !== 'undefined' && CAN_RESOLVE_REFERRAL);
+                if (shouldCollectActualConsumption) {
                     const actualInputs = document.querySelectorAll('.warehouse-actual-input');
                     actualInputs.forEach(input => {
                         const bomId = input.dataset.bomId;
                         const warehouse = input.dataset.warehouse;
                         const amount = new Decimal(input.value || '0');
-                        
-                        if (amount.gt(new Decimal('0'))) {
-                            const hiddenInput = document.createElement('input');
-                            hiddenInput.type = 'hidden';
-                            hiddenInput.name = `actual_consumption_${bomId}_${warehouse}`;
-                            hiddenInput.value = amount.toFixed(3);
-                            productionForm.appendChild(hiddenInput);
-                        }
+                        const hiddenInput = document.createElement('input');
+                        hiddenInput.type = 'hidden';
+                        hiddenInput.name = `actual_consumption_${bomId}_${warehouse}`;
+                        hiddenInput.value = amount.toFixed(3);
+                        productionForm.appendChild(hiddenInput);
                     });
                 }
                 
