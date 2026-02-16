@@ -1466,7 +1466,7 @@ if (productFlowStatusData) {
 				const minBatch = parseFloat(data.min_batch_production || '0');
 				
 				if (minBatch > 0 && plannedWeight < minBatch) {
-					alert(`تناژ برنامه (${plannedWeight.toFixed(3)} کیلوگرم) کمتر از حداقل وزن تولید (${minBatch.toFixed(3)} کیلوگرم) است. لطفاً تناژ برنامه را افزایش دهید.`);
+					alert(`وزن هدف (${plannedWeight.toFixed(3)} کیلوگرم) کمتر از حداقل وزن تولید (${minBatch.toFixed(3)} کیلوگرم) است. لطفاً وزن هدف را افزایش دهید.`);
 					return;
 				}
 			}

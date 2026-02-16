@@ -36,13 +36,13 @@ class ProductionProgramForm(forms.ModelForm):
     # Explicit field widgets & labels (override Model meta widgets)
     production_info = forms.ModelChoiceField(
         queryset=ProductionProgram._meta.get_field('production_info').remote_field.model.objects.all(),
-        required=False,
+        required=True,
         label='اطلاعات فرمول',
         widget=ProductionInfoSelectWidget(attrs={'class': 'form-control'})
     )
     product = forms.ModelChoiceField(
         queryset=ProductionProgram._meta.get_field('product').remote_field.model.objects.all(),
-        required=False,
+        required=True,
         label='محصول',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
@@ -54,8 +54,8 @@ class ProductionProgramForm(forms.ModelForm):
     )
     planned_weight_ton = forms.DecimalField(
         max_digits=12, decimal_places=3,
-        required=False,
-        label='تناژ برنامه (کیلوگرم)',
+        required=True,
+        label='وزن هدف (کیلوگرم)',
         widget=forms.NumberInput(attrs={'class': 'form-control', 'step': '0.001'})
     )
     predicted_start_date = jDateField(
@@ -153,7 +153,7 @@ class ProductionProgramForm(forms.ModelForm):
         cleaned = super().clean()
         status = cleaned.get('status') or (self.instance.status if self.instance.pk else ProductionProgram.Status.DRAFT)
         required_if_active = [
-            'program_id', 'product', 'planned_weight_ton',
+            'program_id', 'production_info', 'product', 'planned_weight_ton',
             'predicted_start_date', 'predicted_start_time', 'predicted_end_date', 'predicted_end_time',
             'packaging_type'
         ]
