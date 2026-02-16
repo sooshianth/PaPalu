@@ -811,7 +811,7 @@ def production_declaration_view(request):
                 status=ProductionProgram.Status.COMPLETED,
                 is_denied=False,
                 is_archived=False
-            ).select_related('product', 'production_info')
+            ).select_related('product', 'production_info', 'product_warehouse')
             
             # Apply consolidated search filter for completed table
             if search_completed:

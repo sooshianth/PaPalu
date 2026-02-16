@@ -1,8 +1,5 @@
 {% for program in in_progress_programs %}
 <tr>
-    {% if accessible_production_program_fields.id %}
-    <td>{{ program.id }}</td>
-    {% endif %}
     {% if accessible_production_program_fields.product and accessible_product_fields.name %}
     <td>{{ program.product.name|default:"-" }}</td>
     {% endif %}

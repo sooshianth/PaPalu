@@ -1,16 +1,13 @@
 {% for program in completed_page.object_list %}
 <tr>
-    {% if accessible_production_program_fields.id %}
-    <td>{{ program.id }}</td>
-    {% endif %}
     {% if accessible_production_program_fields.program_id %}
     <td>{{ program.program_id|default:"-" }}</td>
     {% endif %}
     {% if accessible_production_program_fields.product and accessible_product_fields.name %}
     <td>{{ program.product.name|default:"-" }}</td>
     {% endif %}
-    {% if accessible_production_program_fields.product and accessible_product_fields.packaging_type %}
-    <td>{{ program.product.packaging_type|default:"-" }}</td>
+    {% if accessible_production_program_fields.packaging_type %}
+    <td>{{ program.get_packaging_type_display|default:program.packaging_type|default:"-" }}</td>
     {% endif %}
     {% if accessible_production_program_fields.planned_weight_ton %}
     <td>{{ program.planned_weight_ton|default:"-" }}</td>
@@ -26,8 +23,8 @@
     {% endif %}
     {% if accessible_production_program_fields.product_warehouse %}
     <td>
-        {% if program.product_warehouse and accessible_warehouse_fields.warehouse_name %}
-            {{ program.product_warehouse.warehouse_name|default:"-" }}
+        {% if program.product_warehouse and accessible_warehouse_fields.name %}
+            {{ program.product_warehouse.name|default:"-" }}
         {% else %}
             -
         {% endif %}

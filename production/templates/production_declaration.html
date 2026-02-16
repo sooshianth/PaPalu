@@ -1009,12 +1009,6 @@
                 <table class="data-table">
                     <thead>
                         <tr>
-                            {% if accessible_production_program_fields.id %}
-                            <th class="sortable {% if sort_by_progress == 'id' %}sorted-{{ sort_dir_progress }}{% endif %}" 
-                                onclick="sortTable('id', 'progress')">
-                                شناسه
-                            </th>
-                            {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <th>محصول</th>
                             {% endif %}
@@ -1051,9 +1045,6 @@
                     <tbody>
                         {% for program in in_progress_programs %}
                         <tr>
-                            {% if accessible_production_program_fields.id %}
-                            <td>{{ program.id }}</td>
-                            {% endif %}
                             {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                             <td>{{ program.product.name|default:"-" }}</td>
                             {% endif %}
@@ -1141,12 +1132,6 @@
                     <table class="data-table">
                         <thead>
                             <tr>
-                                {% if accessible_production_program_fields.id %}
-                                <th class="sortable {% if sort_by_completed == 'id' %}sorted-{{ sort_dir_completed }}{% endif %}" 
-                                    onclick="sortTable('id', 'completed')">
-                                    شناسه
-                                </th>
-                                {% endif %}
                                 {% if accessible_production_program_fields.program_id %}
                                 <th class="sortable {% if sort_by_completed == 'program_id' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('program_id', 'completed')">
@@ -1156,13 +1141,13 @@
                                 {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                                 <th>محصول</th>
                                 {% endif %}
-                                {% if accessible_production_program_fields.product and accessible_product_fields.packaging_type %}
+                                {% if accessible_production_program_fields.packaging_type %}
                                 <th>نوع بسته بندی</th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.planned_weight_ton %}
                                 <th class="sortable {% if sort_by_completed == 'planned_weight_ton' %}sorted-{{ sort_dir_completed }}{% endif %}" 
                                     onclick="sortTable('planned_weight_ton', 'completed')">
-                                    تناژ (تن)
+                                    وزن هدف (کیلو)
                                 </th>
                                 {% endif %}
                                 {% if accessible_production_program_fields.planned_weight_ton and accessible_production_program_fields.produced_weight_ton %}
@@ -1195,17 +1180,14 @@
                         <tbody id="completed-tbody">
                             {% for program in completed_page.object_list %}
                             <tr>
-                                {% if accessible_production_program_fields.id %}
-                                <td>{{ program.id }}</td>
-                                {% endif %}
                                 {% if accessible_production_program_fields.program_id %}
                                 <td>{{ program.program_id|default:"-" }}</td>
                                 {% endif %}
                                 {% if accessible_production_program_fields.product and accessible_product_fields.name %}
                                 <td>{{ program.product.name|default:"-" }}</td>
                                 {% endif %}
-                                {% if accessible_production_program_fields.product and accessible_product_fields.packaging_type %}
-                                <td>{{ program.product.packaging_type|default:"-" }}</td>
+                                {% if accessible_production_program_fields.packaging_type %}
+                                <td>{{ program.get_packaging_type_display|default:program.packaging_type|default:"-" }}</td>
                                 {% endif %}
                                 {% if accessible_production_program_fields.planned_weight_ton %}
                                 <td><span class="persian-number-display">{% if program.planned_weight_ton is not None %}{{ program.planned_weight_ton|persian_number:3 }}{% else %}-{% endif %}</span></td>
@@ -1223,8 +1205,8 @@
                                 {% endif %}
                                 {% if accessible_production_program_fields.product_warehouse %}
                                 <td>
-                                    {% if program.product_warehouse and accessible_warehouse_fields.warehouse_name %}
-                                        {{ program.product_warehouse.warehouse_name|default:"-" }}
+                                    {% if program.product_warehouse and accessible_warehouse_fields.name %}
+                                        {{ program.product_warehouse.name|default:"-" }}
                                     {% else %}
                                         -
                                     {% endif %}
