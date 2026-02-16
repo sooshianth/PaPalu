@@ -783,6 +783,18 @@
 <script>
     let allocationProducts = [];
     
+    // نمایش عدد فارسی با جداکننده هزارگان (،) — مثل تامین
+    var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    function formatNumberToPersian(num, decimalPlaces) {
+        if (num === null || num === undefined || isNaN(num)) return '';
+        var n = parseFloat(num);
+        var fixed = (decimalPlaces !== undefined && decimalPlaces >= 0) ? n.toFixed(decimalPlaces) : (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+        var parts = fixed.split('.');
+        var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+        var result = intPart + (parts[1] ? '.' + parts[1] : '');
+        return result.replace(/[0-9]/g, function(d) { return persianDigits[parseInt(d, 10)]; });
+    }
+    
     // نمایش مودال ایجاد حمل
     function showCreateTransportModal(allocationNumber) {
         document.getElementById('modal_allocation_number').value = allocationNumber;
@@ -814,13 +826,13 @@
             allocationProducts = data.products || [];
             renderProducts();
             
-            // نمایش اطلاعات وزن
+            // نمایش اطلاعات وزن (اعداد فارسی)
             if (data.weight_info) {
                 const weightInfo = data.weight_info;
                 const toNum = (v) => (typeof v === 'number' && !isNaN(v)) ? v : parseFloat(v) || 0;
-                document.getElementById('total-allocation-weight').textContent = toNum(weightInfo.total_allocation_weight).toFixed(3) + ' کیلوگرم';
-                document.getElementById('total-transports-weight').textContent = toNum(weightInfo.total_transports_weight).toFixed(3) + ' کیلوگرم';
-                document.getElementById('remaining-weight').textContent = toNum(weightInfo.remaining_weight).toFixed(3) + ' کیلوگرم';
+                document.getElementById('total-allocation-weight').textContent = formatNumberToPersian(toNum(weightInfo.total_allocation_weight), 3) + ' کیلوگرم';
+                document.getElementById('total-transports-weight').textContent = formatNumberToPersian(toNum(weightInfo.total_transports_weight), 3) + ' کیلوگرم';
+                document.getElementById('remaining-weight').textContent = formatNumberToPersian(toNum(weightInfo.remaining_weight), 3) + ' کیلوگرم';
                 document.getElementById('weight-info-container').style.display = 'block';
             }
         })
@@ -847,7 +859,7 @@
                         <div>
                             <strong>${product.name}</strong>
                             <span style="color: var(--gray-600); font-size: 0.9rem; margin-right: 10px;">
-                                (مقدار تخصیص: ${product.quantity} ${product.unit})
+                                (مقدار تخصیص: ${formatNumberToPersian(parseFloat(product.quantity) || 0, 3)} ${product.unit})
                             </span>
                         </div>
                         <label style="display: flex; align-items: center; cursor: pointer;">
