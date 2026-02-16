@@ -43,3 +43,7 @@ urlpatterns = [
 # Serve media files in development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Custom error handlers (صفحهٔ 404 و 500 با نمایش کد خطا)
+handler404 = 'config.views.custom_page_not_found_view'
+handler500 = 'config.views.custom_server_error_view'

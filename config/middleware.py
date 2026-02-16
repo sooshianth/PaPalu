@@ -242,72 +242,17 @@ class SecurityLoggingMiddleware(MiddlewareMixin):
     
     def process_exception(self, request, exception):
         """
-        پردازش خطاهای غیرمنتظره
+        پردازش خطاهای غیرمنتظره. Http404 به handler404 و سایر خطاها به handler500 واگذار می‌شوند.
         """
-        user = getattr(request, 'user', None)
-        
-        # لاگ خطا برای exception ها
+        from django.http import Http404
+        if isinstance(exception, Http404):
+            return None  # واگذاری به handler404
+        # لاگ خطا برای exception های غیر از 404
         logger.error(
             f"EXCEPTION - {request.method} {request.path} - Exception: {str(exception)}",
             exc_info=True
         )
-        
-        # بازگشت صفحه خطای عمومی برای امنیت
-        from django.http import HttpResponse
-        error_html = """
-        <!DOCTYPE html>
-        <html lang="fa" dir="rtl">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>خطای سرور</title>
-            <style>
-                body {
-                    font-family: Tahoma, Arial, sans-serif;
-                    background-color: #f5f5f5;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    height: 100vh;
-                    margin: 0;
-                }
-                .error-container {
-                    background: white;
-                    padding: 40px;
-                    border-radius: 10px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    text-align: center;
-                    max-width: 500px;
-                }
-                h1 {
-                    color: #d32f2f;
-                    margin-bottom: 20px;
-                }
-                p {
-                    color: #555;
-                    line-height: 1.6;
-                }
-                a {
-                    color: #1976d2;
-                    text-decoration: none;
-                    font-weight: bold;
-                }
-                a:hover {
-                    text-decoration: underline;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="error-container">
-                <h1>خطای سرور</h1>
-                <p>متأسفانه خطایی در پردازش درخواست شما رخ داده است.</p>
-                <p>لطفاً دقایقی بعد مجدداً تلاش کنید.</p>
-                <p><a href="/">بازگشت به صفحه اصلی</a></p>
-            </div>
-        </body>
-        </html>
-        """
-        return HttpResponse(error_html, status=500)
+        return None  # واگذاری به handler500 برای نمایش صفحه خطای سرور
 
 
 class LoginAttemptMiddleware(MiddlewareMixin):
@@ -505,6 +450,9 @@ class ExceptionLoggingMiddleware(MiddlewareMixin):
     لاگ کردن traceback کامل خطاهای 500 در فایل لاگ تا بدون DEBUG هم بتوان علت خطا را دید.
     """
     def process_exception(self, request, exception):
+        from django.http import Http404
+        if isinstance(exception, Http404):
+            return None
         tb = traceback.format_exc()
         bug_logger.error(
             "خطای سرور (500) برای مسیر %s:\n%s\n%s",
