@@ -767,6 +767,9 @@
             {% csrf_token %}
             
             <!-- Hidden fields for popup data -->
+            {% if program and program.production_info %}
+            <input type="hidden" id="program_production_info_id" value="{{ program.production_info.id }}">
+            {% endif %}
             <input type="hidden" name="action" id="actionField">
             <input type="hidden" name="actual_start_date" id="actualStartDateField">
             <input type="hidden" name="started_at" id="startedAtField">
@@ -1294,6 +1297,7 @@ const productionInfosData = JSON.parse('{{ production_infos_json|escapejs }}');
 const bomData = JSON.parse('{{ bom_data_json|escapejs }}');
 const warehouseDistributionData = JSON.parse('{{ warehouse_distribution_json|escapejs }}');
 const actualConsumptionGlobal = JSON.parse('{{ actual_consumption_json|escapejs }}');
+const primaryWarehousesList = JSON.parse('{{ primary_warehouses_json|escapejs }}');
 const maxBomError = {{ max_bom_error|default:5.0 }};
 // Safely parse product flow data; fallback to empty array when not provided
 const _productFlowRaw = '{{ product_flow_status_json|escapejs }}';
@@ -1419,12 +1423,31 @@ function showModal(modalId) {
     document.body.style.overflow = 'hidden';
 }
 
+function updateWarehouseAmountPersianDisplays() {
+    document.querySelectorAll('.warehouse-amount-input').forEach(function(input) {
+        var small = input.nextElementSibling;
+        if (small && small.classList.contains('warehouse-amount-persian')) {
+            small.textContent = formatWarehouseActualToPersian(input.value, 3);
+        }
+    });
+}
+
 function setupWarehouseDistributionListeners() {
-    // Only listen to amount input changes
+    updateWarehouseAmountPersianDisplays();
     document.querySelectorAll('.warehouse-amount-input').forEach(input => {
         input.addEventListener('input', function() {
+            var small = this.nextElementSibling;
+            if (small && small.classList.contains('warehouse-amount-persian')) {
+                small.textContent = formatWarehouseActualToPersian(this.value, 3);
+            }
             const bomId = this.dataset.bomId;
             updateTotalDifference(bomId);
+        });
+        input.addEventListener('change', function() {
+            var small = this.nextElementSibling;
+            if (small && small.classList.contains('warehouse-amount-persian')) {
+                small.textContent = formatWarehouseActualToPersian(this.value, 3);
+            }
         });
     });
 }
@@ -1529,7 +1552,7 @@ function updateActualPercentage(bomId) {
         totalActual = totalActual.plus(amount);
     });
     
-    // Calculate percentage for each warehouse
+    // Calculate percentage for each warehouse (نمایش به فارسی)
     actualInputs.forEach(input => {
         const amount = new Decimal(input.value || '0');
         const percentage = amount.div(producedWeight).mul(new Decimal('100'));
@@ -1537,7 +1560,7 @@ function updateActualPercentage(bomId) {
         const display = input.closest('tr').querySelector('.actual-percentage-display');
         if (display) {
             if (amount.gt(new Decimal('0'))) {
-                display.textContent = percentage.toFixed(2) + '%';
+                display.textContent = formatWarehouseActualToPersian(percentage.toFixed(2), 2) + '%';
                 display.style.color = '#2e7d32';
             } else {
                 display.textContent = '-';
@@ -1552,7 +1575,7 @@ function updateActualPercentage(bomId) {
     const totalDisplay = bomItem.querySelector('.total-actual-percentage');
     if (totalDisplay) {
         if (totalActual.gt(new Decimal('0'))) {
-            totalDisplay.textContent = totalPercentage.toFixed(2) + '%';
+            totalDisplay.textContent = formatWarehouseActualToPersian(totalPercentage.toFixed(2), 2) + '%';
             totalDisplay.style.color = '#2e7d32';
         } else {
             totalDisplay.textContent = '-';
@@ -1560,18 +1583,18 @@ function updateActualPercentage(bomId) {
         }
     }
     
-    // Calculate and display allowed range
+    // Calculate and display allowed range (اعداد فارسی)
     const errorAmount = bomPercentage.mul(maxError).div(new Decimal('100'));
     const minAllowed = bomPercentage.minus(errorAmount);
     const maxAllowed = bomPercentage.plus(errorAmount);
     
     const rangeDisplay = bomItem.querySelector('.allowed-range');
     if (rangeDisplay) {
-        rangeDisplay.textContent = `${minAllowed.toFixed(2)}% - ${maxAllowed.toFixed(2)}% (حداکثر انحراف: ${maxError.toFixed(2)}%)`;
+        rangeDisplay.textContent = `${formatWarehouseActualToPersian(minAllowed.toFixed(2), 2)}% - ${formatWarehouseActualToPersian(maxAllowed.toFixed(2), 2)}% (حداکثر انحراف: ${formatWarehouseActualToPersian(maxError.toFixed(2), 2)}%)`;
         rangeDisplay.style.color = '#0d6efd';
     }
     
-    // Display validation status
+    // Display validation status (عدد انحراف فارسی)
     const statusDisplay = bomItem.querySelector('.validation-status');
     if (statusDisplay && totalActual.gt(new Decimal('0'))) {
         if (totalPercentage.gte(minAllowed) && totalPercentage.lte(maxAllowed)) {
@@ -1579,7 +1602,8 @@ function updateActualPercentage(bomId) {
             statusDisplay.style.color = '#28a745';
         } else {
             const diff = totalPercentage.minus(bomPercentage);
-            statusDisplay.textContent = `✗ خارج از محدوده (انحراف: ${diff.gt(new Decimal('0')) ? '+' : ''}${diff.toFixed(2)}%)`;
+            const diffPersian = formatWarehouseActualToPersian(diff.abs().toFixed(2), 2);
+            statusDisplay.textContent = `✗ خارج از محدوده (انحراف: ${diff.gt(new Decimal('0')) ? '+' : '-'}${diffPersian}%)`;
             statusDisplay.style.color = '#dc3545';
         }
     } else if (statusDisplay) {
@@ -1649,27 +1673,28 @@ function updateTotalDifference(bomId) {
     });
     
     const difference = totalWithdrawal.minus(totalNeeded);
+    const unit = item.dataset.unit || 'تن';
     
-    // Update display
+    // Update display (اعداد به فارسی)
     const totalWithdrawalDisplay = item.querySelector('.total-withdrawal');
     const totalDifferenceDisplay = item.querySelector('.total-difference');
     const differenceContainer = item.querySelector('.total-difference-display');
     
     if (totalWithdrawalDisplay) {
-        totalWithdrawalDisplay.textContent = totalWithdrawal.toFixed(3) + ' ' + (totalWithdrawalDisplay.textContent.split(' ').pop() || 'تن');
+        totalWithdrawalDisplay.textContent = formatWarehouseActualToPersian(totalWithdrawal.toFixed(3), 3) + ' ' + unit;
     }
     
     if (totalDifferenceDisplay) {
         const absValue = difference.abs();
-        const unit = totalDifferenceDisplay.textContent.split(' ').pop() || 'تن';
         
         // Use very small tolerance for decimal comparison (0.0001 kg)
         const tolerance = new Decimal('0.0001');
         if (difference.abs().gt(tolerance)) {
+            const absPersian = formatWarehouseActualToPersian(absValue.toFixed(3), 3);
             if (difference.gt(new Decimal('0'))) {
-                totalDifferenceDisplay.textContent = `+${absValue.toFixed(3)} ${unit} (بیش از حد ✗)`;
+                totalDifferenceDisplay.textContent = `+${absPersian} ${unit} (بیش از حد ✗)`;
             } else {
-                totalDifferenceDisplay.textContent = `-${absValue.toFixed(3)} ${unit} (کمبود ✗)`;
+                totalDifferenceDisplay.textContent = `-${absPersian} ${unit} (کمبود ✗)`;
             }
             totalDifferenceDisplay.style.color = '#dc3545';
             if (differenceContainer) {
@@ -1677,7 +1702,7 @@ function updateTotalDifference(bomId) {
                 differenceContainer.style.borderLeft = '4px solid #dc3545';
             }
         } else {
-            totalDifferenceDisplay.textContent = `0.000 ${unit} (دقیق ✓)`;
+            totalDifferenceDisplay.textContent = formatWarehouseActualToPersian('0', 3) + ' ' + unit + ' (دقیق ✓)';
             totalDifferenceDisplay.style.color = '#198754';
             if (differenceContainer) {
                 differenceContainer.style.background = '#d1fadd';
@@ -1724,9 +1749,13 @@ function showConfirmModal(action, title, message) {
 }
 
 function showStartProductionModal() {
-    // Get current production info ID
+    // Get current production info ID (سلکت در حالت تایید شده رندر نمی‌شود؛ از فیلد مخفی استفاده کن)
     const productionInfoSelect = document.querySelector('#id_production_info');
-    const selectedProductionInfoId = productionInfoSelect ? productionInfoSelect.value : null;
+    let selectedProductionInfoId = (productionInfoSelect && productionInfoSelect.value) ? productionInfoSelect.value : null;
+    if (!selectedProductionInfoId) {
+        const hiddenProdInfo = document.getElementById('program_production_info_id');
+        if (hiddenProdInfo && hiddenProdInfo.value) selectedProductionInfoId = hiddenProdInfo.value;
+    }
     
     // Get planned weight for calculation
     const plannedWeightInput = document.querySelector('#id_planned_weight_ton');
@@ -1752,15 +1781,25 @@ function showStartProductionModal() {
                 const percentage = new Decimal(item.percentage || '0');
                 const totalConsumption = percentage.mul(plannedWeight).div(new Decimal('100')).toFixed(3);
                 
-                // Find raw material with matching ID and get its warehouses
+                // Find raw material with matching ID and get its warehouses (دارای موجودی)
                 const rmInventory = rawMaterialsInventory.find(inv => 
                     inv.raw_material_id === item.raw_material_id
                 );
-                const warehouses = rmInventory ? rmInventory.warehouses : [];
+                let warehouses = rmInventory ? rmInventory.warehouses : [];
+                // اگر هیچ انباری با موجودی نبود، انبارهای مواد اولیه (primary) را نشان بده تا کاربر انبار برداشت را انتخاب کند
+                if (warehouses.length === 0 && primaryWarehousesList && primaryWarehousesList.length > 0) {
+                    warehouses = primaryWarehousesList.map(function(w) {
+                        return { id: w.id, warehouse_name: w.name || w.warehouse_id || '-', warehouse_id: w.warehouse_id || '-', quantity: '0' };
+                    });
+                }
+                const unitForItem = rmInventory ? rmInventory.unit : (item.unit_used || 'تن');
                 
                 if (warehouses.length > 0) {
+                    const unitLabel = item.unit_used || 'تن';
+                    const totalConsumptionPersian = formatWarehouseActualToPersian(totalConsumption, 3);
+                    const zeroPersian = formatWarehouseActualToPersian('0', 3);
                     html += `
-                        <div class="warehouse-distribution-item" data-bom-id="${item.id}" data-total-needed="${totalConsumption}" style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; border: 2px solid #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                        <div class="warehouse-distribution-item" data-bom-id="${item.id}" data-total-needed="${totalConsumption}" data-unit="${unitLabel}" style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; border: 2px solid #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                             <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid var(--primary-green);">
                                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                                     <div>
@@ -1771,7 +1810,7 @@ function showStartProductionModal() {
                                     </div>
                                     <div style="text-align: right; background: #e7f5e9; padding: 8px 16px; border-radius: 8px;">
                                         <div style="font-size: 0.75rem; color: #28a745; text-transform: uppercase; font-weight: 600;">مقدار مورد نیاز کل</div>
-                                        <strong style="color: var(--primary-green); font-size: 1.2rem;">${totalConsumption} ${item.unit_used || 'تن'}</strong>
+                                        <strong class="persian-number-display" style="color: var(--primary-green); font-size: 1.2rem;">${totalConsumptionPersian} ${unitLabel}</strong>
                                     </div>
                                 </div>
                             </div>
@@ -1793,26 +1832,30 @@ function showStartProductionModal() {
                         const warehouseName = wh.warehouse_name || wh.warehouse_id || '-';
                         const quantity = wh.quantity || '0';
                         const unit = rmInventory.unit || item.unit_used || 'تن';
-                        
+                        const quantityPersian = formatWarehouseActualToPersian(quantity, 3);
+                        const defaultAmountPersian = formatWarehouseActualToPersian(defaultAmount, 3);
                         html += `
                             <tr class="warehouse-amount-row" style="background: #ffffff; border: 1px solid #e9ecef;">
                                 <td style="padding: 12px; border-radius: 6px 0 0 6px;">
                                     <strong style="font-size: 0.95rem; color: #343a40;">${warehouseName}</strong>
                                 </td>
                                 <td style="padding: 12px; text-align: center;">
-                                    <div style="font-size: 0.9rem; color: #6c757d;">${quantity} ${unit}</div>
+                                    <div class="persian-number-display" style="font-size: 0.9rem; color: #6c757d;">${quantityPersian} ${unit}</div>
                                 </td>
                                 <td style="padding: 12px; text-align: center; background: #f0f8ff; border-radius: 0 6px 6px 0;">
-                                    <input type="number" 
-                                           class="warehouse-amount-input form-control" 
-                                           data-bom-id="${item.id}"
-                                           data-warehouse="${wh.id}"
-                                           data-total-needed="${totalConsumption}"
-                                           min="0" 
-                                           step="0.001"
-                                           value="${defaultAmount}"
-                                           placeholder="مقدار برداشت"
-                                           style="width: 120px; padding: 8px; text-align: center; border: 2px solid #0d6efd; border-radius: 6px; font-weight: 600;">
+                                    <div>
+                                        <input type="number" 
+                                               class="warehouse-amount-input form-control" 
+                                               data-bom-id="${item.id}"
+                                               data-warehouse="${wh.id}"
+                                               data-total-needed="${totalConsumption}"
+                                               min="0" 
+                                               step="0.001"
+                                               value="${defaultAmount}"
+                                               placeholder="مقدار برداشت"
+                                               style="width: 120px; padding: 8px; text-align: center; border: 2px solid #0d6efd; border-radius: 6px; font-weight: 600;">
+                                        <small class="persian-number-display warehouse-amount-persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;">${defaultAmountPersian}</small>
+                                    </div>
                                 </td>
                             </tr>
                         `;
@@ -1824,11 +1867,11 @@ function showStartProductionModal() {
                             </div>
                             <div class="total-difference-display" style="margin-top: 12px; padding: 12px; border-radius: 8px; border-left: 4px solid #6c757d; font-size: 0.9rem; background: #e9ecef;">
                                 <strong>🔢 جمع کل برداشت:</strong> 
-                                <span class="total-withdrawal" style="font-weight: 600;">0.000 ${item.unit_used || 'تن'}</span> / 
-                                <span style="color: var(--primary-green);">${totalConsumption} ${item.unit_used || 'تن'}</span>
+                                <span class="total-withdrawal" style="font-weight: 600;">${zeroPersian} ${unitLabel}</span> / 
+                                <span class="persian-number-display" style="color: var(--primary-green);">${totalConsumptionPersian} ${unitLabel}</span>
                                 <br>
                                 <strong>تفاوت:</strong> 
-                                <span class="total-difference" style="font-weight: 600; font-size: 1.1rem;">0.000 ${item.unit_used || 'تن'}</span>
+                                <span class="total-difference" style="font-weight: 600; font-size: 1.1rem;">${zeroPersian} ${unitLabel}</span>
                             </div>
                         </div>
                     `;
@@ -1938,6 +1981,7 @@ function showCompleteProductionModal() {
                 if (warehousesWithAmount.length > 0) {
                     // Ensure percentage is a valid number string
                     const bomPercentageValue = item.percentage ? String(item.percentage) : '0';
+                    const bomPercentagePersian = formatWarehouseActualToPersian(bomPercentageValue, 2);
                     html += `
                         <div class="warehouse-actual-consumption-item" data-bom-id="${item.id}" data-bom-percentage="${bomPercentageValue}" style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 12px; border: 2px solid #e9ecef; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
                             <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 3px solid #ffc107;">
@@ -1966,6 +2010,7 @@ function showCompleteProductionModal() {
                     
                     warehousesWithAmount.forEach(wh => {
                         const plannedAmount = new Decimal(wh.amount || '0').toFixed(3);
+                        const plannedAmountPersian = formatWarehouseActualToPersian(plannedAmount, 3);
                         const bomActuals = existingActualConsumption[bomIdStr] || {};
                         let defaultActual = '';
                         if (Object.prototype.hasOwnProperty.call(bomActuals, wh.warehouse)) {
@@ -1978,7 +2023,7 @@ function showCompleteProductionModal() {
                                     <strong style="font-size: 0.95rem; color: #343a40;">${wh.warehouse}</strong>
                                 </td>
                                 <td style="padding: 12px; text-align: center; background: #f0f8ff;">
-                                    <div style="font-size: 0.9rem; color: #0d6efd; font-weight: 600;">${plannedAmount} ${item.unit_used || 'تن'}</div>
+                                    <div class="persian-number-display" style="font-size: 0.9rem; color: #0d6efd; font-weight: 600;">${plannedAmountPersian} ${item.unit_used || 'تن'}</div>
                                 </td>
                                 <td style="padding: 12px; text-align: center; background: #fffbf0;">
                                     <div>
@@ -2012,7 +2057,7 @@ function showCompleteProductionModal() {
                                  data-bom-id="${item.id}"
                                  style="margin-top: 12px; padding: 12px; border-radius: 8px; border-left: 4px solid #6c757d; font-size: 0.9rem; background: #e9ecef;">
                                 <strong>درصد فرمول:</strong> 
-                                <span style="color: #0d6efd; font-weight: 600;">${bomPercentageValue}%</span>
+                                <span class="persian-number-display" style="color: #0d6efd; font-weight: 600;">${bomPercentagePersian}%</span>
                                 <br>
                                 <strong>درصد واقعی کل:</strong> 
                                 <span class="total-actual-percentage" style="font-weight: 600;">-</span>

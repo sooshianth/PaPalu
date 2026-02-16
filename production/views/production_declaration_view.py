@@ -1914,6 +1914,13 @@ def production_program_crud_view(request, program_id=None):
         production_warehouses = Warehouse.objects.filter(
             warehouse_type='production'
         ).order_by('name')
+
+        # انبارهای مواد اولیه (primary) برای انتخاب در مودال شروع تولید
+        # حتی وقتی موجودی ثبت نشده، کاربر بتواند انبار برداشت را انتخاب کند
+        primary_warehouses = list(
+            Warehouse.objects.filter(warehouse_type='primary').order_by('name').values('id', 'name', 'warehouse_id')
+        )
+        primary_warehouses_json = json.dumps([{'id': w['id'], 'name': w['name'] or '', 'warehouse_id': w['warehouse_id'] or ''} for w in primary_warehouses])
         
         # Check permissions for revert and archive; ارجاع به مدیر بدون task است؛ حل ارجاع فقط سوپرادمین
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
@@ -1946,6 +1953,7 @@ def production_program_crud_view(request, program_id=None):
             'program_status': program.status if program else 'draft',
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
+            'primary_warehouses_json': primary_warehouses_json,
             'max_bom_error': Decimal(str(program.max_bom_error)) if program and program.max_bom_error else Decimal('5'),
             'declaration_referred_to_manager': declaration_referred_to_manager,
             'can_resolve_referral': can_resolve_referral,
@@ -1985,6 +1993,10 @@ def production_program_crud_view(request, program_id=None):
         production_warehouses = Warehouse.objects.filter(
             warehouse_type='production'
         ).order_by('name')
+        primary_warehouses = list(
+            Warehouse.objects.filter(warehouse_type='primary').order_by('name').values('id', 'name', 'warehouse_id')
+        )
+        primary_warehouses_json = json.dumps([{'id': w['id'], 'name': w['name'] or '', 'warehouse_id': w['warehouse_id'] or ''} for w in primary_warehouses])
         
         # Check permissions for revert and archive
         can_revert = user_has_task(request.user, TaskChoices.PRODUCTION_REVERT_SCHEDULE.value)
@@ -2009,6 +2021,7 @@ def production_program_crud_view(request, program_id=None):
             'program_status': 'draft',
             'warehouses': available_warehouses,
             'production_warehouses': production_warehouses,
+            'primary_warehouses_json': primary_warehouses_json,
             'declaration_referred_to_manager': False,
             'can_resolve_referral': False,
             'can_revert': can_revert,
