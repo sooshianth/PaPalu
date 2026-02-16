@@ -57,5 +57,10 @@ class ProductionProgramTable(tables.Table):
 
     def render_actions(self, record):
         edit_url = reverse('production:program_edit', args=[record.id])
-        return format_html('<a href="{}" class="btn-outline-warning">ویرایش</a>', edit_url)
+        parts = [format_html('<a href="{}" class="btn-outline-warning">ویرایش</a>', edit_url)]
+        # حذف برنامه فقط در وضعیت تایید شده (تولید شروع نشده)
+        if record.status == ProductionProgram.Status.CONFIRMED:
+            delete_url = reverse('production:program_delete', args=[record.id])
+            parts.append(format_html('<a href="{}" class="btn-outline-danger">حذف</a>', delete_url))
+        return format_html(' '.join(['{}'] * len(parts)), *parts)
 

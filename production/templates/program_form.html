@@ -783,6 +783,7 @@ document.addEventListener('submit', function(e) {
 					<div class="form-actions">
 						<button class="btn btn-secondary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'draft')">پیش‌نویس</button>
 						<button class="btn btn-primary btn-sm" type="button" onclick="sendForm(this.closest('.tab-pane'), 'confirm')">تأیید</button>
+						<button class="btn btn-danger btn-sm" type="button" onclick="deleteProgram()">حذف برنامه</button>
 					</div>
 					{% else %}
 					<!-- In progress / completed: no actions -->
@@ -1550,6 +1551,31 @@ if (productFlowStatusData) {
 			}
 		} catch(err){
 			alert('خطای شبکه در حذف پیش‌نویس');
+		}
+	}
+
+	async function deleteProgram(){
+		if (!IS_EDIT_MODE || !PROGRAM_ID) return;
+		if (!confirm('آیا از حذف این برنامه مطمئن هستید؟ حذف فقط در وضعیت تایید شده (قبل از شروع تولید) امکان‌پذیر است.')) return;
+		const csrf = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+		const data = new FormData();
+		data.set('action', 'delete_program');
+		try{
+			const resp = await fetch(FORM_ENDPOINT, {
+				method: 'POST',
+				headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+				body: data,
+				credentials: 'same-origin'
+			});
+			if (resp.ok) {
+				alert('برنامه حذف شد.');
+				window.location.href = '/production/program/list/';
+			} else {
+				const json = await resp.json().catch(() => ({}));
+				alert(json.errors && json.errors.__all__ ? json.errors.__all__.join(' ') : 'حذف برنامه ناموفق بود.');
+			}
+		} catch(err){
+			alert('خطای شبکه در حذف برنامه');
 		}
 	}
 

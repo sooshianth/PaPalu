@@ -630,6 +630,21 @@ def edit_program_view(request, program_id):
                 messages.success(request, 'پیش‌نویس حذف شد.')
                 return redirect(reverse('production:program_list'))
 
+            # Delete program action (only allowed when status is CONFIRMED - production not started)
+            if action == 'delete_program':
+                if program.status != ProductionProgram.Status.CONFIRMED:
+                    msg = 'حذف برنامه فقط در وضعیت تایید شده (قبل از شروع تولید) امکان‌پذیر است.'
+                    if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                        return JsonResponse({'ok': False, 'errors': {'__all__': [msg]}}, status=400)
+                    messages.error(request, msg)
+                    return redirect(reverse('production:program_edit', args=[program.id]))
+                program.delete()
+                audit_logger.info(f"برنامه تولید {program.id} حذف شد")
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept',''):
+                    return JsonResponse({'ok': True, 'deleted': True})
+                messages.success(request, 'برنامه با موفقیت حذف شد.')
+                return redirect(reverse('production:program_list'))
+
             form = ProductionProgramForm(request.POST, instance=program)
             if form.is_valid():
                 instance = form.save(commit=False)
@@ -702,6 +717,27 @@ def edit_program_view(request, program_id):
         # Add field access permissions
         context['accessible_raw_material_fields'] = get_accessible_raw_material_fields(request.user)
         return render(request, 'program_form.html', context)
+
+
+@login_required
+def delete_program_view(request, program_id):
+    """حذف برنامه - فقط در وضعیت تایید شده (تولید شروع نشده)"""
+    if not user_has_task(request.user, TaskChoices.PRODUCTION_REGISTER_NEW_SCHEDULE.value):
+        audit_logger.activity("تلاش برای حذف برنامه تولید بدون دسترسی")
+        messages.error(request, 'شما دسترسی به حذف برنامه تولید ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+    program = get_object_or_404(ProductionProgram, id=program_id)
+    # فقط در وضعیت تایید شده اجازه حذف
+    if program.status != ProductionProgram.Status.CONFIRMED:
+        messages.error(request, 'حذف برنامه فقط در وضعیت تایید شده (قبل از شروع تولید) امکان‌پذیر است.')
+        return redirect(reverse('production:program_list'))
+    if request.method == 'POST':
+        program.delete()
+        audit_logger.info(f"برنامه تولید {program_id} حذف شد")
+        messages.success(request, 'برنامه با موفقیت حذف شد.')
+        return redirect(reverse('production:program_list'))
+    # GET: نمایش صفحه تایید حذف
+    return render(request, 'program_delete_confirm.html', {'program': program})
 
 
 @login_required

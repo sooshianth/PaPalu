@@ -10,6 +10,7 @@ app_name = 'production'
 urlpatterns = [
     path('program/create/', program_views.create_program_view, name='program_create'),
     path('program/<int:program_id>/edit/', program_views.edit_program_view, name='program_edit'),
+    path('program/<int:program_id>/delete/', program_views.delete_program_view, name='program_delete'),
     path('program/list/', program_views.program_list_view, name='program_list'),
     path('program/drafts/', program_views.program_drafts_view, name='program_drafts'),
     path('declaration/', production_declaration_view.production_declaration_view, name='production_declaration'),

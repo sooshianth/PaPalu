@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}تایید حذف برنامه تولید{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 500px; margin: 40px auto; padding: 30px;">
+    <h3 style="margin-bottom: 20px; color: var(--gray-800);">تایید حذف برنامه</h3>
+    <p style="margin-bottom: 24px; color: var(--gray-600);">
+        آیا از حذف برنامه <strong>{{ program.program_id|default:program.id }}</strong>
+        {% if program.product %}({{ program.product.name }}){% endif %}
+        مطمئن هستید؟ این عمل قابل بازگشت نیست.
+    </p>
+    <form method="post" action="{% url 'production:program_delete' program.id %}">
+        {% csrf_token %}
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button type="submit" class="btn btn-danger">بله، حذف کن</button>
+            <a href="{% url 'production:program_list' %}" class="btn btn-secondary">انصراف</a>
+            <a href="{% url 'production:program_edit' program.id %}" class="btn btn-outline-dark">بازگشت به ویرایش</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

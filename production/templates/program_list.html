@@ -58,6 +58,26 @@
         color: #212529 !important;
         border-color: #ffc107 !important;
     }
+    /* استایل دکمه حذف - قرمز (فقط در وضعیت تایید شده) */
+    .data-table .btn-outline-danger,
+    .table-container .btn-outline-danger {
+        padding: 5px 10px;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        border: 1px solid #dc3545;
+        transition: all 0.3s;
+        color: #dc3545 !important;
+        border-color: #dc3545 !important;
+        background-color: transparent !important;
+        display: inline-block;
+    }
+    .data-table .btn-outline-danger:hover,
+    .table-container .btn-outline-danger:hover {
+        background-color: #dc3545 !important;
+        color: white !important;
+        border-color: #dc3545 !important;
+    }
     /* استایل‌های django-tables2 - لینک‌های عادی (حذف رنگ آبی از ستون‌های قابل مرتب‌سازی) */
     .data-table a:not(.btn-outline-warning):not(.btn-outline-info):not(.btn-outline-danger) {
         color: inherit;
