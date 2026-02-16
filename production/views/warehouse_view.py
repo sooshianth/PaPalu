@@ -140,11 +140,11 @@ def warehouse_view(request):
             percentage = min(percentage, Decimal('100'))
             remaining = capacity - used if capacity > 0 else Decimal('0')
             
-            # فرمت کردن اعداد با کاما و تبدیل به فارسی
-            capacity_formatted = persian_number_with_comma(capacity, 2)
-            used_formatted = persian_number_with_comma(used, 2)
-            remaining_formatted = persian_number_with_comma(remaining, 2)
-            percentage_formatted = persian_number_with_comma(percentage, 1)
+            # فرمت کردن اعداد با کاما و تبدیل به فارسی (اعشار 3 رقمی)
+            capacity_formatted = persian_number_with_comma(capacity, 3)
+            used_formatted = persian_number_with_comma(used, 3)
+            remaining_formatted = persian_number_with_comma(remaining, 3)
+            percentage_formatted = persian_number_with_comma(percentage, 3)
             
             # فرمت کردن مقادیر آیتم‌ها و محاسبه مختصات برای نمودار SVG
             import math
@@ -169,8 +169,8 @@ def warehouse_view(request):
                 scale_factor = 1
             
             for idx, item in enumerate(items_data):
-                item['quantity_formatted'] = persian_number_with_comma(item['quantity'], 2)
-                item['percentage_formatted'] = persian_number_with_comma(item['percentage'], 1)
+                item['quantity_formatted'] = persian_number_with_comma(item['quantity'], 3)
+                item['percentage_formatted'] = persian_number_with_comma(item['percentage'], 3)
                 item['color'] = colors[idx % len(colors)]
                 
                 # محاسبه زاویه برای نمودار (بر اساس کل ظرفیت) با محدودیت 360 درجه
