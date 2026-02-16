@@ -161,28 +161,33 @@ def warehouse_production_list(request):
         except EmptyPage:
             approved_programs_page = approved_paginator.page(approved_paginator.num_pages)
         
-        # Pagination for disapproved
-        disapproved_page = request.GET.get('disapproved_page', 1)
-        disapproved_paginator = Paginator(disapproved_programs, 20)
-        try:
-            disapproved_programs_page = disapproved_paginator.page(disapproved_page)
-        except PageNotAnInteger:
-            disapproved_programs_page = disapproved_paginator.page(1)
-        except EmptyPage:
-            disapproved_programs_page = disapproved_paginator.page(disapproved_paginator.num_pages)
+        # Pagination for disapproved - فقط سوپر ادمین جدول «ارسال شده به مدیر» را می‌بیند
+        user_can_see_referred_to_manager = request.user.is_superuser
+        if user_can_see_referred_to_manager:
+            disapproved_page = request.GET.get('disapproved_page', 1)
+            disapproved_paginator = Paginator(disapproved_programs, 20)
+            try:
+                disapproved_programs_page = disapproved_paginator.page(disapproved_page)
+            except PageNotAnInteger:
+                disapproved_programs_page = disapproved_paginator.page(1)
+            except EmptyPage:
+                disapproved_programs_page = disapproved_paginator.page(disapproved_paginator.num_pages)
+        else:
+            disapproved_programs_page = Paginator([], 20).page(1)
         
         # بررسی دسترسی فیلدها
         accessible_production_program_fields = get_accessible_production_program_fields(request.user)
         accessible_product_fields = get_accessible_product_fields(request.user)
         accessible_warehouse_fields = get_accessible_warehouse_fields(request.user)
         
-        # بررسی دسترسی مدیر برای حل مشکلات
-        user_can_manage_issues = user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value)
+        # بررسی دسترسی مدیر برای حل مشکلات (فقط سوپر ادمین)
+        user_can_manage_issues = request.user.is_superuser and user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value)
         
         context = {
             'pending_programs': pending_programs_page,
             'approved_programs': approved_programs_page,
             'disapproved_programs': disapproved_programs_page,
+            'user_can_see_referred_to_manager': user_can_see_referred_to_manager,
             'accessible_production_program_fields': accessible_production_program_fields,
             'accessible_product_fields': accessible_product_fields,
             'accessible_warehouse_fields': accessible_warehouse_fields,
@@ -222,6 +227,11 @@ def warehouse_production_detail(request, program_id):
             id=program_id,
             status=ProductionProgram.Status.COMPLETED
         )
+        
+        # برنامه‌های ارسال شده به مدیر فقط برای سوپر ادمین قابل مشاهده هستند
+        if program.sent_to_manager_for_revalidation and not request.user.is_superuser:
+            audit_logger.alert(f"دسترسی غیرمجاز به جزئیات برنامه ارجاع‌شده به مدیر - برنامه {program_id}")
+            return HttpResponseForbidden("شما اجازه مشاهده این برنامه (ارجاع‌شده به مدیر) را ندارید.")
         
         # دریافت ثبت‌های انبار مرتبط با این برنامه
         # Find stock entries related to this program through notes or other means

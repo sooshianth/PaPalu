@@ -242,8 +242,11 @@ def calculate_warehouse_before_after(program, stock_entries):
 def manager_warehouse_resolve(request, program_id):
     """
     صفحه حل مشکلات تولید توسط مدیر - شبیه warehouse_production_detail اما با قابلیت ویرایش
+    فقط سوپر ادمین (مدیر) دسترسی دارد.
     """
-    # بررسی دسترسی task
+    if not request.user.is_superuser:
+        audit_logger.alert(f"دسترسی غیرمجاز به حل مشکلات تولید (فقط مدیر) - برنامه {program_id}")
+        return HttpResponseForbidden("شما اجازه دسترسی به این صفحه را ندارید.")
     if not user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value):
         audit_logger.alert(f"دسترسی غیرمجاز به حل مشکلات تولید - برنامه {program_id}")
         return HttpResponseForbidden("شما اجازه دسترسی به این صفحه را ندارید.")
@@ -435,7 +438,9 @@ def manager_warehouse_resolve(request, program_id):
 
 @login_required
 def manager_save_program(request, program_id):
-    """ذخیره تغییرات برنامه"""
+    """ذخیره تغییرات برنامه - فقط سوپر ادمین"""
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
     if not user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value):
         audit_logger.alert(f"دسترسی غیرمجاز به ذخیره برنامه - برنامه {program_id}")
         return JsonResponse({'success': False, 'message': 'دسترسی غیرمجاز'}, status=403)
@@ -631,8 +636,10 @@ def manager_save_program(request, program_id):
 @login_required
 def manager_create_stock_entry(request, program_id):
     """
-    ایجاد stock entry جدید توسط مدیر
+    ایجاد stock entry جدید توسط مدیر - فقط سوپر ادمین
     """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
     if not user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value):
         return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
     
@@ -744,9 +751,11 @@ def manager_create_stock_entry(request, program_id):
 @login_required
 def manager_commit_stock_entry(request, program_id, entry_id):
     """
-    Commit کردن stock entry و به‌روزرسانی actual_consumption
+    Commit کردن stock entry و به‌روزرسانی actual_consumption - فقط سوپر ادمین
     این تابع دیگر استفاده نمی‌شود - همه commit ها از طریق resolve انجام می‌شود
     """
+    if not request.user.is_superuser:
+        return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
     if not user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value):
         return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
     
@@ -792,12 +801,15 @@ def manager_commit_stock_entry(request, program_id, entry_id):
 @login_required
 def manager_resolve_all(request, program_id):
     """
-    Resolve کردن همه stock entries و به‌روزرسانی وضعیت برنامه
+    Resolve کردن همه stock entries و به‌روزرسانی وضعیت برنامه - فقط سوپر ادمین
     - همه stock entries uncommitted را commit می‌کند
     - actual_consumption را به‌روزرسانی می‌کند
     - confirmed_by_warehouseman را True می‌کند
     - sent_to_manager_for_revalidation را False می‌کند
     """
+    if not request.user.is_superuser:
+        audit_logger.alert(f"دسترسی غیرمجاز به resolve برنامه (فقط مدیر) - برنامه {program_id}")
+        return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
     if not user_has_task(request.user, TaskChoices.PRODUCTION_MANAGER_SOLVE_ISSUES.value):
         audit_logger.alert(f"دسترسی غیرمجاز به resolve برنامه - برنامه {program_id}")
         return JsonResponse({'success': False, 'error': 'دسترسی غیرمجاز'}, status=403)
