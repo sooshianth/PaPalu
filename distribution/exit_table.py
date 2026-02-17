@@ -2,6 +2,8 @@ import django_tables2 as tables
 from django.utils.html import format_html, mark_safe
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+
+from core.RBACModel import user_has_task, TaskChoices
 from distribution.plate_display import render_iran_plate_html
 
 
@@ -15,7 +17,11 @@ def convert_to_persian_numbers(text):
 
 class ExitTable(tables.Table):
     """جدول لیست حمل‌های در انتظار خروج با استفاده از django-tables2"""
-    
+
+    def __init__(self, *args, **kwargs):
+        self._request = kwargs.pop('request', None)
+        super().__init__(*args, **kwargs)
+
     waybill_number = tables.Column(
         verbose_name='شناسه حمل',
         accessor='transport.waybill_number',
@@ -143,10 +149,10 @@ class ExitTable(tables.Table):
         transport = getattr(record, 'transport', None)
         if not transport:
             return '-'
-        
+
         try:
             buttons = []
-            
+
             # دکمه چاپ بارنامه
             buttons.append(
                 format_html(
@@ -154,15 +160,16 @@ class ExitTable(tables.Table):
                     reverse('distribution:print_waybill_pdf', args=[transport.waybill_number])
                 )
             )
-            
-            # دکمه خودرو خارج شد - باز کردن modal
-            buttons.append(
-                format_html(
-                    '<button type="button" class="btn-outline-primary" onclick="showExitConfirmModal(\'{}\')">خودرو خارج شد</button>',
-                    transport.waybill_number
+
+            # دکمه تایید خروج خودرو - فقط برای کاربران دارای دسترسی، لینک به صفحه تایید
+            if self._request and user_has_task(self._request.user, TaskChoices.DISTRIBUTION_MARK_VEHICLE_EXITED.value):
+                buttons.append(
+                    format_html(
+                        '<a href="{}" class="btn-success">تایید خروج خودرو</a>',
+                        reverse('distribution:confirm_vehicle_exit', args=[transport.waybill_number])
+                    )
                 )
-            )
-            
+
             return format_html(
                 '<div style="display: flex; gap: 5px; flex-wrap: wrap; justify-content: center;">{}</div>',
                 mark_safe(''.join(str(button) for button in buttons))

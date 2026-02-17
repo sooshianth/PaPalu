@@ -89,8 +89,8 @@ def exit_list_view(request):
     
     transports_data = [TransportRow(transport) for transport in transports]
     
-    # ایجاد جدول
-    table = ExitTable(transports_data)
+    # ایجاد جدول (ارسال request برای بررسی دسترسی دکمه تایید خروج)
+    table = ExitTable(transports_data, request=request)
     
     # تنظیم صفحه‌بندی
     RequestConfig(request, paginate={'per_page': 25}).configure(table)
@@ -173,77 +173,117 @@ def print_waybill_pdf_view(request, waybill_number):
         return redirect('distribution:exit_list')
 
 
+def _do_mark_vehicle_exited(transport, request):
+    """منطق مشترک ثبت خروج خودرو (برای استفاده در view و confirm page)."""
+    with transaction.atomic():
+        transport.status = 'completed'
+        transport.save(update_fields=['status'])
+
+        if transport.allocation:
+            allocation = transport.allocation
+            all_transports = Transport.objects.filter(allocation=allocation)
+            all_transports_count = all_transports.count()
+            completed_transports = all_transports.filter(status='completed')
+            completed_count = completed_transports.count()
+
+            if all_transports_count > 0 and all_transports_count == completed_count:
+                if allocation.allocation_status != 'completed':
+                    allocation.allocation_status = 'completed'
+                    allocation.save(update_fields=['allocation_status'])
+                    bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'تکمیل شده' تغییر کرد")
+                    audit_logger.activity(f"وضعیت تخصیص {allocation.allocation_number} به 'تکمیل شده' تغییر کرد")
+
+                if allocation.order:
+                    order = allocation.order
+                    relevant_allocations = Allocation.objects.filter(
+                        order=order
+                    ).exclude(
+                        allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
+                    )
+                    if relevant_allocations.exists():
+                        all_completed = all(
+                            alloc.allocation_status == 'completed'
+                            for alloc in relevant_allocations
+                        )
+                        if all_completed:
+                            order.status = 'pending_unloading_approval'
+                            order.save(update_fields=['status'])
+                            bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تسویه' تغییر کرد")
+                            audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تسویه' تغییر کرد")
+
+        bug_logger.info(f"خروج خودرو برای حمل {transport.waybill_number} ثبت شد")
+        audit_logger.activity(f"خروج خودرو برای حمل {transport.waybill_number} ثبت شد توسط کاربر {request.user.username}")
+
+
+@login_required
+def confirm_vehicle_exit_view(request, waybill_number):
+    """
+    صفحه تایید خروج خودرو (مشابه تامین guard-exit) - GET نمایش فرم، POST ثبت خروج.
+    """
+    audit_logger.info(f"دسترسی به صفحه تایید خروج خودرو - بارنامه {waybill_number}")
+
+    if not user_has_task(request.user, TaskChoices.DISTRIBUTION_MARK_VEHICLE_EXITED.value):
+        audit_logger.activity("تلاش برای تایید خروج خودرو بدون دسترسی")
+        messages.error(request, 'شما دسترسی به تایید خروج خودرو را ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
+    transport = get_object_or_404(Transport, waybill_number=waybill_number)
+
+    if transport.status != 'pending_exit':
+        messages.error(request, 'این حمل در وضعیت مناسب برای ثبت خروج نیست.')
+        return redirect('distribution:exit_list')
+
+    if request.method == 'POST':
+        try:
+            _do_mark_vehicle_exited(transport, request)
+            messages.success(request, f'خروج خودرو برای حمل {waybill_number} با موفقیت ثبت شد.')
+            return redirect('distribution:exit_list')
+        except Exception as e:
+            bug_logger.error(f"خطا در ثبت خروج خودرو: {str(e)}")
+            messages.error(request, f'خطا در ثبت خروج خودرو: {str(e)}')
+
+    from distribution.plate_display import render_iran_plate_html
+    order_number = '—'
+    if transport.allocation and transport.allocation.order:
+        order_number = getattr(transport.allocation.order, 'order_number', None) or 'نامشخص'
+
+    plate = getattr(transport, 'plate_number', None) or ''
+    if not plate and transport.truck_infos.exists():
+        first_truck = transport.truck_infos.first()
+        plate = getattr(first_truck, 'plate_number', None) or ''
+    plate_display_html = render_iran_plate_html(plate)
+
+    context = {
+        'transport': transport,
+        'order_number': order_number,
+        'plate_display_html': plate_display_html,
+    }
+    return render(request, 'distribution/confirm_vehicle_exit.html', context)
+
+
 @login_required
 def mark_vehicle_exited_view(request, waybill_number):
     """
-    ثبت خروج خودرو - تغییر وضعیت حمل به تکمیل شده
-    و بررسی تغییر وضعیت تخصیص و سفارش
+    ثبت خروج خودرو (POST از طریق API/فرم قدیمی) - تغییر وضعیت حمل به تکمیل شده.
+    برای استفاده از صفحه تایید، از confirm_vehicle_exit_view استفاده کنید.
     """
     audit_logger.info(f"درخواست ثبت خروج خودرو برای حمل {waybill_number}")
-    
+
     if not user_has_task(request.user, TaskChoices.DISTRIBUTION_MARK_VEHICLE_EXITED.value):
         audit_logger.activity("تلاش برای ثبت خروج خودرو بدون دسترسی")
         messages.error(request, 'شما دسترسی به ثبت خروج خودرو را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
-    
+
     transport = get_object_or_404(Transport, waybill_number=waybill_number)
-    
+
     if transport.status != 'pending_exit':
         messages.error(request, 'این حمل در وضعیت مناسب برای ثبت خروج نیست.')
         return redirect('distribution:exit_list')
-    
+
     try:
-        with transaction.atomic():
-            # تغییر وضعیت حمل به completed (تکمیل بارگیری)
-            transport.status = 'completed'
-            transport.save(update_fields=['status'])
-            
-            # بررسی تغییر وضعیت تخصیص
-            if transport.allocation:
-                allocation = transport.allocation
-                # بررسی اینکه آیا همه حمل‌های تخصیص به completed رسیدند
-                all_transports = Transport.objects.filter(allocation=allocation)
-                all_transports_count = all_transports.count()
-                completed_transports = all_transports.filter(status='completed')
-                completed_count = completed_transports.count()
-                
-                # اگر همه حمل‌ها به completed رسیدند و تخصیص هنوز completed نیست، آن را به completed ببر
-                if all_transports_count > 0 and all_transports_count == completed_count:
-                    if allocation.allocation_status != 'completed':
-                        allocation.allocation_status = 'completed'
-                        allocation.save(update_fields=['allocation_status'])
-                        bug_logger.info(f"وضعیت تخصیص {allocation.allocation_number} به 'تکمیل شده' تغییر کرد")
-                        audit_logger.activity(f"وضعیت تخصیص {allocation.allocation_number} به 'تکمیل شده' تغییر کرد")
-                    
-                    # بررسی تغییر وضعیت سفارش
-                    if allocation.order:
-                        order = allocation.order
-                        # دریافت همه تخصیص‌های مرتبط سفارش (تخصیص‌هایی که در فرآیند هستند)
-                        relevant_allocations = Allocation.objects.filter(
-                            order=order
-                        ).exclude(
-                            allocation_status__in=['planned', 'pending_approval', 'pending_shipping', 'canceled']
-                        )
-                        
-                        # بررسی اینکه آیا همه تخصیص‌های مرتبط به completed رسیدند
-                        if relevant_allocations.exists():
-                            all_completed = all(
-                                alloc.allocation_status == 'completed' 
-                                for alloc in relevant_allocations
-                            )
-                            
-                            if all_completed:
-                                order.status = 'pending_unloading_approval'
-                                order.save(update_fields=['status'])
-                                bug_logger.info(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تسویه' تغییر کرد")
-                                audit_logger.activity(f"وضعیت سفارش {order.order_number if hasattr(order, 'order_number') else 'نامشخص'} به 'در انتظار تایید تسویه' تغییر کرد")
-            
-            bug_logger.info(f"خروج خودرو برای حمل {waybill_number} ثبت شد")
-            messages.success(request, f'خروج خودرو برای حمل {waybill_number} با موفقیت ثبت شد.')
-            audit_logger.activity(f"خروج خودرو برای حمل {waybill_number} ثبت شد توسط کاربر {request.user.username}")
-            
-            return redirect('distribution:exit_list')
-            
+        _do_mark_vehicle_exited(transport, request)
+        messages.success(request, f'خروج خودرو برای حمل {waybill_number} با موفقیت ثبت شد.')
+        return redirect('distribution:exit_list')
     except Exception as e:
         bug_logger.error(f"خطا در ثبت خروج خودرو: {str(e)}")
         messages.error(request, f'خطا در ثبت خروج خودرو: {str(e)}')

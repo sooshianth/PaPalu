@@ -539,77 +539,12 @@
                 setTimeout(fixPaginationOrder, 100);
                 setTimeout(fixPaginationOrder, 500);
             })();
-            
-            // مدیریت modal تایید خروج خودرو
-            let currentWaybillNumber = null;
-            
-            function showExitConfirmModal(waybillNumber) {
-                currentWaybillNumber = waybillNumber;
-                const modal = document.getElementById('exitConfirmModal');
-                if (modal) {
-                    modal.classList.add('show');
-                }
-            }
-            
-            function closeExitConfirmModal() {
-                const modal = document.getElementById('exitConfirmModal');
-                if (modal) {
-                    modal.classList.remove('show');
-                }
-                currentWaybillNumber = null;
-            }
-            
-            function confirmExit() {
-                if (currentWaybillNumber) {
-                    window.location.href = '{% url "distribution:mark_vehicle_exited" "PLACEHOLDER" %}'.replace('PLACEHOLDER', currentWaybillNumber);
-                }
-            }
-            
-            // بستن modal با کلیک روی پس‌زمینه
-            document.addEventListener('DOMContentLoaded', function() {
-                const modal = document.getElementById('exitConfirmModal');
-                if (modal) {
-                    modal.addEventListener('click', function(e) {
-                        if (e.target === this) {
-                            closeExitConfirmModal();
-                        }
-                    });
-                }
-                
-                // بستن modal با کلید ESC
-                document.addEventListener('keydown', function(e) {
-                    if (e.key === 'Escape') {
-                        closeExitConfirmModal();
-                    }
-                });
-            });
         </script>
     {% else %}
         <div class="empty-state">
             <p>حملی در انتظار خروج وجود ندارد.</p>
         </div>
     {% endif %}
-</div>
-
-<!-- Modal تایید خروج خودرو -->
-<div id="exitConfirmModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>تایید خروج خودرو</h3>
-        </div>
-        <div class="modal-body">
-            <p>آیا مطمئن هستید که خودرو خارج شده است؟</p>
-            <p>با تایید این عملیات، وضعیت حمل به "تکمیل شده" تغییر خواهد کرد.</p>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn-outline-primary" onclick="closeExitConfirmModal()">
-                لغو
-            </button>
-            <button type="button" class="btn-outline-primary" onclick="confirmExit()">
-                تایید خروج
-            </button>
-        </div>
-    </div>
 </div>
 
 <script>

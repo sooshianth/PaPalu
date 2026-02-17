@@ -25,7 +25,8 @@ from distribution.views.waybill_registration_view import (
 from distribution.views.exit_list_view import (
     exit_list_view,
     print_waybill_pdf_view,
-    mark_vehicle_exited_view
+    mark_vehicle_exited_view,
+    confirm_vehicle_exit_view
 )
 
 app_name = 'distribution'
@@ -46,5 +47,6 @@ urlpatterns = [
     path('waybill/<str:waybill_number>/register/', register_waybill_view, name='register_waybill'),
     path('exit/', exit_list_view, name='exit_list'),
     path('exit/<str:waybill_number>/print-pdf/', print_waybill_pdf_view, name='print_waybill_pdf'),
+    path('exit/<str:waybill_number>/confirm-exit/', confirm_vehicle_exit_view, name='confirm_vehicle_exit'),
     path('exit/<str:waybill_number>/mark-exited/', mark_vehicle_exited_view, name='mark_vehicle_exited'),
 ]
