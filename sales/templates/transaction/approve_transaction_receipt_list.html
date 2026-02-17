@@ -306,6 +306,137 @@
         opacity: 0.5;
     }
     
+    /* بخش تاشو برای سفارش‌های با تراکنش تایید شده - منطبق با list-card و data-table */
+    .collapsible-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+        overflow: hidden;
+    }
+    .collapsible-header {
+        padding: 15px 30px;
+        background: var(--gray-100);
+        border-bottom: 2px solid var(--primary-green);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+        color: var(--gray-800);
+        font-size: 1.1rem;
+        user-select: none;
+    }
+    .collapsible-header:hover {
+        background: #e9ecef;
+    }
+    .collapsible-header .toggle-icon {
+        font-size: 1.2rem;
+        transition: transform 0.3s;
+    }
+    .collapsible-card.expanded .toggle-icon {
+        transform: rotate(180deg);
+    }
+    .collapsible-body {
+        display: none;
+        padding: 30px;
+    }
+    .collapsible-card.expanded .collapsible-body {
+        display: block;
+    }
+    .collapsible-body .intro-text {
+        color: var(--gray-600);
+        margin-bottom: 1.5rem;
+        font-size: 0.95rem;
+    }
+    /* ردیف سفارش - مشابه data-table tbody tr */
+    .order-row-toggle {
+        cursor: pointer;
+        padding: 15px;
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.2s;
+        color: var(--gray-600);
+    }
+    .order-row-toggle:hover {
+        background-color: var(--light-green);
+    }
+    .order-row-toggle .expand-icon {
+        transition: transform 0.3s;
+    }
+    .order-row-toggle.expanded .expand-icon {
+        transform: rotate(180deg);
+    }
+    /* پنل جزئیات - مشابه list-card */
+    .order-details-panel {
+        display: none;
+        padding: 1.5rem 0 1.5rem 0;
+        background: white;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    .order-row-toggle.expanded + .order-details-panel {
+        display: block;
+    }
+    .order-details-panel .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .order-details-panel .info-item strong {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--gray-600);
+        margin-bottom: 0.25rem;
+    }
+    .order-details-panel .info-item span {
+        color: var(--gray-800);
+    }
+    .order-details-panel .section-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-800);
+        margin: 1.5rem 0 1rem 0;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    .order-details-panel .section-title:first-of-type {
+        margin-top: 0;
+    }
+    /* جداول جزئیات - منطبق با data-table */
+    .collapsible-body .table-container {
+        overflow-x: auto;
+        margin-bottom: 1.5rem;
+    }
+    .collapsible-body .details-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+    }
+    .collapsible-body .details-table thead {
+        background: var(--gray-100);
+    }
+    .collapsible-body .details-table thead th {
+        padding: 15px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--gray-800);
+        border-bottom: 2px solid var(--primary-green);
+    }
+    .collapsible-body .details-table tbody tr {
+        border-bottom: 1px solid var(--gray-200);
+        transition: background-color 0.2s;
+    }
+    .collapsible-body .details-table tbody tr:hover {
+        background-color: var(--light-green);
+    }
+    .collapsible-body .details-table tbody td {
+        padding: 15px;
+        color: var(--gray-600);
+    }
+    
     @media (max-width: 768px) {
         .page-header {
             flex-direction: column;
@@ -322,6 +453,15 @@
         
         .data-table thead th,
         .data-table tbody td {
+            padding: 10px;
+        }
+        
+        .collapsible-body {
+            padding: 20px;
+        }
+        
+        .collapsible-body .details-table thead th,
+        .collapsible-body .details-table tbody td {
             padding: 10px;
         }
     }
@@ -382,7 +522,7 @@
             }
         </style>
     {% else %}
-        <div class="empty-state">
+        <div class="empty-state" style="margin-bottom: 0;">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M20 21C20 17.134 16.4183 14 12 14C7.58172 14 4 17.134 4 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -391,4 +531,123 @@
         </div>
     {% endif %}
 </div>
+
+<!-- بخش تاشو: سفارش‌های با تراکنش‌های تایید شده (رفته به مراحل بعد) -->
+{% if completed_orders_data %}
+<div class="collapsible-card" id="completedOrdersCard">
+    <div class="collapsible-header" onclick="document.getElementById('completedOrdersCard').classList.toggle('expanded')">
+        <span>سفارش‌های با تراکنش‌های تایید شده (رفته به مراحل بعد)</span>
+        <span class="toggle-icon">▼</span>
+    </div>
+    <div class="collapsible-body">
+        <p class="intro-text">سفارش‌هایی که همه تراکنش‌هایشان تایید شده و به مراحل بعد رفته‌اند. روی هر سفارش کلیک کنید تا جزئیات اسناد و تأییدها را ببینید.</p>
+        {% for item in completed_orders_data %}
+        <div class="order-block">
+            <div class="order-row-toggle" onclick="this.classList.toggle('expanded')">
+                <span>
+                    <strong>{{ item.order_number_persian }}</strong> – {{ item.order.customer.name|default:"-" }} – {{ item.order.get_status_display|default:item.order.status }}
+                </span>
+                <span class="expand-icon">▼</span>
+            </div>
+            <div class="order-details-panel">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <strong>شماره سفارش</strong>
+                        <span>{{ item.order_number_persian }}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>مشتری</strong>
+                        <span>{{ item.order.customer.name|default:"-" }}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>وضعیت</strong>
+                        <span>{{ item.order.get_status_display|default:item.order.status }}</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>مبلغ کل سند مبدا</strong>
+                        <span>{{ item.original_document_amount_persian }} ریال</span>
+                    </div>
+                    <div class="info-item">
+                        <strong>مجموع مبالغ استعلام</strong>
+                        <span>{{ item.total_inquiry_amount_persian }} ریال</span>
+                    </div>
+                </div>
+                <h4 class="section-title">اسناد تراکنش ثبت‌شده</h4>
+                <div class="table-container">
+                    <table class="details-table data-table">
+                        <thead>
+                            <tr>
+                                <th>شماره سند</th>
+                                <th>نوع تسویه</th>
+                                <th>مبلغ سند</th>
+                                <th>درصد</th>
+                                <th>تاریخ سررسید</th>
+                                <th>حساب مبدا</th>
+                                <th>وضعیت وصول</th>
+                                <th>تاریخ وصول</th>
+                                <th>پیوست</th>
+                                <th>وضعیت تأیید</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for doc_item in item.documents_with_persian %}
+                            <tr>
+                                <td>{{ doc_item.doc.accounting_document_number|default:"-" }}</td>
+                                <td>{{ doc_item.doc.get_payment_type_display|default:"-" }}</td>
+                                <td><strong>{{ doc_item.document_amount_persian }}</strong></td>
+                                <td>{% if doc_item.percentage_of_total is not None %}{{ doc_item.percentage_of_total }}٪{% else %}-{% endif %}</td>
+                                <td>{{ doc_item.doc.due_date|default:"-" }}</td>
+                                <td>{{ doc_item.doc.source_account|default:"-" }}</td>
+                                <td>{{ doc_item.doc.get_payment_status_display|default:"-" }}</td>
+                                <td>{{ doc_item.doc.check_receipt_date|default:"-" }}</td>
+                                <td>
+                                    {% if doc_item.doc.document_attachment %}
+                                    <a href="{{ doc_item.doc.document_attachment.url }}" target="_blank" style="color: var(--primary-green);">دانلود</a>
+                                    {% else %}-{% endif %}
+                                </td>
+                                <td>{{ doc_item.doc.get_approval_status_display|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if item.approved_documents_with_persian %}
+                <h4 class="section-title">تأییدهای تراکنش ثبت‌شده</h4>
+                <div class="table-container">
+                    <table class="details-table data-table">
+                        <thead>
+                            <tr>
+                                <th>شماره سند</th>
+                                <th>مبلغ استعلام</th>
+                                <th>شماره پیگیری</th>
+                                <th>بانک مبدا</th>
+                                <th>شماره حساب</th>
+                                <th>شماره شبا</th>
+                                <th>نام استعلام شده</th>
+                                <th>ساعت واریز</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app_item in item.approved_documents_with_persian %}
+                            <tr>
+                                <td>{{ app_item.doc.accounting_document_number|default:"-" }}</td>
+                                <td><strong>{{ app_item.inquiry_amount_persian }}</strong></td>
+                                <td>{{ app_item.tracking_number_persian }}</td>
+                                <td>{{ app_item.doc.source_bank|default:"-" }}</td>
+                                <td>{{ app_item.approval_account_number_persian }}</td>
+                                <td>{{ app_item.shaba_number_persian }}</td>
+                                <td>{{ app_item.doc.inquiry_name|default:"-" }}</td>
+                                <td>{{ app_item.doc.transfer_time|date:"Y/m/d H:i"|default:"-" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
 {% endblock %}

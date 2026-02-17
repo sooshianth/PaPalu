@@ -222,6 +222,143 @@
         padding: 0.25rem 0;
     }
     
+    /* استایل مرتب‌تر برای حساب مبدا و افزودن فایل */
+    .form-grid-account-file {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    .form-group-source-account .source-account-wrapper,
+    .form-group-file-attachments .file-attachments-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    .form-group-source-account select {
+        width: 100%;
+    }
+    .btn-create-account {
+        align-self: flex-start;
+        padding: 0.5rem 1rem;
+        border: 2px solid var(--primary-green);
+        border-radius: 8px;
+        color: var(--primary-green);
+        background: transparent;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-create-account:hover {
+        background: var(--primary-green);
+        color: white;
+    }
+    .btn-create-account .btn-icon {
+        margin-left: 4px;
+    }
+    .btn-add-file {
+        align-self: flex-start;
+        padding: 0.6rem 1.2rem;
+        border: 2px solid var(--gray-400);
+        border-radius: 8px;
+        color: var(--gray-700);
+        background: #f8f9fa;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-add-file:hover {
+        border-color: var(--primary-green);
+        color: var(--primary-green);
+        background: var(--light-green);
+    }
+    .btn-add-file .btn-icon {
+        margin-left: 6px;
+    }
+    .attachments-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        border: 2px solid var(--gray-300);
+        border-radius: 8px;
+        max-height: 180px;
+        overflow-y: auto;
+        background: #fafafa;
+    }
+    .attachments-list li {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    .attachments-list li:last-child {
+        border-bottom: none;
+    }
+    .attachments-hint {
+        color: var(--gray-600);
+        font-size: 0.85rem;
+        margin-top: 4px;
+    }
+    
+    /* مودال overlay */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: rgba(0,0,0,0.4);
+    }
+    .modal-content-account {
+        background: #fff;
+        padding: 28px;
+        border-radius: 12px;
+        max-width: 450px;
+        width: 100%;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    .modal-title {
+        margin: 0 0 24px 0;
+        font-size: 1.25rem;
+        color: var(--gray-800);
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--gray-200);
+    }
+    
+    /* مودال ایجاد حساب بانکی - مرتب‌تر */
+    #createBankAccountModal > div {
+        border-radius: 12px;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    }
+    #createBankAccountModal .form-group {
+        margin-bottom: 1rem;
+    }
+    #createBankAccountModal .form-group:last-of-type {
+        margin-bottom: 1.5rem;
+    }
+    #createBankAccountModal label {
+        font-weight: 600;
+        color: var(--gray-800);
+        margin-bottom: 0.4rem;
+        display: block;
+    }
+    #createBankAccountModal input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 2px solid var(--gray-300);
+        font-size: 1rem;
+    }
+    #createBankAccountModal input:focus {
+        outline: none;
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.15);
+    }
+    
     @media (max-width: 768px) {
         .page-header {
             padding: 1.25rem;
@@ -237,6 +374,10 @@
         }
         
         .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .form-grid-account-file {
             grid-template-columns: 1fr;
         }
         
@@ -407,6 +548,7 @@
                             <th>شماره سند حسابداری</th>
                             <th>نوع تسویه</th>
                             <th>مبلغ سند</th>
+                            <th>درصد از مبلغ کل</th>
                             <th>تاریخ سررسید</th>
                             <th>حساب مبدا</th>
                             <th>حساب مقصد</th>
@@ -424,6 +566,13 @@
                             <td>{{ item.doc.accounting_document_number|default:"-" }}</td>
                             <td>{{ item.doc.get_payment_type_display }}</td>
                             <td><strong>{{ item.document_amount_persian }}</strong></td>
+                            <td>
+                                {% if item.percentage_of_total is not None %}
+                                    <span style="background:var(--light-green);color:var(--dark-green);padding:4px 8px;border-radius:4px;font-weight:600;">{{ item.percentage_of_total }}٪</span>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
                             <td>{{ item.doc.due_date }}</td>
                             <td>{{ item.doc.source_account }}</td>
                             <td>{{ item.doc.destination_account|default:"-" }}</td>
@@ -501,10 +650,11 @@
                     {{ form.payment_type }}
                     {{ form.payment_type.errors }}
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="document-amount-group" data-original-amount="{{ settlement.original_document_amount|default:'' }}">
                     <label for="{{ form.document_amount.id_for_label }}">مبلغ سند <span style="color: #dc3545;">*</span></label>
                     {{ form.document_amount }}
                     <small class="persian-number-display" id="id_document_amount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
+                    <small id="id_document_amount_percent" style="font-size:0.85rem;color:var(--primary-green);margin-top:2px;display:block;min-height:1.2em;font-weight:600;"></small>
                     {{ form.document_amount.errors }}
                 </div>
                 <div class="form-group form-group-date">
@@ -514,21 +664,27 @@
                 </div>
             </div>
             
-            <div class="form-grid">
-                <div class="form-group">
+            <div class="form-grid form-grid-account-file">
+                <div class="form-group form-group-source-account">
                     <label for="{{ form.source_account.id_for_label }}">حساب مبدا <span style="color: #dc3545;">*</span></label>
-                    {{ form.source_account }}
-                    <button type="button" class="btn btn-outline-success btn-sm" id="btn-create-bank-account" style="margin-top: 8px;">
-                        + ایجاد حساب برای مشتری
-                    </button>
+                    <div class="source-account-wrapper">
+                        {{ form.source_account }}
+                        <button type="button" class="btn btn-outline-success btn-sm btn-create-account" id="btn-create-bank-account">
+                            <span class="btn-icon">+</span> ایجاد حساب برای مشتری
+                        </button>
+                    </div>
                     {{ form.source_account.errors }}
                 </div>
-                <div class="form-group">
+                <div class="form-group form-group-file-attachments">
                     <label>پیوست‌های سند <span style="color: #dc3545;">*</span></label>
-                    <input type="file" id="document_attachments_file_input" accept="image/*,.pdf,.doc,.docx" multiple style="display: none;">
-                    <button type="button" id="btn-add-document-attachments" class="btn btn-outline-secondary" style="margin-bottom: 8px;">افزودن فایل(ها)</button>
-                    <ul id="document_attachments_list" style="list-style: none; padding: 0; margin: 0 0 1rem 0; border: 1px solid var(--gray-300); border-radius: 8px; max-height: 200px; overflow-y: auto;"></ul>
-                    <small style="color: var(--gray-600); font-size: 0.85rem;">حداقل یک فایل الزامی است. با «افزودن فایل(ها)» می‌توانید چند پیوست اضافه کنید؛ با «حذف» هر کدام را جداگانه حذف کنید.</small>
+                    <div class="file-attachments-wrapper">
+                        <input type="file" id="document_attachments_file_input" accept="image/*,.pdf,.doc,.docx" multiple style="display: none;">
+                        <button type="button" id="btn-add-document-attachments" class="btn btn-add-file">
+                            <span class="btn-icon">📎</span> افزودن فایل(ها)
+                        </button>
+                        <ul id="document_attachments_list" class="attachments-list"></ul>
+                        <small class="attachments-hint">حداقل یک فایل الزامی است. با دکمه بالا فایل‌ها را اضافه و با «حذف» حذف کنید.</small>
+                    </div>
                 </div>
             </div>
 
@@ -573,25 +729,25 @@
 </div>
 
 <!-- مودال ایجاد حساب بانکی مشتری -->
-<div id="createBankAccountModal" role="dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.4);">
-    <div style="background: #fff; padding: 25px; border-radius: 12px; max-width: 450px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-        <h3 style="margin-top: 0; margin-bottom: 20px;">ایجاد حساب بانکی برای مشتری</h3>
+<div id="createBankAccountModal" role="dialog" class="modal-overlay" style="display: none;">
+    <div class="modal-content-account">
+        <h3 class="modal-title">ایجاد حساب بانکی برای مشتری</h3>
         <form id="createBankAccountForm">
-            <div class="form-group" style="margin-bottom: 1rem;">
+            <div class="form-group">
                 <label for="new_account_number">شماره حساب</label>
-                <input type="text" id="new_account_number" name="account_number" class="form-control" placeholder="حداکثر ۱۶ رقم" maxlength="16" inputmode="numeric" pattern="[0-9]*" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--gray-300);" dir="ltr">
+                <input type="text" id="new_account_number" name="account_number" placeholder="حداکثر ۱۶ رقم" maxlength="16" inputmode="numeric" dir="ltr">
             </div>
-            <div class="form-group" style="margin-bottom: 1rem;">
+            <div class="form-group">
                 <label for="new_shaba_number">شماره شبا</label>
-                <input type="text" id="new_shaba_number" name="shaba_number" class="form-control" placeholder="۲۴ رقم (IR لازم نیست)" maxlength="24" inputmode="numeric" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--gray-300);" dir="ltr">
-                <small style="color: var(--gray-600); font-size: 0.8rem; display: block; margin-top: 4px;">IR لازم نیست وارد شود، حداکثر ۲۴ رقم. IR هنگام ذخیره خودکار اضافه می‌شود.</small>
+                <input type="text" id="new_shaba_number" name="shaba_number" placeholder="۲۴ رقم (IR لازم نیست)" maxlength="24" inputmode="numeric" dir="ltr">
+                <small style="color: var(--gray-600); font-size: 0.8rem; display: block; margin-top: 4px;">IR هنگام ذخیره خودکار اضافه می‌شود.</small>
             </div>
-            <div class="form-group" style="margin-bottom: 1.5rem;">
+            <div class="form-group">
                 <label for="new_bank_name">نام بانک</label>
-                <input type="text" id="new_bank_name" name="bank_name" class="form-control" placeholder="نام بانک" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid var(--gray-300);">
+                <input type="text" id="new_bank_name" name="bank_name" placeholder="نام بانک">
             </div>
-            <div id="createBankAccountError" class="text-danger" style="display: none; margin-bottom: 1rem;"></div>
-            <div style="display: flex; gap: 10px;">
+            <div id="createBankAccountError" class="text-danger" style="display: none; margin-bottom: 1rem; color: #dc3545;"></div>
+            <div style="display: flex; gap: 12px; margin-top: 8px;">
                 <button type="submit" class="btn btn-primary" id="btnSubmitBankAccount">ثبت حساب</button>
                 <button type="button" class="btn btn-secondary" id="btnCancelBankAccount">انصراف</button>
             </div>
@@ -867,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     })();
 
-    // نمایش عدد فارسی با ، زیر مبلغ سند (مشابه تامین)
+    // نمایش عدد فارسی و درصد از مبلغ کل زیر مبلغ سند
     (function () {
         var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
         function formatNumberToPersian(num, decimalPlaces) {
@@ -881,11 +1037,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         var input = document.getElementById('id_document_amount');
         var display = document.getElementById('id_document_amount_persian');
+        var percentDisplay = document.getElementById('id_document_amount_percent');
+        var amountGroup = document.getElementById('document-amount-group');
+        var originalAmount = amountGroup ? parseFloat(amountGroup.getAttribute('data-original-amount') || '') || 0 : 0;
         if (input && display) {
             function update() {
                 var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
                 var num = parseFloat(raw);
                 display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 0);
+                if (percentDisplay && originalAmount > 0 && !isNaN(num) && num > 0) {
+                    var pct = (num / originalAmount) * 100;
+                    percentDisplay.textContent = formatNumberToPersian(pct, 1) + '٪ از مبلغ کل';
+                } else if (percentDisplay) {
+                    percentDisplay.textContent = '';
+                }
             }
             update();
             input.addEventListener('input', update);
