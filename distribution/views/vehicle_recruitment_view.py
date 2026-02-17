@@ -375,9 +375,9 @@ def create_transport_view(request):
                     messages.error(request, f'جمع وزن‌های حمل‌ها ({new_total_weight:.2f} کیلوگرم) نمی‌تواند از جمع وزن این تخصیص ({total_allocation_weight:.2f} کیلوگرم) بیشتر باشد. وزن باقیمانده: {total_allocation_weight - total_existing_weight:.2f} کیلوگرم')
                     return redirect(create_transport_url)
                 
-                # راننده و پلاک: اگر شیوه اعلام بار «ماشین مشتری» باشد مثل قبل (فیلدهای ساده)، وگرنه از جستجو/انتخاب راننده و پلاک
+                # راننده و پلاک: اگر شیوه اعلام بار «ماشین مشتری» باشد مثل قبل (فیلدهای ساده + پلاک اختیاری)، وگرنه از جستجو/انتخاب راننده و پلاک
                 driver_person = None
-                plate_number = ''
+                plate_number = request.POST.get('plate_number', '').strip() or ''
                 if allocation.shipping_announcement_method == 'customer_vehicle':
                     if driver_national_id:
                         driver_person, created = Person.objects.get_or_create(
@@ -408,7 +408,6 @@ def create_transport_view(request):
                                 phone_number.save()
                 else:
                     driver_id = request.POST.get('driver', '').strip()
-                    plate_number = request.POST.get('plate_number', '').strip()
                     if driver_id:
                         try:
                             driver_person = Person.objects.filter(pk=int(driver_id), type='driver').first()
