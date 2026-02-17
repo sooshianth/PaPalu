@@ -38,6 +38,7 @@ class ProformaTable(tables.Table):
                 'order': True,
                 'customer': True,
                 'validity_date': True,
+                'status': True,
                 'created_at': True,
                 'actions': True,
             }
@@ -48,6 +49,7 @@ class ProformaTable(tables.Table):
             'order': (ProformaModel, 'order'),
             'customer': (ProformaModel, 'customer'),
             'validity_date': (ProformaModel, 'validity_date'),
+            'status': None,  # وضعیت محاسبه‌شده - همیشه نمایش
             'created_at': None,  # همیشه نمایش داده می‌شود
             'actions': None,  # عملیات همیشه نمایش داده می‌شود
         }
@@ -108,6 +110,16 @@ class ProformaTable(tables.Table):
         }
     )
     
+    status = tables.Column(
+        verbose_name='وضعیت',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
     created_at = tables.Column(
         verbose_name='تاریخ ایجاد',
         orderable=True,
@@ -130,12 +142,12 @@ class ProformaTable(tables.Table):
     class Meta:
         model = Proforma
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('proforma_number', 'order', 'customer', 'validity_date', 'created_at', 'actions')
+        fields = ('proforma_number', 'order', 'customer', 'validity_date', 'status', 'created_at', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('proforma_number', 'order', 'customer', 'validity_date', 'created_at', 'actions')
+        sequence = ('proforma_number', 'order', 'customer', 'validity_date', 'status', 'created_at', 'actions')
     
     def render_proforma_number(self, value, record):
         """نمایش شماره پیش فاکتور"""
@@ -163,6 +175,24 @@ class ProformaTable(tables.Table):
     def render_customer(self, value, record):
         """نمایش نام مشتری"""
         return value if value else '-'
+    
+    def render_status(self, record):
+        """نمایش وضعیت پیش فاکتور: منسوخ، در انتظار تأیید، تأیید شده"""
+        if hasattr(record, 'is_invalidated') and record.is_invalidated:
+            return format_html(
+                '<span class="badge badge-invalidated" style="background-color: #dc3545; color: white;">منسوخ</span>'
+            )
+        order = getattr(record, 'order', None)
+        if order and hasattr(order, 'status'):
+            if order.status == 'pending_customer_proforma_upload':
+                return format_html(
+                    '<span class="badge badge-pending" style="background-color: #ffc107; color: #212529;">در انتظار تأیید</span>'
+                )
+            # بعد از آپلود فایل تأیید: pending_transaction_receipt_upload یا مراحل بعدی
+            return format_html(
+                '<span class="badge badge-approved" style="background-color: var(--primary-green); color: white;">تأیید شده</span>'
+            )
+        return format_html('<span class="badge" style="background-color: var(--gray-400);">-</span>')
     
     def render_validity_date(self, value, record):
         """نمایش تاریخ اعتبار"""
