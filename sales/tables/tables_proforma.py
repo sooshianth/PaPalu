@@ -434,6 +434,27 @@ class ApproveProformaTable(tables.Table):
                     except:
                         file_url = ''
             
+            # ساخت لیست اقلام سفارش برای نمایش در مودال
+            order_items_data = []
+            for item in order.order_items.all():
+                item_name = '-'
+                if item.product:
+                    item_name = getattr(item.product, 'name', str(item.product))
+                elif item.raw_material:
+                    item_name = getattr(item.raw_material, 'name', str(item.raw_material))
+                unit_display = item.get_weight_unit_display() if item.weight_unit else '-'
+                total_val = item.total_purchase_cost or (item.calculate_total() if hasattr(item, 'calculate_total') else None)
+                order_items_data.append({
+                    'name': str(item_name),
+                    'quantity': str(item.quantity) if item.quantity else '-',
+                    'unit': str(unit_display),
+                    'unit_price': str(item.unit_price) if item.unit_price else '-',
+                    'total': str(total_val) if total_val is not None else '-',
+                })
+            order_items_json = json.dumps(order_items_data, ensure_ascii=False)
+            # Escape برای استفاده امن در data attribute (هم single و هم double quote)
+            order_items_escaped = html.escape(order_items_json, quote=True).replace("'", "&#39;")
+            
             # Escape کردن مقادیر برای JavaScript - استفاده از HTML entity
             order_number_str = html.escape(str(order_number))
             proforma_number_str = html.escape(str(proforma_number))
@@ -450,12 +471,14 @@ class ApproveProformaTable(tables.Table):
                 f'data-customer-name="{customer_name_str}" '
                 f'data-has-file="{has_file_str}" '
                 f'data-file-url="{file_url_str}" '
+                f'data-order-items=\'{order_items_escaped}\' '
                 f'onclick="event.preventDefault(); event.stopPropagation(); '
                 f'openUploadModal(this.getAttribute(\'data-order-number\'), '
                 f'this.getAttribute(\'data-proforma-number\'), '
                 f'this.getAttribute(\'data-customer-name\'), '
                 f'this.getAttribute(\'data-has-file\') === \'true\', '
-                f'this.getAttribute(\'data-file-url\')); return false;">'
+                f'this.getAttribute(\'data-file-url\'), '
+                f'this.getAttribute(\'data-order-items\') || \'[]\'); return false;">'
                 f'آپلود فایل</a>'
             )
             

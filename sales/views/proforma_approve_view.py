@@ -33,7 +33,10 @@ def approve_proforma_list_view(request):
     # دریافت سفارش‌های با وضعیت "در انتظار آپلود پیش فاکتور مشتری"
     orders = Order.objects.filter(
         status='pending_customer_proforma_upload'
-    ).select_related('registered_by', 'customer').prefetch_related('proformas__customer', 'order_documents').order_by('-created_at')
+    ).select_related('registered_by', 'customer').prefetch_related(
+        'proformas__customer', 'order_documents',
+        'order_items__product', 'order_items__raw_material'
+    ).order_by('-created_at')
 
     # اگر کاربر superuser نیست، فقط سفارش‌های خودش را ببیند
     if not request.user.is_superuser:
@@ -78,8 +81,13 @@ def approve_proforma_upload_view(request, order_number):
         messages.error(request, 'شما دسترسی به آپلود فایل تأیید پیش فاکتور ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    # دریافت سفارش
-    order = get_object_or_404(Order, order_number=order_number)
+    # دریافت سفارش همراه با اقلام
+    order = get_object_or_404(
+        Order.objects.prefetch_related(
+            'order_items__product', 'order_items__raw_material'
+        ),
+        order_number=order_number
+    )
 
     # بررسی دسترسی - کاربر باید بتواند سفارش‌های خود را ببیند
     if not request.user.is_superuser:
