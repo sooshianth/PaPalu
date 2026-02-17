@@ -589,13 +589,10 @@ class VehicleEntryTable(tables.Table):
             return '-'
         
         try:
+            register_url = reverse('distribution:register_vehicle_entry', args=[transport.waybill_number])
             return format_html(
-                '<button type="button" '
-                'class="btn-outline-primary" '
-                'onclick="showVehicleEntryModal(\'{}\')">'
-                'ثبت ورود'
-                '</button>',
-                transport.waybill_number
+                '<a href="{}" class="btn-outline-primary" title="ثبت ورود">ثبت ورود</a>',
+                register_url
             )
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))

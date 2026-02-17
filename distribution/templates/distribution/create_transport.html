@@ -615,6 +615,14 @@
             <div class="row">
               <div class="col-md-4 mb-3">
                 <label class="form-label">پلاک</label>
+                <!-- نمایش پلاک‌های پیشنهادی راننده -->
+                <div id="driver-plates-suggestions" style="display: none; margin-bottom: 10px;">
+                  <label style="font-size: 0.85rem; color: #666; margin-bottom: 5px; display: block;">پلاک‌های ثبت شده برای این راننده:</label>
+                  <select id="driver-plates-select" class="form-control" style="font-size: 0.9rem;">
+                    <option value="">-- انتخاب پلاک --</option>
+                  </select>
+                  <small style="font-size:0.75rem;color:#666;margin-top:4px;display:block">می‌توانید یکی از پلاک‌های قبلی را انتخاب کنید</small>
+                </div>
                 <div class="plate-input">
                   <div class="plate-seg">
                     <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="12" inputmode="numeric" pattern="\d*">
@@ -832,6 +840,67 @@
     var driverSuggestions = document.getElementById('driver-suggestions');
     var searchTimeout;
     var suggestionsList = [];
+    var plateSelectListenerAdded = false;
+
+    function parsePlateNumber(plateNumber) {
+      if (!plateNumber) return null;
+      var match = plateNumber.match(/^(\d{2})\|(\d{3})([آ-یA-Za-z])(\d{2})$/);
+      if (match) return { iran: match[1], middle: match[2], letter: match[3], last: match[4] };
+      var oldMatch = plateNumber.match(/^(\d{2})[|-](\d{3})[|-]([آ-یA-Za-z])[|-](\d{2})$/);
+      if (oldMatch) return { iran: oldMatch[1], middle: oldMatch[2], letter: oldMatch[3], last: oldMatch[4] };
+      return null;
+    }
+
+    function loadDriverPlateNumbers(driverId) {
+      if (!driverId) {
+        var dp = document.getElementById('driver-plates-suggestions');
+        if (dp) dp.style.display = 'none';
+        return;
+      }
+      var platesSelect = document.getElementById('driver-plates-select');
+      var driverPlatesSuggestions = document.getElementById('driver-plates-suggestions');
+      if (!platesSelect || !driverPlatesSuggestions) return;
+      platesSelect.innerHTML = '<option value="">-- انتخاب پلاک --</option>';
+      if (!plateSelectListenerAdded) {
+        platesSelect.addEventListener('change', function() {
+          var selectedPlate = this.value;
+          if (selectedPlate) {
+            var parsed = parsePlateNumber(selectedPlate);
+            if (parsed) {
+              var plateIran = document.getElementById('plate-iran');
+              var plateMiddle = document.getElementById('plate-middle');
+              var plateLetter = document.getElementById('plate-letter');
+              var plateLast = document.getElementById('plate-last');
+              var hidden = document.getElementById('id_plate_number');
+              if (plateIran) plateIran.value = parsed.iran;
+              if (plateMiddle) plateMiddle.value = parsed.middle;
+              if (plateLetter) plateLetter.value = parsed.letter;
+              if (plateLast) plateLast.value = parsed.last;
+              if (hidden) hidden.value = selectedPlate;
+              var evt = new Event('input', { bubbles: true });
+              if (plateIran) plateIran.dispatchEvent(evt);
+            }
+          }
+        });
+        plateSelectListenerAdded = true;
+      }
+      fetch('{% url "supply:get_driver_plate_numbers_api" 0 %}'.replace('0', driverId))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success && data.plates && data.plates.length > 0) {
+            driverPlatesSuggestions.style.display = 'block';
+            data.plates.forEach(function(plate) {
+              var opt = document.createElement('option');
+              opt.value = plate.plate_number;
+              opt.textContent = plate.display;
+              platesSelect.appendChild(opt);
+            });
+          } else {
+            driverPlatesSuggestions.style.display = 'none';
+          }
+        })
+        .catch(function() { if (driverPlatesSuggestions) driverPlatesSuggestions.style.display = 'none'; });
+    }
 
     function normalizeDigits(s) {
       if (!s) return '';
@@ -857,6 +926,7 @@
                 driverInput.value = item.text;
                 if (driverIdInput) driverIdInput.value = item.id;
                 driverSuggestions.style.display = 'none';
+                loadDriverPlateNumbers(item.id);
               });
               driverSuggestions.appendChild(div);
             });
@@ -872,6 +942,7 @@
       if (driverSuggestions && driverInput && !driverInput.contains(e.target) && !driverSuggestions.contains(e.target))
         driverSuggestions.style.display = 'none';
     });
+    window.loadDriverPlateNumbers = loadDriverPlateNumbers;
   })();
 
   function openAddDriverModalDist() {
@@ -923,6 +994,7 @@
           var driverIdInput = document.getElementById('id_driver');
           if (driverInput) driverInput.value = (data.driver.name || '') + ' - ' + (data.driver.phone || '');
           if (driverIdInput) driverIdInput.value = data.driver.id;
+          if (window.loadDriverPlateNumbers) window.loadDriverPlateNumbers(data.driver.id);
           closeAddDriverModalDist();
         } else {
           alert('خطا: ' + (data.error || 'خطا در ایجاد راننده'));

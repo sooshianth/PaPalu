@@ -191,50 +191,50 @@ def register_vehicle_entry_view(request, waybill_number):
                 # اعتبارسنجی داده‌های اجباری
                 if not driver_national_id:
                     messages.error(request, 'شماره ملی راننده الزامی است.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # اعتبارسنجی شماره ملی (10 رقم)
                 if not re.match(r'^\d{10}$', driver_national_id):
                     messages.error(request, 'شماره ملی باید 10 رقم باشد.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 if not driver_name:
                     messages.error(request, 'نام راننده الزامی است.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 if not driver_mobile:
                     messages.error(request, 'شماره همراه راننده الزامی است.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # اعتبارسنجی شماره همراه (09XXXXXXXXX)
                 if not re.match(r'^09\d{9}$', driver_mobile):
                     messages.error(request, 'شماره همراه باید با فرمت 09XXXXXXXXX باشد.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # اعتبارسنجی پلاک
                 if not plate_part1 or not plate_part2 or not plate_part3 or not plate_part4:
                     messages.error(request, 'تمام بخش‌های پلاک الزامی است.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # اعتبارسنجی فرمت بخش اول (2 رقم)
                 if not re.match(r'^\d{2}$', plate_part1):
                     messages.error(request, 'بخش اول پلاک باید 2 رقم باشد.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # اعتبارسنجی فرمت بخش دوم (3 رقم)
                 if not re.match(r'^\d{3}$', plate_part2):
                     messages.error(request, 'بخش دوم پلاک باید 3 رقم باشد.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # اعتبارسنجی فرمت بخش سوم (1 حرف فارسی)
                 if not re.match(r'^[ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی]$', plate_part3):
                     messages.error(request, 'بخش سوم پلاک باید یک حرف فارسی باشد.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # اعتبارسنجی فرمت بخش چهارم (2 رقم)
                 if not re.match(r'^\d{2}$', plate_part4):
                     messages.error(request, 'بخش چهارم پلاک باید 2 رقم باشد.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # ساخت پلاک کامل با فرمت: 11|345ح12
                 # حرف در وسط: 3 رقم + حرف + 2 رقم
@@ -277,10 +277,10 @@ def register_vehicle_entry_view(request, waybill_number):
                     
                     if not previous_card_attachment or not previous_card_attachment.file:
                         messages.error(request, 'کارت ملی قبلی یافت نشد. لطفاً فایل جدیدی آپلود کنید.')
-                        return redirect('distribution:vehicle_entry_list')
+                        return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 elif not national_card_file:
                     messages.error(request, 'آپلود کارت ملی الزامی است.')
-                    return redirect('distribution:vehicle_entry_list')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # بررسی فرمت فایل (فقط اگر فایل جدید آپلود شده)
                 if national_card_file:
@@ -292,7 +292,7 @@ def register_vehicle_entry_view(request, waybill_number):
                         file_extension = ''
                     if file_extension not in allowed_extensions:
                         messages.error(request, 'فرمت فایل کارت ملی باید JPG، PNG یا PDF باشد.')
-                        return redirect('distribution:vehicle_entry_list')
+                        return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
                 # به‌روزرسانی اطلاعات اگر Person از قبل وجود داشت
                 if not created:
@@ -411,7 +411,68 @@ def register_vehicle_entry_view(request, waybill_number):
 
             return redirect('distribution:vehicle_entry_list')
     
-    # برای GET request، اطلاعات حمل را برمی‌گردانیم (برای AJAX)
+    # برای GET request معمولی (صفحه کامل)، فرم را نمایش می‌دهیم
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        # آماده‌سازی context برای رندر صفحه کامل (مثل تامین)
+        driver_name = None
+        driver_national_id = None
+        driver_mobile = None
+        driver_description = None
+        plate_part1 = None
+        plate_part2 = None
+        plate_part3 = None
+        plate_part4 = None
+        vehicle_type = None
+        loading_type = None
+        allocation_number = None
+        
+        if transport.driver:
+            driver_name = transport.driver.name
+            driver_national_id = transport.driver.national_id
+            driver_description = transport.driver.description
+            person_content_type = ContentType.objects.get_for_model(Person)
+            mobile_phone = PhoneNumber.objects.filter(
+                content_type=person_content_type,
+                object_id=transport.driver.national_id,
+                phone_type='mobile'
+            ).first()
+            if mobile_phone:
+                driver_mobile = mobile_phone.number
+        
+        if transport.allocation:
+            allocation_number = transport.allocation.allocation_number
+        
+        truck_info = transport.truck_infos.first()
+        if truck_info:
+            plate_parts = (truck_info.plate_number or '').split('|')
+            if len(plate_parts) == 2:
+                plate_part1 = plate_parts[0]
+                plate_middle = plate_parts[1]
+                plate_middle_match = re.match(r'^(\d{3})([ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی])(\d{2})$', plate_middle)
+                if plate_middle_match:
+                    plate_part2 = plate_middle_match.group(1)
+                    plate_part3 = plate_middle_match.group(2)
+                    plate_part4 = plate_middle_match.group(3)
+            vehicle_type = truck_info.vehicle_type
+            loading_type = truck_info.loading_type
+        
+        context = {
+            'transport': transport,
+            'allocation_number': allocation_number,
+            'driver_name': driver_name,
+            'driver_national_id': driver_national_id,
+            'driver_mobile': driver_mobile,
+            'driver_description': driver_description,
+            'plate_part1': plate_part1,
+            'plate_part2': plate_part2,
+            'plate_part3': plate_part3,
+            'plate_part4': plate_part4,
+            'vehicle_type': vehicle_type,
+            'loading_type': loading_type,
+        }
+        return render(request, 'distribution/vehicle_entry_register.html', context)
+    
+    # برای GET request با هدر AJAX (سازگاری با کد قدیمی)، JSON برمی‌گردانیم
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         driver_name = None
         driver_national_id = None
