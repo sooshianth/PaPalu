@@ -134,10 +134,80 @@ def approve_transaction_receipt_list_view(request):
     
     RequestConfig(request, paginate={'per_page': 20}).configure(table)
 
+    # سفارش‌های با تراکنش‌های تایید شده که رفته به مراحل بعد (برای لیست تاشو)
+    completed_statuses = [
+        'pending_allocation',
+        'pending_allocation_approval',
+        'pending_factory',
+        'pending_unloading_approval',
+        'pending_settlement',
+        'pending_settlement_approval',
+        'completed',
+    ]
+    completed_orders_qs = Order.objects.filter(
+        order_type='sale',
+        status__in=completed_statuses
+    ).select_related('customer', 'registered_by').prefetch_related(
+        'settlements__transaction_documents__source_account'
+    ).order_by('-created_at')
+
+    if not request.user.is_superuser:
+        completed_orders_qs = completed_orders_qs.filter(registered_by=request.user)
+
+    completed_orders_data = []
+    for order in completed_orders_qs:
+        settlement = order.settlements.first()
+        if not settlement:
+            continue
+        # فقط سفارش‌هایی که همه تراکنش‌هایشان تایید شده و تسویه کامل است
+        all_docs = settlement.transaction_documents.all()
+        if not all_docs.exists():
+            continue
+        all_approved = all_docs.exclude(approval_status='approved').count() == 0
+        if not all_approved:
+            continue
+        # ساخت داده‌های فارسی برای اسناد
+        documents = list(all_docs.select_related('source_account').order_by('-id'))
+        documents_with_persian = []
+        approved_documents_with_persian = []
+        total_inquiry_amount = 0
+        from decimal import Decimal
+        orig_amount = Decimal(str(settlement.original_document_amount)) if settlement.original_document_amount else None
+        for doc in documents:
+            doc_dict = {
+                'doc': doc,
+                'document_amount_persian': persian_number_with_comma(doc.document_amount) if doc.document_amount else '-',
+            }
+            if orig_amount and doc.document_amount and orig_amount > 0:
+                pct = (Decimal(str(doc.document_amount)) / orig_amount) * 100
+                doc_dict['percentage_of_total'] = round(float(pct), 1)
+            else:
+                doc_dict['percentage_of_total'] = None
+            documents_with_persian.append(doc_dict)
+            if doc.inquiry_amount:
+                total_inquiry_amount += float(doc.inquiry_amount)
+                approved_documents_with_persian.append({
+                    'doc': doc,
+                    'inquiry_amount_persian': persian_number_with_comma(doc.inquiry_amount),
+                    'tracking_number_persian': to_persian_digits(doc.tracking_number) if doc.tracking_number else '-',
+                    'approval_account_number_persian': to_persian_digits(doc.approval_account_number) if doc.approval_account_number else '-',
+                    'shaba_number_persian': to_persian_digits(doc.shaba_number) if doc.shaba_number else '-',
+                })
+        completed_orders_data.append({
+            'order': order,
+            'settlement': settlement,
+            'documents_with_persian': documents_with_persian,
+            'approved_documents_with_persian': approved_documents_with_persian,
+            'total_inquiry_amount_persian': persian_number_with_comma(total_inquiry_amount) if total_inquiry_amount else '۰',
+            'original_document_amount_persian': persian_number_with_comma(settlement.original_document_amount) if settlement.original_document_amount else '-',
+            'order_number_persian': to_persian_digits(order.order_number),
+        })
+
     context = {
         'table': table,
         'accessible_fields': accessible_fields,
         'page_title': 'سفارش‌های در انتظار تأیید حسابداری',
+        'completed_orders_data': completed_orders_data,
     }
     return render(request, 'transaction/approve_transaction_receipt_list.html', context)
 
