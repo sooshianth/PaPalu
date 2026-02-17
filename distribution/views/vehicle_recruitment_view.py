@@ -247,7 +247,7 @@ def create_transport_view(request):
                 # دریافت داده‌های فرم
                 waybill_number = request.POST.get('waybill_number')
                 carrier_recruitment = request.POST.get('carrier_recruitment')
-                vehicle_type_official = request.POST.get('vehicle_type_official')
+                vehicle_type = request.POST.get('vehicle_type', '').strip()
                 driver_national_id = request.POST.get('driver_national_id', '').strip()
                 driver_name = request.POST.get('driver_name', '').strip()
                 driver_mobile = request.POST.get('driver_mobile', '').strip()
@@ -262,7 +262,7 @@ def create_transport_view(request):
                     messages.error(request, 'باربری جذب الزامی است.')
                     return redirect(create_transport_url)
                 
-                if not vehicle_type_official:
+                if not vehicle_type:
                     messages.error(request, 'نوع ماشین الزامی است.')
                     return redirect(create_transport_url)
                 
@@ -422,7 +422,7 @@ def create_transport_view(request):
                     delivery_postal_code=allocation.delivery_postal_code,
                     direction='outbound',
                     carrier_recruitment=carrier_recruitment,
-                    vehicle_type_official=vehicle_type_official,
+                    vehicle_type=vehicle_type,
                     driver=driver_person,
                     plate_number=plate_number or None,
                     status='pending_vehicle_entry',
@@ -555,6 +555,7 @@ def create_transport_view(request):
         'weight_info': weight_info,
         'delivery_info': delivery_info,
         'existing_transports_table': existing_transports_table,
+        'vehicle_type_choices': Transport.VEHICLE_TYPE_CHOICES,
         'page_title': 'تعریف حمل',
     })
 

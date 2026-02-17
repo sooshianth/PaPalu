@@ -93,8 +93,10 @@ def loading_exit_list_view(request):
                 self.plate_number = truck_info.plate_number
                 self.vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
             
-            # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
-            if not self.vehicle_type and transport.vehicle_type_official:
+            # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type یا vehicle_type_official استفاده کن
+            if not self.vehicle_type and transport.vehicle_type:
+                self.vehicle_type = transport.get_vehicle_type_display()
+            elif not self.vehicle_type and transport.vehicle_type_official:
                 self.vehicle_type = transport.get_vehicle_type_official_display()
             
             # دریافت اطلاعات محصول از ProductInfo
@@ -869,8 +871,10 @@ def register_loading_exit_view(request, waybill_number):
         plate_number = truck_info.plate_number
         vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
     
-    # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
-    if not vehicle_type and transport.vehicle_type_official:
+    # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type یا vehicle_type_official استفاده کن
+    if not vehicle_type and transport.vehicle_type:
+        vehicle_type = transport.get_vehicle_type_display()
+    elif not vehicle_type and transport.vehicle_type_official:
         vehicle_type = transport.get_vehicle_type_official_display()
     
     # دریافت اطلاعات محصول - همه ProductInfoها

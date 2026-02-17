@@ -70,7 +70,7 @@ class TransportCreateForm(forms.ModelForm):
         fields = [
             'waybill_number',
             'carrier_recruitment',
-            'vehicle_type_official',
+            'vehicle_type',
         ]
         widgets = {
             'waybill_number': forms.TextInput(attrs={
@@ -83,7 +83,7 @@ class TransportCreateForm(forms.ModelForm):
                 'placeholder': 'باربری جذب',
                 'required': True
             }),
-            'vehicle_type_official': forms.Select(attrs={
+            'vehicle_type': forms.Select(attrs={
                 'class': 'form-control',
                 'required': True
             }),
@@ -93,7 +93,8 @@ class TransportCreateForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['waybill_number'].required = True
         self.fields['carrier_recruitment'].required = True
-        self.fields['vehicle_type_official'].required = True
+        self.fields['vehicle_type'].required = True
+        self.fields['vehicle_type'].choices = [('', '-- انتخاب کنید --')] + list(Transport.VEHICLE_TYPE_CHOICES)
     
     def clean_waybill_number(self):
         waybill_number = self.cleaned_data.get('waybill_number')

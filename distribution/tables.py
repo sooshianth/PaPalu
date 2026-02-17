@@ -326,7 +326,7 @@ class AllocationTransportTable(tables.Table):
         accessor='driver.name',
         orderable=False
     )
-    vehicle_type_official = tables.Column(
+    vehicle_type = tables.Column(
         verbose_name='نوع ماشین',
         orderable=False
     )
@@ -341,15 +341,16 @@ class AllocationTransportTable(tables.Table):
         model = Transport
         attrs = {'class': 'table table-bordered'}
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('waybill_number', 'driver_name', 'vehicle_type_official', 'status', 'created_at')
-        sequence = ('waybill_number', 'driver_name', 'vehicle_type_official', 'status', 'created_at')
+        fields = ('waybill_number', 'driver_name', 'vehicle_type', 'status', 'created_at')
+        sequence = ('waybill_number', 'driver_name', 'vehicle_type', 'status', 'created_at')
 
-    def render_vehicle_type_official(self, value):
-        if value == 'official':
-            return 'رسمی'
-        if value == 'unofficial':
-            return 'غیررسمی'
-        return value or '-'
+    def render_vehicle_type(self, value, record):
+        """نمایش نوع ماشین: اول vehicle_type (تریلی، کمپرسی و...)، در صورت نبود fallback به رسمی/غیررسمی"""
+        if record.vehicle_type:
+            return record.get_vehicle_type_display()
+        if record.vehicle_type_official:
+            return record.get_vehicle_type_official_display()
+        return '—'
 
 
 class VehicleEntryTable(tables.Table):

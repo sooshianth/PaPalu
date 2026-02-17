@@ -106,8 +106,10 @@ def vehicle_entry_list_view(request):
                 self.vehicle_type = truck_info.get_vehicle_type_display() if truck_info.vehicle_type else None
                 self.loading_type = truck_info.get_loading_type_display() if truck_info.loading_type else None
             
-            # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type_official استفاده کن
-            if not self.vehicle_type and transport.vehicle_type_official:
+            # اگر vehicle_type در TruckInfo وجود نداشت، از Transport.vehicle_type یا vehicle_type_official استفاده کن
+            if not self.vehicle_type and transport.vehicle_type:
+                self.vehicle_type = transport.get_vehicle_type_display()
+            elif not self.vehicle_type and transport.vehicle_type_official:
                 self.vehicle_type = transport.get_vehicle_type_official_display()
         
         @property
