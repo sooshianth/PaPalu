@@ -337,12 +337,18 @@ def transaction_receipt_upload_view(request, order_number):
     remaining_amount_persian = persian_number_with_comma(remaining_amount) if settlement.original_document_amount else '-'
     total_document_amount_persian = persian_number_with_comma(total_document_amount) if total_document_amount else '۰'
     
-    # فارسی کردن اعداد برای هر سند
+    # فارسی کردن اعداد و محاسبه درصد برای هر سند
+    orig_amount_decimal = Decimal(str(settlement.original_document_amount)) if settlement.original_document_amount else None
     documents_with_persian = []
     for doc in documents:
+        percentage = None
+        if orig_amount_decimal and doc.document_amount and orig_amount_decimal > 0:
+            pct = (Decimal(str(doc.document_amount)) / orig_amount_decimal) * 100
+            percentage = round(float(pct), 1)
         doc_dict = {
             'doc': doc,
             'document_amount_persian': persian_number_with_comma(doc.document_amount) if doc.document_amount else '-',
+            'percentage_of_total': percentage,
         }
         documents_with_persian.append(doc_dict)
     
