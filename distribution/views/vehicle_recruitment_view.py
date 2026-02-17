@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.utils import timezone
 import logging
 from core.logging_levels import *
@@ -26,7 +27,7 @@ from django.contrib.contenttypes.models import ContentType
 from sales.views.allocation_list_view import get_delivery_address_info
 from core.helpers import check_field_access_prefer_edit
 from decimal import Decimal
-from distribution.tables import VehicleRecruitmentTable
+from distribution.tables import VehicleRecruitmentTable, AllocationTransportTable
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -154,23 +155,91 @@ def vehicle_recruitment_list_view(request):
     return render(request, 'distribution/vehicle_recruitment_list.html', context)
 
 
+def _get_allocation_context(allocation):
+    """محاسبه products_data و weight_info برای یک تخصیص (شامل وزن کل/حمل‌شده/باقیمانده هر محصول)"""
+    alloc_product_infos = AllocationProductInfo.objects.filter(allocation=allocation, product__isnull=False)
+    total_allocation_weight = Decimal('0')
+    allocation_product_weights = {}
+    for api in alloc_product_infos:
+        if api.product_id and api.quantity:
+            quantity = Decimal(str(api.quantity))
+            if api.unit == 'ton':
+                quantity = quantity * Decimal('1000')
+            elif api.unit == 'gr':
+                quantity = quantity / Decimal('1000')
+            total_allocation_weight += quantity
+            if api.product_id in allocation_product_weights:
+                allocation_product_weights[api.product_id] += quantity
+            else:
+                allocation_product_weights[api.product_id] = quantity
+    existing_transports = Transport.objects.filter(allocation=allocation)
+    total_transports_weight = Decimal('0')
+    transport_product_weights = {}
+    for transport in existing_transports:
+        for tp in ProductInfo.objects.filter(transport=transport, product__isnull=False):
+            if tp.product_id and tp.weight:
+                weight_kg = Decimal(str(tp.weight))
+                total_transports_weight += weight_kg
+                if tp.product_id in transport_product_weights:
+                    transport_product_weights[tp.product_id] += weight_kg
+                else:
+                    transport_product_weights[tp.product_id] = weight_kg
+    remaining_product_weights = {
+        str(pid): str(allocation_product_weights[pid] - transport_product_weights.get(pid, Decimal('0')))
+        for pid in allocation_product_weights
+    }
+    # ساخت products_data با کل/حمل‌شده/باقیمانده هر محصول (برای نمایش شبیه مواد اولیه تامین)
+    products_data = []
+    for api in AllocationProductInfo.objects.filter(allocation=allocation).select_related('product'):
+        if not api.product:
+            continue
+        pid = api.product_id
+        total_kg = float(allocation_product_weights.get(pid, Decimal('0')))
+        transported_kg = float(transport_product_weights.get(pid, Decimal('0')))
+        remaining_kg = total_kg - transported_kg
+        products_data.append({
+            'id': api.product.pk,
+            'name': api.product.name,
+            'quantity': str(api.quantity) if api.quantity else '0',
+            'unit': api.unit or 'kg',
+            'total_kg': total_kg,
+            'transported_kg': transported_kg,
+            'remaining_kg': remaining_kg,
+        })
+    weight_info = {
+        'total_allocation_weight': float(total_allocation_weight),
+        'total_transports_weight': float(total_transports_weight),
+        'remaining_weight': float(total_allocation_weight - total_transports_weight),
+        'remaining_product_weights': remaining_product_weights,
+    }
+    return products_data, weight_info
+
+
 @login_required
-def create_transport_view(request, allocation_number):
+def create_transport_view(request):
     """
-    ایجاد حمل جدید برای یک تخصیص
+    تعریف حمل: بدون تخصیص = لیست تخصیص‌ها برای انتخاب، با تخصیص = فرم ایجاد حمل
     """
-    audit_logger.info(f"درخواست ایجاد حمل برای تخصیص {allocation_number}")
+    allocation_number = request.GET.get('allocation') or request.POST.get('allocation_number')
+    audit_logger.info(f"درخواست تعریف حمل، allocation={allocation_number}")
     
     if not user_has_task(request.user, TaskChoices.DISTRIBUTION_CREATE_TRANSPORT.value):
         audit_logger.activity("تلاش برای ایجاد حمل بدون دسترسی")
         messages.error(request, 'شما دسترسی به ایجاد حمل را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
     
+    # بدون تخصیص: فقط با allocation در URL مجاز است؛ در غیر این صورت به لیست جذب خودرو برگردان
+    if not allocation_number:
+        messages.info(request, 'برای تعریف حمل، از لیست جذب خودرو روی «تعریف حمل» برای یک تخصیص کلیک کنید.')
+        return redirect('distribution:vehicle_recruitment_list')
+    
     allocation = get_object_or_404(Allocation, allocation_number=allocation_number)
     
     if allocation.allocation_status != 'pending_vehicle_recruitment':
         messages.error(request, 'این تخصیص در وضعیت مناسب برای جذب خودرو نیست.')
         return redirect('distribution:vehicle_recruitment_list')
+    
+    create_transport_url = reverse('distribution:create_transport') + f'?allocation={allocation_number}'
     
     if request.method == 'POST':
         try:
@@ -187,20 +256,20 @@ def create_transport_view(request, allocation_number):
                 # اعتبارسنجی داده‌های اجباری
                 if not waybill_number:
                     messages.error(request, 'شماره بارنامه الزامی است.')
-                    return redirect('distribution:vehicle_recruitment_list')
+                    return redirect(create_transport_url)
                 
                 if not carrier_recruitment:
                     messages.error(request, 'باربری جذب الزامی است.')
-                    return redirect('distribution:vehicle_recruitment_list')
+                    return redirect(create_transport_url)
                 
                 if not vehicle_type_official:
                     messages.error(request, 'نوع ماشین الزامی است.')
-                    return redirect('distribution:vehicle_recruitment_list')
+                    return redirect(create_transport_url)
                 
                 # بررسی تکراری نبودن شماره بارنامه
                 if Transport.objects.filter(waybill_number=waybill_number).exists():
                     messages.error(request, 'شماره بارنامه تکراری است.')
-                    return redirect('distribution:vehicle_recruitment_list')
+                    return redirect(create_transport_url)
                 
                 # دریافت محصولات انتخاب شده و وزن‌های آن‌ها
                 allocation_product_infos = AllocationProductInfo.objects.filter(
@@ -227,7 +296,7 @@ def create_transport_view(request, allocation_number):
                 # بررسی اینکه حداقل یک محصول انتخاب شده باشد
                 if not selected_products:
                     messages.error(request, 'حداقل باید یک محصول انتخاب شود.')
-                    return redirect('distribution:vehicle_recruitment_list')
+                    return redirect(create_transport_url)
                 
                 # محاسبه جمع وزن محصولات انتخاب شده
                 total_products_weight = sum(p['weight'] for p in selected_products)
@@ -296,7 +365,7 @@ def create_transport_view(request, allocation_number):
                 
                 if validation_errors:
                     messages.error(request, 'خطاهای اعتبارسنجی:\n' + '\n'.join(validation_errors))
-                    return redirect('distribution:vehicle_recruitment_list')
+                    return redirect(create_transport_url)
                 
                 # بررسی مجموع وزن (برای اطمینان بیشتر)
                 total_allocation_weight = sum(allocation_product_weights.values())
@@ -304,43 +373,49 @@ def create_transport_view(request, allocation_number):
                 new_total_weight = total_existing_weight + total_products_weight
                 if new_total_weight > total_allocation_weight + Decimal('0.001'):
                     messages.error(request, f'جمع وزن‌های حمل‌ها ({new_total_weight:.2f} کیلوگرم) نمی‌تواند از جمع وزن این تخصیص ({total_allocation_weight:.2f} کیلوگرم) بیشتر باشد. وزن باقیمانده: {total_allocation_weight - total_existing_weight:.2f} کیلوگرم')
-                    return redirect('distribution:vehicle_recruitment_list')
+                    return redirect(create_transport_url)
                 
-                # ایجاد یا به‌روزرسانی Person برای راننده (اگر اطلاعات راننده داده شده)
+                # راننده و پلاک: اگر شیوه اعلام بار «ماشین مشتری» باشد مثل قبل (فیلدهای ساده)، وگرنه از جستجو/انتخاب راننده و پلاک
                 driver_person = None
-                if driver_national_id:
-                    driver_person, created = Person.objects.get_or_create(
-                        national_id=driver_national_id,
-                        defaults={
-                            'name': driver_name or None,
-                            'type': 'driver',
-                            'description': driver_description or None,
-                        }
-                    )
-                    # به‌روزرسانی اطلاعات اگر Person از قبل وجود داشت
-                    if not created:
-                        if driver_name:
-                            driver_person.name = driver_name
-                        if driver_description:
-                            driver_person.description = driver_description
-                        driver_person.type = 'driver'
-                        driver_person.save()
-                    
-                    # اضافه کردن شماره همراه به PhoneNumber
-                    if driver_mobile:
-                        person_content_type = ContentType.objects.get_for_model(Person)
-                        phone_number, created = PhoneNumber.objects.get_or_create(
-                            content_type=person_content_type,
-                            object_id=driver_person.national_id,
-                            phone_type='mobile',
-                            defaults={'number': driver_mobile, 'is_primary': True}
+                plate_number = ''
+                if allocation.shipping_announcement_method == 'customer_vehicle':
+                    if driver_national_id:
+                        driver_person, created = Person.objects.get_or_create(
+                            national_id=driver_national_id,
+                            defaults={
+                                'name': driver_name or None,
+                                'type': 'driver',
+                                'description': driver_description or None,
+                            }
                         )
                         if not created:
-                            phone_number.number = driver_mobile
-                            phone_number.save()
+                            if driver_name:
+                                driver_person.name = driver_name
+                            if driver_description:
+                                driver_person.description = driver_description
+                            driver_person.type = 'driver'
+                            driver_person.save()
+                        if driver_mobile:
+                            person_content_type = ContentType.objects.get_for_model(Person)
+                            phone_number, created = PhoneNumber.objects.get_or_create(
+                                content_type=person_content_type,
+                                object_id=driver_person.national_id,
+                                phone_type='mobile',
+                                defaults={'number': driver_mobile, 'is_primary': True}
+                            )
+                            if not created:
+                                phone_number.number = driver_mobile
+                                phone_number.save()
+                else:
+                    driver_id = request.POST.get('driver', '').strip()
+                    plate_number = request.POST.get('plate_number', '').strip()
+                    if driver_id:
+                        try:
+                            driver_person = Person.objects.filter(pk=int(driver_id), type='driver').first()
+                        except (ValueError, TypeError):
+                            driver_person = None
                 
                 # ایجاد حمل
-                # وضعیت حمل مستقیماً به pending_vehicle_entry می‌رود
                 transport = Transport.objects.create(
                     waybill_number=waybill_number,
                     allocation=allocation,
@@ -349,6 +424,7 @@ def create_transport_view(request, allocation_number):
                     carrier_recruitment=carrier_recruitment,
                     vehicle_type_official=vehicle_type_official,
                     driver=driver_person,
+                    plate_number=plate_number or None,
                     status='pending_vehicle_entry',
                 )
                 
@@ -403,6 +479,7 @@ def create_transport_view(request, allocation_number):
                     
                     bug_logger.info(f"وضعیت تخصیص {allocation_number} به pending_vehicle_entry تغییر کرد (وزن کامل شد)")
                     messages.success(request, f'حمل با موفقیت ایجاد شد و وضعیت این تخصیص به "در انتظار ورود خودرو به کارخانه" تغییر کرد.')
+                    return redirect('distribution:vehicle_recruitment_list')
                 else:
                     messages.success(request, f'حمل با موفقیت ایجاد شد.')
                 
@@ -438,100 +515,46 @@ def create_transport_view(request, allocation_number):
                     )
                 
                 bug_logger.info(f"حمل {transport.pk} برای تخصیص {allocation_number} ایجاد شد")
-                messages.success(request, f'حمل با موفقیت ایجاد شد.')
                 audit_logger.activity(f"حمل {transport.pk} برای تخصیص {allocation_number} ایجاد شد توسط کاربر {request.user.username}")
                 
-                return redirect('distribution:vehicle_recruitment_list')
+                return redirect(create_transport_url)
                 
         except Exception as e:
             bug_logger.error(f"خطا در ایجاد حمل: {str(e)}")
             messages.error(request, f'خطا در ایجاد حمل: {str(e)}')
-            return redirect('distribution:vehicle_recruitment_list')
+            return redirect(create_transport_url)
     
-    # برای GET request، اطلاعات تخصیص را برمی‌گردانیم (برای AJAX)
+    # برای GET با درخواست AJAX، JSON برگردان
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         delivery_info = None
         if allocation.delivery_postal_code:
             delivery_info = get_delivery_address_info(allocation.delivery_postal_code)
-        
-        # دریافت محصولات تخصیص
-        allocation_product_infos = AllocationProductInfo.objects.filter(
-            allocation=allocation
-        ).select_related('product')
-        
-        products_data = []
-        for api in allocation_product_infos:
-            if api.product:
-                products_data.append({
-                    'id': api.product.pk,
-                    'name': api.product.name,
-                    'quantity': str(api.quantity) if api.quantity else '0',
-                    'unit': api.unit or '',
-                })
-        
-        # محاسبه وزن این تخصیص (تبدیل به کیلوگرم)
-        total_allocation_weight = Decimal('0')
-        allocation_product_weights = {}  # {product_id: weight_in_kg}
-        
-        # دریافت محصولات این تخصیص
-        alloc_product_infos = AllocationProductInfo.objects.filter(allocation=allocation, product__isnull=False)
-        for api in alloc_product_infos:
-            if api.product_id and api.quantity:
-                quantity = Decimal(str(api.quantity))
-                # تبدیل واحد به کیلوگرم
-                if api.unit == 'ton':
-                    quantity = quantity * Decimal('1000')
-                elif api.unit == 'gr':
-                    quantity = quantity / Decimal('1000')
-                # elif api.unit == 'kg': quantity بدون تغییر
-                
-                total_allocation_weight += quantity
-                
-                # محاسبه وزن هر محصول
-                if api.product_id in allocation_product_weights:
-                    allocation_product_weights[api.product_id] += quantity
-                else:
-                    allocation_product_weights[api.product_id] = quantity
-        
-        # محاسبه وزن حمل‌های موجود این تخصیص
-        existing_transports = Transport.objects.filter(allocation=allocation)
-        total_transports_weight = Decimal('0')
-        transport_product_weights = {}  # {product_id: weight_in_kg}
-        
-        for transport in existing_transports:
-            transport_products = ProductInfo.objects.filter(transport=transport, product__isnull=False)
-            for tp in transport_products:
-                if tp.product_id and tp.weight:
-                    weight_kg = Decimal(str(tp.weight))
-                    total_transports_weight += weight_kg
-                    
-                    # محاسبه وزن هر محصول
-                    if tp.product_id in transport_product_weights:
-                        transport_product_weights[tp.product_id] += weight_kg
-                    else:
-                        transport_product_weights[tp.product_id] = weight_kg
-        
-        # محاسبه وزن باقیمانده (هم مجموع و هم به تفکیک محصول)
-        remaining_weight = total_allocation_weight - total_transports_weight
-        
-        # محاسبه وزن باقیمانده برای هر محصول
-        remaining_product_weights = {}
-        for product_id, allocation_weight in allocation_product_weights.items():
-            transport_weight = transport_product_weights.get(product_id, Decimal('0'))
-            remaining_product_weights[product_id] = str(allocation_weight - transport_weight)
+        products_data, weight_info = _get_allocation_context(allocation)
         return JsonResponse({
             'allocation_number': allocation.allocation_number,
             'order_number': allocation.order.order_number if allocation.order else '-',
             'delivery_info': delivery_info,
             'products': products_data,
-            'weight_info': {
-                'total_allocation_weight': float(total_allocation_weight),
-                'total_transports_weight': float(total_transports_weight),
-                'remaining_weight': float(remaining_weight),
-                'remaining_product_weights': remaining_product_weights,
-            }
+            'weight_info': weight_info,
         })
     
-    # در غیر این صورت به لیست برگرد
-    return redirect('distribution:vehicle_recruitment_list')
+    # GET عادی: نمایش صفحه فرم (شبیه تامین)
+    delivery_info = None
+    if allocation.delivery_postal_code:
+        delivery_info = get_delivery_address_info(allocation.delivery_postal_code)
+    products_data, weight_info = _get_allocation_context(allocation)
+    existing_transports = Transport.objects.filter(allocation=allocation).select_related('driver').order_by('-created_at')
+    existing_transports_table = None
+    if existing_transports.exists():
+        existing_transports_table = AllocationTransportTable(existing_transports)
+        RequestConfig(request, paginate=False).configure(existing_transports_table)
+    return render(request, 'distribution/create_transport.html', {
+        'allocation': allocation,
+        'initial_allocation': allocation,
+        'products_data': products_data,
+        'weight_info': weight_info,
+        'delivery_info': delivery_info,
+        'existing_transports_table': existing_transports_table,
+        'page_title': 'تعریف حمل',
+    })
 

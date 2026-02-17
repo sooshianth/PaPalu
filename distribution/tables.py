@@ -2,6 +2,7 @@ import django_tables2 as tables
 from django.utils.html import format_html, mark_safe
 from django.urls import reverse
 from core.helpers import check_field_access_prefer_edit
+from core.RBACModel import user_has_task, TaskChoices
 from core.AllocationFolder.AllocationModel import Allocation
 from core.OrderFolder.OrderModel import Order
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
@@ -287,24 +288,22 @@ class VehicleRecruitmentTable(tables.Table):
         )
     
     def render_actions(self, record):
-        """نمایش دکمه‌های عملیات"""
+        """نمایش لینک تعریف حمل (فقط برای کاربر دارای دسترسی ایجاد حمل)"""
         allocation = getattr(record, 'allocation', None)
         if not allocation:
             return '-'
-        
+        user = getattr(self, 'user', None)
+        if not user or not user_has_task(user, TaskChoices.DISTRIBUTION_CREATE_TRANSPORT.value):
+            return '-'
         try:
             buttons = []
-            
-            # دکمه ایجاد حمل (فقط اگر تخصیص هنوز در وضعیت pending_vehicle_recruitment باشد)
+            # دکمه تعریف حمل (فقط اگر تخصیص در وضعیت pending_vehicle_recruitment باشد)
             if allocation.allocation_status == 'pending_vehicle_recruitment':
+                url = reverse('distribution:create_transport') + '?allocation=' + allocation.allocation_number
                 buttons.append(
                     format_html(
-                        '<button type="button" '
-                        'class="btn-outline-primary" '
-                        'onclick="showCreateTransportModal(\'{}\')">'
-                        'ایجاد حمل'
-                        '</button>',
-                        allocation.allocation_number
+                        '<a href="{}" class="btn-outline-primary">تعریف حمل</a>',
+                        url
                     )
                 )
             
@@ -317,6 +316,40 @@ class VehicleRecruitmentTable(tables.Table):
             )
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+
+
+class AllocationTransportTable(tables.Table):
+    """جدول حمل‌های یک تخصیص (برای صفحه تعریف حمل)"""
+    waybill_number = tables.Column(verbose_name='شماره بارنامه', orderable=False)
+    driver_name = tables.Column(
+        verbose_name='راننده',
+        accessor='driver.name',
+        orderable=False
+    )
+    vehicle_type_official = tables.Column(
+        verbose_name='نوع ماشین',
+        orderable=False
+    )
+    status = tables.Column(
+        verbose_name='وضعیت',
+        accessor='get_status_display',
+        orderable=False
+    )
+    created_at = tables.DateTimeColumn(verbose_name='تاریخ ثبت', format='Y/m/d', orderable=False)
+
+    class Meta:
+        model = Transport
+        attrs = {'class': 'table table-bordered'}
+        template_name = 'django_tables2/bootstrap.html'
+        fields = ('waybill_number', 'driver_name', 'vehicle_type_official', 'status', 'created_at')
+        sequence = ('waybill_number', 'driver_name', 'vehicle_type_official', 'status', 'created_at')
+
+    def render_vehicle_type_official(self, value):
+        if value == 'official':
+            return 'رسمی'
+        if value == 'unofficial':
+            return 'غیررسمی'
+        return value or '-'
 
 
 class VehicleEntryTable(tables.Table):
