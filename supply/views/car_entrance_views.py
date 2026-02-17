@@ -260,8 +260,10 @@ class CarEntranceTable(TransportTable):
         return record.get_vehicle_type_display() or '—'
     
     def render_plate_number(self, value, record):
-        """نمایش پلاک خودرو"""
-        return (getattr(record, 'plate_number', None) or value or '').strip() or '—'
+        """نمایش پلاک خودرو به سبک پلاک ایران"""
+        from distribution.plate_display import render_iran_plate_html
+        plate_number = getattr(record, 'plate_number', None) or value
+        return render_iran_plate_html(plate_number)
     
     def render_driver_name(self, value, record):
         """نمایش اسم راننده"""
