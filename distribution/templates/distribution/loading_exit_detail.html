@@ -715,7 +715,7 @@
         {% if plate_number %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">پلاک خودرو:</span>
-            <span class="readonly-info-value">{{ plate_number }}</span>
+            <span class="readonly-info-value">{{ plate_number|iran_plate }}</span>
         </div>
         {% endif %}
         {% if vehicle_type %}
