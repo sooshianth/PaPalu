@@ -214,6 +214,38 @@
         </div>
     </div>
     
+    {% if order.order_items.all %}
+    <div class="order-items-section" style="margin-bottom: 30px; padding: 20px; background: var(--gray-100); border-radius: 8px;">
+        <h3 style="margin-bottom: 15px; color: var(--gray-800);">اقلام سفارش</h3>
+        <div style="overflow-x: auto;">
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: var(--gray-200); border-bottom: 2px solid var(--primary-green);">
+                        <th style="text-align: right; padding: 12px;">نام قلم</th>
+                        <th style="text-align: right; padding: 12px;">مقدار</th>
+                        <th style="text-align: right; padding: 12px;">واحد</th>
+                        <th style="text-align: right; padding: 12px;">فی (ریال)</th>
+                        <th style="text-align: right; padding: 12px;">جمع (ریال)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.order_items.all %}
+                    <tr style="border-bottom: 1px solid var(--gray-200);">
+                        <td style="padding: 12px;">
+                            {% if item.product %}{{ item.product.name }}{% elif item.raw_material %}{{ item.raw_material.name }}{% else %}بدون نام{% endif %}
+                        </td>
+                        <td style="padding: 12px;">{{ item.quantity|default:"-" }}</td>
+                        <td style="padding: 12px;">{{ item.get_weight_unit_display|default:"-" }}</td>
+                        <td style="padding: 12px;">{{ item.unit_price|default:"-" }}</td>
+                        <td style="padding: 12px;">{{ item.total_purchase_cost|default:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
     {% if order_document and order_document.proforma_confirmation_attachment %}
     <div class="existing-file">
         <div class="existing-file-info">
