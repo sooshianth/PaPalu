@@ -147,8 +147,17 @@
         background: white;
         border-radius: 12px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        overflow: hidden;
+        overflow: visible;
         margin-bottom: 1.5rem;
+    }
+    
+    /* جلوگیری از رفتن تقویم/ساعت زیر کارت‌های پایین (مثل تامین و approve-transaction-receipt) */
+    .form-section .form-group:has(.jdp-container.jdp-open) {
+        position: relative;
+        z-index: 99999;
+    }
+    .form-section .form-group .jdp-container {
+        position: relative;
     }
     
     .form-section-header {
