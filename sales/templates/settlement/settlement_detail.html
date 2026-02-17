@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -390,20 +391,20 @@
         <div class="info-row">
             <div class="info-item">
                 <strong>شناسه سفارش:</strong>
-                <span>{{ order.order_number }}</span>
+                <span>{{ order.order_number|persian_number:0 }}</span>
             </div>
             <div class="info-item">
                 <strong>وزن کل سفارش:</strong>
-                <span>{{ order_weight|floatformat:2 }} کیلوگرم</span>
+                <span>{{ order_weight|persian_number:3 }} کیلوگرم</span>
             </div>
             <div class="info-item">
                 <strong>وزن تحویلی:</strong>
-                <span>{{ delivered_weight|floatformat:2 }} کیلوگرم</span>
+                <span>{{ delivered_weight|persian_number:3 }} کیلوگرم</span>
             </div>
             <div class="info-item">
                 <strong>مبلغ اختلاف کل:</strong>
                 <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
-                    {{ difference_amount|floatformat:0 }} ریال
+                    {{ difference_amount|persian_number:0 }} ریال
                 </span>
             </div>
         </div>
@@ -428,14 +429,14 @@
                         {% for discrepancy in product_discrepancies %}
                         <tr>
                             <td><strong>{{ discrepancy.product_name }}</strong></td>
-                            <td>{{ discrepancy.allocated_weight|floatformat:2 }}</td>
-                            <td>{{ discrepancy.delivered_weight|floatformat:2 }}</td>
+                            <td>{{ discrepancy.allocated_weight|persian_number:3 }}</td>
+                            <td>{{ discrepancy.delivered_weight|persian_number:3 }}</td>
                             <td class="{% if discrepancy.weight_difference > 0 %}positive{% elif discrepancy.weight_difference < 0 %}negative{% endif %}">
-                                {{ discrepancy.weight_difference|floatformat:2 }}
+                                {{ discrepancy.weight_difference|persian_number:3 }}
                             </td>
-                            <td>{{ discrepancy.unit_price|floatformat:0 }}</td>
+                            <td>{{ discrepancy.unit_price|persian_number:0 }}</td>
                             <td class="{% if discrepancy.difference_amount > 0 %}positive{% elif discrepancy.difference_amount < 0 %}negative{% endif %}">
-                                <strong>{{ discrepancy.difference_amount|floatformat:0 }}</strong>
+                                <strong>{{ discrepancy.difference_amount|persian_number:0 }}</strong>
                             </td>
                         </tr>
                         {% endfor %}
@@ -451,7 +452,7 @@
                 {% if settlement_completed %}
                     تسویه کامل شد
                 {% else %}
-                    {{ settled_amount|floatformat:0 }} از {{ difference_amount|floatformat:0 }} ریال
+                    {{ settled_amount|persian_number:0 }} از {{ difference_amount|persian_number:0 }} ریال
                 {% endif %}
             </div>
         </div>
@@ -459,12 +460,12 @@
         <div class="info-row">
             <div class="info-item">
                 <strong>مبلغ تسویه شده:</strong>
-                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|floatformat:0 }} ریال</span>
+                <span style="font-weight: 600; color: var(--dark-green);">{{ settled_amount|persian_number:0 }} ریال</span>
             </div>
             <div class="info-item">
                 <strong>مانده تسویه:</strong>
                 <span class="{% if remaining_amount > 0 %}negative{% else %}positive{% endif %}">
-                    {{ remaining_amount|floatformat:0 }} ریال
+                    {{ remaining_amount|persian_number:0 }} ریال
                 </span>
             </div>
         </div>
@@ -475,7 +476,7 @@
         </div>
         {% elif remaining_amount > 0 and not settlement_completed %}
         <div class="alert-warning">
-            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|floatformat:0 }} ریال باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
+            <strong>⚠️ توجه:</strong> هنوز {{ remaining_amount|persian_number:0 }} ریال باقیمانده است. لطفاً تراکنش‌ها را تا رسیدن به مبلغ کل اضافه کنید.
         </div>
         {% elif settlement_completed %}
         <div class="alert-success">
@@ -572,6 +573,7 @@
                 <div class="form-group">
                     <label for="{{ form.document_amount.id_for_label }}">{{ form.document_amount.label }} <span style="color: #dc3545;">*</span></label>
                     {{ form.document_amount }}
+                    <small class="persian-number-display" id="id_document_amount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {{ form.document_amount.errors }}
                 </div>
                 
@@ -686,7 +688,7 @@
                         <td>
                             <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
                         </td>
-                        <td><strong>{{ transaction.document_amount|floatformat:0 }}</strong> ریال</td>
+                        <td><strong>{{ transaction.document_amount|persian_number:0 }}</strong> ریال</td>
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
@@ -702,7 +704,7 @@
             </table>
         </div>
         <div class="total-amount">
-            جمع مبالغ تراکنش‌ها: {{ settled_amount|floatformat:0 }} ریال
+            جمع مبالغ تراکنش‌ها: {{ settled_amount|persian_number:0 }} ریال
         </div>
     </div>
 </div>
@@ -727,6 +729,32 @@
 document.addEventListener('DOMContentLoaded', function() {
     // راه‌اندازی Custom Jalali Datepicker با تاخیر
     setTimeout(initializeDatePickers, 200);
+
+    // نمایش عدد فارسی با ، زیر مبلغ سند (مشابه تامین)
+    (function () {
+        var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+        function formatNumberToPersian(num, decimalPlaces) {
+            if (num === null || num === undefined || isNaN(num)) return '';
+            var n = parseFloat(num);
+            var fixed = (decimalPlaces !== undefined && decimalPlaces > 0) ? n.toFixed(decimalPlaces) : String(Math.round(n));
+            var parts = fixed.split('.');
+            var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+            var result = intPart + (parts[1] ? '.' + parts[1] : '');
+            return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+        }
+        var input = document.getElementById('id_document_amount');
+        var display = document.getElementById('id_document_amount_persian');
+        if (input && display) {
+            function update() {
+                var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+                var num = parseFloat(raw);
+                display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, 0);
+            }
+            update();
+            input.addEventListener('input', update);
+            input.addEventListener('change', update);
+        }
+    })();
 
     // پیوست‌های سند: لیست فایل + افزودن/حذف + ارسال با FormData
     (function () {
