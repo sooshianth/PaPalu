@@ -441,6 +441,8 @@ def register_vehicle_entry_view(request, waybill_number):
             ).first()
             if mobile_phone:
                 driver_mobile = mobile_phone.number
+            elif getattr(transport.driver, 'phone_number', None):
+                driver_mobile = transport.driver.phone_number
         
         if transport.allocation:
             allocation_number = transport.allocation.allocation_number
@@ -458,6 +460,21 @@ def register_vehicle_entry_view(request, waybill_number):
                     plate_part4 = plate_middle_match.group(3)
             vehicle_type = truck_info.vehicle_type
             loading_type = truck_info.loading_type
+        # اگر TruckInfo نبود (حمل از جذب خودرو با پلاک ذخیره‌شده)، از Transport بگیر
+        if not plate_part1 and getattr(transport, 'plate_number', None):
+            plate_raw = (transport.plate_number or '').strip()
+            if plate_raw:
+                plate_parts = plate_raw.split('|')
+                if len(plate_parts) == 2:
+                    plate_part1 = plate_parts[0]
+                    plate_middle = plate_parts[1]
+                    plate_middle_match = re.match(r'^(\d{3})([ابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی])(\d{2})$', plate_middle)
+                    if plate_middle_match:
+                        plate_part2 = plate_middle_match.group(1)
+                        plate_part3 = plate_middle_match.group(2)
+                        plate_part4 = plate_middle_match.group(3)
+        if not vehicle_type and getattr(transport, 'vehicle_type', None):
+            vehicle_type = transport.vehicle_type
         
         context = {
             'transport': transport,
@@ -472,6 +489,8 @@ def register_vehicle_entry_view(request, waybill_number):
             'plate_part4': plate_part4,
             'vehicle_type': vehicle_type,
             'loading_type': loading_type,
+            'vehicle_type_choices': Transport.VEHICLE_TYPE_CHOICES,
+            'loading_type_choices': TruckInfo.LOADING_TYPE_CHOICES,
         }
         return render(request, 'distribution/vehicle_entry_register.html', context)
     
@@ -500,6 +519,8 @@ def register_vehicle_entry_view(request, waybill_number):
             ).first()
             if mobile_phone:
                 driver_mobile = mobile_phone.number
+            elif getattr(transport.driver, 'phone_number', None):
+                driver_mobile = transport.driver.phone_number
         
         truck_info = transport.truck_infos.first()
         if truck_info:
@@ -556,7 +577,9 @@ def register_vehicle_entry_view(request, waybill_number):
         if accessible_person_fields.get('description'):
             response_data['driver_description'] = driver_description
         
-        # شماره همراه را همیشه نشان بده (چون مربوط به PhoneNumber است، نه Person)
+        # شماره همراه: از PhoneNumber یا Person.phone_number (fallback)
+        if not driver_mobile and transport.driver and getattr(transport.driver, 'phone_number', None):
+            driver_mobile = transport.driver.phone_number
         response_data['driver_mobile'] = driver_mobile
         
         return JsonResponse(response_data)
@@ -612,8 +635,9 @@ def get_driver_info_by_national_id_view(request):
         if accessible_person_fields.get('description'):
             response_data['driver_description'] = driver.description or ''
         
-        # شماره همراه را همیشه نشان بده
-        response_data['driver_mobile'] = mobile_phone.number if mobile_phone else ''
+        # شماره همراه: از PhoneNumber یا Person.phone_number (fallback)
+        driver_mobile = mobile_phone.number if mobile_phone else (driver.phone_number or '')
+        response_data['driver_mobile'] = driver_mobile
         
         # جستجوی کارت ملی در پیوست‌های شخص
         # بررسی attachment های Person که ممکن است کارت ملی باشد
