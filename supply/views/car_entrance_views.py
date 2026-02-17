@@ -342,6 +342,8 @@ def car_entrance_list_view(request):
         )
         # حمل‌های ارجاع‌شده به مدیر را از لیست اصلاً نشان نده (همه کاربران؛ مدیر فقط از صفحه ارجاعات وارد می‌شود)
         transports = transports.filter(carentrance_referred_to_manager=False)
+        # فقط حمل‌های تامین (خرید) - حمل‌های توزیع (فروش) را نشان نده
+        transports = transports.exclude(allocation__order__order_type='sale')
         
         inbound_count = transports.count()
         bug_logger.info(f"تعداد حمل‌های ورودی در انتظار ورود خودرو: {inbound_count}")
@@ -352,8 +354,8 @@ def car_entrance_list_view(request):
             bug_logger.warning(f"هیچ حمل ورودی پیدا نشد! نمایش همه حمل‌های در انتظار ورود برای دیباگ")
             sample_transports = list(all_awaiting.values_list('transport_number', 'direction', 'transport_type', 'status')[:5])
             bug_logger.warning(f"نمونه حمل‌ها (transport_number, direction, transport_type, status): {sample_transports}")
-            # نمایش همه حمل‌های در انتظار ورود (حتی اگر direction/transport_type تنظیم نشده باشند)، بدون ارجاع‌شده‌ها
-            transports = all_awaiting.filter(carentrance_referred_to_manager=False)
+            # نمایش همه حمل‌های در انتظار ورود (حتی اگر direction/transport_type تنظیم نشده باشند)، بدون ارجاع‌شده‌ها و بدون توزیع
+            transports = all_awaiting.filter(carentrance_referred_to_manager=False).exclude(allocation__order__order_type='sale')
         
         transports = transports.select_related('allocation__order', 'allocation__order__customer', 'driver').order_by('-created_at')
         final_count = transports.count()
