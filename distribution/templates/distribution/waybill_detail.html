@@ -240,28 +240,14 @@
     .file-preview a:hover {
         text-decoration: underline;
     }
-    
-    /* Date picker styles */
-    .p-datepicker-trigger {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        cursor: pointer;
-        font-size: 1.2rem;
-        z-index: 10;
-        user-select: none;
-    }
 
-    .p-datepicker-trigger:hover {
-        opacity: 0.7;
-    }
-
-    #id_waybill_date {
-        position: relative;
-        padding-left: 40px;
+    /* تقویم شمسی (جلوگیری از برش) */
+    .form-group .jdp-container {
+        width: 100%;
     }
 </style>
+<!-- تقویم شمسی (همان کامپوننت تامین) -->
+{% include "components/jalali_datepicker.html" %}
 {% endblock %}
 
 {% block content %}
@@ -313,7 +299,7 @@
         {% if plate_number %}
         <div class="readonly-info-item">
             <span class="readonly-info-label">پلاک خودرو:</span>
-            <span class="readonly-info-value">{{ plate_number }}</span>
+            <span class="readonly-info-value">{{ plate_number|iran_plate }}</span>
         </div>
         {% endif %}
         {% if vehicle_type %}
@@ -377,7 +363,7 @@
             
             <div class="form-group">
                 <label for="{{ form.waybill_date.id_for_label }}" class="required">تاریخ بارنامه</label>
-                <div style="position: relative;">
+                <div class="waybill-date-wrapper" style="position: relative;">
                     {{ form.waybill_date }}
                 </div>
                 {% if form.waybill_date.errors %}
@@ -551,13 +537,6 @@
     </form>
 </div>
 
-<!-- jQuery (برای استفاده از تقویم شمسی) -->
-<script src="{% static 'vendor/jquery-3.6.0/jquery.min.js' %}"></script>
-<!-- Persian Date Picker Library -->
-<link rel="stylesheet" href="{% static 'vendor/persian-datepicker-1.2.0/css/persian-datepicker.min.css' %}">
-<script src="{% static 'vendor/persian-date-1.1.0/persian-date.min.js' %}"></script>
-<script src="{% static 'vendor/persian-datepicker-1.2.0/js/persian-datepicker.min.js' %}"></script>
-
 <script>
     // پیش‌نمایش فایل بارنامه و مدیریت باز و بسته شدن بخش‌ها
     document.addEventListener('DOMContentLoaded', function() {
@@ -568,6 +547,39 @@
                 section.classList.toggle('collapsed');
             });
         });
+
+        // راه‌اندازی تقویم شمسی برای تاریخ بارنامه (همان کامپوننت تامین)
+        var waybillDateInput = document.getElementById('id_waybill_date');
+        if (waybillDateInput && typeof JalaliDatepicker !== 'undefined') {
+            var wrapper = waybillDateInput.closest('.waybill-date-wrapper');
+            if (wrapper) {
+                var initialVal = (waybillDateInput.value || '').trim();
+                if (!initialVal) {
+                    var today = new Date();
+                    initialVal = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                    waybillDateInput.value = initialVal;
+                }
+                var hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'waybill_date';
+                hiddenInput.id = 'id_waybill_date_hidden';
+                hiddenInput.value = initialVal;
+                waybillDateInput.removeAttribute('name');
+                wrapper.appendChild(hiddenInput);
+                JalaliDatepicker.init('#id_waybill_date', { time: false });
+                setTimeout(function() {
+                    var gdate = waybillDateInput.getAttribute('data-gdate');
+                    if (gdate) {
+                        var datePart = gdate.split(' ')[0];
+                        if (datePart) hiddenInput.value = datePart;
+                    }
+                }, 300);
+                waybillDateInput.addEventListener('jdp:change', function(e) {
+                    var g = (e.detail && e.detail.gregorian) ? e.detail.gregorian : '';
+                    hiddenInput.value = g.split(' ')[0] || hiddenInput.value;
+                });
+            }
+        }
         
         const fileInput = document.getElementById('{{ form.waybill_file.id_for_label }}');
         const filePreview = document.getElementById('filePreview');
@@ -602,109 +614,6 @@
                 }
             });
         }
-    });
-    
-    // راه‌اندازی تقویم شمسی برای waybill_date
-    $(document).ready(function () {
-        // تابع برای راه‌اندازی date picker برای یک فیلد
-        function setupDatePicker(inputId, hiddenInputName) {
-            var dateInput = $('#' + inputId);
-            
-            if (dateInput.length) {
-                // تبدیل type='date' به text برای استفاده از تقویم شمسی
-                dateInput.attr('type', 'text');
-                dateInput.attr('readonly', 'readonly');
-                dateInput.css('cursor', 'pointer');
-                
-                // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
-                var initialValue = dateInput.val();
-                var persianDateValue = '';
-                
-                // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
-                if (initialValue) {
-                    var parts = initialValue.split('-');
-                    if (parts.length === 3) {
-                        var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-                        var pDate = persianDate.fromGregorian(gregorianDate);
-                        persianDateValue = pDate.format('YYYY/MM/DD');
-                        dateInput.val(persianDateValue);
-                    }
-                }
-                
-                // غیرفعال کردن name اصلی input برای جلوگیری از ارسال تاریخ شمسی
-                var originalName = dateInput.attr('name');
-                dateInput.removeAttr('name');
-                
-                // ایجاد یک input مخفی برای ارسال تاریخ میلادی به سرور
-                var hiddenInput = $('<input>', {
-                    type: 'hidden',
-                    id: inputId + '_hidden',
-                    name: hiddenInputName
-                });
-                if (initialValue) {
-                    hiddenInput.val(initialValue);
-                }
-                dateInput.after(hiddenInput);
-                
-                // راه‌اندازی تقویم شمسی
-                dateInput.pDatepicker({
-                    observer: true,
-                    format: 'YYYY/MM/DD',
-                    altField: '#' + inputId + '_hidden',
-                    altFormat: 'YYYY-MM-DD',
-                    calendarType: 'persian',
-                    initialValue: persianDateValue || false,
-                    timePicker: {
-                        enabled: false
-                    },
-                    onSelect: function() {
-                        // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
-                        var selectedDate = dateInput.val();
-                        if (selectedDate) {
-                            try {
-                                var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
-                                var gregorianDate = persianDateObj.toCalendar('gregorian');
-                                var formattedDate = gregorianDate.year + '-' + 
-                                                   String(gregorianDate.month).padStart(2, '0') + '-' + 
-                                                   String(gregorianDate.day).padStart(2, '0');
-                                
-                                hiddenInput.val(formattedDate);
-                            } catch (e) {
-                                console.error('خطا در تبدیل تاریخ:', e);
-                            }
-                        }
-                    }
-                });
-                
-                // اضافه کردن آیکون تقویم
-                if (!dateInput.parent().find('.p-datepicker-trigger').length) {
-                    var iconSpan = $('<span>', {
-                        class: 'p-datepicker-trigger',
-                        html: '📅',
-                        css: {
-                            'position': 'absolute',
-                            'right': '10px',
-                            'top': '50%',
-                            'transform': 'translateY(-50%)',
-                            'cursor': 'pointer',
-                            'font-size': '1.2rem',
-                            'z-index': '10',
-                            'pointer-events': 'none'
-                        }
-                    });
-                    dateInput.parent().css('position', 'relative');
-                    dateInput.parent().append(iconSpan);
-                }
-                
-                // باز کردن تقویم با کلیک روی input
-                dateInput.on('click', function() {
-                    dateInput.pDatepicker('show');
-                });
-            }
-        }
-        
-        // راه‌اندازی date picker برای تاریخ بارنامه
-        setupDatePicker('id_waybill_date', 'waybill_date');
     });
 </script>
 {% endblock %}
