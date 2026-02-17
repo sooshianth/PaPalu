@@ -45,7 +45,8 @@ def persian_number(value, decimal_places=0):
         formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
     else:
         formatted = f"{d.quantize(Decimal('1')):,.0f}"
-    return convert_to_persian_numbers(formatted)
+    # جداکننده هزارگان به «،» و ارقام به فارسی
+    return convert_to_persian_numbers(formatted.replace(',', '،'))
 
 
 @register.filter(name='rials_to_tomans')
@@ -57,7 +58,7 @@ def rials_to_tomans(value):
     if d is None:
         return str(value)
     tomans = (d / Decimal('10')).quantize(Decimal('1'))
-    return convert_to_persian_numbers(f"{tomans:,.0f}")
+    return convert_to_persian_numbers(f"{tomans:,.0f}".replace(',', '،'))
 
 
 @register.filter(name='number_to_words_persian')

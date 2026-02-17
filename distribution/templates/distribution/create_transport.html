@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 {% load render_table from django_tables2 %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -456,9 +457,9 @@
           <div class="info-box" style="margin-top: 15px;">
             <div class="info-box-title">وزن تخصیص</div>
             <div class="info-box-content">
-              <div>وزن کل تخصیص: <span id="total-allocation-weight">{{ weight_info.total_allocation_weight|floatformat:0 }}</span> کیلوگرم</div>
-              <div>وزن حمل‌های موجود: <span id="total-transports-weight">{{ weight_info.total_transports_weight|floatformat:0 }}</span> کیلوگرم</div>
-              <div><strong>وزن باقیمانده: <span id="remaining-weight">{{ weight_info.remaining_weight|floatformat:0 }}</span> کیلوگرم</strong></div>
+              <div>وزن کل تخصیص: <span id="total-allocation-weight">{{ weight_info.total_allocation_weight|persian_number:3 }}</span> کیلوگرم</div>
+              <div>وزن حمل‌های موجود: <span id="total-transports-weight">{{ weight_info.total_transports_weight|persian_number:3 }}</span> کیلوگرم</div>
+              <div><strong>وزن باقیمانده: <span id="remaining-weight">{{ weight_info.remaining_weight|persian_number:3 }}</span> کیلوگرم</strong></div>
             </div>
           </div>
           {% endif %}
@@ -511,22 +512,22 @@
                 <div class="material-stats">
                   <div class="material-stat">
                     <span class="material-stat-label">کل تخصیص</span>
-                    <span class="material-stat-value">{{ product.total_kg|floatformat:0 }} کیلوگرم</span>
+                    <span class="material-stat-value">{{ product.total_kg|persian_number:3 }} کیلوگرم</span>
                   </div>
                   <div class="material-stat">
                     <span class="material-stat-label">تخصیص‌یافته در حمل‌ها</span>
-                    <span class="material-stat-value allocated">{{ product.transported_kg|floatformat:0 }} کیلوگرم</span>
+                    <span class="material-stat-value allocated">{{ product.transported_kg|persian_number:3 }} کیلوگرم</span>
                   </div>
                   <div class="material-stat">
                     <span class="material-stat-label">باقیمانده</span>
-                    <span class="material-stat-value remaining">{{ product.remaining_kg|floatformat:0 }} کیلوگرم</span>
+                    <span class="material-stat-value remaining">{{ product.remaining_kg|persian_number:3 }} کیلوگرم</span>
                   </div>
                 </div>
               </div>
               <div class="material-input-group">
                 <label class="form-label required-field">وزن در این حمل (کیلوگرم) <span style="color:#dc3545;">*</span>:</label>
-                <input type="number" name="product_weight_{{ product.id }}" id="product_weight_{{ product.id }}" class="form-control" step="0.001" min="0" max="{{ product.remaining_kg }}" placeholder="حداکثر {{ product.remaining_kg|floatformat:0 }}">
-                <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">حداکثر: {{ product.remaining_kg|floatformat:0 }} کیلوگرم</small>
+                <input type="number" name="product_weight_{{ product.id }}" id="product_weight_{{ product.id }}" class="form-control" step="0.001" min="0" max="{{ product.remaining_kg }}" placeholder="حداکثر {{ product.remaining_kg|persian_number:3 }}">
+                <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">حداکثر: {{ product.remaining_kg|persian_number:3 }} کیلوگرم</small>
               </div>
             </div>
             {% endfor %}

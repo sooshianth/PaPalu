@@ -1639,28 +1639,26 @@
     }
 
     // تابع برای فرمت کردن عدد به دو رقم اعشار (فقط برای نمایش)
-    // این تابع فقط برای نمایش استفاده می‌شود و مقدار واقعی را تغییر نمی‌دهد
     function formatDecimal(value) {
-      if (value === null || value === undefined || value === '') {
-        return '0';
-      }
-      // تبدیل به string و سپس parseFloat برای اطمینان از دقت
-      const strValue = String(value).trim();
-      if (!strValue || strValue === '') {
-        return '0';
-      }
-      // استفاده از parseFloat برای تبدیل
-      const num = parseFloat(strValue);
-      if (isNaN(num)) {
-        return '0';
-      }
-      // اگر عدد صحیح است، بدون اعشار نمایش بده
-      if (num % 1 === 0) {
-        return num.toString();
-      }
-      // برای اعداد اعشاری، تا دو رقم اعشار نمایش بده
-      // استفاده از toFixed(2) برای نمایش دقیق
+      if (value === null || value === undefined || value === '') return '0';
+      const num = parseFloat(String(value).trim());
+      if (isNaN(num)) return '0';
+      if (num % 1 === 0) return num.toString();
       return num.toFixed(2);
+    }
+
+    // نمایش عدد با ارقام فارسی و جداکننده هزارگان «،» (برای نمایش وزن/مقدار)
+    var persianDigitsMaterials = '۰۱۲۳۴۵۶۷۸۹';
+    function formatDecimalToPersian(value, decimalPlaces) {
+      if (value === null || value === undefined || value === '') return '۰';
+      var n = parseFloat(String(value).trim());
+      if (isNaN(n)) return '۰';
+      var dp = (decimalPlaces !== undefined && decimalPlaces >= 0) ? decimalPlaces : 2;
+      var fixed = (n % 1 === 0 && dp === 0) ? String(Math.round(n)) : n.toFixed(dp);
+      var parts = fixed.split('.');
+      var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+      var result = intPart + (parts[1] ? '.' + parts[1] : '');
+      return result.replace(/[0-9]/g, function (d) { return persianDigitsMaterials[parseInt(d, 10)]; });
     }
 
     // تابع برای نمایش اطلاعات سفارش
@@ -1695,7 +1693,7 @@
         materialsList.innerHTML = '';
         materials.forEach(mat => {
           const li = document.createElement('li');
-          li.innerHTML = `<strong>${mat.raw_material_name}:</strong> کل: ${formatDecimal(mat.total_quantity)} ${mat.weight_unit_display} | تخصیص یافته: ${formatDecimal(mat.allocated_quantity)} ${mat.weight_unit_display} | باقیمانده: ${formatDecimal(mat.remaining_quantity)} ${mat.weight_unit_display}`;
+          li.innerHTML = `<strong>${mat.raw_material_name}:</strong> کل: ${formatDecimalToPersian(mat.total_quantity, 2)} ${mat.weight_unit_display} | تخصیص یافته: ${formatDecimalToPersian(mat.allocated_quantity, 2)} ${mat.weight_unit_display} | باقیمانده: ${formatDecimalToPersian(mat.remaining_quantity, 2)} ${mat.weight_unit_display}`;
           materialsList.appendChild(li);
         });
       }
@@ -1783,15 +1781,15 @@
         <div class="material-stats">
           <div class="material-stat">
             <span class="material-stat-label">کل سفارش</span>
-            <span class="material-stat-value">${formatDecimal(material.total_quantity)} ${material.weight_unit_display}</span>
+            <span class="material-stat-value">${formatDecimalToPersian(material.total_quantity, 2)} ${material.weight_unit_display}</span>
           </div>
           <div class="material-stat">
             <span class="material-stat-label">تخصیص یافته</span>
-            <span class="material-stat-value allocated">${formatDecimal(material.allocated_quantity)} ${material.weight_unit_display}</span>
+            <span class="material-stat-value allocated">${formatDecimalToPersian(material.allocated_quantity, 2)} ${material.weight_unit_display}</span>
           </div>
           <div class="material-stat">
             <span class="material-stat-label">باقیمانده</span>
-            <span class="material-stat-value remaining">${formatDecimal(material.remaining_quantity)} ${material.weight_unit_display}</span>
+            <span class="material-stat-value remaining">${formatDecimalToPersian(material.remaining_quantity, 2)} ${material.weight_unit_display}</span>
           </div>
         </div>
       </div>
@@ -1807,12 +1805,12 @@
                    pattern="[0-9]+(\.[0-9]{1,2})?"
                    min="0" 
                    max="${material.remaining_quantity}"
-                   placeholder="مقدار (حداکثر ${formatDecimal(material.remaining_quantity)})"
+                   placeholder="مقدار (حداکثر ${formatDecimalToPersian(material.remaining_quantity, 2)})"
                    data-max="${material.remaining_quantity}"
                    data-unit="${material.weight_unit_display}"
                    required>
             <small style="font-size:0.85rem;color:#666;margin-top:5px;display:block">
-              واحد: ${material.weight_unit_display} - حداکثر: ${formatDecimal(material.remaining_quantity)} ${material.weight_unit_display}
+              واحد: ${material.weight_unit_display} - حداکثر: ${formatDecimalToPersian(material.remaining_quantity, 2)} ${material.weight_unit_display}
             </small>
           </div>
           <div class="col-md-6 mb-3">
@@ -1911,7 +1909,7 @@
             this.setCustomValidity('مقدار باید بیشتر از صفر باشد');
             this.style.borderColor = '#dc3545';
           } else if (value > max) {
-            this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${formatDecimal(max)} باشد`);
+            this.setCustomValidity(`مقدار نمی‌تواند بیشتر از ${formatDecimalToPersian(max, 2)} باشد`);
             this.style.borderColor = '#dc3545';
           } else {
             this.setCustomValidity('');
@@ -2753,7 +2751,7 @@
               hasError = true;
               quantityInput.style.borderColor = '#dc3545';
               if (!errorMessage) {
-                errorMessage = `مقدار تخصیص برای "${materialName}" نمی‌تواند بیشتر از ${formatDecimal(max)} باشد.`;
+                errorMessage = `مقدار تخصیص برای "${materialName}" نمی‌تواند بیشتر از ${formatDecimalToPersian(max, 2)} باشد.`;
               }
             } else {
               quantityInput.style.borderColor = '';
