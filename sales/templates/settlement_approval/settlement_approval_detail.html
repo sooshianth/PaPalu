@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load number_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -333,22 +334,22 @@
         <div class="info-row">
             <div class="info-item">
                 <strong>وزن کل سفارش:</strong>
-                <span>{{ order_weight|floatformat:2 }} کیلوگرم</span>
+                <span>{{ order_weight|persian_number:3 }} کیلوگرم</span>
             </div>
             <div class="info-item">
                 <strong>وزن تحویلی:</strong>
-                <span>{{ delivered_weight|floatformat:2 }} کیلوگرم</span>
+                <span>{{ delivered_weight|persian_number:3 }} کیلوگرم</span>
             </div>
             <div class="info-item">
                 <strong>اختلاف وزن:</strong>
                 <span class="{% if weight_difference > 0 %}positive{% elif weight_difference < 0 %}negative{% endif %}">
-                    {{ weight_difference|floatformat:2 }} کیلوگرم
+                    {{ weight_difference|persian_number:3 }} کیلوگرم
                 </span>
             </div>
             <div class="info-item">
                 <strong>مبلغ اختلاف:</strong>
                 <span class="{% if difference_amount > 0 %}positive{% elif difference_amount < 0 %}negative{% endif %}">
-                    {{ difference_amount|floatformat:0 }} ریال
+                    {{ difference_amount|persian_number }} ریال
                 </span>
             </div>
         </div>
@@ -429,7 +430,7 @@
                         <td>
                             <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
                         </td>
-                        <td><strong>{{ transaction.document_amount|floatformat:0 }}</strong> ریال</td>
+                        <td><strong>{{ transaction.document_amount|persian_number }}</strong> ریال</td>
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
@@ -445,7 +446,7 @@
             </table>
         </div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--gray-200);">
-            <strong>جمع مبالغ: {{ settled_weight_discrepancy|floatformat:0 }} ریال</strong>
+            <strong>جمع مبالغ: {{ settled_weight_discrepancy|persian_number }} ریال</strong>
         </div>
     </div>
 </div>
@@ -477,7 +478,7 @@
                         <td>
                             <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
                         </td>
-                        <td><strong>{{ transaction.document_amount|floatformat:0 }}</strong> ریال</td>
+                        <td><strong>{{ transaction.document_amount|persian_number }}</strong> ریال</td>
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
@@ -493,9 +494,9 @@
             </table>
         </div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--gray-200);">
-            <strong>جمع مبالغ: {{ settled_sale|floatformat:0 }} ریال</strong>
+            <strong>جمع مبالغ: {{ settled_sale|persian_number }} ریال</strong>
             {% if sale_settlement and sale_settlement.original_document_amount %}
-            <br><strong>مبلغ کل: {{ sale_settlement.original_document_amount|floatformat:0 }} ریال</strong>
+            <br><strong>مبلغ کل: {{ sale_settlement.original_document_amount|persian_number }} ریال</strong>
             {% endif %}
         </div>
     </div>
@@ -528,7 +529,7 @@
                         <td>
                             <span class="badge badge-info">{{ transaction.get_payment_type_display }}</span>
                         </td>
-                        <td><strong>{{ transaction.document_amount|floatformat:0 }}</strong> ریال</td>
+                        <td><strong>{{ transaction.document_amount|persian_number }}</strong> ریال</td>
                         <td>{{ transaction.due_date|date:"Y/m/d"|default:"-" }}</td>
                         <td>{{ transaction.tracking_number|default:"-" }}</td>
                         <td>
@@ -544,7 +545,7 @@
             </table>
         </div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid var(--gray-200);">
-            <strong>جمع مبالغ: {{ freight_settled_amount|floatformat:0 }} ریال</strong>
+            <strong>جمع مبالغ: {{ freight_settled_amount|persian_number }} ریال</strong>
         </div>
     </div>
 </div>
@@ -639,7 +640,7 @@
                                             <td><span class="code-badge">{{ transport.waybill_number }}</span></td>
                                             <td>{{ transport.driver.name|default:"-" }}</td>
                                             <td>{{ transport.get_status_display|default:"-" }}</td>
-                                            <td>{{ transport.net_weight|floatformat:3|default:"-" }}</td>
+                                            <td>{{ transport.net_weight|persian_number:3 }}</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>
