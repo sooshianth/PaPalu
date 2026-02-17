@@ -256,6 +256,22 @@
   .plate-input .seg-2 { width: 60px; }
   .plate-input .dash { opacity: 0.5; font-size: 1rem; font-weight: bold; }
   .plate-helper { font-size: 0.75rem; color: #666; margin-top: 4px; }
+  /* نمایش‌دهنده پلاک (عین پلاک ایران) */
+  .plate-preview-box .iran-plate {
+    display: inline-flex; align-items: stretch; white-space: nowrap;
+    border: 1px solid #222; border-radius: 4px; overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+    font-weight: 700; font-size: 0.85rem; line-height: 1.1;
+    font-family: Vazirmatn, Tahoma, Segoe UI, Arial, sans-serif;
+    font-variant-numeric: tabular-nums; direction: rtl;
+  }
+  .plate-preview-box .iran-plate .part-region {
+    padding: 4px 6px; background: #dee2e6; color: #000;
+    border-left: 1px solid #222; min-width: 1.6em; text-align: center;
+  }
+  .plate-preview-box .iran-plate .part-main {
+    padding: 4px 6px; background: #f1f3f5; color: #000; letter-spacing: 0.5px;
+  }
   .driver-autocomplete-wrapper { position: relative; }
   .driver-autocomplete-input { width: 100%; padding: 10px 15px; font-size: 1rem; border: 1px solid var(--gray-300); border-radius: 8px; background: #fff; }
   .suggestions-container {
@@ -417,7 +433,7 @@
       {% endfor %}
     {% endif %}
 
-    <form method="post" action="{% url 'distribution:create_transport' %}?allocation={{ allocation.allocation_number }}" enctype="multipart/form-data">
+    <form method="post" action="{% url 'distribution:create_transport' %}?allocation={{ allocation.allocation_number }}" enctype="multipart/form-data" {% if allocation.shipping_announcement_method == 'customer_vehicle' %}data-plate-optional="true"{% endif %}>
       {% csrf_token %}
       <input type="hidden" name="allocation_number" value="{{ allocation.allocation_number }}">
 
@@ -576,6 +592,25 @@
                 <textarea name="driver_description" id="driver_description" class="form-control" rows="2"></textarea>
               </div>
             </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">پلاک</label>
+                <div class="plate-input">
+                  <div class="plate-seg">
+                    <input type="text" id="plate-last" class="seg-2" maxlength="2" placeholder="12" inputmode="numeric" pattern="\d*">
+                    <span class="dash">-</span>
+                    <input type="text" id="plate-letter" class="seg-letter" maxlength="1" placeholder="ب" dir="rtl">
+                    <span class="dash">-</span>
+                    <input type="text" id="plate-middle" class="seg-3" maxlength="3" placeholder="345" inputmode="numeric" pattern="\d*">
+                    <span class="dash">-</span>
+                    <input type="text" id="plate-iran" class="seg-iran" maxlength="2" placeholder="11" inputmode="numeric" pattern="\d*">
+                  </div>
+                </div>
+                <input type="hidden" id="id_plate_number" name="plate_number">
+                <small class="plate-helper">الگو: 11-345-ب-12</small>
+                <div id="plate-preview-display" class="plate-preview-box" style="margin-top:8px;min-height:28px;"></div>
+              </div>
+            </div>
           {% else %}
             <div class="row">
               <div class="col-md-4 mb-3">
@@ -593,6 +628,7 @@
                 </div>
                 <input type="hidden" id="id_plate_number" name="plate_number">
                 <small class="plate-helper">الگو: 11-345-ب-12</small>
+                <div id="plate-preview-display" class="plate-preview-box" style="margin-top:8px;min-height:28px;"></div>
               </div>
               <div class="col-md-8 mb-3">
                 <label class="form-label">راننده</label>
@@ -726,6 +762,69 @@
     header.addEventListener('click', function() { this.closest('.form-section').classList.toggle('collapsed'); });
   });
 
+  (function() {
+    var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+    function toPersianNum(str) {
+      if (!str) return '';
+      return String(str).replace(/\d/g, function(d) { return persianDigits[parseInt(d,10)]; });
+    }
+    function updatePlatePreview() {
+      var box = document.getElementById('plate-preview-display');
+      if (!box) return;
+      var iran = (document.getElementById('plate-iran') && document.getElementById('plate-iran').value) || '';
+      var middle = (document.getElementById('plate-middle') && document.getElementById('plate-middle').value) || '';
+      var letter = (document.getElementById('plate-letter') && document.getElementById('plate-letter').value) || '';
+      var last = (document.getElementById('plate-last') && document.getElementById('plate-last').value) || '';
+      iran = iran.replace(/\D/g, ''); middle = middle.replace(/\D/g, ''); last = last.replace(/\D/g, '');
+      if (!iran && !middle && !letter && !last) { box.innerHTML = ''; return; }
+      var p1 = toPersianNum(iran);
+      var p3 = toPersianNum(middle);
+      var pIran = toPersianNum(last);
+      box.innerHTML = '<span class="iran-plate">' +
+        '<span class="part-region">' + (p1 || '') + '</span>' +
+        '<span class="part-main">' + (p3 || '') + ' ' + (letter || '') + ' ' + (pIran || '') + '</span>' +
+        '</span>';
+    }
+    function onlyDigits(el) { if (el && el.value.length > 0) el.value = el.value.replace(/\D/g, ''); }
+    function onlyLetters(el) { if (el && el.value.length > 1) el.value = el.value.charAt(0); }
+    document.addEventListener('input', function(e) {
+      if (['plate-iran','plate-middle','plate-last'].indexOf(e.target.id) !== -1) onlyDigits(e.target);
+      if (e.target.id === 'plate-letter') onlyLetters(e.target);
+      if (['plate-iran','plate-middle','plate-letter','plate-last'].indexOf(e.target.id) !== -1) updatePlatePreview();
+    });
+    var form = document.querySelector('form[method="post"]');
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        var plateIran = document.getElementById('plate-iran');
+        var plateMiddle = document.getElementById('plate-middle');
+        var plateLetter = document.getElementById('plate-letter');
+        var plateLast = document.getElementById('plate-last');
+        var hidden = document.getElementById('id_plate_number');
+        if (!plateIran || !plateMiddle || !plateLetter || !plateLast || !hidden) return;
+        var iran = (plateIran.value || '').replace(/\D/g, '').trim();
+        var middle = (plateMiddle.value || '').replace(/\D/g, '').trim();
+        var letter = (plateLetter.value || '').trim();
+        var last = (plateLast.value || '').replace(/\D/g, '').trim();
+        var hasAny = iran || middle || letter || last;
+        var optional = form.getAttribute('data-plate-optional') === 'true';
+        if (hasAny) {
+          if (iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2) {
+            hidden.value = iran + '|' + middle + letter + last;
+          } else if (!optional) {
+            alert('لطفاً شماره پلاک را کامل وارد کنید. فرمت: 11 - 345 - ب - 12');
+            e.preventDefault();
+            return false;
+          } else {
+            hidden.value = '';
+          }
+        } else {
+          hidden.value = '';
+        }
+      }, true);
+    }
+    updatePlatePreview();
+  })();
+
   {% if allocation.shipping_announcement_method != 'customer_vehicle' %}
   (function() {
     var driverInput = document.getElementById('driver-autocomplete');
@@ -835,42 +934,6 @@
   document.getElementById('addDriverModalDist') && document.getElementById('addDriverModalDist').addEventListener('click', function(e) {
     if (e.target === this) closeAddDriverModalDist();
   });
-
-  (function() {
-    function onlyDigits(el) { if (el && el.value.length > 0) el.value = el.value.replace(/\D/g, ''); }
-    function onlyLetters(el) { if (el && el.value.length > 1) el.value = el.value.charAt(0); }
-    document.addEventListener('input', function(e) {
-      if (['plate-iran','plate-middle','plate-last'].indexOf(e.target.id) !== -1) onlyDigits(e.target);
-      if (e.target.id === 'plate-letter') onlyLetters(e.target);
-    });
-    var form = document.querySelector('form[method="post"]');
-    if (form) {
-      form.addEventListener('submit', function(e) {
-        var plateIran = document.getElementById('plate-iran');
-        var plateMiddle = document.getElementById('plate-middle');
-        var plateLetter = document.getElementById('plate-letter');
-        var plateLast = document.getElementById('plate-last');
-        var hidden = document.getElementById('id_plate_number');
-        if (!plateIran || !plateMiddle || !plateLetter || !plateLast || !hidden) return;
-        var iran = (plateIran.value || '').replace(/\D/g, '').trim();
-        var middle = (plateMiddle.value || '').replace(/\D/g, '').trim();
-        var letter = (plateLetter.value || '').trim();
-        var last = (plateLast.value || '').replace(/\D/g, '').trim();
-        var hasAny = iran || middle || letter || last;
-        if (hasAny) {
-          if (iran.length === 2 && middle.length === 3 && letter.length === 1 && last.length === 2) {
-            hidden.value = iran + '|' + middle + letter + last;
-          } else {
-            alert('لطفاً شماره پلاک را کامل وارد کنید. فرمت: 11 - 345 - ب - 12');
-            e.preventDefault();
-            return false;
-          }
-        } else {
-          hidden.value = '';
-        }
-      }, true);
-    }
-  })();
   {% endif %}
 </script>
 {% else %}
