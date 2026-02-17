@@ -1,0 +1,506 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ثبت ورود خودرو - {{ transport.waybill_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 3px solid var(--primary-green);
+    }
+    
+    .page-header h2 {
+        color: var(--gray-800);
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .form-section {
+        background: var(--gray-100);
+        padding: 0;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .form-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 25px;
+        cursor: pointer;
+        user-select: none;
+        background: var(--gray-100);
+        transition: background-color 0.3s ease;
+    }
+    
+    .form-section-header:hover {
+        background: var(--gray-200);
+    }
+    
+    .form-section h5 {
+        color: var(--primary-green);
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+    
+    .form-section-toggle-icon {
+        width: 20px;
+        height: 20px;
+        transition: transform 0.3s ease;
+        color: var(--primary-green);
+        flex-shrink: 0;
+    }
+    
+    .form-section.collapsed .form-section-toggle-icon {
+        transform: rotate(-90deg);
+    }
+    
+    .form-section-content {
+        padding: 0 25px 25px 25px;
+        max-height: 5000px;
+        overflow: visible;
+        transition: max-height 0.4s ease, padding 0.3s ease;
+    }
+    
+    .form-section.collapsed .form-section-content {
+        max-height: 0;
+        padding: 0 25px;
+        overflow: hidden;
+    }
+    
+    .form-label {
+        color: var(--gray-800);
+        font-weight: 500;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    .required-field::after {
+        content: '*';
+        color: #dc3545;
+        margin-right: 5px;
+    }
+    
+    .form-control {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s;
+        width: 100%;
+    }
+    
+    .form-control:focus {
+        border-color: var(--primary-green);
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+        outline: none;
+    }
+    
+    .form-control[readonly] {
+        background-color: #f5f5f5;
+        cursor: not-allowed;
+    }
+    
+    .form-actions {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 30px;
+        border-top: 1px solid var(--gray-300);
+    }
+    
+    .mb-3 { margin-bottom: 1rem; }
+    
+    .row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-right: -15px;
+        margin-left: -15px;
+    }
+    
+    .col-md-6 { flex: 0 0 50%; max-width: 50%; padding-right: 15px; padding-left: 15px; }
+    .col-md-12 { flex: 0 0 100%; max-width: 100%; padding-right: 15px; padding-left: 15px; }
+    
+    .info-box {
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .info-box p { margin: 0; color: var(--gray-600); font-size: 0.95rem; line-height: 1.6; }
+    
+    .alert { border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; border: none; }
+    .alert-success { background-color: var(--light-green); color: var(--dark-green); }
+    .alert-info { background-color: #d1ecf1; color: #0c5460; }
+    .alert-danger { background-color: #f8d7da; color: #721c24; }
+    
+    .btn { padding: 10px 20px; border-radius: 8px; text-decoration: none; display: inline-block; cursor: pointer; border: none; font-size: 1rem; }
+    .btn-primary { background-color: var(--primary-green); color: white; }
+    .btn-primary:hover { background-color: var(--dark-green); color: white; }
+    .btn-secondary { background-color: var(--gray-600); color: white; }
+    .btn-secondary:hover { background-color: var(--gray-700); color: white; }
+    
+    /* پلاک (مثل ورود خودرو تامین) */
+    .plate-section { display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+    .plate-input { display: flex; align-items: center; gap: 6px; direction: ltr; justify-content: flex-start; width: fit-content; max-width: 50%; }
+    .plate-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .plate-seg { display: flex; gap: 4px; align-items: center; justify-content: center; }
+    .plate-input input[type="text"] { text-align: center; padding: 8px 10px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.95rem; }
+    .plate-input .seg-iran { width: 80px; }
+    .plate-input .seg-3 { width: 75px; }
+    .plate-input .seg-letter { width: 50px; }
+    .plate-input .seg-2 { width: 60px; }
+    .plate-input .dash { opacity: 0.5; font-size: 1rem; font-weight: bold; }
+    .plate-helper { font-size: 0.75rem; color: #666; margin: 0; direction: ltr; }
+    .iran-plate-preview .iran-plate { display: inline-flex; align-items: stretch; white-space: nowrap; border: 1px solid #222; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.12); font-weight: 700; font-size: 0.7rem; line-height: 1.1; font-family: Vazirmatn, Tahoma, Segoe UI, Arial, sans-serif; font-variant-numeric: tabular-nums; direction: rtl; }
+    
+    .image-preview { margin-top: 10px; max-width: 50%; margin-right: auto; margin-left: auto; display: block; border-radius: 6px; border: 1px solid var(--gray-300); }
+.image-preview:not(.active) { display: none; }
+    .image-preview.active { display: block; }
+    
+    @media (max-width: 768px) {
+        .col-md-6 { flex: 0 0 100%; max-width: 100%; }
+        .form-card { padding: 20px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2>ثبت ورود خودرو</h2>
+</div>
+
+<div class="form-card">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+    
+    <div class="info-box">
+        <p>
+            <strong>شماره بارنامه:</strong> {{ transport.waybill_number }}<br>
+            <strong>شناسه تخصیص:</strong> {{ allocation_number|default:"-" }}<br>
+            با وارد کردن شماره تلفن یا کد ملی راننده، سیستم به صورت خودکار اطلاعات راننده را پر خواهد کرد.
+        </p>
+    </div>
+    
+    <form method="post" action="{% url 'distribution:register_vehicle_entry' transport.waybill_number %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- بخش نوع خودرو (بالای اطلاعات راننده) -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>نوع خودرو</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">نوع ماشین</label>
+                        <select name="vehicle_type" id="vehicle_type" class="form-control" required>
+                            <option value="">-- انتخاب کنید --</option>
+                            {% for value, label in vehicle_type_choices %}
+                            <option value="{{ value }}" {% if vehicle_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">نوع بارگیر</label>
+                        <select name="loading_type" id="loading_type" class="form-control">
+                            <option value="">-- انتخاب کنید --</option>
+                            {% for value, label in loading_type_choices %}
+                            <option value="{{ value }}" {% if loading_type == value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- بخش اطلاعات راننده (ترتیب مثل تامین: تلفن، نام، کد ملی، پلاک) -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>اطلاعات راننده</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">شماره همراه راننده</label>
+                        <input type="tel" name="driver_mobile" id="driver_mobile" class="form-control"
+                               placeholder="09XXXXXXXXX" pattern="09[0-9]{9}" value="{{ driver_mobile|default:'' }}" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">نام راننده</label>
+                        <input type="text" name="driver_name" id="driver_name" class="form-control"
+                               placeholder="نام راننده" value="{{ driver_name|default:'' }}" required>
+                        <small id="driver_name_hint" style="display: none; color: var(--gray-600); font-size: 0.85rem; margin-top: 5px;">این فیلد به صورت خودکار پر شده و قابل ویرایش نیست</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">کد ملی راننده</label>
+                        <input type="text" name="driver_national_id" id="driver_national_id" class="form-control"
+                               placeholder="کد ملی راننده" maxlength="10" pattern="[0-9]{10}"
+                               value="{{ driver_national_id|default:'' }}" required onblur="loadDriverInfo(this.value)">
+                        <small id="driver_info_status" style="display: none; font-size: 0.85rem; margin-top: 5px;"></small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label required-field">پلاک</label>
+                        <div id="previous_plates_container" style="display: none; margin-bottom: 10px; padding: 10px; background: #e7f3ff; border-radius: 6px; border: 1px solid #b3d9ff;">
+                            <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: var(--gray-700); font-weight: 600;">پلاک‌های قبلی این راننده:</p>
+                            <div id="previous_plates_list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                        </div>
+                        <div class="plate-section">
+                        <div class="plate-input">
+                            <div class="plate-seg">
+                                <input type="text" name="plate_part4" id="plate_part4" class="seg-2" placeholder="12" maxlength="2"
+                                       value="{{ plate_part4|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part3', 2)">
+                                <span class="dash">-</span>
+                                <input type="text" name="plate_part3" id="plate_part3" class="seg-letter" placeholder="ح" maxlength="1"
+                                       value="{{ plate_part3|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part2', 1)">
+                                <span class="dash">-</span>
+                                <input type="text" name="plate_part2" id="plate_part2" class="seg-3" placeholder="345" maxlength="3"
+                                       value="{{ plate_part2|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part1', 3)">
+                                <span class="dash">-</span>
+                                <input type="text" name="plate_part1" id="plate_part1" class="seg-iran" placeholder="11 (ایران)" maxlength="2" pattern="[0-9]{2}"
+                                       value="{{ plate_part1|default:'' }}" required>
+                            </div>
+                        </div>
+                        <div class="plate-right">
+                            <div id="plate-preview" class="iran-plate-preview" style="display:none; margin-bottom: 4px;"></div>
+                        </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">توضیحات شخص</label>
+                        <textarea name="driver_description" id="driver_description" class="form-control" rows="3" placeholder="توضیحات شخص">{{ driver_description|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- بخش پیوست -->
+        <div class="form-section">
+            <div class="form-section-header">
+                <h5>پیوست کارت ملی</h5>
+                <svg class="form-section-toggle-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+            <div class="form-section-content">
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label required-field">کارت ملی</label>
+                        <input type="file" name="national_card_file" id="national_card_file" class="form-control"
+                               accept="image/*,.pdf" capture="environment">
+                        <img id="national_card_preview" class="image-preview" alt="پیش‌نمایش کارت ملی">
+                        <div id="previous_national_card_info" style="display: none; margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 6px; border: 1px solid #b3d9ff;">
+                            <p style="margin: 0 0 8px 0; font-size: 0.9rem; color: var(--gray-700);"><strong>کارت ملی از پیوست‌های شخص:</strong></p>
+                            <a id="previous_national_card_link" href="#" target="_blank" style="color: var(--primary-green); text-decoration: underline; cursor: pointer;">مشاهده کارت ملی قبلی</a>
+                            <label style="display: block; margin-top: 10px; cursor: pointer;">
+                                <input type="checkbox" name="use_previous_national_card" id="use_previous_national_card" value="true" onchange="toggleNationalCardRequired()">
+                                <span style="margin-right: 5px;">استفاده از کارت ملی قبلی</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">ثبت و تأیید ورود</button>
+            <a href="{% url 'distribution:vehicle_entry_list' %}" class="btn btn-secondary">بازگشت</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.form-section-header').forEach(function(h) {
+        h.addEventListener('click', function() { this.closest('.form-section').classList.toggle('collapsed'); });
+    });
+});
+
+function loadDriverInfo(nationalId) {
+    var statusEl = document.getElementById('driver_info_status');
+    var previousCardInfo = document.getElementById('previous_national_card_info');
+    var driverNameInput = document.getElementById('driver_name');
+    var driverMobileInput = document.getElementById('driver_mobile');
+    var driverDescInput = document.getElementById('driver_description');
+    var nationalCardFile = document.getElementById('national_card_file');
+    var usePreviousCheckbox = document.getElementById('use_previous_national_card');
+    
+    statusEl.style.display = 'none';
+    previousCardInfo.style.display = 'none';
+    
+    if (!nationalId || nationalId.length !== 10 || !/^\d{10}$/.test(nationalId)) {
+        driverNameInput.value = ''; driverMobileInput.value = ''; driverDescInput.value = '';
+        nationalCardFile.value = ''; if (usePreviousCheckbox) usePreviousCheckbox.checked = false;
+        document.getElementById('previous_plates_container').style.display = 'none';
+        document.getElementById('previous_plates_list').innerHTML = '';
+        driverNameInput.removeAttribute('readonly'); driverNameInput.style.backgroundColor = ''; driverNameInput.style.cursor = '';
+        document.getElementById('driver_name_hint').style.display = 'none';
+        return;
+    }
+    
+    statusEl.textContent = 'در حال جستجو...';
+    statusEl.style.display = 'block';
+    statusEl.style.color = 'var(--gray-600)';
+    
+    fetch('/distribution/vehicle-entry/get-driver-info/?national_id=' + encodeURIComponent(nationalId), { headers: {'X-Requested-With': 'XMLHttpRequest'} })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.error) {
+            statusEl.textContent = data.error;
+            statusEl.style.color = '#dc3545';
+            statusEl.style.display = 'block';
+            return;
+        }
+        if (!data.found) {
+            statusEl.textContent = 'راننده یافت نشد. می‌توانید اطلاعات را به صورت دستی وارد کنید.';
+            statusEl.style.color = 'var(--gray-600)';
+            statusEl.style.display = 'block';
+            document.getElementById('previous_plates_container').style.display = 'none';
+            document.getElementById('previous_plates_list').innerHTML = '';
+            return;
+        }
+        if (data.driver_name !== undefined) {
+            driverNameInput.value = data.driver_name || '';
+            driverNameInput.setAttribute('readonly', 'readonly');
+            driverNameInput.style.backgroundColor = 'var(--gray-100)';
+            driverNameInput.style.cursor = 'not-allowed';
+            document.getElementById('driver_name_hint').style.display = 'block';
+        }
+        if (data.driver_mobile !== undefined) driverMobileInput.value = data.driver_mobile || '';
+        if (data.driver_description !== undefined) driverDescInput.value = data.driver_description || '';
+        
+        if (data.national_card_url) {
+            var link = document.getElementById('previous_national_card_link');
+            link.href = data.national_card_url.startsWith('/') || data.national_card_url.startsWith('http') ? data.national_card_url : '/' + data.national_card_url;
+            previousCardInfo.style.display = 'block';
+        }
+        
+        var prevPlates = document.getElementById('previous_plates_container');
+        var prevList = document.getElementById('previous_plates_list');
+        if (data.previous_plates && data.previous_plates.length > 0) {
+            prevList.innerHTML = '';
+            data.previous_plates.forEach(function(plate) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-secondary';
+                btn.style.cssText = 'padding: 8px 12px; font-size: 0.85rem; cursor: pointer;';
+                btn.textContent = plate.display || plate.plate_number;
+                btn.onclick = function() {
+                    document.getElementById('plate_part1').value = plate.plate_part1 || '';
+                    document.getElementById('plate_part2').value = plate.plate_part2 || '';
+                    document.getElementById('plate_part3').value = plate.plate_part3 || '';
+                    document.getElementById('plate_part4').value = plate.plate_part4 || '';
+                    if (plate.vehicle_type) document.getElementById('vehicle_type').value = plate.vehicle_type;
+                    if (plate.loading_type) document.getElementById('loading_type').value = plate.loading_type;
+                    if (typeof updatePlatePreview === 'function') updatePlatePreview();
+                };
+                prevList.appendChild(btn);
+            });
+            prevPlates.style.display = 'block';
+        } else {
+            prevPlates.style.display = 'none';
+        }
+        
+        statusEl.textContent = 'اطلاعات راننده با موفقیت بارگذاری شد.';
+        statusEl.style.color = 'var(--primary-green)';
+        statusEl.style.display = 'block';
+    })
+    .catch(function(err) {
+        statusEl.textContent = 'خطا در بارگذاری اطلاعات راننده';
+        statusEl.style.color = '#dc3545';
+        statusEl.style.display = 'block';
+    });
+}
+
+function autoMoveToNext(currentInput, nextId, maxLen) {
+    if (currentInput.value.length >= maxLen) {
+        var next = document.getElementById(nextId);
+        if (next) { next.focus(); if (!next.value) next.select(); }
+    }
+}
+
+function toPersianDigits(n) {
+    var p = '\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9';
+    return String(n).replace(/[0-9]/g, function(d) { return p[parseInt(d, 10)]; });
+}
+
+function updatePlatePreview() {
+    var p1 = document.getElementById('plate_part1').value.trim();
+    var p2 = document.getElementById('plate_part2').value.trim();
+    var p3 = document.getElementById('plate_part3').value.trim();
+    var p4 = document.getElementById('plate_part4').value.trim();
+    var el = document.getElementById('plate-preview');
+    if (!p1 && !p2 && !p3 && !p4) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
+    el.style.display = 'block';
+    var s1 = toPersianDigits(p1 || '11');
+    var s2 = toPersianDigits(p2 || '345');
+    var s3 = p3 || '\u062D';
+    var s4 = toPersianDigits(p4 || '12');
+    el.innerHTML = '<span class="iran-plate"><span style="padding:2px 5px;background:#dee2e6;color:#000;border-left:1px solid #222;min-width:1.4em;text-align:center">' + s1 + '</span><span style="padding:2px 5px;background:#f1f3f5;color:#000;letter-spacing:0.5px">' + s2 + ' ' + s3 + '</span><span style="padding:2px 5px;background:#f1f3f5;color:#000;min-width:1.4em;text-align:center">' + s4 + '</span></span>';
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    ['plate_part1','plate_part2','plate_part3','plate_part4'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', updatePlatePreview);
+    });
+    updatePlatePreview();
+});
+
+function toggleNationalCardRequired() {
+    var cb = document.getElementById('use_previous_national_card');
+    var f = document.getElementById('national_card_file');
+    if (cb.checked) f.removeAttribute('required');
+    else f.setAttribute('required', 'required');
+}
+
+document.getElementById('national_card_file')?.addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    var cb = document.getElementById('use_previous_national_card');
+    if (file && file.type.startsWith('image/')) {
+        var r = new FileReader();
+        r.onload = function(ev) {
+            var p = document.getElementById('national_card_preview');
+            p.src = ev.target.result; p.classList.add('active');
+        };
+        r.readAsDataURL(file);
+    } else {
+        document.getElementById('national_card_preview').classList.remove('active');
+    }
+    if (file && cb) { cb.checked = false; toggleNationalCardRequired(); }
+});
+</script>
+{% endblock %}

@@ -21,9 +21,9 @@ def convert_to_persian_numbers(text):
 
 
 def format_number_persian(number, decimal_places=0):
-    """فرمت کردن عدد با کاما و تبدیل به فارسی (اعشار ثابت)"""
+    """فرمت کردن عدد با جداکننده هزارگان «،» و ارقام فارسی"""
     if number is None:
-        return '-'
+        return '—'
     try:
         from decimal import Decimal
         d = Decimal(str(number))
@@ -32,7 +32,7 @@ def format_number_persian(number, decimal_places=0):
             formatted = f"{d.quantize(quantizer):,.{decimal_places}f}"
         else:
             formatted = f"{d.quantize(Decimal('1')):,.0f}"
-        return convert_to_persian_numbers(formatted)
+        return convert_to_persian_numbers(formatted.replace(',', '،'))
     except (ValueError, TypeError):
         return str(number)
 
@@ -926,24 +926,26 @@ class GuardExitTable(TransportTable):
         return '—'
     
     def render_quantity(self, record):
-        """نمایش مقدار سفارش"""
+        """نمایش مقدار سفارش با اعداد فارسی و جداکننده هزارگان"""
         if not record.purchase_order:
             return '—'
-        # استفاده از order_items به جای materials
         materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
         if materials:
-            quantities = [str(m.quantity) for m in materials if m.quantity]
-            return format_html('<br>'.join(quantities)) if quantities else '—'
+            parts = []
+            for m in materials:
+                if m.quantity is not None:
+                    formatted = format_number_persian(m.quantity, 3)
+                    parts.append(format_html('<span class="weight-value persian-number" dir="ltr">{}</span>', formatted))
+            return format_html('<br>'.join(parts)) if parts else '—'
         return '—'
     
     def render_unit(self, record):
-        """نمایش واحد سفارش"""
+        """نمایش واحد سفارش با badge"""
         if not record.purchase_order:
             return '—'
-        # استفاده از order_items به جای materials
         materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
         if materials:
-            units = [m.get_weight_unit_display() or '—' for m in materials]
+            units = [format_html('<span class="unit-badge">{}</span>', m.get_weight_unit_display() or '—') for m in materials]
             return format_html('<br>'.join(units)) if units else '—'
         return '—'
     
@@ -1033,25 +1035,26 @@ class WarehouseDeliveryTable(TransportTable):
         return '—'
     
     def render_quantity(self, record):
-        """نمایش مقدار حمل (تخصیص یافته به این حمل)"""
-        # استفاده از raw_material_infos که مقدار تخصیص یافته به این حمل را نگه می‌دارد
+        """نمایش مقدار حمل (تخصیص یافته) با اعداد فارسی و جداکننده هزارگان"""
         raw_material_infos = record.raw_material_infos.select_related('raw_material', 'order_item').all()
         if raw_material_infos:
-            quantities = [str(rmi.allocated_quantity) for rmi in raw_material_infos if rmi.allocated_quantity]
-            return format_html('<br>'.join(quantities)) if quantities else '—'
+            parts = []
+            for rmi in raw_material_infos:
+                if rmi.allocated_quantity is not None:
+                    formatted = format_number_persian(rmi.allocated_quantity, 3)
+                    parts.append(format_html('<span class="weight-value persian-number" dir="ltr">{}</span>', formatted))
+            return format_html('<br>'.join(parts)) if parts else '—'
         return '—'
     
     def render_unit(self, record):
-        """نمایش واحد مواد اولیه تخصیص یافته به این حمل"""
-        # استفاده از raw_material_infos که فقط مواد اولیه تخصیص یافته به این حمل را نگه می‌دارد
+        """نمایش واحد مواد اولیه با badge"""
         raw_material_infos = record.raw_material_infos.select_related('order_item').all()
         if raw_material_infos:
             units = []
             for rmi in raw_material_infos:
-                # واحد از order_item گرفته می‌شود
                 if rmi.order_item:
                     unit_display = rmi.order_item.get_weight_unit_display() or '—'
-                    units.append(unit_display)
+                    units.append(format_html('<span class="unit-badge">{}</span>', unit_display))
             return format_html('<br>'.join(units)) if units else '—'
         return '—'
     

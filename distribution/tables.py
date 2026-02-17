@@ -8,6 +8,7 @@ from core.OrderFolder.OrderModel import Order
 from core.PersonFolder.DeliveryAddressModel import DeliveryAddress
 from core.TransportFolder.TransportModel import Transport
 from sales.views.allocation_list_view import get_delivery_address_info
+from distribution.templatetags.number_filters import persian_number as persian_number_filter
 
 
 def convert_to_persian_numbers(text):
@@ -589,13 +590,10 @@ class VehicleEntryTable(tables.Table):
             return '-'
         
         try:
+            register_url = reverse('distribution:register_vehicle_entry', args=[transport.waybill_number])
             return format_html(
-                '<button type="button" '
-                'class="btn-outline-primary" '
-                'onclick="showVehicleEntryModal(\'{}\')">'
-                'ثبت ورود'
-                '</button>',
-                transport.waybill_number
+                '<a href="{}" class="btn-outline-primary" title="ثبت ورود">ثبت ورود</a>',
+                register_url
             )
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
@@ -800,10 +798,15 @@ class LoadingExitTable(tables.Table):
         return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_allocated_quantity(self, value, record):
-        """نمایش مقدار تخصیص‌یافته"""
-        if value and value != 'نامشخص':
+        """نمایش مقدار تخصیص‌یافته به صورت فارسی (عدد + جداکننده هزارگان)"""
+        if value is None or value == 'نامشخص' or value == '':
+            return format_html('<span style="color: var(--gray-400);">—</span>')
+        try:
+            # فارسی‌سازی عدد با ۳ رقم اعشار و جداکننده هزارگان
+            formatted = persian_number_filter(value, 3)
+            return format_html('<span class="persian-number" dir="ltr">{}</span>', formatted)
+        except (ValueError, TypeError):
             return value
-        return format_html('<span style="color: var(--gray-400);">-</span>')
     
     def render_unit(self, value, record):
         """نمایش واحد"""

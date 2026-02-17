@@ -1,4 +1,5 @@
 from django import template
+from django.utils.safestring import mark_safe
 
 register = template.Library()
 
@@ -28,4 +29,11 @@ def persian_number(value, decimal_places=0):
         return convert_to_persian_numbers(formatted.replace(',', '،'))
     except (ValueError, TypeError):
         return str(value)
+
+
+@register.filter(name='iran_plate')
+def iran_plate(value):
+    """نمایش پلاک به سبک پلاک ایران (همان سبک تامین)"""
+    from distribution.plate_display import render_iran_plate_html
+    return mark_safe(render_iran_plate_html(value or ''))
 
