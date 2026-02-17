@@ -502,7 +502,7 @@ class ApproveTransactionReceiptTable(tables.Table):
         template_name = 'django_tables2/bootstrap.html'
         fields = ('order_number', 'customer', 'created_at', 'actions')
         attrs = {
-            'class': 'data-table',
+            'class': 'data-table searchable-table',
             'thead': {'class': ''}
         }
         sequence = ('order_number', 'customer', 'created_at', 'actions')
