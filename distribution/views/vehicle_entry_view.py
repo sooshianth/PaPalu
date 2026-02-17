@@ -209,6 +209,10 @@ def register_vehicle_entry_view(request, waybill_number):
                     messages.error(request, 'شماره همراه راننده الزامی است.')
                     return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
                 
+                if not vehicle_type:
+                    messages.error(request, 'نوع ماشین الزامی است.')
+                    return redirect('distribution:register_vehicle_entry', waybill_number=waybill_number)
+                
                 # اعتبارسنجی شماره همراه (09XXXXXXXXX)
                 if not re.match(r'^09\d{9}$', driver_mobile):
                     messages.error(request, 'شماره همراه باید با فرمت 09XXXXXXXXX باشد.')

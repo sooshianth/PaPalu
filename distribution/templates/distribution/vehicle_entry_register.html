@@ -158,11 +158,22 @@
     .btn-secondary { background-color: var(--gray-600); color: white; }
     .btn-secondary:hover { background-color: var(--gray-700); color: white; }
     
-    .plate-input-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    .plate-input-group .form-control { flex: 1; min-width: 60px; }
-    .plate-separator { font-size: 1.2rem; font-weight: bold; color: var(--gray-600); }
+    /* پلاک (مثل ورود خودرو تامین) */
+    .plate-section { display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+    .plate-input { display: flex; align-items: center; gap: 6px; direction: ltr; justify-content: flex-start; width: fit-content; max-width: 50%; }
+    .plate-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .plate-seg { display: flex; gap: 4px; align-items: center; justify-content: center; }
+    .plate-input input[type="text"] { text-align: center; padding: 8px 10px; border: 1px solid var(--gray-300); border-radius: 6px; font-size: 0.95rem; }
+    .plate-input .seg-iran { width: 80px; }
+    .plate-input .seg-3 { width: 75px; }
+    .plate-input .seg-letter { width: 50px; }
+    .plate-input .seg-2 { width: 60px; }
+    .plate-input .dash { opacity: 0.5; font-size: 1rem; font-weight: bold; }
+    .plate-helper { font-size: 0.75rem; color: #666; margin: 0; direction: ltr; }
+    .iran-plate-preview .iran-plate { display: inline-flex; align-items: stretch; white-space: nowrap; border: 1px solid #222; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.12); font-weight: 700; font-size: 0.7rem; line-height: 1.1; font-family: Vazirmatn, Tahoma, Segoe UI, Arial, sans-serif; font-variant-numeric: tabular-nums; direction: rtl; }
     
-    .image-preview { margin-top: 10px; max-width: 100%; border-radius: 6px; border: 1px solid var(--gray-300); display: none; }
+    .image-preview { margin-top: 10px; max-width: 50%; margin-right: auto; margin-left: auto; display: block; border-radius: 6px; border: 1px solid var(--gray-300); }
+.image-preview:not(.active) { display: none; }
     .image-preview.active { display: block; }
     
     @media (max-width: 768px) {
@@ -206,8 +217,8 @@
             <div class="form-section-content">
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">نوع ماشین</label>
-                        <select name="vehicle_type" id="vehicle_type" class="form-control">
+                        <label class="form-label required-field">نوع ماشین</label>
+                        <select name="vehicle_type" id="vehicle_type" class="form-control" required>
                             <option value="">-- انتخاب کنید --</option>
                             {% for value, label in vehicle_type_choices %}
                             <option value="{{ value }}" {% if vehicle_type == value %}selected{% endif %}>{{ label }}</option>
@@ -256,34 +267,37 @@
                         <small id="driver_info_status" style="display: none; font-size: 0.85rem; margin-top: 5px;"></small>
                     </div>
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">توضیحات شخص</label>
-                        <textarea name="driver_description" id="driver_description" class="form-control" rows="3" placeholder="توضیحات شخص">{{ driver_description|default:'' }}</textarea>
+                        <label class="form-label required-field">پلاک</label>
+                        <div id="previous_plates_container" style="display: none; margin-bottom: 10px; padding: 10px; background: #e7f3ff; border-radius: 6px; border: 1px solid #b3d9ff;">
+                            <p style="margin: 0 0 8px 0; font-size: 0.85rem; color: var(--gray-700); font-weight: 600;">پلاک‌های قبلی این راننده:</p>
+                            <div id="previous_plates_list" style="display: flex; flex-wrap: wrap; gap: 6px;"></div>
+                        </div>
+                        <div class="plate-section">
+                        <div class="plate-input">
+                            <div class="plate-seg">
+                                <input type="text" name="plate_part4" id="plate_part4" class="seg-2" placeholder="12" maxlength="2"
+                                       value="{{ plate_part4|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part3', 2)">
+                                <span class="dash">-</span>
+                                <input type="text" name="plate_part3" id="plate_part3" class="seg-letter" placeholder="ح" maxlength="1"
+                                       value="{{ plate_part3|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part2', 1)">
+                                <span class="dash">-</span>
+                                <input type="text" name="plate_part2" id="plate_part2" class="seg-3" placeholder="345" maxlength="3"
+                                       value="{{ plate_part2|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part1', 3)">
+                                <span class="dash">-</span>
+                                <input type="text" name="plate_part1" id="plate_part1" class="seg-iran" placeholder="11 (ایران)" maxlength="2" pattern="[0-9]{2}"
+                                       value="{{ plate_part1|default:'' }}" required>
+                            </div>
+                        </div>
+                        <div class="plate-right">
+                            <div id="plate-preview" class="iran-plate-preview" style="display:none; margin-bottom: 4px;"></div>
+                        </div>
+                        </div>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-12 mb-3">
-                        <label class="form-label required-field">پلاک خودرو</label>
-                        <div id="previous_plates_container" style="display: none; margin-bottom: 15px; padding: 15px; background: #e7f3ff; border-radius: 6px; border: 1px solid #b3d9ff;">
-                            <p style="margin: 0 0 10px 0; font-size: 0.9rem; color: var(--gray-700); font-weight: 600;">پلاک‌های قبلی این راننده:</p>
-                            <div id="previous_plates_list" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
-                        </div>
-                        <div class="plate-input-group">
-                            <div style="position: relative; flex: 1;">
-                                <input type="text" name="plate_part1" id="plate_part1" class="form-control" placeholder="11" maxlength="2" pattern="[0-9]{2}"
-                                       value="{{ plate_part1|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part2', 2)">
-                                <small style="position: absolute; bottom: -20px; right: 5px; font-size: 0.75rem; color: var(--gray-600);">ایران</small>
-                            </div>
-                            <span class="plate-separator">-</span>
-                            <input type="text" name="plate_part2" id="plate_part2" class="form-control" placeholder="345" maxlength="3"
-                                   value="{{ plate_part2|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part3', 3)">
-                            <span class="plate-separator">-</span>
-                            <input type="text" name="plate_part3" id="plate_part3" class="form-control" placeholder="ح" maxlength="1"
-                                   value="{{ plate_part3|default:'' }}" required oninput="autoMoveToNext(this, 'plate_part4', 1)">
-                            <span class="plate-separator">-</span>
-                            <input type="text" name="plate_part4" id="plate_part4" class="form-control" placeholder="12" maxlength="2"
-                                   value="{{ plate_part4|default:'' }}" required>
-                        </div>
-                        <small style="color: var(--gray-600); font-size: 0.85rem; margin-top: 5px; display: block;">فرمت: 11(ایران) - 345 - ح - 12</small>
+                        <label class="form-label">توضیحات شخص</label>
+                        <textarea name="driver_description" id="driver_description" class="form-control" rows="3" placeholder="توضیحات شخص">{{ driver_description|default:'' }}</textarea>
                     </div>
                 </div>
             </div>
@@ -407,6 +421,7 @@ function loadDriverInfo(nationalId) {
                     document.getElementById('plate_part4').value = plate.plate_part4 || '';
                     if (plate.vehicle_type) document.getElementById('vehicle_type').value = plate.vehicle_type;
                     if (plate.loading_type) document.getElementById('loading_type').value = plate.loading_type;
+                    if (typeof updatePlatePreview === 'function') updatePlatePreview();
                 };
                 prevList.appendChild(btn);
             });
@@ -432,6 +447,38 @@ function autoMoveToNext(currentInput, nextId, maxLen) {
         if (next) { next.focus(); if (!next.value) next.select(); }
     }
 }
+
+function toPersianDigits(n) {
+    var p = '\u06F0\u06F1\u06F2\u06F3\u06F4\u06F5\u06F6\u06F7\u06F8\u06F9';
+    return String(n).replace(/[0-9]/g, function(d) { return p[parseInt(d, 10)]; });
+}
+
+function updatePlatePreview() {
+    var p1 = document.getElementById('plate_part1').value.trim();
+    var p2 = document.getElementById('plate_part2').value.trim();
+    var p3 = document.getElementById('plate_part3').value.trim();
+    var p4 = document.getElementById('plate_part4').value.trim();
+    var el = document.getElementById('plate-preview');
+    if (!p1 && !p2 && !p3 && !p4) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
+    el.style.display = 'block';
+    var s1 = toPersianDigits(p1 || '11');
+    var s2 = toPersianDigits(p2 || '345');
+    var s3 = p3 || '\u062D';
+    var s4 = toPersianDigits(p4 || '12');
+    el.innerHTML = '<span class="iran-plate"><span style="padding:2px 5px;background:#dee2e6;color:#000;border-left:1px solid #222;min-width:1.4em;text-align:center">' + s1 + '</span><span style="padding:2px 5px;background:#f1f3f5;color:#000;letter-spacing:0.5px">' + s2 + ' ' + s3 + '</span><span style="padding:2px 5px;background:#f1f3f5;color:#000;min-width:1.4em;text-align:center">' + s4 + '</span></span>';
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    ['plate_part1','plate_part2','plate_part3','plate_part4'].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', updatePlatePreview);
+    });
+    updatePlatePreview();
+});
 
 function toggleNationalCardRequired() {
     var cb = document.getElementById('use_previous_national_card');
