@@ -216,6 +216,21 @@ class Order(models.Model):
         verbose_name='دلیل ارجاع تایید تسویه کامل خرید به مدیریت'
     )
 
+    # ارجاع تایید تسویه کامل فروش به مدیر (فقط مدیر می‌تواند باز کرده و تایید کند)
+    settlement_approval_referred_to_manager = models.BooleanField(
+        default=False,
+        verbose_name='ارجاع تایید تسویه کامل فروش به مدیریت'
+    )
+    settlement_approval_referred_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='زمان ارجاع تایید تسویه کامل فروش به مدیریت'
+    )
+    settlement_approval_referral_reason = models.TextField(
+        blank=True,
+        verbose_name='دلیل ارجاع تایید تسویه کامل فروش به مدیریت'
+    )
+
     # ارجاع بارگذاری رسید تراکنش فروش به مدیر (فقط مدیر می‌تواند باز کرده و مرحله بعد ببرد)
     transaction_receipt_referred_to_manager = models.BooleanField(
         default=False,

@@ -4,6 +4,7 @@ from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, render, redirect
+from django.utils import timezone
 from decimal import Decimal
 import logging
 from core.logging_levels import *
@@ -17,6 +18,7 @@ from core.TransportFolder.TransportModel import Transport
 from core.SettlementFolder.SettlementModel import Settlement
 from core.SettlementFolder.TransactionDocumentModel import TransactionDocument
 from sales.tables.tables_settlement import PendingSettlementApprovalOrderTable
+from sales.forms.settlement_approval_transaction_edit_form import SettlementApprovalTransactionEditForm
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
@@ -36,7 +38,7 @@ def settlement_approval_list_view(request):
         messages.error(request, 'شما دسترسی به تایید تسویه کامل را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
-    # دریافت سفارش‌های در انتظار تایید تسویه کامل
+    # دریافت سفارش‌های در انتظار تایید تسویه کامل؛ ارجاع‌شده فقط برای سوپرادمین در لیست دیده می‌شود
     orders_qs = Order.objects.filter(
         status='pending_settlement_approval'
     ).select_related('customer').prefetch_related(
@@ -44,6 +46,8 @@ def settlement_approval_list_view(request):
         'allocations',
         'order_items__product'
     ).order_by('-created_at')
+    if not request.user.is_superuser:
+        orders_qs = orders_qs.exclude(settlement_approval_referred_to_manager=True)
 
     # دریافت تمام تخصیص‌ها و حمل‌ها به صورت bulk
     all_allocations = Allocation.objects.filter(order__in=orders_qs).select_related('order')
@@ -163,6 +167,12 @@ def settlement_approval_detail_view(request, order_number):
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     order = get_object_or_404(Order, order_number=order_number)
+
+    # اگر به مدیر ارجاع شده فقط سوپرادمین دسترسی دارد
+    if getattr(order, 'settlement_approval_referred_to_manager', False) and not request.user.is_superuser:
+        audit_logger.activity(f"تلاش برای دسترسی به تایید تسویه ارجاع‌شده به مدیر - سفارش {order_number}")
+        messages.error(request, 'این سفارش به مدیر ارجاع شده و فقط مدیر می‌تواند آن را مشاهده و تایید کند.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
     if order.status != 'pending_settlement_approval':
         bug_logger.warning(f"سفارش {order_number} در وضعیت {order.status} است، در حالی که انتظار pending_settlement_approval می‌رود")
@@ -318,37 +328,144 @@ def settlement_approval_detail_view(request, order_number):
             'transports': alloc_transports,
         })
     
+    is_refer_to_manager = False
+    referral_reason = ''
+    invalid_edit_form = None
+    invalid_edit_document_id = None
     if request.method == 'POST':
-        # تایید تسویه کامل
-        try:
-            with transaction.atomic():
-                # تغییر وضعیت سفارش به archived (بایگانی شده)
-                order.status = 'archived'
-                order.save(update_fields=['status'])
-                
-                # به‌روزرسانی وضعیت Settlement‌ها به completed
-                if weight_discrepancy_settlement:
-                    weight_discrepancy_settlement.settlement_status = 'completed'
-                    weight_discrepancy_settlement.save(update_fields=['settlement_status'])
-                
-                if sale_settlement:
-                    sale_settlement.settlement_status = 'completed'
-                    sale_settlement.save(update_fields=['settlement_status'])
-                
-                for freight_settlement in freight_settlements:
-                    freight_settlement.settlement_status = 'completed'
-                    freight_settlement.save(update_fields=['settlement_status'])
-                
-                bug_logger.info(f"تایید تسویه کامل برای سفارش {order_number} ثبت شد و به وضعیت 'بایگانی شده' تغییر کرد")
-                messages.success(request, f'تایید تسویه کامل برای سفارش {order_number} با موفقیت ثبت شد. سفارش در حال حاضر در وضعیت «بایگانی شده» قرار دارد.')
-                audit_logger.activity(f"تایید تسویه کامل برای سفارش {order_number} ثبت شد و به وضعیت 'بایگانی شده' تغییر کرد توسط کاربر {request.user.username}")
-                
-                return redirect('sales:settlement_approval_list')
-                
-        except Exception as e:
-            bug_logger.error(f"خطا در تایید تسویه کامل: {str(e)}")
-            messages.error(request, f'خطا در تایید تسویه کامل: {str(e)}')
-    
+        # ذخیره ویرایش تراکنش (مدیر - در همان صفحه، بدون رفتن به صفحه جدا)
+        edit_doc_id = request.POST.get('edit_transaction_document_id')
+        if edit_doc_id and getattr(order, 'settlement_approval_referred_to_manager', False) and request.user.is_superuser:
+            try:
+                doc_id = int(edit_doc_id)
+                document = TransactionDocument.objects.filter(
+                    id=doc_id,
+                    settlement__order=order,
+                ).select_related('settlement').first()
+                if document:
+                    settlement = document.settlement
+                    form = SettlementApprovalTransactionEditForm(
+                        request.POST,
+                        instance=document,
+                        settlement=settlement,
+                    )
+                    if form.is_valid():
+                        with transaction.atomic():
+                            form.save()
+                            new_total = TransactionDocument.objects.filter(
+                                settlement=settlement
+                            ).aggregate(total=Sum('document_amount'))['total'] or Decimal('0')
+                            settlement.settled_amount = new_total
+                            settlement.save(update_fields=['settled_amount'])
+                        messages.success(request, 'تراکنش با موفقیت ذخیره شد.')
+                        audit_logger.activity(
+                            f"مدیر تراکنش {document.id} سفارش {order_number} را در صفحه تایید تسویه ویرایش کرد."
+                        )
+                        return redirect('sales:settlement_approval_detail', order_number=order_number)
+                    invalid_edit_form = form
+                    invalid_edit_document_id = doc_id
+            except (ValueError, TypeError):
+                pass
+
+        is_refer_to_manager = request.POST.get('refer_to_manager') == '1'
+        referral_reason = (request.POST.get('settlement_approval_referral_reason') or '').strip()
+
+        # ارجاع به مدیر با دلیل اجباری
+        if is_refer_to_manager:
+            if not referral_reason:
+                messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
+            else:
+                try:
+                    order.settlement_approval_referred_to_manager = True
+                    order.settlement_approval_referred_at = timezone.now()
+                    order.settlement_approval_referral_reason = referral_reason
+                    order.save(update_fields=['settlement_approval_referred_to_manager', 'settlement_approval_referred_at', 'settlement_approval_referral_reason'])
+                    bug_logger.info(f"سفارش {order_number} به مدیر ارجاع داده شد - تایید تسویه کامل فروش")
+                    audit_logger.activity(f"تایید تسویه کامل فروش برای سفارش {order_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {referral_reason[:100]}")
+                    messages.warning(request, 'این سفارش به مدیر ارجاع داده شد. فقط مدیر می‌تواند آن را از همان لیست تایید تسویه باز کرده، در صورت نیاز تراکنش‌ها را ویرایش کند و در پایان «تایید مدیر» را بزند.')
+                    return redirect('sales:settlement_approval_list')
+                except Exception as e:
+                    bug_logger.error(f"خطا در ارجاع به مدیر برای سفارش {order_number}: {e}", exc_info=True)
+                    messages.error(request, f'خطا در ارجاع به مدیر: {str(e)}')
+        else:
+            # تایید تسویه کامل
+            if not all_settlements_completed:
+                messages.error(request, 'برخی از تسویه‌ها هنوز کامل نشده‌اند. امکان تایید وجود ندارد.')
+            else:
+                try:
+                    with transaction.atomic():
+                        order.status = 'archived'
+                        # در صورت تایید توسط مدیر پس از ارجاع، پرچم ارجاع را پاک کن
+                        if getattr(order, 'settlement_approval_referred_to_manager', False):
+                            order.settlement_approval_referred_to_manager = False
+                            order.settlement_approval_referred_at = None
+                            order.settlement_approval_referral_reason = ''
+                            order.save(update_fields=['status', 'settlement_approval_referred_to_manager', 'settlement_approval_referred_at', 'settlement_approval_referral_reason'])
+                        else:
+                            order.save(update_fields=['status'])
+
+                        if weight_discrepancy_settlement:
+                            weight_discrepancy_settlement.settlement_status = 'completed'
+                            weight_discrepancy_settlement.save(update_fields=['settlement_status'])
+                        if sale_settlement:
+                            sale_settlement.settlement_status = 'completed'
+                            sale_settlement.save(update_fields=['settlement_status'])
+                        for freight_settlement in freight_settlements:
+                            freight_settlement.settlement_status = 'completed'
+                            freight_settlement.save(update_fields=['settlement_status'])
+
+                        bug_logger.info(f"تایید تسویه کامل برای سفارش {order_number} ثبت شد و به وضعیت 'بایگانی شده' تغییر کرد")
+                        messages.success(request, f'تایید تسویه کامل برای سفارش {order_number} با موفقیت ثبت شد. سفارش در حال حاضر در وضعیت «بایگانی شده» قرار دارد.')
+                        audit_logger.activity(f"تایید تسویه کامل برای سفارش {order_number} ثبت شد و به وضعیت 'بایگانی شده' تغییر کرد توسط کاربر {request.user.username}")
+                        return redirect('sales:settlement_approval_list')
+                except Exception as e:
+                    bug_logger.error(f"خطا در تایید تسویه کامل: {str(e)}")
+                    messages.error(request, f'خطا در تایید تسویه کامل: {str(e)}')
+
+    is_settlement_approval_referred = getattr(order, 'settlement_approval_referred_to_manager', False)
+    show_refer_button = not is_settlement_approval_referred and not request.user.is_superuser
+    settlement_approval_referral_reason = getattr(order, 'settlement_approval_referral_reason', '') or ''
+    can_edit_transactions = is_settlement_approval_referred and request.user.is_superuser
+
+    # لیست تراکنش‌های قابل ویرایش برای مدیر (کسری و سرک، فروش، کرایه) و فرم ویرایش درون‌صفحه
+    editable_transactions = []
+    edit_transaction_form = None
+    edit_document_id = None
+    if request.method == 'GET':
+        raw_edit = request.GET.get('edit')
+        if raw_edit:
+            try:
+                edit_document_id = int(raw_edit)
+            except (ValueError, TypeError):
+                pass
+    if invalid_edit_document_id is not None:
+        edit_document_id = invalid_edit_document_id
+    if can_edit_transactions:
+        for doc in weight_discrepancy_transactions:
+            label = f"کسری و سرک - سند {doc.accounting_document_number or doc.id}"
+            editable_transactions.append((doc, label))
+        for doc in sale_transactions:
+            label = f"فروش - سند {doc.accounting_document_number or doc.id}"
+            editable_transactions.append((doc, label))
+        for doc in freight_transactions:
+            label = f"کرایه - سند {doc.accounting_document_number or doc.id}"
+            editable_transactions.append((doc, label))
+        if invalid_edit_form is not None and invalid_edit_document_id is not None:
+            edit_transaction_form = invalid_edit_form
+            edit_document_id = invalid_edit_document_id
+        elif edit_document_id:
+            doc_to_edit = TransactionDocument.objects.filter(
+                id=edit_document_id,
+                settlement__order=order,
+            ).select_related('settlement').first()
+            if doc_to_edit:
+                edit_transaction_form = SettlementApprovalTransactionEditForm(
+                    instance=doc_to_edit,
+                    settlement=doc_to_edit.settlement,
+                )
+            else:
+                edit_document_id = None
+
     context = {
         'order': order,
         'order_weight': order_weight,
@@ -371,6 +488,86 @@ def settlement_approval_detail_view(request, order_number):
         'customer_info': customer_info,
         'allocations_with_transports': allocations_with_transports,
         'page_title': f'تایید تسویه کامل - سفارش {order.order_number}',
+        'is_settlement_approval_referred': is_settlement_approval_referred,
+        'show_refer_button': show_refer_button,
+        'settlement_approval_referral_reason': settlement_approval_referral_reason,
+        'refer_modal_open': request.method == 'POST' and is_refer_to_manager and not referral_reason,
+        'can_edit_transactions': can_edit_transactions,
+        'editable_transactions': editable_transactions,
+        'edit_transaction_form': edit_transaction_form,
+        'edit_document_id': edit_document_id,
     }
     return render(request, 'settlement_approval/settlement_approval_detail.html', context)
+
+
+@login_required
+def settlement_approval_edit_transaction_view(request, order_number, document_id):
+    """
+    ویرایش یک سند تراکنش در صفحه تایید تسویه کامل.
+    فقط وقتی سفارش به مدیر ارجاع شده و کاربر سوپرادمین است.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, 'فقط مدیر می‌تواند تراکنش را ویرایش کند.')
+        return HttpResponseForbidden('دسترسی غیرمجاز.')
+
+    order = get_object_or_404(Order, order_number=order_number)
+    if order.status != 'pending_settlement_approval':
+        messages.error(request, 'این سفارش در وضعیت مناسب برای ویرایش تراکنش نیست.')
+        return redirect('sales:settlement_approval_list')
+
+    if not getattr(order, 'settlement_approval_referred_to_manager', False):
+        messages.error(request, 'ویرایش تراکنش فقط برای سفارش‌های ارجاع‌شده به مدیر امکان‌پذیر است.')
+        return redirect('sales:settlement_approval_detail', order_number=order_number)
+
+    document = get_object_or_404(
+        TransactionDocument,
+        id=document_id,
+        settlement__order=order,
+    )
+    settlement = document.settlement
+
+    settlement_type_label = settlement.get_settlement_type_display() if settlement.settlement_type else 'تراکنش'
+
+    if request.method == 'POST':
+        form = SettlementApprovalTransactionEditForm(
+            request.POST,
+            instance=document,
+            settlement=settlement,
+        )
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    form.save()
+                    new_total = TransactionDocument.objects.filter(
+                        settlement=settlement
+                    ).aggregate(total=Sum('document_amount'))['total'] or Decimal('0')
+                    settlement.settled_amount = new_total
+                    settlement.save(update_fields=['settled_amount'])
+                messages.success(request, 'تراکنش با موفقیت ذخیره شد.')
+                audit_logger.activity(
+                    f"مدیر تراکنش {document_id} سفارش {order_number} را در صفحه تایید تسویه ویرایش کرد."
+                )
+                return redirect('sales:settlement_approval_detail', order_number=order_number)
+            except Exception as e:
+                bug_logger.error(f"خطا در ذخیره تراکنش: {e}", exc_info=True)
+                messages.error(request, f'خطا در ذخیره: {str(e)}')
+        else:
+            for _field, errors in form.errors.items():
+                for err in errors:
+                    messages.error(request, err)
+    else:
+        form = SettlementApprovalTransactionEditForm(
+            instance=document,
+            settlement=settlement,
+        )
+
+    context = {
+        'form': form,
+        'order': order,
+        'document': document,
+        'settlement': settlement,
+        'page_title': f'ویرایش تراکنش - سفارش {order_number}',
+        'settlement_type_label': settlement_type_label,
+    }
+    return render(request, 'settlement_approval/settlement_approval_edit_transaction.html', context)
 

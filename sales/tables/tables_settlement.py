@@ -740,14 +740,18 @@ class PendingSettlementApprovalOrderTable(tables.Table):
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""
         try:
+            from django.utils.safestring import mark_safe
             detail_url = reverse('sales:settlement_approval_detail', args=[record.order_number])
-            
-            html = format_html(
+            referred = getattr(record, 'settlement_approval_referred_to_manager', False)
+            badge = ''
+            if referred:
+                badge = mark_safe('<span class="badge badge-warning" style="background:#fff3cd;color:#856404;margin-right:8px;">ارجاع به مدیر</span>')
+            return format_html(
                 '<div class="btn-group">'
                 '<a href="{}" class="btn-outline-info" title="تایید تسویه کامل">تایید تسویه کامل</a>'
-                '</div>',
-                detail_url
+                '{}</div>',
+                detail_url,
+                badge
             )
-            return html
         except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))

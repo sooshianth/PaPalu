@@ -394,6 +394,44 @@
     </div>
 </div>
 
+<!-- ویرایش تراکنش توسط مدیر (در همان صفحه، بدون رفتن به صفحه جدا) -->
+{% if can_edit_transactions and editable_transactions %}
+<div class="info-card">
+    <div class="info-card-header">
+        ویرایش تراکنش (کسری و سرک / فروش / کرایه)
+    </div>
+    <div class="info-card-body">
+        <p class="mb-3" style="margin-bottom: 1rem; color: var(--gray-700);">تراکنش را انتخاب کنید، ویرایش کنید و ذخیره کنید. پس از اطمینان در پایین صفحه «تایید مدیر» را بزنید.</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+            {% for doc, label in editable_transactions %}
+            <a href="{% url 'sales:settlement_approval_detail' order.order_number %}?edit={{ doc.id }}" class="btn {% if edit_document_id == doc.id %}btn-primary{% else %}btn-secondary{% endif %}" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                {{ label }}
+            </a>
+            {% endfor %}
+        </div>
+        {% if edit_transaction_form %}
+        <form method="post" style="background: var(--gray-100); padding: 1.25rem; border-radius: 8px;">
+            {% csrf_token %}
+            <input type="hidden" name="edit_transaction_document_id" value="{{ edit_document_id }}">
+            {% for field in edit_transaction_form %}
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="{{ field.id_for_label }}" style="display: block; font-weight: 600; color: var(--gray-800); margin-bottom: 0.35rem;">{{ field.label }}{% if field.field.required %} *{% endif %}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div class="text-danger small mt-1">{{ field.errors.0 }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary">ذخیره تراکنش</button>
+                <a href="{% url 'sales:settlement_approval_detail' order.order_number %}" class="btn btn-secondary">انصراف</a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- اطلاعات تراکنش‌های کسری و سرک -->
 {% if weight_discrepancy_transactions %}
 <div class="info-card">
@@ -412,6 +450,7 @@
                         <th>تاریخ سررسید</th>
                         <th>شماره پیگیری</th>
                         <th>پیوست</th>
+                        {% if can_edit_transactions %}<th>عملیات</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -440,6 +479,11 @@
                             -
                             {% endfor %}
                         </td>
+                        {% if can_edit_transactions %}
+                        <td>
+                            <a href="{% url 'sales:settlement_approval_detail' order.order_number %}?edit={{ transaction.id }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">ویرایش</a>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -469,6 +513,7 @@
                         <th>تاریخ سررسید</th>
                         <th>شماره پیگیری</th>
                         <th>پیوست</th>
+                        {% if can_edit_transactions %}<th>عملیات</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -488,6 +533,11 @@
                             -
                             {% endfor %}
                         </td>
+                        {% if can_edit_transactions %}
+                        <td>
+                            <a href="{% url 'sales:settlement_approval_detail' order.order_number %}?edit={{ transaction.id }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">ویرایش</a>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -520,6 +570,7 @@
                         <th>تاریخ سررسید</th>
                         <th>شماره پیگیری</th>
                         <th>پیوست</th>
+                        {% if can_edit_transactions %}<th>عملیات</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -539,6 +590,11 @@
                             -
                             {% endfor %}
                         </td>
+                        {% if can_edit_transactions %}
+                        <td>
+                            <a href="{% url 'sales:settlement_approval_detail' order.order_number %}?edit={{ transaction.id }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">ویرایش</a>
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -663,17 +719,31 @@
         تایید تسویه کامل
     </div>
     <div class="info-card-body">
-        <form method="post" onsubmit="return confirm('آیا از تایید تسویه کامل این سفارش اطمینان دارید؟ این عمل غیرقابل بازگشت است.');">
+        {% if is_settlement_approval_referred %}
+        <div class="alert alert-warning">
+            ⚠️ این سفارش به مدیر ارجاع شده است. فقط مدیر می‌تواند تسویه کامل را تایید کند.
+            {% if settlement_approval_referral_reason %}
+            <br><strong>دلیل ارجاع به مدیر:</strong><br>
+            <span style="white-space: pre-wrap;">{{ settlement_approval_referral_reason }}</span>
+            {% endif %}
+        </div>
+        {% endif %}
+        <form method="post" id="salesSettlementApprovalForm">
             {% csrf_token %}
+            <input type="hidden" name="refer_to_manager" id="id_settlement_refer_to_manager" value="">
+            <input type="hidden" name="settlement_approval_referral_reason" id="id_settlement_referral_reason" value="">
             
             {% if all_settlements_completed %}
             <div class="alert alert-success">
                 ✓ همه تسویه‌ها کامل شده‌اند. می‌توانید تسویه کامل را تایید کنید.
             </div>
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary">
-                    تایید تسویه کامل و بایگانی سفارش
+                <button type="submit" class="btn btn-primary" id="btnApproveSettlement">
+                    {% if is_settlement_approval_referred %}تایید مدیر و بایگانی سفارش{% else %}تایید تسویه کامل و بایگانی سفارش{% endif %}
                 </button>
+                {% if show_refer_button %}
+                <button type="button" class="btn btn-warning" id="btnSettlementReferToManager" style="background: #856404; border-color: #856404; color: #fff;">ارجاع به مدیر</button>
+                {% endif %}
                 <a href="{% url 'sales:settlement_approval_list' %}" class="btn btn-secondary">
                     بازگشت به لیست
                 </a>
@@ -683,9 +753,12 @@
                 ⚠️ برخی از تسویه‌ها هنوز کامل نشده‌اند. لطفاً قبل از تایید تسویه کامل، همه تسویه‌ها را بررسی کنید.
             </div>
             <div class="btn-group">
-                <button type="submit" class="btn btn-primary" disabled>
-                    تایید تسویه کامل و بایگانی سفارش (غیرفعال)
+                <button type="submit" class="btn btn-primary" id="btnApproveSettlement" disabled>
+                    {% if is_settlement_approval_referred %}تایید مدیر و بایگانی سفارش (غیرفعال){% else %}تایید تسویه کامل و بایگانی سفارش (غیرفعال){% endif %}
                 </button>
+                {% if show_refer_button %}
+                <button type="button" class="btn btn-warning" id="btnSettlementReferToManager" style="background: #856404; border-color: #856404; color: #fff;">ارجاع به مدیر</button>
+                {% endif %}
                 <a href="{% url 'sales:settlement_approval_list' %}" class="btn btn-secondary">
                     بازگشت به لیست
                 </a>
@@ -694,6 +767,71 @@
         </form>
     </div>
 </div>
+
+<!-- تایید قبل از ارسال فرم «تایید تسویه کامل» -->
+<script>
+(function() {
+    var form = document.getElementById('salesSettlementApprovalForm');
+    var btnApprove = document.getElementById('btnApproveSettlement');
+    if (form && btnApprove) {
+        form.addEventListener('submit', function(e) {
+            if (document.getElementById('id_settlement_refer_to_manager') && document.getElementById('id_settlement_refer_to_manager').value === '1')
+                return;
+            if (btnApprove && btnApprove.disabled) return;
+            if (!confirm('آیا از تایید تسویه کامل این سفارش اطمینان دارید؟ این عمل غیرقابل بازگشت است.'))
+                e.preventDefault();
+        });
+    }
+})();
+</script>
+
+<!-- مودال دلیل ارجاع به مدیر (تایید تسویه کامل فروش) -->
+{% if show_refer_button %}
+<script>window.settlementReferModalOpen = {{ refer_modal_open|yesno:"true,false" }};</script>
+<div id="settlementReferToManagerModal" role="dialog" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999; align-items: center; justify-content: center; padding: 20px; background: rgba(0,0,0,0.4);">
+    <div style="background: #fff; padding: 25px; border-radius: 12px; max-width: 500px; width: 100%; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
+        <h3 style="margin-top: 0;">ارجاع به مدیر</h3>
+        <p style="color: #666;">پس از ارجاع، این سفارش در لیست تایید تسویه نمایش داده نمی‌شود و فقط مدیر می‌تواند از صفحه ارجاعات آن را باز کرده و تسویه کامل را تایید کند.</p>
+        <label class="form-label">دلیل ارجاع (اجباری)</label>
+        <textarea id="id_settlement_referral_reason_text" class="form-control" rows="4" placeholder="دلیل ارجاع به مدیر را بنویسید..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"></textarea>
+        <div id="settlementReferReasonError" class="text-danger mt-2" style="display: none;">لطفاً دلیل ارجاع را وارد کنید.</div>
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="button" class="btn btn-primary" id="btnSettlementConfirmRefer">تایید ارجاع</button>
+            <button type="button" class="btn btn-secondary" id="btnSettlementCancelRefer">انصراف</button>
+        </div>
+    </div>
+</div>
+<script>
+(function() {
+    var form = document.getElementById('salesSettlementApprovalForm');
+    var modal = document.getElementById('settlementReferToManagerModal');
+    var btnRefer = document.getElementById('btnSettlementReferToManager');
+    var btnConfirm = document.getElementById('btnSettlementConfirmRefer');
+    var btnCancel = document.getElementById('btnSettlementCancelRefer');
+    var reasonInput = document.getElementById('id_settlement_referral_reason_text');
+    var reasonError = document.getElementById('settlementReferReasonError');
+    var hidRefer = document.getElementById('id_settlement_refer_to_manager');
+    var hidReason = document.getElementById('id_settlement_referral_reason');
+    if (!modal || !form) return;
+    function showModal() { modal.style.display = 'flex'; }
+    function hideModal() { modal.style.display = 'none'; if (reasonError) reasonError.style.display = 'none'; }
+    if (btnRefer) btnRefer.addEventListener('click', showModal);
+    if (btnCancel) btnCancel.addEventListener('click', hideModal);
+    modal.addEventListener('click', function(e) { if (e.target === modal) hideModal(); });
+    if (btnConfirm && hidRefer && hidReason) {
+        btnConfirm.addEventListener('click', function() {
+            var reason = reasonInput ? reasonInput.value.trim() : '';
+            if (!reason) { if (reasonError) { reasonError.style.display = 'block'; reasonError.textContent = 'لطفاً دلیل ارجاع را وارد کنید.'; } return; }
+            hidRefer.value = '1';
+            hidReason.value = reason;
+            if (reasonError) reasonError.style.display = 'none';
+            form.submit();
+        });
+    }
+    if (window.settlementReferModalOpen) showModal();
+})();
+</script>
+{% endif %}
 
 {% endblock %}
 

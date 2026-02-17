@@ -117,6 +117,7 @@ urlpatterns = [
     # مسیرهای تایید تسویه کامل
     path('settlement-approval/list/', settlement_approval_view.settlement_approval_list_view, name='settlement_approval_list'),
     path('settlement-approval/<str:order_number>/', settlement_approval_view.settlement_approval_detail_view, name='settlement_approval_detail'),
+    path('settlement-approval/<str:order_number>/edit-transaction/<int:document_id>/', settlement_approval_view.settlement_approval_edit_transaction_view, name='settlement_approval_edit_transaction'),
 
     path('create/', product_view.create_product_view, name='create_product'),
     
