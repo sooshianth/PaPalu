@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.views.decorators.http import require_http_methods
@@ -57,6 +57,9 @@ def transaction_receipt_order_list_view(request):
         messages.error(request, 'شما دسترسی به مدیریت رسیدهای تراکنش فروش را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # دریافت پارامتر جستجو
+    search_query = request.GET.get('search', '').strip()
+
     # سفارش‌های ارجاع‌شده به مدیر فقط در صفحه ارجاعات دیده می‌شوند
     orders_qs = Order.objects.filter(
         status='pending_transaction_receipt_upload'
@@ -64,6 +67,13 @@ def transaction_receipt_order_list_view(request):
 
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
+
+    # اعمال جستجو (شماره سفارش، نام مشتری)
+    if search_query:
+        orders_qs = orders_qs.filter(
+            Q(order_number__icontains=search_query) |
+            Q(customer__name__icontains=search_query)
+        )
 
     bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار بارگذاری رسید تراکنش لود شد")
 
@@ -93,6 +103,7 @@ def transaction_receipt_order_list_view(request):
     context = {
         'table': table,
         'accessible_fields': accessible_fields,
+        'search_query': search_query,
         'page_title': 'سفارش‌های در انتظار بارگذاری رسید تراکنش',
     }
     return render(request, 'transaction/transaction_receipt_order_list.html', context)
