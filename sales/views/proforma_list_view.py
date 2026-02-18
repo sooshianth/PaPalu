@@ -152,6 +152,9 @@ def proforma_list_view(request):
         messages.error(request, 'شما دسترسی به مشاهده لیست سفارش‌های در انتظار صدور پیش فاکتور ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # دریافت پارامتر جستجو
+    search_query = request.GET.get('search', '').strip()
+
     # دریافت سفارش‌های در وضعیت "در انتظار صدور پیش فاکتور"
     orders_qs = Order.objects.filter(
         status='pending_proforma_issue',
@@ -161,6 +164,13 @@ def proforma_list_view(request):
     # فیلتر بر اساس کاربر (اگر superuser نیست)
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
+
+    # اعمال جستجو روی سفارش‌ها
+    if search_query:
+        orders_qs = orders_qs.filter(
+            Q(order_number__icontains=search_query) |
+            Q(customer__name__icontains=search_query)
+        )
 
     bug_logger.debug(f"تعداد {orders_qs.count()} سفارش در انتظار صدور پیش فاکتور لود شد")
 
@@ -185,6 +195,15 @@ def proforma_list_view(request):
     if not request.user.is_superuser:
         proformas_qs = proformas_qs.filter(order__registered_by=request.user)
 
+    # اعمال جستجو روی پیش فاکتورهای صادر شده
+    if search_query:
+        proformas_qs = proformas_qs.filter(
+            Q(proforma_number__icontains=search_query) |
+            Q(order__order_number__icontains=search_query) |
+            Q(customer__name__icontains=search_query) |
+            Q(order__customer__name__icontains=search_query)
+        )
+
     bug_logger.debug(f"تعداد {proformas_qs.count()} پیش فاکتور صادر شده لود شد")
 
     # ایجاد جدول پیش فاکتورهای صادر شده
@@ -197,6 +216,7 @@ def proforma_list_view(request):
     context = {
         'table': table,
         'proformas_table': proformas_table,
+        'search_query': search_query,
         'page_title': 'سفارش‌های در انتظار صدور پیش فاکتور',
     }
     return render(request, 'proforma/proforma_list.html', context)

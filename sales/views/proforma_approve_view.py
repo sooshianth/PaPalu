@@ -30,6 +30,9 @@ def approve_proforma_list_view(request):
         messages.error(request, 'شما دسترسی به مشاهده لیست تأیید پیش فاکتورها ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # دریافت پارامتر جستجو
+    search_query = request.GET.get('search', '').strip()
+
     # دریافت سفارش‌های با وضعیت "در انتظار آپلود پیش فاکتور مشتری"
     orders = Order.objects.filter(
         status='pending_customer_proforma_upload'
@@ -55,6 +58,16 @@ def approve_proforma_list_view(request):
             'has_confirmation_file': order_doc and order_doc.proforma_confirmation_attachment
         })
 
+    # اعمال جستجو روی لیست (شماره سفارش، نام مشتری، شماره پیش فاکتور)
+    if search_query:
+        q = search_query.lower()
+        orders_with_proformas = [
+            x for x in orders_with_proformas
+            if (x['order'].order_number and q in (x['order'].order_number or '').lower())
+            or (x['order'].customer and x['order'].customer.name and q in (x['order'].customer.name or '').lower())
+            or (x['proforma'] and x['proforma'].proforma_number and q in (x['proforma'].proforma_number or '').lower())
+        ]
+
     bug_logger.debug(f"تعداد {len(orders_with_proformas)} سفارش برای نمایش لود شد")
     
     # ایجاد جدول با django-tables2
@@ -63,6 +76,7 @@ def approve_proforma_list_view(request):
     
     context = {
         'table': table,
+        'search_query': search_query,
         'page_title': 'لیست سفارش‌های در انتظار آپلود پیش فاکتور مشتری',
     }
     return render(request, 'proforma/approve_proforma_list.html', context)

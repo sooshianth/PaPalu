@@ -542,7 +542,7 @@
     
     <!-- بخش جستجو و فیلتر -->
     <div class="search-filter-section">
-        <form method="get" action="{% url 'sales:product_list' %}">
+        <form method="get" action="{% url 'sales:product_list' %}" id="search-filter-form">
             <div class="row">
                 <div class="col-md-4 mb-3">
                     <label for="search" class="form-label">جستجو</label>
@@ -581,7 +581,7 @@
             
             <div style="display: flex; gap: 10px; margin-top: 15px;">
                 <button type="submit" class="btn btn-primary">جستجو</button>
-                <a href="{% url 'sales:product_list' %}" class="btn btn-secondary">پاک کردن فیلترها</a>
+                <a href="{% url 'sales:product_list' %}" class="btn btn-secondary" id="clear-filters-btn">پاک کردن فیلترها</a>
             </div>
         </form>
     </div>
@@ -649,11 +649,70 @@
 
 {% block extra_js %}
 <script>
-    // Auto-submit form on filter change
-    document.querySelectorAll('#category, #application, #is_custom').forEach(function(element) {
-        element.addEventListener('change', function() {
-            this.form.submit();
-        });
-    });
+    // جستجوی لحظه‌ای (لایو) با debounce مانند صفحه سفارش‌ها
+    (function() {
+        let searchTimeout;
+        const searchInput = document.getElementById('search');
+        const form = document.getElementById('search-filter-form');
+        const categorySelect = document.getElementById('category');
+        const applicationSelect = document.getElementById('application');
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction() {
+                const later = function() {
+                    clearTimeout(timeout);
+                    func();
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function submitForm() {
+            if (searchInput) {
+                sessionStorage.setItem('productSearchInputFocus', 'true');
+                sessionStorage.setItem('productSearchInputCursorPos', String(searchInput.selectionStart || 0));
+                sessionStorage.setItem('productSearchInputValue', searchInput.value);
+            }
+            if (form) form.submit();
+        }
+
+        // بازگرداندن focus و cursor بعد از reload
+        if (searchInput) {
+            if (sessionStorage.getItem('productSearchInputFocus') === 'true') {
+                sessionStorage.removeItem('productSearchInputFocus');
+                setTimeout(function() {
+                    searchInput.focus();
+                    var pos = parseInt(sessionStorage.getItem('productSearchInputCursorPos') || '0', 10);
+                    if (searchInput.setSelectionRange) {
+                        searchInput.setSelectionRange(pos, pos);
+                    }
+                    sessionStorage.removeItem('productSearchInputCursorPos');
+                    sessionStorage.removeItem('productSearchInputValue');
+                }, 100);
+            }
+            // جستجوی لحظه‌ای: بعد از 500ms توقف تایپ، فرم ارسال می‌شود
+            searchInput.addEventListener('input', debounce(submitForm, 500));
+        }
+
+        // ارسال فوری فرم با تغییر گروه یا کاربرد
+        if (categorySelect) {
+            categorySelect.addEventListener('change', function() { if (form) form.submit(); });
+        }
+        if (applicationSelect) {
+            applicationSelect.addEventListener('change', function() { if (form) form.submit(); });
+        }
+
+        // پاک کردن sessionStorage هنگام کلیک روی «پاک کردن فیلترها»
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function() {
+                sessionStorage.removeItem('productSearchInputFocus');
+                sessionStorage.removeItem('productSearchInputCursorPos');
+                sessionStorage.removeItem('productSearchInputValue');
+            });
+        }
+    })();
 </script>
 {% endblock %}
