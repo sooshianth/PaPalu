@@ -32,6 +32,28 @@
         margin-bottom: 30px;
     }
     
+    .search-filter-section {
+        background: var(--gray-100);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border-right: 4px solid var(--primary-green);
+    }
+    
+    .search-filter-section .form-control {
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        padding: 10px 15px;
+        font-size: 1rem;
+    }
+    
+    .search-filter-section .form-label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        color: var(--gray-700);
+    }
+    
     .table-container {
         overflow-x: auto;
     }
@@ -352,6 +374,27 @@
         {% endfor %}
     {% endif %}
     
+    <!-- بخش جستجو -->
+    <div class="search-filter-section">
+        <form method="get" action="{% url 'sales:invoice_list' %}" id="search-filter-form">
+            <div class="row" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end;">
+                <div style="flex: 1; min-width: 220px;">
+                    <label for="search" class="form-label">جستجو</label>
+                    <input type="text"
+                           class="form-control"
+                           id="search"
+                           name="search"
+                           value="{{ search_query }}"
+                           placeholder="شماره فاکتور، شماره سفارش، نام مشتری...">
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary">جستجو</button>
+                    <a href="{% url 'sales:invoice_list' %}" class="btn btn-secondary" id="clear-filters-btn">پاک کردن فیلترها</a>
+                </div>
+            </div>
+        </form>
+    </div>
+    
     {% if table %}
         <div class="table-container">
             {% render_table table %}
@@ -403,5 +446,60 @@
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    (function() {
+        var searchInput = document.getElementById('search');
+        var form = document.getElementById('search-filter-form');
+        var clearBtn = document.getElementById('clear-filters-btn');
+
+        function debounce(func, wait) {
+            var timeout;
+            return function() {
+                var later = function() {
+                    clearTimeout(timeout);
+                    func();
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function submitForm() {
+            if (searchInput) {
+                sessionStorage.setItem('invoiceSearchInputFocus', 'true');
+                sessionStorage.setItem('invoiceSearchInputCursorPos', String(searchInput.selectionStart || 0));
+                sessionStorage.setItem('invoiceSearchInputValue', searchInput.value);
+            }
+            if (form) form.submit();
+        }
+
+        if (searchInput) {
+            if (sessionStorage.getItem('invoiceSearchInputFocus') === 'true') {
+                sessionStorage.removeItem('invoiceSearchInputFocus');
+                setTimeout(function() {
+                    searchInput.focus();
+                    var pos = parseInt(sessionStorage.getItem('invoiceSearchInputCursorPos') || '0', 10);
+                    if (searchInput.setSelectionRange) {
+                        searchInput.setSelectionRange(pos, pos);
+                    }
+                    sessionStorage.removeItem('invoiceSearchInputCursorPos');
+                    sessionStorage.removeItem('invoiceSearchInputValue');
+                }, 100);
+            }
+            searchInput.addEventListener('input', debounce(submitForm, 500));
+        }
+
+        if (clearBtn) {
+            clearBtn.addEventListener('click', function() {
+                sessionStorage.removeItem('invoiceSearchInputFocus');
+                sessionStorage.removeItem('invoiceSearchInputCursorPos');
+                sessionStorage.removeItem('invoiceSearchInputValue');
+            });
+        }
+    })();
+</script>
 {% endblock %}
 

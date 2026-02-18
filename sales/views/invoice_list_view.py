@@ -155,6 +155,9 @@ def invoice_list_view(request):
         messages.error(request, 'شما دسترسی به مشاهده لیست فاکتورها ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # دریافت پارامتر جستجو
+    search_query = request.GET.get('search', '').strip()
+
     # نمایش همه فاکتورها
     if request.user.is_superuser:
         invoices = Invoice.objects.all().select_related('order', 'customer', 'company').order_by('-created_at')
@@ -162,6 +165,14 @@ def invoice_list_view(request):
         invoices = Invoice.objects.filter(
             order__registered_by=request.user
         ).select_related('order', 'customer', 'company').order_by('-created_at')
+
+    # اعمال جستجو (شماره فاکتور، شماره سفارش، نام مشتری)
+    if search_query:
+        invoices = invoices.filter(
+            Q(tax_invoice_number__icontains=search_query) |
+            Q(order__order_number__icontains=search_query) |
+            Q(customer__name__icontains=search_query)
+        )
 
     # دریافت فیلدهای قابل دسترسی برای نمایش
     accessible_fields = get_accessible_invoice_fields_for_view(request.user)
@@ -176,6 +187,7 @@ def invoice_list_view(request):
     context = {
         'table': table,
         'accessible_fields': accessible_fields,
+        'search_query': search_query,
         'page_title': 'لیست فاکتورها',
     }
     return render(request, 'invoice/invoice_list.html', context)

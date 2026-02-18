@@ -40,6 +40,9 @@ def approve_allocation_list_view(request):
         messages.error(request, 'شما دسترسی به تأیید تخصیص را ندارید.')
         return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
 
+    # دریافت پارامتر جستجو
+    search_query = request.GET.get('search', '').strip()
+
     orders_qs = Order.objects.filter(status='pending_allocation_approval').select_related('customer', 'registered_by')
     
     # فیلتر کردن سفارش‌هایی که تخصیص رد شده دارند
@@ -47,6 +50,13 @@ def approve_allocation_list_view(request):
 
     if not request.user.is_superuser:
         orders_qs = orders_qs.filter(registered_by=request.user)
+
+    # اعمال جستجو (شماره سفارش، نام مشتری)
+    if search_query:
+        orders_qs = orders_qs.filter(
+            Q(order_number__icontains=search_query) |
+            Q(customer__name__icontains=search_query)
+        )
 
     # افزودن annotate برای فیلدهای محاسبه شده
     # مهم: ابتدا مقدار سفارش را با استفاده از Subquery محاسبه می‌کنیم
@@ -132,6 +142,7 @@ def approve_allocation_list_view(request):
 
     context = {
         'table': table,
+        'search_query': search_query,
         'page_title': 'سفارش‌های در انتظار تأیید تخصیص',
     }
     return render(request, 'allocation/approve_allocation_list.html', context)
