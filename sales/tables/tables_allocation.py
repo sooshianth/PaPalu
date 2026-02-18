@@ -2,7 +2,9 @@ import django_tables2 as tables
 from django.utils.html import format_html
 from django.urls import reverse
 from decimal import Decimal
+import jdatetime
 from core.OrderFolder.OrderModel import Order
+from core.AllocationFolder.AllocationModel import Allocation
 from core.helpers import check_field_access_prefer_edit
 from core.decimal_utils import to_decimal
 
@@ -595,5 +597,206 @@ class ApproveAllocationTable(tables.Table):
             )
         except Exception as e:
             # در صورت بروز خطا، یک پیام خطا برگردان
+            return format_html('<span style="color: red;">خطا: {}</span>', str(e))
+
+
+class PurchaseAllocationDetailTable(tables.Table):
+    """جدول لیست تخصیص‌های سفارش‌های خرید"""
+    
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+    
+    allocation_number = tables.Column(
+        verbose_name='شماره تخصیص',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    order_number = tables.Column(
+        verbose_name='شماره سفارش',
+        accessor='order.order_number',
+        orderable=True,
+        order_by='order__order_number',
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    customer = tables.Column(
+        verbose_name='مشتری',
+        accessor='order.customer.name',
+        orderable=True,
+        order_by='order__customer__name',
+        empty_values=(),
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    allocation_status = tables.Column(
+        verbose_name='وضعیت تخصیص',
+        orderable=True,
+        empty_values=(),
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    delivery_postal_code = tables.Column(
+        verbose_name='کد پستی تحویل',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    requested_machine = tables.Column(
+        verbose_name='ماشین درخواستی',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    created_at = tables.Column(
+        verbose_name='تاریخ ایجاد',
+        orderable=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
+    
+    actions = tables.Column(
+        verbose_name='عملیات',
+        empty_values=(),
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+    
+    class Meta:
+        model = Allocation
+        template_name = 'django_tables2/bootstrap.html'
+        fields = (
+            'allocation_number',
+            'order_number',
+            'customer',
+            'allocation_status',
+            'delivery_postal_code',
+            'requested_machine',
+            'created_at',
+            'actions',
+        )
+        attrs = {
+            'class': 'data-table',
+            'thead': {'class': ''}
+        }
+        sequence = (
+            'allocation_number',
+            'order_number',
+            'customer',
+            'allocation_status',
+            'delivery_postal_code',
+            'requested_machine',
+            'created_at',
+            'actions',
+        )
+    
+    def render_allocation_number(self, value, record):
+        """نمایش شماره تخصیص"""
+        return format_html('<span style="font-weight: 700; color: #000; font-size: 1rem;">{}</span>', value or '-')
+    
+    def render_order_number(self, value, record):
+        """نمایش شماره سفارش"""
+        if value:
+            return format_html('<span class="code-badge">{}</span>', value)
+        return '-'
+    
+    def render_customer(self, value, record):
+        """نمایش نام مشتری"""
+        if value:
+            return value
+        if record.order and record.order.customer:
+            return record.order.customer.name
+        return '-'
+    
+    def render_allocation_status(self, value, record):
+        """نمایش وضعیت تخصیص به صورت badge"""
+        status_value = getattr(record, 'allocation_status', None) or value
+        if not status_value:
+            return format_html('<span class="badge badge-archived">-</span>')
+        
+        status_badges = {
+            'planned': ('badge-pending', 'برنامه‌ریزی شده'),
+            'pending_approval': ('badge-pending-accounting', 'در انتظار تأیید'),
+            'pending_shipping': ('badge-pending-factory', 'در انتظار اعلام بار'),
+            'pending_vehicle_recruitment': ('badge-pending-vehicle', 'در انتظار جذب خودرو'),
+            'pending_vehicle_entry': ('badge-pending-vehicle-entry', 'در انتظار ورود خودرو به کارخانه'),
+            'pending_loading_completion': ('badge-pending-loading', 'در انتظار تکمیل بارگیری'),
+            'completed': ('badge-completed', 'تکمیل شده'),
+            'canceled': ('badge-cancelled', 'لغو شده'),
+        }
+        
+        if status_value in status_badges:
+            badge_class, badge_text = status_badges[status_value]
+            return format_html('<span class="badge {}">{}</span>', badge_class, badge_text)
+        
+        try:
+            display_text = record.get_allocation_status_display()
+        except Exception:
+            display_text = str(status_value)
+        return format_html('<span class="badge badge-unknown">{}</span>', display_text)
+    
+    def render_delivery_postal_code(self, value, record):
+        return value or '-'
+    
+    def render_requested_machine(self, value, record):
+        return value or '-'
+    
+    def render_created_at(self, value, record):
+        """نمایش تاریخ ایجاد"""
+        if hasattr(record, 'created_at') and record.created_at:
+            dt = record.created_at
+            if isinstance(dt, jdatetime.datetime):
+                if dt.hour != 0 or dt.minute != 0 or dt.second != 0:
+                    return dt.strftime('%Y-%m-%d %H:%M')
+                return dt.strftime('%Y-%m-%d')
+            elif isinstance(dt, jdatetime.date):
+                return dt.strftime('%Y-%m-%d')
+        if value:
+            if isinstance(value, jdatetime.datetime):
+                if value.hour != 0 or value.minute != 0 or value.second != 0:
+                    return value.strftime('%Y-%m-%d %H:%M')
+                return value.strftime('%Y-%m-%d')
+            elif isinstance(value, jdatetime.date):
+                return value.strftime('%Y-%m-%d')
+        return '-'
+    
+    def render_actions(self, record):
+        """نمایش دکمه‌های عملیات"""
+        try:
+            if not record.order_id:
+                return '-'
+            order_number = record.order.order_number
+            edit_url = reverse('sales:allocation_edit', args=[order_number, record.allocation_number])
+            return format_html(
+                '<div class="btn-group">'
+                '<a href="{}" class="btn-outline-warning" title="ویرایش">ویرایش</a>'
+                '</div>',
+                edit_url
+            )
+        except Exception as e:
             return format_html('<span style="color: red;">خطا: {}</span>', str(e))
 

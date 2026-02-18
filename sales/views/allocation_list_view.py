@@ -22,7 +22,7 @@ from core.PersonFolder.PhoneNumberModel import PhoneNumber
 from django.contrib.contenttypes.models import ContentType
 from sales.forms.allocation_create_form import CreateAllocationForm, AllocationProductInfoFormSet
 from sales.forms.customer_create_form import DeliveryAddressForm
-from sales.tables.tables_allocation import AllocationTable
+from sales.tables.tables_allocation import AllocationTable, PurchaseAllocationDetailTable
 from core.ProductFolder.ProductModel import Product
 from decimal import Decimal
 
@@ -312,6 +312,52 @@ def allocation_list_view(request):
         'page_title': 'سفارش‌های در انتظار تخصیص',
     }
     return render(request, 'allocation/allocation_list.html', context)
+
+
+@login_required
+def purchase_allocation_list_view(request):
+    """
+    لیست تخصیص‌های مربوط به سفارش‌های فروش
+    """
+    audit_logger.info("درخواست مشاهده لیست تخصیص‌های سفارش‌های فروش")
+    
+    if not user_has_task(request.user, TaskChoices.SALES_VIEW_ALLOCATION_LIST.value):
+        audit_logger.activity("تلاش برای مشاهده لیست تخصیص‌ها بدون دسترسی")
+        messages.error(request, 'شما دسترسی به این بخش ندارید.')
+        return HttpResponseForbidden('شما دسترسی به این بخش ندارید.')
+
+    search_query = request.GET.get('search', '').strip()
+    status_filter = request.GET.get('status', '')
+
+    allocations_qs = Allocation.objects.filter(
+        order__order_type='sale'
+    ).select_related('order', 'order__customer').order_by('-created_at')
+
+    if not request.user.is_superuser:
+        allocations_qs = allocations_qs.filter(order__registered_by=request.user)
+
+    if search_query:
+        allocations_qs = allocations_qs.filter(
+            Q(allocation_number__icontains=search_query) |
+            Q(order__order_number__icontains=search_query) |
+            Q(order__customer__name__icontains=search_query)
+        )
+
+    if status_filter:
+        allocations_qs = allocations_qs.filter(allocation_status=status_filter)
+
+    bug_logger.debug(f"تعداد {allocations_qs.count()} تخصیص سفارش فروش لود شد")
+
+    table = PurchaseAllocationDetailTable(allocations_qs, user=request.user)
+    RequestConfig(request, paginate={'per_page': 25}).configure(table)
+
+    context = {
+        'table': table,
+        'page_title': 'لیست تخصیص‌های سفارش‌های فروش',
+        'search_query': search_query,
+        'status_filter': status_filter,
+    }
+    return render(request, 'order/purchase_allocation_list.html', context)
 
 
 @login_required

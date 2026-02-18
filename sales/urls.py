@@ -84,6 +84,7 @@ urlpatterns = [
     
     # مسیرهای تخصیص
     path('allocation/list/', allocation_list_view.allocation_list_view, name='allocation_list'),
+    path('allocation/purchase-list/', allocation_list_view.purchase_allocation_list_view, name='purchase_allocation_list'),
     path('allocation/<str:order_number>/create/', allocation_list_view.allocation_create_view, name='allocation_create'),
     path('allocation/<str:order_number>/<str:allocation_number>/edit/', allocation_list_view.allocation_edit_view, name='allocation_edit'),
     path('api/delivery-info/<str:postal_code>/', allocation_list_view.get_delivery_info_api, name='get_delivery_info_api'),

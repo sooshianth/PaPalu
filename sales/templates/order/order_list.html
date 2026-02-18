@@ -651,12 +651,19 @@
 {% block content %}
 <div class="page-header">
     <h2>{{ page_title }}</h2>
-    <a href="{% url 'sales:order_create' %}" class="btn btn-primary">
-        <svg style="width: 20px; height: 20px; margin-left: 8px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        ایجاد سفارش جدید
-    </a>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        {% if can_view_allocation_list %}
+        <a href="{% url 'sales:purchase_allocation_list' %}" class="btn btn-secondary">
+            لیست تخصیص‌ها
+        </a>
+        {% endif %}
+        <a href="{% url 'sales:order_create' %}" class="btn btn-primary">
+            <svg style="width: 20px; height: 20px; margin-left: 8px; display: inline-block; vertical-align: middle;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            ایجاد سفارش جدید
+        </a>
+    </div>
 </div>
 
 <div class="list-card">

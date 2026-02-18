@@ -320,6 +320,7 @@ def order_list_view(request):
         'page_title': 'لیست سفارش‌ها',
         'search_query': search_query,
         'status_filter': status_filter,
+        'can_view_allocation_list': user_has_task(request.user, TaskChoices.SALES_VIEW_ALLOCATION_LIST.value),
     }
     return render(request, 'order/order_list.html', context)
 
