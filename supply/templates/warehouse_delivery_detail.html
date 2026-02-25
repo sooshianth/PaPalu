@@ -946,6 +946,7 @@
                                 <th>وزن تخصیص یافته در سفارش (کیلوگرم)</th>
                                 <th>وزن بارنامه (کیلوگرم)</th>
                                 <th>وزن خالص محاسبه شده (کیلوگرم)</th>
+                                <th>اختلاف بارنامه و خالص (کیلوگرم)</th>
                                 <th>اختلاف تخصیص و خالص (کیلوگرم)</th>
                             </tr>
                         </thead>
@@ -958,6 +959,7 @@
                                 </td>
                                 <td id="waybill-{{ item_data.item.id }}">{% if pt.waybill_weight is not None %}{{ pt.waybill_weight|persian_number:3 }}{% else %}—{% endif %}</td>
                                 <td id="calculated-{{ item_data.item.id }}">{% if item_data.calculated_net_weight is not None %}{{ item_data.calculated_net_weight|persian_number:3 }}{% else %}—{% endif %}</td>
+                                <td id="waybill-net-diff-{{ item_data.item.id }}">{% if item_data.waybill_net_diff is not None %}{{ item_data.waybill_net_diff|persian_number:3 }}{% else %}—{% endif %}</td>
                                 <td id="diff-{{ item_data.item.id }}">{% if item_data.weight_diff is not None %}{{ item_data.weight_diff|persian_number:3 }}{% else %}—{% endif %}</td>
                             </tr>
                             {% endfor %}
@@ -966,6 +968,7 @@
                                 <td id="total-allocated"><strong>{% if comparison_totals %}{{ comparison_totals.total_allocated|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                                 <td id="total-waybill"><strong>{% if pt.waybill_weight is not None %}{{ pt.waybill_weight|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                                 <td id="total-calculated"><strong>{% if comparison_totals %}{{ comparison_totals.total_calculated|persian_number:3 }}{% else %}—{% endif %}</strong></td>
+                                <td id="total-waybill-net-diff"><strong>{% if comparison_totals and comparison_totals.total_waybill_net_diff is not None %}{{ comparison_totals.total_waybill_net_diff|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                                 <td id="total-diff"><strong>{% if comparison_totals %}{{ comparison_totals.total_diff|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                             </tr>
                         </tbody>
@@ -1021,6 +1024,7 @@
                 <div class="form-group" id="initial-freight-group">
                     <label for="{{ form.initial_freight.id_for_label }}">{{ form.initial_freight.label }}</label>
                     {{ form.initial_freight }}
+                    <small class="persian-number-display" id="id_initial_freight_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if form.initial_freight.errors %}
                     <div class="alert alert-error">
                         {{ form.initial_freight.errors }}
@@ -1033,6 +1037,7 @@
                 <div class="form-group" id="discount-group">
                     <label for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
                     {{ form.discount }}
+                    <small class="persian-number-display" id="id_discount_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if form.discount.errors %}
                     <div class="alert alert-error">
                         {{ form.discount.errors }}
@@ -1045,6 +1050,7 @@
                 <div class="form-group" id="surplus-group">
                     <label for="{{ form.surplus.id_for_label }}">{{ form.surplus.label }}</label>
                     {{ form.surplus }}
+                    <small class="persian-number-display" id="id_surplus_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if form.surplus.errors %}
                     <div class="alert alert-error">
                         {{ form.surplus.errors }}
@@ -1058,6 +1064,7 @@
                     <label for="{{ form.total_freight.id_for_label }}">{{ form.total_freight.label }} (محاسبه
                         خودکار)</label>
                     {{ form.total_freight }}
+                    <small class="persian-number-display" id="id_total_freight_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if form.total_freight.errors %}
                     <div class="alert alert-error">
                         {{ form.total_freight.errors }}
@@ -1071,6 +1078,7 @@
                     <label for="{{ form.freight_payment.id_for_label }}">{{ form.freight_payment.label }} (محاسبه
                         خودکار)</label>
                     {{ form.freight_payment }}
+                    <small class="persian-number-display" id="id_freight_payment_persian" style="font-size:0.85rem;color:#666;margin-top:4px;display:block;min-height:1.2em;"></small>
                     {% if form.freight_payment.errors %}
                     <div class="alert alert-error">
                         {{ form.freight_payment.errors }}
@@ -1210,6 +1218,48 @@
                 section.classList.toggle('collapsed');
             });
         });
+
+        // نمایش اعداد فارسی با جداکننده ، برای اطلاعات کرایه (مثل سایر صفحات)
+        (function () {
+            var persianDigits = '۰۱۲۳۴۵۶۷۸۹';
+            function formatNumberToPersian(num, decimalPlaces) {
+                if (num === null || num === undefined || isNaN(num)) return '';
+                var n = parseFloat(num);
+                var fixed;
+                if (decimalPlaces === 0) {
+                    fixed = String(Math.round(n));
+                } else if (decimalPlaces !== undefined && decimalPlaces > 0) {
+                    fixed = n.toFixed(decimalPlaces);
+                } else {
+                    fixed = (n % 1 === 0 ? String(Math.round(n)) : n.toFixed(2));
+                }
+                var parts = fixed.split('.');
+                var intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '،');
+                var result = intPart + (parts[1] ? '.' + parts[1] : '');
+                return result.replace(/[0-9]/g, function (d) { return persianDigits[parseInt(d, 10)]; });
+            }
+            function updatePersianDisplay(inputId, displayId, decimals) {
+                var input = document.getElementById(inputId);
+                var display = document.getElementById(displayId);
+                if (!input || !display) return;
+                var raw = (input.value || '').replace(/،/g, '').replace(/,/g, '');
+                var num = parseFloat(raw);
+                display.textContent = (raw === '' || isNaN(num)) ? '' : formatNumberToPersian(num, decimals);
+            }
+            function attachPersianDisplay(inputId, displayId, decimals) {
+                decimals = decimals !== undefined ? decimals : 2;
+                var input = document.getElementById(inputId);
+                if (!input) return;
+                updatePersianDisplay(inputId, displayId, decimals);
+                input.addEventListener('input', function () { updatePersianDisplay(inputId, displayId, decimals); });
+                input.addEventListener('change', function () { updatePersianDisplay(inputId, displayId, decimals); });
+            }
+            attachPersianDisplay('id_initial_freight', 'id_initial_freight_persian', 0);
+            attachPersianDisplay('id_total_freight', 'id_total_freight_persian', 0);
+            attachPersianDisplay('id_discount', 'id_discount_persian', 0);
+            attachPersianDisplay('id_surplus', 'id_surplus_persian', 0);
+            attachPersianDisplay('id_freight_payment', 'id_freight_payment_persian', 0);
+        })();
 
         // ==========================================
         //       SEQUENTIAL WEIGHING SYSTEM

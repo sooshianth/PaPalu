@@ -338,7 +338,21 @@ def create_purchase_transport_view(request):
     
     try:
         if request.method == 'POST':
-            form = TransportForm(request.POST)
+            # وقتی از صفحه با ?order=PO-xxx می‌آییم، فیلد purchase_order در قالب ممکن است غیرفعال یا فقط hidden باشد.
+            # برای اطمینان از اینکه فرم allocation را تنظیم کند، در صورت امکان initial را از POST یا GET پر کن.
+            post_initial = {}
+            post_order_id = request.POST.get('purchase_order')
+            if post_order_id:
+                try:
+                    post_initial['purchase_order'] = Order.objects.get(pk=post_order_id)
+                except (Order.DoesNotExist, ValueError, TypeError):
+                    pass
+            if not post_initial.get('purchase_order') and order_number:
+                try:
+                    post_initial['purchase_order'] = Order.objects.get(order_number=order_number)
+                except Order.DoesNotExist:
+                    pass
+            form = TransportForm(request.POST, initial=post_initial if post_initial else None)
             raw_material_formset = RawMaterialInfoFormSet(request.POST, prefix='materials')
             
             if form.is_valid() and raw_material_formset.is_valid():

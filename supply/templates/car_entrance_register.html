@@ -600,7 +600,7 @@
                     {% if accessible_transport_fields.waybill_date %}
                     <div class="col-md-6 mb-3">
                         <label class="form-label">{{ form.waybill_date.label }}</label>
-                        <div style="position: relative;">
+                        <div class="waybill-date-wrapper" style="position: relative;">
                             {{ form.waybill_date }}
                         </div>
                         {% if form.waybill_date.errors %}
@@ -1102,11 +1102,13 @@
             'transform': 'translateY(-50%)',
             'cursor': 'pointer',
             'font-size': '1.2rem',
-            'z-index': '10',
-            'pointer-events': 'none'
+            'z-index': '10'
           }
         });
-
+        iconSpan.on('click', function (e) {
+          e.preventDefault();
+          waybillDateInput.pDatepicker('show');
+        });
         waybillDateInput.parent().css('position', 'relative').append(iconSpan);
       }
 

@@ -81,7 +81,8 @@ class CarEntranceDriverForm(forms.Form):
             'class': 'form-control',
             'type': 'text',
             'placeholder': '1403/09/15',
-            'id': 'id_waybill_date'
+            'id': 'id_waybill_date',
+            'autocomplete': 'off',
         })
     )
     bill_of_lading_file = forms.FileField(

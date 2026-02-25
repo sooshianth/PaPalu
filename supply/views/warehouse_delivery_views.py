@@ -152,15 +152,19 @@ def _guard_exit_delivery_items(pt):
     return items
 
 
-def _comparison_totals_from_order_items(order_items):
+def _comparison_totals_from_order_items(order_items, pt=None):
     """محاسبه جمع کل تخصیص، وزن خالص محاسبه‌شده و اختلاف برای جدول مقایسه وزن‌ها"""
     total_allocated = sum((item.get('allocated_quantity') or Decimal('0')) for item in order_items)
     total_calculated = sum((item.get('calculated_net_weight') or Decimal('0')) for item in order_items)
-    return {
+    out = {
         'total_allocated': total_allocated,
         'total_calculated': total_calculated,
         'total_diff': total_calculated - total_allocated,
     }
+    if pt is not None:
+        waybill = pt.waybill_weight or Decimal('0')
+        out['total_waybill_net_diff'] = waybill - total_calculated
+    return out
 
 
 def _initial_stages_from_order_items(pt, order_items):
@@ -364,16 +368,18 @@ def warehouse_delivery_detail_view(request, transport_number):
                 if info.order_item and info.order_item.raw_material:
                     net = info.net_weight or Decimal('0')
                     alloc = info.allocated_quantity or Decimal('0')
+                    waybill = pt.waybill_weight or Decimal('0')
                     order_items.append({
                         'item': info.order_item,
                         'raw_material': info.raw_material,
                         'allocated_quantity': info.allocated_quantity,
                         'calculated_net_weight': info.net_weight,
                         'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                        'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
                         'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                     })
         
-        comparison_totals = _comparison_totals_from_order_items(order_items)
+        comparison_totals = _comparison_totals_from_order_items(order_items, pt)
         initial_stages = _initial_stages_from_order_items(pt, order_items)
         # Initialize form for display
         # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
@@ -426,12 +432,14 @@ def warehouse_delivery_detail_view(request, transport_number):
                         if info.order_item and info.order_item.raw_material:
                             net = info.net_weight or Decimal('0')
                             alloc = info.allocated_quantity or Decimal('0')
+                            waybill = pt.waybill_weight or Decimal('0')
                             order_items.append({
                                 'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
                                 'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                                'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
                                 'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                             })
-                comparison_totals = _comparison_totals_from_order_items(order_items)
+                comparison_totals = _comparison_totals_from_order_items(order_items, pt)
                 initial_stages = _initial_stages_from_order_items(pt, order_items)
                 context = {
                     'form': form, 'pt': pt, 'order_items': order_items, 'comparison_totals': comparison_totals,
@@ -814,12 +822,14 @@ def warehouse_delivery_detail_view(request, transport_number):
                     if info.order_item and info.order_item.raw_material:
                         net = info.net_weight or Decimal('0')
                         alloc = info.allocated_quantity or Decimal('0')
+                        waybill = pt.waybill_weight or Decimal('0')
                         order_items.append({
                             'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
                             'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                            'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
                             'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                         })
-            comparison_totals = _comparison_totals_from_order_items(order_items)
+            comparison_totals = _comparison_totals_from_order_items(order_items, pt)
             initial_stages = _initial_stages_from_order_items(pt, order_items)
             context = {
                 'form': form, 'pt': pt, 'order_items': order_items, 'comparison_totals': comparison_totals,
@@ -865,16 +875,18 @@ def warehouse_delivery_detail_view(request, transport_number):
             if info.order_item and info.order_item.raw_material:
                 net = info.net_weight or Decimal('0')
                 alloc = info.allocated_quantity or Decimal('0')
+                waybill = pt.waybill_weight or Decimal('0')
                 order_items.append({
                     'item': info.order_item,
                     'raw_material': info.raw_material,
                     'allocated_quantity': info.allocated_quantity,
                     'calculated_net_weight': info.net_weight,
                     'weight_diff': (net - alloc) if info.net_weight is not None else None,
+                    'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
                     'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
                 })
     
-    comparison_totals = _comparison_totals_from_order_items(order_items)
+    comparison_totals = _comparison_totals_from_order_items(order_items, pt)
     initial_stages = _initial_stages_from_order_items(pt, order_items)
     # لیست انبارهای مقصد (فقط انبارهای اولیه) برای انتخاب در هر مرحله
     destination_warehouses = Warehouse.objects.filter(warehouse_type='primary')
