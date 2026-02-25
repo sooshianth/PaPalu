@@ -103,6 +103,10 @@
   }
 
   /* بخش خودرو و راننده: overflow visible تا لیبل و دراپ‌داون زیر کارت بعدی نروند */
+  .form-section.vehicle-driver-section {
+    z-index: 10001;
+    overflow: visible;
+  }
   .form-section.vehicle-driver-section .form-section-content {
     overflow: visible;
   }
@@ -111,6 +115,10 @@
   }
   .form-section.vehicle-driver-section .col-md-8.mb-3 {
     overflow: visible;
+  }
+  /* دراپ‌داون نتایج جستجوی راننده بالای کارت‌های بعدی نمایش داده شود */
+  .form-section.vehicle-driver-section .suggestions-container {
+    z-index: 999999 !important;
   }
 
   .form-label {
@@ -365,11 +373,11 @@
     background: #218838;
   }
 
-  /* Modal styles */
+  /* Modal styles - z-index بالا تا روی همه کارت‌ها و محتوا نمایش داده شوند */
   .modal {
     display: none;
     position: fixed;
-    z-index: 2000;
+    z-index: 105000;
     left: 0;
     top: 0;
     width: 100%;
@@ -378,6 +386,8 @@
   }
 
   .modal-content {
+    position: relative;
+    z-index: 105001;
     background-color: #fefefe;
     margin: 5% auto;
     padding: 20px;

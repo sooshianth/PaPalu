@@ -336,6 +336,12 @@ class TransportForm(ModelForm):
         cleaned_data = super().clean()
         purchase_order = cleaned_data.get('purchase_order')
         
+        # وقتی از صفحه سفارش با ?order= می‌آییم، فیلد purchase_order غیرفعال است و در POST ارسال نمی‌شود.
+        # در این حالت از مقدار اولیه استفاده کن تا allocation حتماً تنظیم شود (جلوگیری از خطای FK).
+        if not purchase_order and self.initial.get('purchase_order'):
+            purchase_order = self.initial['purchase_order']
+            cleaned_data['purchase_order'] = purchase_order
+        
         if purchase_order:
             # پیدا کردن یا ایجاد Allocation برای این Order
             from core.AllocationFolder.AllocationModel import Allocation
@@ -358,6 +364,11 @@ class TransportForm(ModelForm):
             # تنظیم freight_payment_type از سفارش خرید (همیشه از سفارش گرفته می‌شود)
             if purchase_order.freight_payment_type:
                 cleaned_data['freight_payment_type'] = purchase_order.freight_payment_type
+        
+        # اطمینان از اینکه FKهای اختیاری مقدار خالی/رشته خالی را به None تبدیل کنند (جلوگیری از خطای FK)
+        for fk_field in ('driver_bank_account', 'supplier_bank_account'):
+            if cleaned_data.get(fk_field) in (None, ''):
+                cleaned_data[fk_field] = None
         
         # محاسبه خودکار کرایه کل و پرداختی
         initial_freight = cleaned_data.get('initial_freight') or 0

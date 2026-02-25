@@ -31,7 +31,7 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_display = ['id', 'order', 'product', 'weight_unit', 'quantity', 'unit_price', 'total_purchase_cost']
     list_filter = ['order', 'weight_unit']
     search_fields = ['order__order_number', 'product__name']
-    readonly_fields = ['total_purchase_cost']
+    readonly_fields = ['total_purchase_cost', 'vat']
     fieldsets = (
         ('اطلاعات اصلی', {
             'fields': ('order', 'product')
@@ -40,7 +40,7 @@ class OrderItemAdmin(admin.ModelAdmin):
             'fields': ('weight_unit', 'bag_weight', 'quantity')
         }),
         ('قیمت و هزینه‌ها', {
-            'fields': ('unit_price', 'discount', 'additional_charges', 'vat')
+            'fields': ('unit_price', 'discount', 'additional_charges', 'vat_percent', 'vat')
         }),
         ('هزینه‌های محاسبه شده', {
             'fields': ('cost_without_freight', 'freight_cost', 'total_purchase_cost'),
