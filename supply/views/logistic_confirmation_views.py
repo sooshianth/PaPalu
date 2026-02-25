@@ -191,9 +191,15 @@ def logistic_confirmation_list_view(request):
     accessible_person_fields = get_accessible_person_fields_logistic(request.user)
     
     try:
-        # Get transports awaiting settlement (status = awaiting_settlement)
+        # حمل‌هایی که هنوز تایید لجستیک نشده‌اند (موازی با بارگذاری سند: هر دو تا تکمیل شوند)
+        # شامل: در انتظار تسویه (pending_settlement) و در انتظار بارگذاری سند (awaiting_payment_doc)
         transports = Transport.objects.filter(
-            status=Transport.STATUS_AWAITING_SETTLEMENT
+            status__in=[
+                Transport.STATUS_AWAITING_SETTLEMENT,
+                Transport.STATUS_AWAITING_PAYMENT_DOC,
+            ]
+        ).filter(
+            logistic_confirmed=False
         ).select_related(
             'allocation__order',
             'allocation__order__customer',
@@ -278,9 +284,9 @@ def logistic_confirmation_detail_view(request, transport_number):
             messages.error(request, 'حمل مورد نظر یافت نشد.')
             return redirect('supply:logistic_confirmation_list')
         
-        # Check if transport is in awaiting_settlement status
-        bug_logger.info(f"بررسی وضعیت حمل - status: {transport.status}, expected: {Transport.STATUS_AWAITING_SETTLEMENT}")
-        if transport.status != Transport.STATUS_AWAITING_SETTLEMENT:
+        # Check if transport is in a status that allows logistic confirmation (awaiting_settlement OR awaiting_payment_doc برای موازی بودن با بارگذاری سند)
+        bug_logger.info(f"بررسی وضعیت حمل - status: {transport.status}, allowed: {Transport.STATUS_AWAITING_SETTLEMENT} or {Transport.STATUS_AWAITING_PAYMENT_DOC}")
+        if transport.status not in [Transport.STATUS_AWAITING_SETTLEMENT, Transport.STATUS_AWAITING_PAYMENT_DOC]:
             audit_logger.warning(
                 f"تلاش برای تایید لجستیک در وضعیت نامناسب - حمل {transport_number} - "
                 f"وضعیت: {transport.get_status_display()}"
