@@ -464,6 +464,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                 }
                 return render(request, 'warehouse_delivery_detail.html', context)
             audit_logger.info(f"شروع ثبت تخلیه برای حمل {transport_number}")
+            data = form.cleaned_data
             
             try:
                 with transaction.atomic():
