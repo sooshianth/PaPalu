@@ -766,24 +766,23 @@ def create_driver_api(request):
         phone = request.POST.get('phone', '').strip()
         national_id = request.POST.get('national_id', '').strip()
         
-        if not name or not phone or not national_id:
+        if not name or not phone:
             error_fields = []
             if not name:
                 error_fields.append('نام راننده')
             if not phone:
                 error_fields.append('شماره تلفن')
-            if not national_id:
-                error_fields.append('کد ملی')
             return JsonResponse({'error': f'فیلدهای اجباری زیر را پر کنید: {", ".join(error_fields)}'}, status=400)
         
-        # بررسی صحت کد ملی (باید 10 رقم باشد)
-        if len(national_id) != 10 or not national_id.isdigit():
+        # بررسی صحت کد ملی (باید 10 رقم باشد، اگر وارد شده باشد)
+        if national_id and (len(national_id) != 10 or not national_id.isdigit()):
             return JsonResponse({'error': 'کد ملی باید دقیقاً 10 رقم باشد'}, status=400)
         
-        # بررسی تکراری نبودن
-        existing = Person.objects.filter(
-            Q(phone_number=phone) | Q(national_id=national_id)
-        ).filter(type='driver').first()
+        # بررسی تکراری نبودن (فقط بر اساس تلفن، یا کد ملی اگر وارد شده باشد)
+        duplicate_filter = Q(phone_number=phone)
+        if national_id:
+            duplicate_filter = duplicate_filter | Q(national_id=national_id)
+        existing = Person.objects.filter(duplicate_filter).filter(type='driver').first()
         
         if existing:
             return JsonResponse({

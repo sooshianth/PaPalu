@@ -1087,8 +1087,8 @@
             <input type="text" id="new-driver-phone" placeholder="09123456789">
           </div>
           <div class="mb-3">
-            <label>کد ملی <span style="color:#d32f2f">*</span></label>
-            <input type="text" id="new-driver-national-id" placeholder="کد ملی 10 رقمی">
+            <label>کد ملی</label>
+            <input type="text" id="new-driver-national-id" placeholder="کد ملی 10 رقمی (اختیاری)">
           </div>
         </div>
         <div class="modal-footer">
@@ -2418,17 +2418,16 @@
     const phone = document.getElementById('new-driver-phone').value.trim();
     const nationalId = document.getElementById('new-driver-national-id').value.trim();
 
-    if (!name || !phone || !nationalId) {
+    if (!name || !phone) {
       let errorMsg = 'لطفاً فیلدهای اجباری زیر را پر کنید:\n';
       if (!name) errorMsg += '- نام راننده\n';
       if (!phone) errorMsg += '- شماره تلفن\n';
-      if (!nationalId) errorMsg += '- کد ملی\n';
       alert(errorMsg);
       return;
     }
 
-    // بررسی صحت کد ملی (باید 10 رقم باشد)
-    if (nationalId.length !== 10 || !/^\d+$/.test(nationalId)) {
+    // بررسی صحت کد ملی (باید 10 رقم باشد، اگر وارد شده باشد)
+    if (nationalId && (nationalId.length !== 10 || !/^\d+$/.test(nationalId))) {
       alert('کد ملی باید دقیقاً 10 رقم باشد.');
       return;
     }

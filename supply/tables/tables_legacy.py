@@ -926,18 +926,16 @@ class GuardExitTable(TransportTable):
         return '—'
     
     def render_quantity(self, record):
-        """نمایش مقدار سفارش با اعداد فارسی و جداکننده هزارگان"""
-        if not record.purchase_order:
+        """نمایش وزن خالص (تحویلی) این حمل با اعداد فارسی و جداکننده هزارگان"""
+        net = record.net_weight
+        if net is None:
             return '—'
-        materials = record.purchase_order.order_items.filter(raw_material__isnull=False).all()
-        if materials:
-            parts = []
-            for m in materials:
-                if m.quantity is not None:
-                    formatted = format_number_persian(m.quantity, 3)
-                    parts.append(format_html('<span class="weight-value persian-number" dir="ltr">{}</span>', formatted))
-            return format_html('<br>'.join(parts)) if parts else '—'
-        return '—'
+        formatted = format_number_persian(net, 3)
+        return format_html(
+            '<span class="weight-value persian-number" dir="ltr">{}</span>'
+            '&nbsp;<span class="unit-badge">کیلوگرم</span>',
+            formatted
+        )
     
     def render_unit(self, record):
         """نمایش واحد سفارش با badge"""
