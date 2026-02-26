@@ -853,7 +853,8 @@ def warehouse_delivery_detail_view(request, transport_number):
                 'form_has_errors': True,
             }
             return render(request, 'warehouse_delivery_detail.html', context)
-        # مقداردهی اولیه فرم
+    else:
+        # مقداردهی اولیه فرم (GET request)
         # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
         freight_payment_type = None
         if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
