@@ -76,8 +76,8 @@ def create_supplier_view(request):
 
 					# ایجاد انبار برای تامین‌کننده (اگر وجود نداشته باشد)
 					if not person.warehouse:
-						warehouse_name = f"انبار {person.name or person.national_id}"
-						warehouse_id = f"WH-SUP-{person.national_id}"
+						warehouse_name = f"انبار {person.name or person.national_id or person.pk}"
+						warehouse_id = f"WH-SUP-{person.national_id or person.pk}"
 						warehouse, created = Warehouse.objects.get_or_create(
 							warehouse_id=warehouse_id,
 							defaults={
@@ -109,6 +109,8 @@ def create_supplier_view(request):
 					att_fs.save()
 
 				messages.success(request, 'تامین‌کننده با موفقیت ثبت شد.')
+				if not (person.national_id and person.national_id.strip()) or not (getattr(person, 'phone_number', '') and str(person.phone_number or '').strip()):
+					messages.warning(request, 'کد ملی یا شماره تلفن پر نشده است. توصیه می‌شود برای شناسایی بهتر آن‌ها را تکمیل کنید.')
 				return redirect(reverse('supply:create_supplier'))
 			else:
 				bug_logger.warning(f"Supplier form invalid person={person_form.errors} fb={fb_form.errors}")
@@ -217,8 +219,8 @@ def supplier_list_view(request):
 
 					# ایجاد انبار برای تامین‌کننده (اگر وجود نداشته باشد)
 					if not person.warehouse:
-						warehouse_name = f"انبار {person.name or person.national_id}"
-						warehouse_id = f"WH-SUP-{person.national_id}"
+						warehouse_name = f"انبار {person.name or person.national_id or person.pk}"
+						warehouse_id = f"WH-SUP-{person.national_id or person.pk}"
 						warehouse, created = Warehouse.objects.get_or_create(
 							warehouse_id=warehouse_id,
 							defaults={
@@ -246,6 +248,8 @@ def supplier_list_view(request):
 					att_fs.save()
 
 				messages.success(request, 'تامین‌کننده با موفقیت ثبت شد.')
+				if not (person.national_id and person.national_id.strip()) or not (getattr(person, 'phone_number', '') and str(person.phone_number or '').strip()):
+					messages.warning(request, 'کد ملی یا شماره تلفن پر نشده است. توصیه می‌شود برای شناسایی بهتر آن‌ها را تکمیل کنید.')
 				return redirect(reverse('supply:supplier_list'))
 			else:
 				bug_logger.warning(f"Supplier form invalid person={person_form.errors} fb={fb_form.errors} rep={rep_fs.errors} ba={ba_fs.errors} pay={pay_fs.errors} sn={sn_fs.errors} att={att_fs.errors}")
@@ -353,7 +357,11 @@ def supplier_detail_view(request, national_id):
 			RepresentativeTable, BankAccountTable, PaymentPreferenceTable,
 			SocialNetworkTable, AttachmentTable
 		)
-		supplier = Person.objects.get(national_id=national_id, type='supplier')
+		# پشتیبانی از لینک با pk وقتی کد ملی خالی است
+		if national_id and national_id.isdigit():
+			supplier = Person.objects.get(pk=int(national_id), type='supplier')
+		else:
+			supplier = Person.objects.get(national_id=national_id, type='supplier')
 		financial_banking = FinancialBanking.objects.filter(person=supplier).first()
 		representatives = Representative.objects.filter(person=supplier)
 		bank_accounts = BankAccount.objects.filter(financial_banking=financial_banking) if financial_banking else []
@@ -397,7 +405,13 @@ def supplier_edit_view(request, national_id):
 	"""ویرایش تأمین‌کننده"""
 	audit_logger.info(f"ویرایش تأمین‌کننده با کد ملی {national_id}")
 	try:
-		supplier = Person.objects.get(national_id=national_id, type='supplier')
+		# پشتیبانی از لینک با pk وقتی کد ملی خالی است
+		if national_id and national_id.isdigit():
+			supplier = Person.objects.get(pk=int(national_id), type='supplier')
+		else:
+			supplier = Person.objects.get(national_id=national_id, type='supplier')
+		# برای redirect بعد از ویرایش از کد ملی یا pk استفاده می‌شود
+		detail_identifier = (supplier.national_id and supplier.national_id.strip()) or str(supplier.pk)
 		financial_banking, _ = FinancialBanking.objects.get_or_create(person=supplier)
 		
 		if request.method == 'POST':
@@ -427,7 +441,7 @@ def supplier_edit_view(request, national_id):
 					att_fs.save()
 				
 				messages.success(request, 'تأمین‌کننده با موفقیت ویرایش شد.')
-				return redirect(reverse('supply:supplier_detail', kwargs={'national_id': national_id}))
+				return redirect(reverse('supply:supplier_detail', kwargs={'national_id': detail_identifier}))
 			else:
 				bug_logger.warning(f"Supplier edit form invalid person={person_form.errors} fb={fb_form.errors}")
 			

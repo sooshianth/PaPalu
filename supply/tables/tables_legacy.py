@@ -166,7 +166,7 @@ class SupplierTable(tables.Table):
     
     def render_actions(self, record):
         """نمایش دکمه‌های عملیات"""
-        detail_url = reverse('supply:supplier_detail', args=[record.national_id])
+        detail_url = reverse('supply:supplier_detail', args=[(record.national_id and record.national_id.strip()) or str(record.pk)])
         return format_html(
             '<div class="btn-group">'
             '<a href="{}" class="btn-outline-info supplier-detail-link" data-supplier-id="{}" title="جزئیات">جزئیات</a>'
