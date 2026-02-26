@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load render_table from django_tables2 %}
+{% load custom_filters %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -310,6 +311,24 @@
     {% endif %}
     
     {% if table %}
+        {% if total_difference_amount is not None %}
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:20px;">
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px 20px; min-width:160px;">
+                <div style="font-size:0.8rem; color:#6b7280; margin-bottom:4px;">وزن سفارش (کیلوگرم)</div>
+                <div style="font-size:1.1rem; font-weight:700; color:#166534;">{{ total_order_weight|add_commas }}</div>
+            </div>
+            <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px 20px; min-width:160px;">
+                <div style="font-size:0.8rem; color:#6b7280; margin-bottom:4px;">وزن تحویلی (کیلوگرم)</div>
+                <div style="font-size:1.1rem; font-weight:700; color:#166534;">{{ total_delivered_weight|add_commas }}</div>
+            </div>
+            <div style="background:{% if total_difference_amount > 0 %}#f0fdf4{% elif total_difference_amount < 0 %}#fef2f2{% else %}#f9fafb{% endif %}; border:1px solid {% if total_difference_amount > 0 %}#bbf7d0{% elif total_difference_amount < 0 %}#fecaca{% else %}#e5e7eb{% endif %}; border-radius:8px; padding:12px 20px; min-width:180px;">
+                <div style="font-size:0.8rem; color:#6b7280; margin-bottom:4px;">اختلاف کل (ریال)</div>
+                <div style="font-size:1.1rem; font-weight:700; color:{% if total_difference_amount > 0 %}#166534{% elif total_difference_amount < 0 %}#991b1b{% else %}#374151{% endif %};">
+                    {{ total_difference_amount|add_commas }} ریال
+                </div>
+            </div>
+        </div>
+        {% endif %}
         <div class="table-container">
             {% render_table table %}
         </div>

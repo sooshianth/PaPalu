@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load custom_filters %}
 
 {% block title %}ثبت راننده - ورود خودرو{% endblock %}
 
@@ -459,7 +460,7 @@
                                             <strong>{{ material.name }}</strong>
                                             {% if material.allocated_quantity %}
                                                 <span style="color: #666; font-size: 0.9rem; margin-right: 10px;">
-                                                    ({{ material.allocated_quantity }} {{ material.weight_unit }})
+                                                    ({{ material.allocated_quantity|add_commas }} {{ material.weight_unit }})
                                                 </span>
                                             {% endif %}
                                         </div>
@@ -584,7 +585,7 @@
                         {% if form.waybill_weight.errors %}
                             <div class="text-danger">{{ form.waybill_weight.errors.0 }}</div>
                         {% endif %}
-                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">وزن بارنامه به کیلوگرم</small>
+                        <small class="form-text text-muted" id="waybill-weight-display" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">وزن بارنامه به کیلوگرم</small>
                     </div>
                     {% endif %}
 
@@ -594,7 +595,7 @@
                         {% if form.waybill_gross_weight.errors %}
                             <div class="text-danger">{{ form.waybill_gross_weight.errors.0 }}</div>
                         {% endif %}
-                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">وزن پر (ناخالص) روی بارنامه</small>
+                        <small class="form-text text-muted" id="waybill-gross-weight-display" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">وزن پر (ناخالص) روی بارنامه</small>
                     </div>
                     
                     {% if accessible_transport_fields.waybill_date %}
@@ -868,13 +869,23 @@
       console.error('فیلد hidden پلاک پیدا نشد!');
     }
     
-    // مدیریت input برای فیلدهای پلاک
+    // مدیریت input برای فیلدهای پلاک + auto-advance
     document.addEventListener('input', function(e){
       if(e.target.id==='plate-iran' || e.target.id==='plate-middle' || e.target.id==='plate-last') {
         onlyDigits(e.target);
       }
       if(e.target.id==='plate-letter') {
         onlyLetters(e.target);
+      }
+      // auto-advance: وقتی به حداکثر رسید برو باکس بعدی
+      var maxLen = parseInt(e.target.maxLength, 10);
+      if(maxLen > 0 && e.target.value.length >= maxLen) {
+        var order = ['plate-iran', 'plate-middle', 'plate-letter', 'plate-last'];
+        var idx = order.indexOf(e.target.id);
+        if(idx >= 0 && idx < order.length - 1) {
+          var next = document.getElementById(order[idx + 1]);
+          if(next) { next.focus(); next.select(); }
+        }
       }
     });
     
@@ -1041,7 +1052,47 @@
       hiddenInput.value = e.detail.gregorian;
     });
   })();
-  
+
+  // نمایش عدد فارسی با جداکننده هزار زیر فیلدهای وزن بارنامه
+  (function() {
+    function toPersianNum(str) {
+      var p = '۰۱۲۳۴۵۶۷۸۹';
+      return String(str || '').replace(/[0-9]/g, function(d) { return p[parseInt(d, 10)]; });
+    }
+    function formatWithComma(val) {
+      var num = parseFloat(String(val).replace(/,/g, ''));
+      if (isNaN(num)) return '';
+      // جداسازی اعشار
+      var parts = num.toString().split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      var formatted = parts.length > 1 && parseInt(parts[1]) > 0 ? parts.join('.') : parts[0];
+      return toPersianNum(formatted);
+    }
+    function updateHint(inputEl, hintEl) {
+      var val = inputEl ? inputEl.value : '';
+      var formatted = formatWithComma(val);
+      if (formatted) {
+        hintEl.textContent = formatted + ' کیلوگرم';
+      } else {
+        hintEl.textContent = hintEl.getAttribute('data-default');
+      }
+    }
+    var wbInput = document.getElementById('id_waybill_weight');
+    var wbHint  = document.getElementById('waybill-weight-display');
+    var wgInput = document.getElementById('id_waybill_gross_weight');
+    var wgHint  = document.getElementById('waybill-gross-weight-display');
+    if (wbHint) wbHint.setAttribute('data-default', 'وزن بارنامه به کیلوگرم');
+    if (wgHint) wgHint.setAttribute('data-default', 'وزن پر (ناخالص) روی بارنامه');
+    if (wbInput && wbHint) {
+      updateHint(wbInput, wbHint);
+      wbInput.addEventListener('input', function() { updateHint(wbInput, wbHint); });
+    }
+    if (wgInput && wgHint) {
+      updateHint(wgInput, wgHint);
+      wgInput.addEventListener('input', function() { updateHint(wgInput, wgHint); });
+    }
+  })();
+
 </script>
 {% endblock %}
 

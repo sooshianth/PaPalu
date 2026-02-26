@@ -744,6 +744,27 @@
     {% endfor %}
     {% endif %}
 
+    {% if form_has_errors %}
+    <div class="alert alert-error" id="form-error-banner" role="alert" style="border-right: 4px solid #dc3545; background: #f8d7da; color: #721c24; padding: 15px 20px; border-radius: 8px; margin-bottom: 20px;">
+        <strong>⚠️ خطا در اطلاعات وارد شده</strong><br>
+        لطفاً موارد زیر را بررسی و اصلاح کنید:
+        {% if form.errors %}
+        <ul style="margin: 8px 0 0 0; padding-right: 20px;">
+            {% for field in form %}
+                {% if field.errors %}
+                <li><strong>{{ field.label }}:</strong>
+                    {% for error in field.errors %}{{ error }}{% endfor %}
+                </li>
+                {% endif %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endif %}
+
     <!-- اطلاعات فقط خواندنی -->
     <div class="readonly-info">
         <div class="readonly-info-item">
@@ -2121,6 +2142,14 @@
                 renderAllStages();
             }
         })();
+
+        // اگر خطای فرم وجود داشت، اسکرول به بنر خطا
+        const formErrorBanner = document.getElementById('form-error-banner');
+        if (formErrorBanner) {
+            setTimeout(function () {
+                formErrorBanner.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
 
     });
 </script>

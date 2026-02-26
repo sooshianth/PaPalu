@@ -5,6 +5,32 @@ from decimal import Decimal
 from core.OrderFolder.OrderModel import Order
 
 
+_PERSIAN_DIGITS = str.maketrans('0123456789', '۰۱۲۳۴۵۶۷۸۹')
+
+def _to_persian(s: str) -> str:
+    return s.translate(_PERSIAN_DIGITS)
+
+def _fmt_weight(value):
+    """عدد وزن را با جداکننده هزار و ارقام فارسی برمی‌گرداند"""
+    try:
+        d = Decimal(str(value or 0)).quantize(Decimal('0.001'))
+        # حذف صفرهای اضافه اعشار
+        d = d.normalize()
+        formatted = f'{d:,.3f}'.rstrip('0').rstrip('.')
+        return _to_persian(formatted)
+    except Exception:
+        return '-'
+
+def _fmt_rial(value):
+    """مبلغ ریال را با جداکننده هزار و ارقام فارسی برمی‌گرداند"""
+    try:
+        d = Decimal(str(value or 0)).quantize(Decimal('1'))
+        formatted = f'{d:,.0f}'
+        return _to_persian(formatted)
+    except Exception:
+        return '-'
+
+
 class PendingSupplySettlementOrderTable(tables.Table):
     """جدول سفارش‌های خرید در انتظار تسویه"""
     
@@ -70,35 +96,27 @@ class PendingSupplySettlementOrderTable(tables.Table):
         return '-'
     
     def render_order_weight(self, value, record):
-        """رندر وزن سفارش (اعشار ثابت)"""
+        """رندر وزن سفارش (فارسی با جداکننده)"""
         if self.accessible_fields.get('order_weight', False):
-            try:
-                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            except Exception:
-                return '-'
-            formatted = f'{d:,.2f}'
-            return format_html('{}', formatted)
+            v = _fmt_weight(value)
+            return format_html('{}', v) if v != '-' else '-'
         return '-'
     
     def render_delivered_weight(self, value, record):
-        """رندر وزن تحویلی (اعشار ثابت)"""
+        """رندر وزن تحویلی (فارسی با جداکننده)"""
         if self.accessible_fields.get('delivered_weight', False):
-            try:
-                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            except Exception:
-                return '-'
-            formatted = f'{d:,.2f}'
-            return format_html('{}', formatted)
+            v = _fmt_weight(value)
+            return format_html('{}', v) if v != '-' else '-'
         return '-'
     
     def render_difference_amount(self, value, record):
-        """رندر مبلغ اختلاف (اعشار ثابت)"""
+        """رندر مبلغ اختلاف (فارسی با جداکننده)"""
         if self.accessible_fields.get('difference_amount', False):
             try:
                 amount = Decimal(str(value or 0)).quantize(Decimal('1'))
             except Exception:
                 return '-'
-            formatted = f'{amount:,.0f}'
+            formatted = _fmt_rial(amount)
             if amount > 0:
                 return format_html(
                     '<span style="color: #28a745; font-weight: 600;">{} ریال</span>',
@@ -195,35 +213,27 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
         return '-'
     
     def render_order_weight(self, value, record):
-        """رندر وزن سفارش (اعشار ثابت)"""
+        """رندر وزن سفارش (فارسی با جداکننده)"""
         if self.accessible_fields.get('order_weight', False):
-            try:
-                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            except Exception:
-                return '-'
-            formatted = f'{d:,.2f}'
-            return format_html('{}', formatted)
+            v = _fmt_weight(value)
+            return format_html('{}', v) if v != '-' else '-'
         return '-'
     
     def render_delivered_weight(self, value, record):
-        """رندر وزن تحویلی (اعشار ثابت)"""
+        """رندر وزن تحویلی (فارسی با جداکننده)"""
         if self.accessible_fields.get('delivered_weight', False):
-            try:
-                d = Decimal(str(value or 0)).quantize(Decimal('0.01'))
-            except Exception:
-                return '-'
-            formatted = f'{d:,.2f}'
-            return format_html('{}', formatted)
+            v = _fmt_weight(value)
+            return format_html('{}', v) if v != '-' else '-'
         return '-'
     
     def render_difference_amount(self, value, record):
-        """رندر مبلغ اختلاف (اعشار ثابت)"""
+        """رندر مبلغ اختلاف (فارسی با جداکننده)"""
         if self.accessible_fields.get('difference_amount', False):
             try:
                 amount = Decimal(str(value or 0)).quantize(Decimal('1'))
             except Exception:
                 return '-'
-            formatted = f'{amount:,.0f}'
+            formatted = _fmt_rial(amount)
             if amount > 0:
                 return format_html(
                     '<span style="color: #28a745; font-weight: 600;">{} ریال</span>',
@@ -239,13 +249,11 @@ class PendingSupplySettlementApprovalOrderTable(tables.Table):
         return '-'
     
     def render_settled_amount(self, value, record):
-        """رندر مبلغ تسویه شده (اعشار ثابت)"""
+        """رندر مبلغ تسویه شده (فارسی با جداکننده)"""
         if self.accessible_fields.get('settled_amount', False):
-            try:
-                d = Decimal(str(value or 0)).quantize(Decimal('1'))
-            except Exception:
+            formatted = _fmt_rial(value)
+            if formatted == '-':
                 return '-'
-            formatted = f'{d:,.0f}'
             return format_html(
                 '<span style="color: #28a745; font-weight: 600;">{} ریال</span>',
                 formatted

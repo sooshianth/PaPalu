@@ -155,7 +155,9 @@ def _guard_exit_delivery_items(pt):
 def _comparison_totals_from_order_items(order_items, pt=None):
     """محاسبه جمع کل تخصیص، وزن خالص محاسبه‌شده و اختلاف برای جدول مقایسه وزن‌ها"""
     total_allocated = sum((item.get('allocated_quantity') or Decimal('0')) for item in order_items)
-    total_calculated = sum((item.get('calculated_net_weight') or Decimal('0')) for item in order_items)
+    # فقط آیتم‌هایی که وزن خالص واقعی دارند حساب می‌شوند
+    items_with_net = [item for item in order_items if item.get('calculated_net_weight') is not None]
+    total_calculated = sum((item.get('calculated_net_weight') or Decimal('0')) for item in items_with_net)
     out = {
         'total_allocated': total_allocated,
         'total_calculated': total_calculated,
@@ -163,7 +165,11 @@ def _comparison_totals_from_order_items(order_items, pt=None):
     }
     if pt is not None:
         waybill = pt.waybill_weight or Decimal('0')
-        out['total_waybill_net_diff'] = waybill - total_calculated
+        # اختلاف بارنامه و خالص فقط وقتی حداقل یک آیتم وزن خالص دارد معنادار است
+        if items_with_net:
+            out['total_waybill_net_diff'] = waybill - total_calculated
+        else:
+            out['total_waybill_net_diff'] = None
     return out
 
 
@@ -454,9 +460,9 @@ def warehouse_delivery_detail_view(request, transport_number):
                     'show_refer_button': not getattr(pt, 'warehouse_delivery_referred_to_manager', False) and not request.user.is_superuser,
                     'refer_modal_open': True,
                     'warehouse_delivery_referral_reason': getattr(pt, 'warehouse_delivery_referral_reason', '') or '',
+                    'form_has_errors': True,
                 }
                 return render(request, 'warehouse_delivery_detail.html', context)
-            data = form.cleaned_data
             audit_logger.info(f"شروع ثبت تخلیه برای حمل {transport_number}")
             
             try:
@@ -844,9 +850,9 @@ def warehouse_delivery_detail_view(request, transport_number):
                 'show_refer_button': not getattr(pt, 'warehouse_delivery_referred_to_manager', False) and not request.user.is_superuser,
                 'refer_modal_open': is_refer_to_manager,
                 'warehouse_delivery_referral_reason': getattr(pt, 'warehouse_delivery_referral_reason', '') or '',
+                'form_has_errors': True,
             }
             return render(request, 'warehouse_delivery_detail.html', context)
-    else:
         # مقداردهی اولیه فرم
         # نوع کرایه از سفارش خرید گرفته می‌شود (نه از transport)
         freight_payment_type = None
@@ -910,6 +916,7 @@ def warehouse_delivery_detail_view(request, transport_number):
         'show_refer_button': show_refer_btn,
         'refer_modal_open': False,
         'warehouse_delivery_referral_reason': getattr(pt, 'warehouse_delivery_referral_reason', '') or '',
+        'form_has_errors': False,
     }
     return render(request, 'warehouse_delivery_detail.html', context)
 

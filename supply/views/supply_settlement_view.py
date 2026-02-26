@@ -128,6 +128,11 @@ def supply_settlement_list_view(request):
     orders_list = list(orders_qs)
     bug_logger.debug(f"تعداد {len(orders_list)} سفارش خرید در انتظار تسویه لود شد")
 
+    # جمع کل‌ها برای نمایش بالای جدول
+    total_order_weight = sum((o._order_weight for o in orders_list), Decimal('0'))
+    total_delivered_weight = sum((o._delivered_weight for o in orders_list), Decimal('0'))
+    total_difference_amount = sum((o._difference_amount for o in orders_list), Decimal('0'))
+
     # محاسبه فیلدهای قابل دسترسی
     accessible_fields = {
         'order_number': True,
@@ -147,6 +152,9 @@ def supply_settlement_list_view(request):
         'table': table,
         'accessible_fields': accessible_fields,
         'page_title': 'سفارش‌های خرید در انتظار تسویه',
+        'total_order_weight': total_order_weight,
+        'total_delivered_weight': total_delivered_weight,
+        'total_difference_amount': total_difference_amount,
     }
     return render(request, 'supply_settlement/supply_settlement_list.html', context)
 
