@@ -420,7 +420,7 @@ def create_purchase_transport_view(request):
                                 from datetime import datetime
                                 date_str = datetime.now().strftime('%Y%m%d')
                                 unique_id = str(uuid.uuid4())[:4].upper()
-                                        pt.transport_number = f"TR-FALLBACK-{date_str}-{unique_id}"
+                                pt.transport_number = f"TR-FALLBACK-{date_str}-{unique_id}"
                                 bug_logger.warning(f"شماره حمل با fallback تولید شد: {pt.transport_number} (allocation یا order موجود نبود)")
                         
                         bug_logger.info(f"DEBUG_STEP_8: pt.save() شروع شد - transport_number={pt.transport_number}, allocation_id={pt.allocation_id}, driver_id={pt.driver_id}, driver_bank_account_id={pt.driver_bank_account_id}, supplier_bank_account_id={pt.supplier_bank_account_id}")
