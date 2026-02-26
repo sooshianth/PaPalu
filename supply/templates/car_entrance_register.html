@@ -600,9 +600,7 @@
                     {% if accessible_transport_fields.waybill_date %}
                     <div class="col-md-6 mb-3">
                         <label class="form-label">{{ form.waybill_date.label }}</label>
-                        <div class="waybill-date-wrapper" style="position: relative;">
-                            {{ form.waybill_date }}
-                        </div>
+                        {{ form.waybill_date }}
                         {% if form.waybill_date.errors %}
                             <div class="text-danger">{{ form.waybill_date.errors.0 }}</div>
                         {% endif %}
@@ -705,10 +703,8 @@
 {% block extra_js %}
 <!-- jQuery (برای استفاده از تقویم شمسی) -->
 <script src="{% static 'vendor/jquery-3.6.0/jquery.min.js' %}"></script>
-<!-- Persian Date Picker Library -->
-<link rel="stylesheet" href="{% static 'vendor/persian-datepicker-1.2.0/css/persian-datepicker.min.css' %}">
-<script src="{% static 'vendor/persian-date-1.1.0/persian-date.min.js' %}"></script>
-<script src="{% static 'vendor/persian-datepicker-1.2.0/js/persian-datepicker.min.js' %}"></script>
+<!-- Custom Jalali Datepicker Component -->
+{% include "components/jalali_datepicker.html" %}
 
 <script>
   // Plate formatting and serialization
@@ -1009,115 +1005,42 @@
   })();
   
   // راه‌اندازی تقویم شمسی برای waybill_date
-  $(document).ready(function () {
-    const waybillDateInput = $('#id_waybill_date');
+  (function () {
+    const waybillDateEl = document.getElementById('id_waybill_date');
+    if (!waybillDateEl) return;
 
-    if (waybillDateInput.length) {
-      // تبدیل type='date' به text برای استفاده از تقویم شمسی
-      waybillDateInput.attr('type', 'text');
-      waybillDateInput.attr('readonly', 'readonly');
-      waybillDateInput.css('cursor', 'pointer');
+    // تبدیل به text برای تقویم
+    waybillDateEl.type = 'text';
+    waybillDateEl.readOnly = true;
+    waybillDateEl.style.cursor = 'pointer';
 
-      // مقدار اولیه را از input دریافت می‌کنیم (اگر وجود داشته باشد)
-      var initialValue = waybillDateInput.val();
-      var persianDateValue = '';
-      var originalName = waybillDateInput.attr('name');
-
-      // ایجاد یک input hidden برای ارسال تاریخ میلادی به سرور
-      var hiddenInput = $('#id_waybill_date_hidden');
-      if (hiddenInput.length === 0) {
-        hiddenInput = $('<input>', {
-          type: 'hidden',
-          id: 'id_waybill_date_hidden',
-          name: originalName || 'waybill_date'
-        });
-        waybillDateInput.after(hiddenInput);
-        // حذف name از input اصلی برای جلوگیری از ارسال تاریخ شمسی
-        waybillDateInput.removeAttr('name');
-      }
-
-      // تبدیل تاریخ میلادی به شمسی (اگر مقدار اولیه وجود داشته باشد)
-      if (initialValue) {
-        var parts = initialValue.split('-');
-        if (parts.length === 3) {
-          var gregorianDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
-          var pDate = persianDate.fromGregorian(gregorianDate);
-          persianDateValue = pDate.format('YYYY/MM/DD');
-          waybillDateInput.val(persianDateValue);
-          // ذخیره تاریخ میلادی در فیلد hidden
-          hiddenInput.val(initialValue);
-        }
-      }
-
-      // راه‌اندازی تقویم شمسی
-      waybillDateInput.pDatepicker({
-        observer: true,
-        format: 'YYYY/MM/DD',
-        calendarType: 'persian',
-        initialValue: persianDateValue || false,
-        timePicker: {
-          enabled: false
-        },
-        onSelect: function () {
-          // تبدیل تاریخ شمسی به میلادی برای ارسال به سرور
-          var selectedDate = waybillDateInput.val();
-          if (selectedDate) {
-            try {
-              var persianDateObj = persianDate.fromString(selectedDate, 'YYYY/MM/DD');
-              var gregorianDate = persianDateObj.toCalendar('gregorian');
-              var formattedDate = gregorianDate.year + '-' +
-                String(gregorianDate.month).padStart(2, '0') + '-' +
-                String(gregorianDate.day).padStart(2, '0');
-
-              // ایجاد یک input hidden برای ارسال تاریخ میلادی به سرور
-              var hiddenInput = $('#id_waybill_date_hidden');
-              if (hiddenInput.length === 0) {
-                var originalName = waybillDateInput.attr('name');
-                hiddenInput = $('<input>', {
-                  type: 'hidden',
-                  id: 'id_waybill_date_hidden',
-                  name: originalName || 'waybill_date'
-                });
-                waybillDateInput.after(hiddenInput);
-                // حذف name از input اصلی برای جلوگیری از ارسال تاریخ شمسی
-                waybillDateInput.removeAttr('name');
-              }
-              hiddenInput.val(formattedDate);
-            } catch (e) {
-              console.error('خطا در تبدیل تاریخ:', e);
-            }
-          }
-        }
-      });
-
-      // اضافه کردن آیکون تقویم
-      if (!waybillDateInput.parent().find('.p-datepicker-trigger').length) {
-        var iconSpan = $('<span>', {
-          class: 'p-datepicker-trigger',
-          html: '📅',
-          css: {
-            'position': 'absolute',
-            'right': '10px',
-            'top': '50%',
-            'transform': 'translateY(-50%)',
-            'cursor': 'pointer',
-            'font-size': '1.2rem',
-            'z-index': '10'
-          }
-        });
-        iconSpan.on('click', function (e) {
-          e.preventDefault();
-          waybillDateInput.pDatepicker('show');
-        });
-        waybillDateInput.parent().css('position', 'relative').append(iconSpan);
-      }
-
-      // باز کردن تقویم با کلیک روی input
-      waybillDateInput.on('click', function () {
-        waybillDateInput.pDatepicker('show');
-      });
+    // فیلد hidden برای ارسال تاریخ میلادی به سرور
+    const originalName = waybillDateEl.name;
+    let hiddenInput = document.getElementById('id_waybill_date_hidden');
+    if (!hiddenInput) {
+      hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.id = 'id_waybill_date_hidden';
+      hiddenInput.name = originalName || 'waybill_date';
+      waybillDateEl.parentNode.insertBefore(hiddenInput, waybillDateEl.nextSibling);
+      waybillDateEl.removeAttribute('name');
     }
-  });
+
+    // اگر مقدار اولیه میلادی دارد (از سرور)، به شمسی تبدیل کن
+    const initVal = waybillDateEl.value;
+    if (initVal && initVal.includes('-')) {
+      waybillDateEl.setAttribute('data-gdate', initVal);
+      hiddenInput.value = initVal;
+    }
+
+    // init با تقویم جلالی
+    JalaliDatepicker.init('#id_waybill_date');
+
+    // هر بار که تاریخ انتخاب شد، مقدار میلادی رو به hidden منتقل کن
+    waybillDateEl.addEventListener('jdp:change', function (e) {
+      hiddenInput.value = e.detail.gregorian;
+    });
+  })();
   
 </script>
 {% endblock %}

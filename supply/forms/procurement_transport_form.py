@@ -353,11 +353,19 @@ class TransportForm(ModelForm):
             # اگر Allocation وجود نداشت، یکی بساز
             if not allocation:
                 allocation_number = f"ALLOC-{purchase_order.order_number}-{str(uuid.uuid4())[:8]}"
+                import logging
+                _bug_logger = logging.getLogger("bugs")
+                _bug_logger.info(f"DEBUG_CLEAN_1: Allocation وجود ندارد - در حال ساختن برای order={purchase_order.pk} ({purchase_order.order_number})")
                 allocation = Allocation.objects.create(
                     allocation_number=allocation_number,
                     order=purchase_order,
                     allocation_status='planned'
                 )
+                _bug_logger.info(f"DEBUG_CLEAN_2: Allocation ساخته شد - id={allocation.pk}")
+            else:
+                import logging
+                _bug_logger = logging.getLogger("bugs")
+                _bug_logger.info(f"DEBUG_CLEAN_3: Allocation موجود پیدا شد - id={allocation.pk}")
             
             cleaned_data['allocation'] = allocation
             

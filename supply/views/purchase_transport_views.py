@@ -355,10 +355,21 @@ def create_purchase_transport_view(request):
             form = TransportForm(request.POST, initial=post_initial if post_initial else None)
             raw_material_formset = RawMaterialInfoFormSet(request.POST, prefix='materials')
             
-            if form.is_valid() and raw_material_formset.is_valid():
+            bug_logger.info(f"DEBUG_STEP_1: form.is_valid() شروع شد")
+            form_valid = form.is_valid()
+            bug_logger.info(f"DEBUG_STEP_2: form.is_valid()={form_valid}, errors={form.errors if not form_valid else 'none'}")
+            if form_valid:
+                bug_logger.info(f"DEBUG_STEP_3: cleaned_data keys={list(form.cleaned_data.keys())}")
+                bug_logger.info(f"DEBUG_STEP_4: allocation={form.cleaned_data.get('allocation')}, driver={form.cleaned_data.get('driver')}, driver_bank_account={form.cleaned_data.get('driver_bank_account')}")
+            formset_valid = raw_material_formset.is_valid()
+            bug_logger.info(f"DEBUG_STEP_5: raw_material_formset.is_valid()={formset_valid}, errors={raw_material_formset.errors if not formset_valid else 'none'}")
+            
+            if form_valid and formset_valid:
                 try:
                     with transaction.atomic():
+                        bug_logger.info(f"DEBUG_STEP_6: داخل transaction.atomic() - form.save(commit=False) شروع شد")
                         pt = form.save(commit=False)
+                        bug_logger.info(f"DEBUG_STEP_7: pt ساخته شد - allocation={pt.allocation_id}, driver={pt.driver_id}, driver_bank_account={pt.driver_bank_account_id}")
                         pt.created_by = request.user
                         # تنظیم خودکار transport_type و direction به inbound
                         pt.transport_type = 'inbound'
@@ -409,10 +420,12 @@ def create_purchase_transport_view(request):
                                 from datetime import datetime
                                 date_str = datetime.now().strftime('%Y%m%d')
                                 unique_id = str(uuid.uuid4())[:4].upper()
-                                pt.transport_number = f"TR-FALLBACK-{date_str}-{unique_id}"
+                                        pt.transport_number = f"TR-FALLBACK-{date_str}-{unique_id}"
                                 bug_logger.warning(f"شماره حمل با fallback تولید شد: {pt.transport_number} (allocation یا order موجود نبود)")
                         
+                        bug_logger.info(f"DEBUG_STEP_8: pt.save() شروع شد - transport_number={pt.transport_number}, allocation_id={pt.allocation_id}, driver_id={pt.driver_id}, driver_bank_account_id={pt.driver_bank_account_id}, supplier_bank_account_id={pt.supplier_bank_account_id}")
                         pt.save()
+                        bug_logger.info(f"DEBUG_STEP_9: pt.save() موفق شد - pt.pk={pt.pk}")
                         
                         # لاگ کردن پلاک بعد از ذخیره
                         if pt.plate_number:
@@ -422,7 +435,9 @@ def create_purchase_transport_view(request):
                         
                         # ذخیره مواد اولیه
                         raw_material_formset.instance = pt
+                        bug_logger.info(f"DEBUG_STEP_10: raw_material_formset.save() شروع شد - تعداد فرم‌ها={len(raw_material_formset.forms)}")
                         raw_material_formset.save()
+                        bug_logger.info(f"DEBUG_STEP_11: raw_material_formset.save() موفق شد")
                         
                         # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
                         pt.status = Transport.STATUS_AWAITING_VEHICLE_ENTRY
@@ -520,7 +535,7 @@ def create_purchase_transport_view(request):
             'accessible_transport_fields': accessible_transport_fields,
         })
     except Exception as e:
-        bug_logger.error(f"Create purchase transport error: {e}")
+        bug_logger.error(f"Create purchase transport error: {e}", exc_info=True)
         messages.error(request, 'خطا در ایجاد حمل.')
         return render(request, 'transport/create_supply_transport.html', {
             'form': TransportForm(),
