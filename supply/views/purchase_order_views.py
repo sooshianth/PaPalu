@@ -148,13 +148,15 @@ def purchase_order_management_view(request):
             open_orders = open_orders.filter(
                 Q(order_number__icontains=search_query) |
                 Q(customer__name__icontains=search_query) |
-                Q(registered_by__username__icontains=search_query)
-            )
+                Q(registered_by__username__icontains=search_query) |
+                Q(order_items__raw_material__name__icontains=search_query)
+            ).distinct()
             completed_orders = completed_orders.filter(
                 Q(order_number__icontains=search_query) |
                 Q(customer__name__icontains=search_query) |
-                Q(registered_by__username__icontains=search_query)
-            )
+                Q(registered_by__username__icontains=search_query) |
+                Q(order_items__raw_material__name__icontains=search_query)
+            ).distinct()
         
         # اعمال فیلتر وضعیت
         if status_filter:

@@ -258,6 +258,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                     'allocation__order__customer',
                     'driver',
                     'freight_payment_document_uploaded_by'
+                ).prefetch_related(
+                    'freight_payment_document_attachments'
                 ).get(pk=int(transport_number))
                 bug_logger.info(f"حمل با pk={transport_number} پیدا شد - transport_number: {transport.transport_number}, status: {transport.status}")
             except Transport.DoesNotExist:
@@ -272,6 +274,8 @@ def logistic_confirmation_detail_view(request, transport_number):
                     'allocation__order__customer',
                     'driver',
                     'freight_payment_document_uploaded_by'
+                ).prefetch_related(
+                    'freight_payment_document_attachments'
                 ).get(transport_number=transport_number)
                 bug_logger.info(f"حمل با transport_number={transport_number} پیدا شد - pk: {transport.pk}, status: {transport.status}")
             except Transport.DoesNotExist:
@@ -541,6 +545,7 @@ def logistic_confirmation_detail_view(request, transport_number):
                 'weight_discrepancy': weight_discrepancy,
                 'weight_discrepancy_percent': weight_discrepancy_percent,
                 'has_weight_discrepancy': has_weight_discrepancy,
+                'freight_payment_attachments': list(transport.freight_payment_document_attachments.all()),
             }
             
             bug_logger.info(f"رندر کردن template - logistic_confirmation_detail.html")
