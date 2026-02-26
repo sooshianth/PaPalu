@@ -23,7 +23,6 @@ class CarEntranceDriverForm(forms.Form):
     - نام راننده
     - شماره تلفن راننده
     - پلاک
-    - کد ملی راننده
     - وزن بارنامه
     - تصویر بارنامه
     - شماره حساب راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
@@ -41,7 +40,7 @@ class CarEntranceDriverForm(forms.Form):
     )
     national_id = forms.CharField(
         label='کد ملی راننده',
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'کد ملی 10 رقمی'})
     )
     plate_number = forms.CharField(

@@ -530,7 +530,7 @@
                     
                     {% if accessible_person_fields.national_id %}
                     <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">{{ form.national_id.label }}</label>
+                        <label class="form-label">{{ form.national_id.label }}</label>
                         {{ form.national_id }}
                         {% if form.national_id.errors %}
                             <div class="text-danger">{{ form.national_id.errors.0 }}</div>
