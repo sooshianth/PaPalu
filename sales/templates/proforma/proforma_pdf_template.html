@@ -218,6 +218,41 @@
             </div>
         </div>
     </div>
+    <!-- اطلاعات فروشنده (تامین نهاده سیمرغ) به صورت جدول افقی -->
+    <div class="info-section">
+        <table class="info-table">
+            <thead>
+                <tr>
+                    <th colspan="4">اطلاعات فروشنده (تامین نهاده سیمرغ)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label">نام:</td>
+                    <td class="value">{{ company_info.name|default:"تامین نهاده سیمرغ" }}</td>
+                    <td class="label">شماره ملی:</td>
+                    <td class="value">{{ company_info.national_id|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <td class="label">شماره ثبت:</td>
+                    <td class="value">{{ company_info.registration_number|default:"-" }}</td>
+                    <td class="label">کد اقتصادی:</td>
+                    <td class="value">{{ company_info.economic_code|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <td class="label">آدرس:</td>
+                    <td class="value" colspan="3">{{ company_info.address|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <td class="label">کدپستی:</td>
+                    <td class="value">{{ company_info.postal_code|default:"-" }}</td>
+                    <td class="label">تلفن:</td>
+                    <td class="value">{{ company_info.phone_number|default:"-" }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
 
     <!-- اطلاعات خریدار به صورت جدول افقی -->
     <div class="info-section">
@@ -249,41 +284,6 @@
                     <td class="value">{{ customer_info.postal_code|default:"-" }}</td>
                     <td class="label">تلفن:</td>
                     <td class="value">{{ customer_info.phone_number|default:"-" }}</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
-    <!-- اطلاعات فروشنده (تامین نهاده سیمرغ) به صورت جدول افقی -->
-    <div class="info-section">
-        <table class="info-table">
-            <thead>
-                <tr>
-                    <th colspan="4">اطلاعات فروشنده (تامین نهاده سیمرغ)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="label">نام:</td>
-                    <td class="value">{{ company_info.name|default:"تامین نهاده سیمرغ" }}</td>
-                    <td class="label">شماره ملی:</td>
-                    <td class="value">{{ company_info.national_id|default:"-" }}</td>
-                </tr>
-                <tr>
-                    <td class="label">شماره ثبت:</td>
-                    <td class="value">{{ company_info.registration_number|default:"-" }}</td>
-                    <td class="label">کد اقتصادی:</td>
-                    <td class="value">{{ company_info.economic_code|default:"-" }}</td>
-                </tr>
-                <tr>
-                    <td class="label">آدرس:</td>
-                    <td class="value" colspan="3">{{ company_info.address|default:"-" }}</td>
-                </tr>
-                <tr>
-                    <td class="label">کدپستی:</td>
-                    <td class="value">{{ company_info.postal_code|default:"-" }}</td>
-                    <td class="label">تلفن:</td>
-                    <td class="value">{{ company_info.phone_number|default:"-" }}</td>
                 </tr>
             </tbody>
         </table>

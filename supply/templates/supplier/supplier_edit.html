@@ -125,7 +125,7 @@
 <div class="page-header">
   <h2>ویرایش تأمین‌کننده: {{ supplier.name|default:supplier.national_id }}</h2>
   <div style="display: flex; gap: 10px;">
-    <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary btn-sm">بازگشت به جزئیات</a>
+    <a href="{% url 'supply:supplier_detail' supplier.national_id|default:supplier.pk %}" class="btn btn-secondary btn-sm">بازگشت به جزئیات</a>
     <a href="{% url 'supply:supplier_list' %}" class="btn btn-secondary btn-sm">لیست تأمین‌کنندگان</a>
   </div>
 </div>
@@ -201,7 +201,7 @@
 
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
-        <a href="{% url 'supply:supplier_detail' supplier.national_id %}" class="btn btn-secondary">انصراف</a>
+        <a href="{% url 'supply:supplier_detail' supplier.national_id|default:supplier.pk %}" class="btn btn-secondary">انصراف</a>
         <a href="{% url 'supply:supplier_list' %}" class="btn btn-outline-secondary">بازگشت به لیست</a>
       </div>
     </form>

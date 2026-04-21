@@ -363,6 +363,74 @@
         position: relative;
         padding-left: 40px;
     }
+
+    /* جداول مواد اولیه در ورود خودرو — مرتب و ساده، زیر هم، عرض محدود */
+    .car-entrance-materials-block {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        width: 100%;
+    }
+    .car-entrance-table-box {
+        width: 100%;
+        max-width: 380px;
+        margin-bottom: 0;
+    }
+    .car-entrance-table-box .table-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        display: block;
+    }
+    .car-entrance-table-box.table-main .table-title { color: var(--primary-green); }
+    .car-entrance-table-box.table-order .table-title { color: #5a6268; }
+    .car-entrance-table-wrap {
+        width: 100%;
+        max-width: 380px;
+        overflow-x: auto;
+        border-radius: 8px;
+        border: 1px solid #dee2e6;
+        background: #fff;
+    }
+    .car-entrance-table {
+        width: 100%;
+        min-width: 200px;
+        margin: 0;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+    }
+    .car-entrance-table th,
+    .car-entrance-table td {
+        padding: 10px 14px;
+        border: 1px solid #e9ecef;
+        text-align: right;
+    }
+    .car-entrance-table th {
+        background: #f1f3f5;
+        font-weight: 600;
+        color: #495057;
+    }
+    .car-entrance-table th.col-index,
+    .car-entrance-table td.col-index {
+        width: 56px;
+        text-align: center;
+    }
+    .car-entrance-table tbody tr:nth-child(even) {
+        background: #fafafa;
+    }
+    .car-entrance-table tbody tr:hover {
+        background: #f0f7f0;
+    }
+    .car-entrance-table-box.table-main .car-entrance-table th {
+        background: var(--primary-green);
+        color: #fff;
+        border-color: var(--primary-green);
+    }
+    .car-entrance-table-box.table-order .car-entrance-table th {
+        background: #6c757d;
+        color: #fff;
+        border-color: #6c757d;
+    }
     
     @media (max-width: 768px) {
         .col-md-6, .col-md-4 {
@@ -448,51 +516,69 @@
                     {% endif %}
                     
                     {% if accessible_transport_fields.purchase_order and accessible_po_fields.materials %}
-                    <div class="col-md-12 mb-3">
-                        <label class="form-label" style="color: var(--primary-green); font-weight: 600; margin-bottom: 10px;">
-                            مواد اولیه این ماشین
-                        </label>
-                        {% if transport_raw_materials_list %}
-                            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; border-right: 4px solid var(--primary-green);">
-                                {% for material in transport_raw_materials_list %}
-                                    {% if accessible_raw_material_fields.name %}
-                                        <div style="margin-bottom: 8px; padding: 8px; background: white; border-radius: 5px;">
-                                            <strong>{{ material.name }}</strong>
-                                            {% if material.allocated_quantity %}
-                                                <span style="color: #666; font-size: 0.9rem; margin-right: 10px;">
-                                                    ({{ material.allocated_quantity|add_commas }} {{ material.weight_unit }})
-                                                </span>
-                                            {% endif %}
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div style="background: #fff3cd; padding: 15px; border-radius: 8px; border-right: 4px solid #ffc107; color: #856404;">
-                                هنوز ماده اولیه‌ای برای این ماشین ثبت نشده است.
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="col-md-12 mb-3" style="margin-top: 20px;">
-                        <label class="form-label" style="color: #666; font-weight: 500; margin-bottom: 10px;">
-                            کل سفارش (همه مواد اولیه)
-                        </label>
-                        {% if all_order_items_list %}
-                            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; border-right: 4px solid #999;">
-                                {% for material in all_order_items_list %}
-                                    {% if material.raw_material and accessible_raw_material_fields.name %}
-                                        <div style="margin-bottom: 5px; padding: 5px; color: #666; font-size: 0.9rem;">
-                                            {{ material.raw_material.name }}
-                                        </div>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; color: #999;">
-                                سفارش خرید ندارد.
-                            </div>
-                        {% endif %}
+                    <div class="col-md-12 mb-3 car-entrance-materials-block">
+                        <div class="car-entrance-table-box table-main">
+                            <span class="table-title">مواد اولیه این ماشین</span>
+                            {% if transport_raw_materials_list %}
+                                <div class="car-entrance-table-wrap">
+                                    <table class="car-entrance-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="col-index">ردیف</th>
+                                                <th>نام ماده اولیه</th>
+                                                <th class="col-index">مقدار</th>
+                                                <th class="col-index">واحد</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for material in transport_raw_materials_list %}
+                                                {% if accessible_raw_material_fields.name %}
+                                                <tr>
+                                                    <td class="col-index">{{ forloop.counter }}</td>
+                                                    <td>{{ material.name }}</td>
+                                                    <td class="col-index">{% if material.allocated_quantity %}{{ material.allocated_quantity|add_commas }}{% else %}—{% endif %}</td>
+                                                    <td class="col-index">{{ material.weight_unit|default:"—" }}</td>
+                                                </tr>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div style="background: #fff8e1; padding: 12px 14px; border-radius: 6px; border: 1px solid #ffecb3; color: #856404; font-size: 0.9rem;">
+                                    هنوز ماده اولیه‌ای برای این ماشین ثبت نشده است.
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="car-entrance-table-box table-order">
+                            <span class="table-title">کل سفارش (همه مواد اولیه)</span>
+                            {% if all_order_items_list %}
+                                <div class="car-entrance-table-wrap">
+                                    <table class="car-entrance-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="col-index">ردیف</th>
+                                                <th>نام ماده اولیه</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for material in all_order_items_list %}
+                                                {% if material.raw_material and accessible_raw_material_fields.name %}
+                                                <tr>
+                                                    <td class="col-index">{{ forloop.counter }}</td>
+                                                    <td>{{ material.raw_material.name }}</td>
+                                                </tr>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            {% else %}
+                                <div style="background: #f5f5f5; padding: 12px 14px; border-radius: 6px; border: 1px solid #e0e0e0; color: #757575; font-size: 0.9rem;">
+                                    سفارش خرید ندارد.
+                                </div>
+                            {% endif %}
+                        </div>
                     </div>
                     {% endif %}
                 </div>
@@ -645,7 +731,7 @@
             <div class="form-section-content">
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">{{ form.account.label }}</label>
+                        <label class="form-label">{{ form.account.label }}</label>
                         {{ form.account }}
                         {% if form.account.errors %}
                             <div class="text-danger">{{ form.account.errors.0 }}</div>
@@ -653,7 +739,7 @@
                     </div>
                     
                     <div class="col-md-6 mb-3">
-                        <label class="form-label required-field">{{ form.sheba.label }}</label>
+                        <label class="form-label">{{ form.sheba.label }}</label>
                         {{ form.sheba }}
                         {% if form.sheba.errors %}
                             <div class="text-danger">{{ form.sheba.errors.0 }}</div>
@@ -662,7 +748,7 @@
                 </div>
                 <div class="info-box" style="margin-top: 10px;">
                     <p style="margin: 0; color: #546e7a; font-size: 0.75rem; line-height: 1.5;">
-                        در صورت وارد کردن شماره حساب و شبا، سیستم به صورت خودکار حساب بانکی را برای راننده ایجاد یا پیدا می‌کند.
+                        حداقل یکی از شماره حساب یا شماره شبا را وارد کنید. در صورت وارد کردن هر دو، سیستم به صورت خودکار حساب بانکی را برای راننده ایجاد یا پیدا می‌کند.
                     </p>
                 </div>
             </div>

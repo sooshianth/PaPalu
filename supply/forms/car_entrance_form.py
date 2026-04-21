@@ -18,15 +18,14 @@ audit_logger = logging.getLogger("audit")
 
 class CarEntranceDriverForm(forms.Form):
     """فرم ثبت اطلاعات راننده برای ورود خودرو
-    
+
     فیلدهای اجباری:
     - نام راننده
     - شماره تلفن راننده
     - پلاک
     - وزن بارنامه
     - تصویر بارنامه
-    - شماره حساب راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
-    - شماره شبا راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
+    - حداقل یکی از شماره حساب یا شماره شبا راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
     """
     phone = forms.CharField(
         label='شماره تلفن راننده',
@@ -114,19 +113,18 @@ class CarEntranceDriverForm(forms.Form):
         if has_existing_waybill:
             self.fields['bill_of_lading_file'].required = False
 
-        # اگر نوع کرایه "پرداخت به راننده" باشد، فیلدهای حساب و شبا را required می‌کنیم
+        # اگر نوع کرایه "پرداخت به راننده" باشد، حداقل یکی از شماره حساب یا شبا الزامی است (هر دو اجباری نیستند)
         if freight_payment_type == 'pay_to_driver':
-            self.fields['account'].required = True
-            self.fields['sheba'].required = True
+            self.fields['account'].required = False
+            self.fields['sheba'].required = False
     
     def clean(self):
         cleaned_data = super().clean()
-        # بررسی اینکه اگر نوع کرایه "پرداخت به راننده" باشد، فیلدهای حساب و شبا باید پر شوند
+        # اگر نوع کرایه "پرداخت به راننده" باشد، حداقل یکی از شماره حساب یا شبا باید پر شود
         if self.freight_payment_type == 'pay_to_driver':
-            account = cleaned_data.get('account')
-            sheba = cleaned_data.get('sheba')
-            if not account:
-                self.add_error('account', 'این فیلد برای نوع کرایه "پرداخت به راننده" اجباری است.')
-            if not sheba:
-                self.add_error('sheba', 'این فیلد برای نوع کرایه "پرداخت به راننده" اجباری است.')
+            account = (cleaned_data.get('account') or '').strip()
+            sheba = (cleaned_data.get('sheba') or '').strip()
+            if not account and not sheba:
+                self.add_error('account', 'برای نوع کرایه «پرداخت به راننده» حداقل یکی از شماره حساب یا شماره شبا را وارد کنید.')
+                self.add_error('sheba', 'برای نوع کرایه «پرداخت به راننده» حداقل یکی از شماره حساب یا شماره شبا را وارد کنید.')
         return cleaned_data

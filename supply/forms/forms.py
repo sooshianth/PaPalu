@@ -223,17 +223,17 @@ class SupplierPersonForm(ModelForm):
 	def __init__(self, *args, **kwargs):
 		self.editing_instance = kwargs.get('instance')
 		super().__init__(*args, **kwargs)
-		self.fields['national_id'].required = True
+		self.fields['national_id'].required = False
 		self.fields['name'].required = True
 		self.fields['nature'].required = True
-		self.fields['phone_number'].required = True
+		self.fields['phone_number'].required = False
 
 	def clean_national_id(self):
-		"""اعتبارسنجی کد ملی"""
-		national_id = self.cleaned_data.get('national_id')
+		"""اعتبارسنجی کد ملی (اختیاری؛ در صورت خالی بودن فقط خالی برمی‌گردد)"""
+		national_id = (self.cleaned_data.get('national_id') or '').strip()
 		
 		if not national_id:
-			raise forms.ValidationError('کد ملی الزامی است.')
+			return ''
 		
 		# بررسی طول (10 یا 11 رقم)
 		if len(national_id) not in [10, 11]:
@@ -251,16 +251,16 @@ class SupplierPersonForm(ModelForm):
 		return national_id
 
 	def clean_phone_number(self):
-		"""اعتبارسنجی و فرمت‌دهی چند شماره تلفن (کاما جدا)"""
+		"""اعتبارسنجی و فرمت‌دهی چند شماره تلفن (کاما جدا). در صورت خالی بودن فقط خالی برمی‌گردد."""
 		import re
 		raw = self.cleaned_data.get('phone_number')
-		if not raw:
-			raise forms.ValidationError('حداقل یک شماره تلفن الزامی است.')
+		if not raw or not str(raw).strip():
+			return ''
 		
 		# اجازه چند شماره با جداکننده کاما
 		numbers = [s.strip() for s in str(raw).split(',') if s and s.strip()]
 		if not numbers:
-			raise forms.ValidationError('حداقل یک شماره تلفن معتبر وارد کنید.')
+			return ''
 		
 		formatted = []
 		for phone in numbers:
