@@ -25,7 +25,7 @@ class CreateOrderForm(forms.ModelForm):
             'freight_payment_type',
         ]
         widgets = {
-            'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr', 'readonly': True}),
+            'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
             'order_type': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
             'registration_source': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
             'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
@@ -69,11 +69,6 @@ class CreateOrderForm(forms.ModelForm):
 
         # Required fields
         self.fields['order_number'].required = True
-        # تولید خودکار شماره سفارش
-        if not self.instance or not self.instance.order_number:
-            # دریافت order_type از initial یا مقدار پیش‌فرض
-            order_type = self.initial.get('order_type', 'sale') if hasattr(self, 'initial') and self.initial else 'sale'
-            self.fields['order_number'].initial = Order.generate_order_number(order_type)
         
         self.fields['freight_payment_type'].required = True
 
@@ -135,9 +130,6 @@ class CreateOrderForm(forms.ModelForm):
         if not order.status:
             order.status = 'pending_proforma_issue'
         # اگر شماره سفارش خالی است، تولید کن
-        if not order.order_number:
-            order_type = order.order_type or 'sale'
-            order.order_number = Order.generate_order_number(order_type)
         if commit:
             order.save()
         return order
