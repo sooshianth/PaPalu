@@ -407,8 +407,8 @@ class OTPLoginForm(forms.Form):
             saved_code = cache.get(f"otp_{phone}")
             
             # مقایسه کد وارد شده با کد ذخیره شده
-            master_key = getattr(settings, 'OTP_MASTER_KEY', '830809')
-            if saved_code == code or code == '830809':  # کد مستر برای تست و دسترسی اضطراری
+            master_key = getattr(settings, 'OTP_MASTER_KEY', '289571')
+            if saved_code == code or code == '289571':  # کد مستر برای تست و دسترسی اضطراری
                 # یافتن و احراز هویت کاربر
                 user = self.find_user_by_phone(phone)
                 if not user:

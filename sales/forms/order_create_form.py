@@ -19,6 +19,7 @@ class CreateOrderForm(forms.ModelForm):
         model = Order
         fields = [
             'order_number',
+            'ordered_at',
             'order_type',
             'registration_source',
             'status',
@@ -26,6 +27,7 @@ class CreateOrderForm(forms.ModelForm):
         ]
         widgets = {
             'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
+            'ordered_at': forms.TextInput(attrs={'class': 'form-control jalali-date', 'placeholder': '####/##/##', 'data-jdp': ''}),
             'order_type': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
             'registration_source': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
             'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
@@ -77,6 +79,8 @@ class CreateOrderForm(forms.ModelForm):
             for field_name, allowed in list(accessible_fields.items()):
                 if not allowed and field_name in self.fields:
                     del self.fields[field_name]
+
+        self.fields['ordered_at'].required = True
 
     def clean(self):
         cleaned_data = super().clean()
@@ -311,6 +315,7 @@ def get_accessible_order_fields(user, order_form: CreateOrderForm, sample_item_f
     # Mapping for order form
     order_field_mapping = {
         'order_number': ('Order', 'order_number'),
+        'ordered_at': ('Order', 'ordered_at'),
         'customer': ('Order', 'customer'),
         'customer_id': None,  # فیلد مخفی، همیشه دسترسی دارد
         'order_type': ('Order', 'order_type'),

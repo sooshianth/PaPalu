@@ -101,12 +101,6 @@ class Order(models.Model):
         verbose_name='وضعیت'
     )
     
-    # تاریخ ایجاد
-    creation_date = jmodels.jDateField(
-        null=True,
-        blank=True,
-        verbose_name='تاریخ ایجاد'
-    )
     
     # کاربر ثبت کننده
     registered_by = models.ForeignKey(
@@ -273,6 +267,12 @@ class Order(models.Model):
     updated_at = jmodels.jDateTimeField(
         auto_now=True,
         verbose_name='تاریخ بروزرسانی',
+        null=True,
+        blank=True
+    )
+
+    ordered_at = jmodels.jDateTimeField(
+        verbose_name='تاریخ خرید',
         null=True,
         blank=True
     )
