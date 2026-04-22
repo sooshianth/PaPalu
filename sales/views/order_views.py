@@ -655,7 +655,9 @@ def edit_order_view(request, order_number):
                     old_order = Order.objects.select_related('customer').get(pk=order.pk)
                     
                     # ذخیره سفارش
+
                     order = order_form.save(commit=False)
+                    print("order: ", order_form.cleaned_data.get('ordered_at'))
                     order.save()
                     
                     # ثبت تغییرات فیلدها

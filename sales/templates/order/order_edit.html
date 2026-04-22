@@ -194,6 +194,83 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+
+    function initJalaliDatePickers() {
+        const inputs = document.querySelectorAll('.jalali-date');
+
+        inputs.forEach(inp => {
+            // Skip if already initialized
+            if (inp.dataset.jdpInitialized) return;
+            inp.dataset.jdpInitialized = 'true';
+
+            /* ---- 1. Create hidden field ---- */
+            const originalName = inp.name;                // e.g. "ordered_at"
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type   = 'hidden';
+            hiddenInput.name   = originalName;           // Django will look for this
+            hiddenInput.id     = 'hidden_' + (inp.id || originalName);
+            inp.parentNode.appendChild(hiddenInput);
+
+            /* ---- 2. Remove name from visual input ---- */
+            inp.removeAttribute('name');
+
+            /* ---- 3. Set id for visual input ---- */
+            const visualId = inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9);
+            inp.id = 'visual_' + visualId;
+
+            /* ---- 4. Initialize JalaliDatepicker ---- */
+            if (typeof JalaliDatepicker !== 'undefined') {
+                JalaliDatepicker.init('#' + inp.id, {
+                    time: false,
+                    container: 'body'
+                });
+
+                /* ---- 5. Listener for date change ---- */
+                inp.addEventListener('jdp:change', function (e) {
+                    // Small delay to let the library finish its internal updates
+                    setTimeout(() => {
+                        let gDate = null;
+
+                        /* Try to get the Gregorian date from library */
+                        if (e.detail && e.detail.gDate) {
+                            gDate = e.detail.gDate;
+                        } else {
+                            try {
+                                const picker = JalaliDatepicker.hide()._datePicker;
+                                if (picker && picker.getGDate) {
+                                    gDate = picker.getGDate();
+                                }
+                            } catch (err) {
+                                /* ignore, fallback to data-gdate */
+                            }
+                        }
+
+                        /* Fallback: use data-gdate if gDate still null */
+                        if (!gDate && inp.dataset.gdate) {
+                            const parts = inp.dataset.gdate.split('-');
+                            gDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                        }
+
+                        /* Set hidden input if we have a valid date */
+                        if (gDate) {
+                            const y = gDate.getFullYear();
+                            const m = String(gDate.getMonth() + 1).padStart(2, '0');
+                            const d = String(gDate.getDate()).padStart(2, '0');
+                            hiddenInput.value = `${y}-${m}-${d}`;
+                        }
+                    }, 50);   // 50ms delay is usually enough
+                });
+
+                /* ---- 6. Pre‑populate hidden input from data-gdate ---- */
+                if (inp.dataset.gdate) {
+                    hiddenInput.value = inp.dataset.gdate;
+                }
+            }
+        });
+    }
+
+    /* Call once on load, and again after any AJAX that might insert new inputs */
+    setTimeout(initJalaliDatePickers, 200);
     // تابع برای مدیریت نمایش فیلد "وزن هر کیسه" برای هر قلم
     function setupBagWeightToggle(formRow) {
         const weightUnitSelect = formRow.querySelector('.weight-unit-select');
@@ -793,6 +870,16 @@ document.addEventListener('DOMContentLoaded', function() {
                     {% endif %}
                 </div>
                 {% endif %}
+
+                {% if accessible_fields_main.ordered_at %}
+                <div class="col-md-6 mb-3">
+                    <label class="form-label required-field">{{ form.ordered_at.label }}</label>
+                    {{ form.ordered_at }}
+                    {% if form.ordered_at.errors %}
+                        <div class="text-danger">{{ form.ordered_at.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -957,5 +1044,7 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </form>
 </div>
+{% include "components/jalali_datepicker.html" %}
+
 {% endblock %}
 

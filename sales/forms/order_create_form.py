@@ -165,6 +165,10 @@ class CreateOrderForm(forms.ModelForm):
         # اگر شماره سفارش خالی است، تولید کن
         if commit:
             order.save()
+        if order.ordered_at:
+            import jdatetime
+            from django.utils.dateparse import parse_date
+            order.ordered_at = jdatetime.date.fromgregorian(date=parse_date(self.data.get('ordered_at', '').strip()))
         return order
 
 
