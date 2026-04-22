@@ -42,6 +42,7 @@ def get_accessible_procurement_purchase_order_fields(user):
         'registered_by': user_can_access_field(user, Order, 'registered_by', 'view'),
         'created_at': user_can_access_field(user, Order, 'created_at', 'view'),
         'updated_at': user_can_access_field(user, Order, 'updated_at', 'view'),
+        'ordered_at': user_can_access_field(user, Order, 'ordered_at', 'view'),
     }
 
 
@@ -262,6 +263,7 @@ def create_procurement_purchase_order_view(request):
         'subtotal_without_freight': user_can_access_field(request.user, Order, 'subtotal_without_freight', 'edit'),
         'freight_cost': user_can_access_field(request.user, Order, 'freight_cost', 'edit'),
         'external_system_id': user_can_access_field(request.user, Order, 'external_system_id', 'edit'),
+        'ordered_at': user_can_access_field(request.user, Order, 'ordered_at', 'edit'),
     }
     
     accessible_po_material_fields = {

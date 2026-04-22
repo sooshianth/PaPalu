@@ -3,6 +3,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from ..PersonFolder.PersonModel import Person
 from .RawMaterialModel import RawMaterial
 from ..WarehouseFolder.WarehouseModel import Warehouse
+from django_jalali.db import models as jmodels
 
 
 class RawMaterialPurchaseInfo(models.Model):
@@ -81,6 +82,11 @@ class RawMaterialPurchaseInfo(models.Model):
     )
     storage_conditions = models.TextField(
         verbose_name="شرایط نگهداری",
+        null=True,
+        blank=True
+    )
+    ordered_at = jmodels.jDateTimeField(
+        verbose_name='تاریخ خرید',
         null=True,
         blank=True
     )

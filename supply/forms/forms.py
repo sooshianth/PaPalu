@@ -98,10 +98,19 @@ class PurchaseInfoInlineForm(ModelForm):
 	"""فرم اطلاعات خرید ماده اولیه"""
 	class Meta:
 		model = RawMaterialPurchaseInfo
-		fields = ['transportation_conditions', 'storage_conditions', 'minimum_order_quantity', 'vat_percentage', 'accounting_code', 'tax_code', 'supplier']
+		fields = [
+			'transportation_conditions',
+			'storage_conditions',
+			'ordered_at',
+			'minimum_order_quantity', 
+			'vat_percentage', 
+			'accounting_code', 
+			'tax_code', 
+			'supplier']
 		labels = {
 			'minimum_order_quantity': 'حداقل مقدار سفارش (کیلوگرم)',
 			'vat_percentage': 'درصد مالیات بر ارزش افزوده (درصد)',
+			'ordered_at': 'تاریخ خرید',
 			'accounting_code': 'کد حسابداری مرتبط',
 			'tax_code': 'کد مالیاتی ماده',
 			'supplier': 'تامین‌کننده (Purchase Info)',

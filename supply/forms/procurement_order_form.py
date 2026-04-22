@@ -21,7 +21,7 @@ class ProcurementPurchaseOrderForm(ModelForm):
         fields = [
             'customer', 'freight_payment_type',
             'subtotal_without_freight', 'freight_cost',
-            'external_system_id'
+            'external_system_id', 'ordered_at'
         ]
         labels = {
             'customer': 'تأمین‌کننده',
@@ -29,6 +29,7 @@ class ProcurementPurchaseOrderForm(ModelForm):
             'subtotal_without_freight': 'جمع بدون کرایه',
             'freight_cost': 'هزینه کرایه',
             'external_system_id': 'شناسه یکتا در سیستم دامپروش/کی‌اچ/انبار/لبه‌ژنت',
+            'ordered_at': "تاریخ خرید"
         }
         widgets = {
             'customer': forms.Select(attrs={'class': 'form-control'}),
@@ -36,6 +37,7 @@ class ProcurementPurchaseOrderForm(ModelForm):
             'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'readonly': True}),
             'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
             'external_system_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'ordered_at': forms.TextInput(attrs={'class': 'form-control jalali-date', 'placeholder': '####/##/##', 'data-jdp': ''}),
         }
 
     def __init__(self, *args, **kwargs):
