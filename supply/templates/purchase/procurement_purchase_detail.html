@@ -338,6 +338,7 @@
             <div class="kv"><span>شناسه در سیستم خارجی</span><strong>{{ po.external_system_id|default:'—' }}</strong></div>
             <div class="kv"><span>کاربر ثبت کننده</span><strong>{% if po.registered_by %}{{ po.registered_by.get_full_name|default:po.registered_by.username }}{% else %}—{% endif %}</strong></div>
             <div class="kv"><span>تاریخ ایجاد</span><strong>{{ po.created_at|date:'Y-m-d H:i' }}</strong></div>
+            <div class="kv"><span>تاریخ خرید</span><strong>{{ po.ordered_at|date:'Y-m-d' }}</strong></div>
             {% if po.pre_invoice_file %}
             <div class="kv" style="grid-column:1/-1"><span>فایل پیش‌فاکتور</span><a href="{{ po.pre_invoice_file.url }}" target="_blank" style="color:var(--primary-green);font-weight:600">دانلود</a></div>
             {% endif %}

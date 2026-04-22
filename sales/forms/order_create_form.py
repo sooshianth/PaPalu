@@ -33,6 +33,9 @@ class CreateOrderForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
             'freight_payment_type': forms.Select(attrs={'class': 'form-control'}),
         }
+        labels = {
+            'ordered_at': 'تاریخ خرید',
+        }
 
     def __init__(self, *args, **kwargs):
         self.request_user = kwargs.pop('user', None)
@@ -78,6 +81,9 @@ class CreateOrderForm(forms.ModelForm):
         if isinstance(accessible_fields, dict) and hasattr(self, 'fields'):
             for field_name, allowed in list(accessible_fields.items()):
                 if not allowed and field_name in self.fields:
+                    # Keep ordered_at field even if not accessible for editing
+                    if field_name == 'ordered_at':
+                        continue
                     del self.fields[field_name]
 
         self.fields['ordered_at'].required = True
@@ -118,6 +124,19 @@ class CreateOrderForm(forms.ModelForm):
                 self.add_error('customer', 'مشتری انتخاب شده یافت نشد یا شما دسترسی به آن ندارید.')
             except Person.MultipleObjectsReturned:
                 self.add_error('customer', 'چندین مشتری با این کد ملی یافت شد. لطفاً با پشتیبانی تماس بگیرید.')
+        
+        # Validate ordered_at field
+        ordered_at = cleaned_data.get('ordered_at')
+        if not ordered_at:
+            self.add_error('ordered_at', 'تاریخ خرید الزامی است.')
+        else:
+            try:
+                # Parse Jalali date from string
+                from jdatetime import date as jdate
+                year, month, day = map(int, ordered_at.split('/'))
+                cleaned_data['ordered_at'] = jdate(year, month, day)
+            except (ValueError, jdate.Error):
+                self.add_error('ordered_at', 'فرمت تاریخ نامعتبر است. از فرمت شمسی (####/##/##) استفاده کنید.')
         
         return cleaned_data
 

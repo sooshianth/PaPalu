@@ -37,7 +37,7 @@ class ProcurementPurchaseOrderForm(ModelForm):
             'subtotal_without_freight': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'readonly': True}),
             'freight_cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '1'}),
             'external_system_id': forms.TextInput(attrs={'class': 'form-control'}),
-            'ordered_at': forms.TextInput(attrs={'class': 'form-control jalali-date', 'placeholder': '####/##/##', 'data-jdp': ''}),
+            'ordered_at': forms.DateInput(attrs={'class': 'form-control jalali-date', 'type': 'text', 'placeholder': '####/##/##', 'data-jdp': ''}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -51,6 +51,13 @@ class ProcurementPurchaseOrderForm(ModelForm):
                 kwargs['initial'] = {}
             kwargs['initial']['customer'] = f"{instance.customer.name} ({instance.customer.national_id})"
             kwargs['initial']['supplier_id'] = instance.customer.national_id
+
+        # اگر instance وجود دارد و ordered_at دارد، مقدار initial را تنظیم کن
+        if instance and instance.pk and instance.ordered_at:
+            if 'initial' not in kwargs:
+                kwargs['initial'] = {}
+            # تنظیم ordered_at به صورت رشته‌ای با فرمت گریگوریان
+            kwargs['initial']['ordered_at'] = instance.ordered_at.strftime('%Y-%m-%d')
         
         # حذف customer از fields قبل از super().__init__ تا Django آن را از instance نگیرد
         # این کار را با تغییر Meta.fields انجام می‌دهیم
@@ -66,6 +73,31 @@ class ProcurementPurchaseOrderForm(ModelForm):
                 'class': 'form-control supplier-autocomplete',
                 'placeholder': 'جستجوی تأمین‌کننده...',
                 'autocomplete': 'off'
+            })
+        )
+        
+        # تبدیل ordered_at به jalali date picker
+        # Handle initial value from instance or form data
+        initial_date = None
+        
+        # First try to get from form data
+        if hasattr(self, 'data') and self.data:
+            initial_date = self.data.get('ordered_at', None)
+        
+        # If not found, try to get from instance
+        if not initial_date and instance and instance.ordered_at:
+            initial_date = instance.ordered_at.strftime('%Y-%m-%d')
+        
+        # Create the field with appropriate attributes
+        self.fields['ordered_at'] = forms.CharField(
+            required=True,
+            label='تاریخ خرید',
+            widget=forms.TextInput(attrs={
+                'class': 'form-control jalali-date',
+                'placeholder': '####/##/##',
+                'autocomplete': 'off',
+                'data-jdp': '',
+                'data-gdate': initial_date if initial_date else ''
             })
         )
         
@@ -107,6 +139,24 @@ class ProcurementPurchaseOrderForm(ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         # تبدیل supplier_id به customer
+        ordered_at = cleaned_data.get('ordered_at')
+        # Get the raw date string from form data
+        raw_ordered_at = self.data.get('ordered_at', '').strip()
+        print("wqdqwqd ",raw_ordered_at)
+        if not ordered_at and raw_ordered_at:
+            try:
+                import jdatetime
+                from django.utils.dateparse import parse_date
+                
+                # Parse the Gregorian string (YYYY-MM-DD)
+                g_date = parse_date(raw_ordered_at)
+                if g_date:
+                    # Convert Gregorian date to Jalali date object
+                    # This ensures compatibility with jDateTimeField
+                    cleaned_data['ordered_at'] = jdatetime.date.fromgregorian(date=g_date)
+            except Exception as e:
+                print(f"Date conversion error: {e}")
+
         supplier_id = cleaned_data.get('supplier_id', '').strip()
         supplier_text = cleaned_data.get('customer', '').strip()
         

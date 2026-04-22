@@ -186,7 +186,7 @@ def purchase_order_management_view(request):
                 accessible_person_fields.get('name', False)
             ),
             'created_by': accessible_po_fields.get('registered_by', False),
-            'created_at': accessible_po_fields.get('created_at', False),
+            'ordered_at': accessible_po_fields.get('ordered_at', False),
             'total_weight': (
                 accessible_po_material_fields.get('quantity', False) and
                 accessible_po_material_fields.get('weight_unit', False)

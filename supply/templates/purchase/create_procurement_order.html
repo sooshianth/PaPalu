@@ -250,48 +250,87 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     function initJalaliDatePickers() {
-        // Find all inputs with the jalali-date class
-        var inputs = document.querySelectorAll('.jalali-date');
-        
-        inputs.forEach(function(inp) {
-            // Prevent double initialization
-            if (inp.hasAttribute('data-jdp-initialized')) return;
+        const inputs = document.querySelectorAll('.jalali-date');
 
-            // 1. Create a hidden input to hold the actual value for Django
-            var originalName = inp.name;
-            var hiddenInput = document.createElement('input');
-            hiddenInput.type = 'hidden';
-            hiddenInput.name = originalName;
-            hiddenInput.id = 'hidden_' + (inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9));
-            
-            // 2. Rename the visible input so it doesn't conflict with the hidden one
-            inp.removeAttribute('name');
-            var originalId = inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9);
-            inp.id = 'visual_' + originalId;
-            
-            // 3. Add classes and append the hidden input to the DOM
-            inp.classList.add('form-control');
+        inputs.forEach(inp => {
+            // Skip if already initialized
+            if (inp.dataset.jdpInitialized) return;
+            inp.dataset.jdpInitialized = 'true';
+
+            /* ---- 1. Create hidden field ---- */
+            const originalName = inp.name;                // e.g. "ordered_at"
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type   = 'hidden';
+            hiddenInput.name   = originalName;           // Django will look for this
+            hiddenInput.id     = 'hidden_' + (inp.id || originalName);
             inp.parentNode.appendChild(hiddenInput);
 
-            // 4. Initialize the library on the VISUAL input
+            /* ---- 2. Remove name from visual input ---- */
+            inp.removeAttribute('name');
+
+            /* ---- 3. Set id for visual input ---- */
+            const visualId = inp.id || 'jalali_' + Math.random().toString(36).substr(2, 9);
+            inp.id = 'visual_' + visualId;
+
+            /* ---- 4. Initialize JalaliDatepicker ---- */
             if (typeof JalaliDatepicker !== 'undefined') {
-                JalaliDatepicker.init('#' + inp.id, { 
+                JalaliDatepicker.init('#' + inp.id, {
                     time: false,
-                    container: 'body',
-                    onSelect: function() {
-                        // Keep hidden input in sync when a date is picked
-                        hiddenInput.value = inp.value;
-                    }
+                    container: 'body'
                 });
+
+                /* ---- 5. Listener for date change ---- */
+                inp.addEventListener('jdp:change', function (e) {
+                    // Small delay to let the library finish its internal updates
+                    setTimeout(() => {
+                        let gDate = null;
+
+                        /* Try to get the Gregorian date from library */
+                        if (e.detail && e.detail.gDate) {
+                            gDate = e.detail.gDate;
+                        } else {
+                            try {
+                                const picker = JalaliDatepicker.hide()._datePicker;
+                                if (picker && picker.getGDate) {
+                                    gDate = picker.getGDate();
+                                }
+                            } catch (err) {
+                                /* ignore, fallback to data-gdate */
+                            }
+                        }
+
+                        /* Fallback: use data-gdate if gDate still null */
+                        if (!gDate && inp.dataset.gdate) {
+                            const parts = inp.dataset.gdate.split('-');
+                            gDate = new Date(parts[0], parts[1] - 1, parts[2]);
+                        }
+
+                        /* Set hidden input if we have a valid date */
+                        if (gDate) {
+                            const y = gDate.getFullYear();
+                            const m = String(gDate.getMonth() + 1).padStart(2, '0');
+                            const d = String(gDate.getDate()).padStart(2, '0');
+                            hiddenInput.value = `${y}-${m}-${d}`;
+                        }
+                    }, 50);   // 50ms delay is usually enough
+                });
+
+                /* ---- 6. Pre‑populate hidden input from data-gdate ---- */
+                if (inp.dataset.gdate) {
+                    hiddenInput.value = inp.dataset.gdate;
+                }
             }
-            
-            // Mark as initialized
-            inp.setAttribute('data-jdp-initialized', 'true');
         });
     }
 
+    /* Call once on load, and again after any AJAX that might insert new inputs */
     setTimeout(initJalaliDatePickers, 200);
 
+    /* ----------------------------------------------
+     * 2.  Optional: observe changes to data-gdate
+     * ---------------------------------------------- */
+    const observer = new MutationObserver(() => initJalaliDatePickers());
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-gdate'] });
     // مدیریت autocomplete برای تأمین‌کننده
     const supplierInput = document.querySelector('input[name="customer"]');
     const supplierIdInput = document.querySelector('input[name="supplier_id"]');

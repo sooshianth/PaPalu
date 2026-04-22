@@ -271,7 +271,7 @@ class Order(models.Model):
         blank=True
     )
 
-    ordered_at = jmodels.jDateTimeField(
+    ordered_at = jmodels.jDateField(
         verbose_name='تاریخ خرید',
         null=True,
         blank=True

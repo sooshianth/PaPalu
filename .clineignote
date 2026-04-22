@@ -1,0 +1,69 @@
+# Git
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Migrations (usually large and not useful for AI context)
+**/migrations/*
+!**/migrations/__init__.py
+
+# Static build outputs
+staticfiles/
+static_root/
+collected_static/
+
+# Node (if you use frontend tooling)
+node_modules/
+npm-debug.log*
+yarn.lock
+package-lock.json
+
+# Build / distribution
+dist/
+build/
+*.egg-info/
+
+# Media uploads
+media/
+
+# Coverage / testing
+.coverage
+coverage/
+htmlcov/
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large assets
+*.zip
+*.tar
+*.gz
+*.mp4
+*.mov
+*.pdf
+
+# Minified frontend files
+*.min.js
+*.min.css

@@ -233,8 +233,8 @@ class ProcurementPurchaseOrderTable(tables.Table):
         }
     )
     
-    created_at = tables.DateTimeColumn(
-        verbose_name='تاریخ ایجاد',
+    ordered_at = tables.DateTimeColumn(
+        verbose_name='تاریخ خرید',
         format='Y-m-d',
         orderable=True,
         visible=False,
@@ -276,7 +276,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
             self.columns['materials_list'].column.visible = accessible_fields.get('materials_list', False)
             self.columns['supplier'].column.visible = accessible_fields.get('supplier', False)
             self.columns['created_by'].column.visible = accessible_fields.get('created_by', False)
-            self.columns['created_at'].column.visible = accessible_fields.get('created_at', False)
+            self.columns['ordered_at'].column.visible = accessible_fields.get('ordered_at', False)
             self.columns['total_weight'].column.visible = accessible_fields.get('total_weight', False)
             # Always show actions if any field is visible
             self.columns['actions'].column.visible = any(accessible_fields.values())
@@ -284,7 +284,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
     class Meta:
         model = Order
         template_name = 'django_tables2/bootstrap4.html'
-        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'created_at', 'total_weight', 'actions')
+        fields = ('order_number', 'status', 'materials_list', 'supplier', 'created_by', 'ordered_at', 'total_weight', 'actions')
         attrs = {
             'class': 'table table-hover table-bordered',
             'style': 'border-collapse:collapse;font-size:.85rem'
@@ -292,7 +292,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
-        sequence = ('order_number', 'status', 'materials_list', 'total_weight', 'supplier', 'created_by', 'created_at', 'actions')
+        sequence = ('order_number', 'status', 'materials_list', 'total_weight', 'supplier', 'created_by', 'ordered_at', 'actions')
     
     def render_status(self, value, record):
         """نمایش وضعیت به صورت badge"""
@@ -361,7 +361,7 @@ class ProcurementPurchaseOrderTable(tables.Table):
             return format_html('<strong>{}</strong>', name)
         return '—'
     
-    def render_created_at(self, value, record):
+    def render_ordered_at(self, value, record):
         """نمایش تاریخ ایجاد"""
         if value:
             return format_html('<strong>{}</strong>', value)

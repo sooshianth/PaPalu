@@ -4,7 +4,7 @@ from . import Order, OrderItem, OrderDocument, DocumentRelation, ApprovalInfo, P
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['order_number', 'customer', 'order_type', 'status', 'freight_payment_type']
+    list_display = ['order_number', 'customer', 'order_type', 'status', 'freight_payment_type', 'ordered_at']
     list_filter = ['order_type', 'status', 'registered_by']
     search_fields = ['order_number', 'customer__name', 'customer__national_id']
     readonly_fields = ['created_at', 'updated_at']
@@ -17,7 +17,7 @@ class OrderAdmin(admin.ModelAdmin):
             'description': 'این مقادیر از اقلام سفارش محاسبه می‌شوند'
         }),
         ('وضعیت و تاریخ', {
-            'fields': ('status', 'creation_date', 'created_at', 'updated_at')
+            'fields': ('status', 'ordered_at', 'created_at', 'updated_at')
         }),
         ('اطلاعات دیگر', {
             'fields': ('freight_payment_type', 'accounting_document_number'),
