@@ -156,6 +156,8 @@ class ProcurementPurchaseOrderForm(ModelForm):
                     cleaned_data['ordered_at'] = jdatetime.date.fromgregorian(date=g_date)
             except Exception as e:
                 print(f"Date conversion error: {e}")
+        
+        print("wqdqwqd ",ordered_at)
 
         supplier_id = cleaned_data.get('supplier_id', '').strip()
         supplier_text = cleaned_data.get('customer', '').strip()

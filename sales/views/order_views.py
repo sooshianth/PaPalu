@@ -99,9 +99,7 @@ def create_order_view(request):
                     order: Order = order_form.save(commit=False)
                     order.registered_by = request.user
                     # تنظیم وضعیت به "در انتظار صدور پیش فاکتور"
-                    if not order.ordered_at and 'ordered_at' not in access_main:
-                        import jdatetime
-                        order.ordered_at = jdatetime.datetime.now()
+                    print("ordered at: ", order.ordered_at)
                     order.status = 'pending_proforma_issue'
                     order.save()
 

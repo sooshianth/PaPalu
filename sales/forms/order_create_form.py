@@ -27,7 +27,7 @@ class CreateOrderForm(forms.ModelForm):
         ]
         widgets = {
             'order_number': forms.TextInput(attrs={'class': 'form-control', 'dir': 'ltr'}),
-            'ordered_at': forms.TextInput(attrs={'class': 'form-control jalali-date', 'placeholder': '####/##/##', 'data-jdp': ''}),
+            'ordered_at': forms.TextInput(attrs={'class': 'form-control jalali-date', 'placeholder': '####/##/##', 'type':'text', 'data-jdp': ''}),
             'order_type': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
             'registration_source': forms.Select(attrs={'class': 'form-control', 'readonly': True, 'disabled': True}),
             'status': forms.Select(attrs={'class': 'form-control', 'disabled': True}),
@@ -90,6 +90,27 @@ class CreateOrderForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        ordered_at = cleaned_data.get('ordered_at')
+        # Get the raw date string from form data
+        raw_ordered_at = self.data.get('ordered_at', '').strip()
+        print("wqdqwqd ",raw_ordered_at)
+        if not ordered_at and raw_ordered_at:
+            try:
+                import jdatetime
+                from django.utils.dateparse import parse_date
+                
+                # Parse the Gregorian string (YYYY-MM-DD)
+                g_date = parse_date(raw_ordered_at)
+                if g_date:
+                    # Convert Gregorian date to Jalali date object
+                    # This ensures compatibility with jDateTimeField
+                    cleaned_data['ordered_at'] = jdatetime.date.fromgregorian(date=g_date)
+            except Exception as e:
+                print(f"Date conversion error: {e}")
+        import jdatetime
+        from django.utils.dateparse import parse_date
+        cleaned_data['ordered_at'] = jdatetime.date.fromgregorian(date=parse_date(raw_ordered_at))
+        print("wqdqwqd ",ordered_at)
         # تبدیل customer_id به customer
         customer_id = cleaned_data.get('customer_id', '').strip()
         customer_text = cleaned_data.get('customer', '').strip()
@@ -125,18 +146,7 @@ class CreateOrderForm(forms.ModelForm):
             except Person.MultipleObjectsReturned:
                 self.add_error('customer', 'چندین مشتری با این کد ملی یافت شد. لطفاً با پشتیبانی تماس بگیرید.')
         
-        # Validate ordered_at field
-        ordered_at = cleaned_data.get('ordered_at')
-        if not ordered_at:
-            self.add_error('ordered_at', 'تاریخ خرید الزامی است.')
-        else:
-            try:
-                # Parse Jalali date from string
-                from jdatetime import date as jdate
-                year, month, day = map(int, ordered_at.split('/'))
-                cleaned_data['ordered_at'] = jdate(year, month, day)
-            except (ValueError, jdate.Error):
-                self.add_error('ordered_at', 'فرمت تاریخ نامعتبر است. از فرمت شمسی (####/##/##) استفاده کنید.')
+        
         
         return cleaned_data
 

@@ -283,7 +283,9 @@ def create_procurement_purchase_order_view(request):
             form = ProcurementPurchaseOrderForm(request.POST, request.FILES)
             if form.is_valid():
                 with transaction.atomic():
+                    
                     po = form.save(commit=False)
+                    print("ordered at: ", po.ordered_at)
                     po.order_type = 'purchase'
                     po.status = Order.STATUS_DRAFT  # تنظیم وضعیت به پیش‌نویس
                     po.registered_by = request.user
