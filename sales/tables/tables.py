@@ -295,7 +295,7 @@ class OrderTable(tables.Table):
                 'total_purchase_cost': True,
                 'total_order_weight': True,
                 'registered_by': True,
-                'created_at': True,
+                'ordered_at': True,
             }
         
         # فیلدهایی که در لیست نمایش داده می‌شوند
@@ -307,7 +307,7 @@ class OrderTable(tables.Table):
             'total_purchase_cost': (OrderItemModel, 'total_purchase_cost'),
             'total_order_weight': None,  # محاسبه شده، همیشه نمایش داده می‌شود
             'registered_by': None,  # همیشه نمایش داده می‌شود
-            'created_at': None,  # همیشه نمایش داده می‌شود
+            'ordered_at': None,  # همیشه نمایش داده می‌شود
         }
         
         accessible_fields = {}
@@ -386,8 +386,8 @@ class OrderTable(tables.Table):
         }
     )
     
-    created_at = tables.Column(
-        verbose_name='تاریخ ایجاد',
+    ordered_at = tables.Column(
+        verbose_name='تاریخ فروش',
         orderable=True,
         attrs={
             'td': {'class': 'text-right'},
@@ -398,12 +398,12 @@ class OrderTable(tables.Table):
     class Meta:
         model = Order
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('order_number', 'customer', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
+        fields = ('order_number', 'customer', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'ordered_at', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('order_number', 'customer', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'created_at', 'actions')
+        sequence = ('order_number', 'customer', 'status', 'total_purchase_cost', 'total_order_weight', 'registered_by', 'ordered_at', 'actions')
     
     def render_order_number(self, value, record):
         """نمایش شماره سفارش به صورت عدد bold و واضح"""
@@ -496,11 +496,11 @@ class OrderTable(tables.Table):
             return value
         return '-'
     
-    def render_created_at(self, value, record):
+    def render_ordered_at(self, value, record):
         """نمایش تاریخ ایجاد"""
         # استفاده از record برای اطمینان از دریافت مقدار صحیح
-        if hasattr(record, 'created_at') and record.created_at:
-            dt = record.created_at
+        if hasattr(record, 'ordered_at') and record.ordered_at:
+            dt = record.ordered_at
             # اگر jdatetime.datetime است
             if isinstance(dt, jdatetime.datetime):
                 # اگر ساعت دارد (نه 00:00:00)
