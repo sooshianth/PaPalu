@@ -84,6 +84,11 @@
                         <span class="detail-label">تاریخ ایجاد:</span>
                         <span class="detail-value">{{ order.created_at|default:"-" }}</span>
                     </div>
+
+                    <div class="detail-item">
+                        <span class="detail-label">تاریخ خرید:</span>
+                        <span class="detail-value">{{ order.ordered_at|default:"-" }}</span>
+                    </div>
                 </div>
             </div>
             
