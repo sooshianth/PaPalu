@@ -367,8 +367,43 @@ def create_purchase_transport_view(request):
             if form_valid and formset_valid:
                 try:
                     with transaction.atomic():
+                        purchase_order = form.cleaned_data.get('purchase_order')
+                        allocation = form.cleaned_data.get('allocation')
+                        if purchase_order:
+                            from core.AllocationFolder.AllocationModel import Allocation
+                            from core.AllocationFolder.AllocationSchedulingInfoModel import AllocationSchedulingInfo
+                            import uuid
+
+                            if not allocation:
+                                allocation = Allocation.objects.filter(order=purchase_order).first()
+                                if not allocation:
+                                    allocation_number = f"ALLOC-{purchase_order.order_number}-{str(uuid.uuid4())[:8]}"
+                                    bug_logger.info(
+                                        f"DEBUG_STEP_ALLOC_1: Allocation وجود ندارد - در حال ساختن برای order={purchase_order.pk} ({purchase_order.order_number})"
+                                    )
+                                    allocation = Allocation.objects.create(
+                                        allocation_number=allocation_number,
+                                        order=purchase_order,
+                                        allocation_status='planned'
+                                    )
+                                    bug_logger.info(f"DEBUG_STEP_ALLOC_2: Allocation ساخته شد - id={allocation.pk}")
+                                else:
+                                    bug_logger.info(f"DEBUG_STEP_ALLOC_3: Allocation موجود پیدا شد - id={allocation.pk}")
+
+                            AllocationSchedulingInfo.objects.get_or_create(
+                                allocation=allocation,
+                                defaults={'allocation_received_time': allocation.created_at}
+                            )
+                            bug_logger.info(
+                                f"DEBUG_STEP_ALLOC_4: AllocationSchedulingInfo برای allocation={allocation.pk} آماده شد"
+                            )
+
+                            form.cleaned_data['allocation'] = allocation
+
                         bug_logger.info(f"DEBUG_STEP_6: داخل transaction.atomic() - form.save(commit=False) شروع شد")
                         pt = form.save(commit=False)
+                        if allocation:
+                            pt.allocation = allocation
                         bug_logger.info(f"DEBUG_STEP_7: pt ساخته شد - allocation={pt.allocation_id}, driver={pt.driver_id}, driver_bank_account={pt.driver_bank_account_id}")
                         pt.created_by = request.user
                         # تنظیم خودکار transport_type و direction به inbound
