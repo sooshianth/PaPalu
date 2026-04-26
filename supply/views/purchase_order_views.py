@@ -17,6 +17,7 @@ from core.OrderFolder.OrderModel import Order, OrderStatusLog
 from core.OrderFolder.OrderItemModel import OrderItem
 from core.PersonFolder.PersonModel import Person
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
+from core.TransportFolder.RawMaterialInfoModel import RawMaterialInfo
 from core.RBACModel import user_has_task, TaskChoices, user_can_access_field
 from django.contrib.auth import get_user_model
 from supply.forms.procurement_order_form import ProcurementPurchaseOrderForm, ProcurementPurchaseOrderMaterialForm, MaterialFormSetBase
@@ -398,6 +399,24 @@ def procurement_purchase_order_detail_view(request, order_number):
             messages.error(request, f'سفارش {order_number} یافت نشد.')
             return redirect('supply:purchase_transport_list')
     materials = po.order_items.filter(raw_material__isnull=False).select_related('raw_material').all()
+    raw_material_infos = RawMaterialInfo.objects.filter(
+        order_item__order=po
+    ).select_related('order_item')
+    totals_by_item_id = {}
+    for raw_material_info in raw_material_infos:
+        bucket = totals_by_item_id.setdefault(
+            raw_material_info.order_item_id,
+            {'total_net_weight': Decimal('0'), 'total_waybill_weight': Decimal('0')}
+        )
+        if raw_material_info.net_weight is not None:
+            bucket['total_net_weight'] += raw_material_info.net_weight
+        if raw_material_info.waybill_weight is not None:
+            bucket['total_waybill_weight'] += raw_material_info.waybill_weight
+
+    for material in materials:
+        item_totals = totals_by_item_id.get(material.id, {})
+        material.total_net_weight = item_totals.get('total_net_weight')
+        material.total_waybill_weight = item_totals.get('total_waybill_weight')
     logs = po.status_logs.all().order_by('-changed_at')
     log_table = ProcurementPurchaseOrderStatusLogTable(logs)
     RequestConfig(request, paginate=False).configure(log_table)

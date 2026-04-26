@@ -363,8 +363,9 @@
             <thead>
                 <tr>
                     <th>ماده اولیه</th>
-                    <th>مقدار تخصیص یافته</th>
                     <th>واحد</th>
+                    <th>وزن خرید</th>
+                    <th>وزن بارنامه (کیلوگرم)</th>
                     <th>وزن خالص (کیلوگرم)</th>
                     <th>نوع بسته‌بندی</th>
                     <th>تعداد بسته</th>
@@ -381,8 +382,15 @@
                         <small style="color: var(--gray-600); font-size: 0.85rem;">سفارش: {{ rmi.order_item.order.order_number }}</small>
                         {% endif %}
                     </td>
-                    <td>{{ rmi.allocated_quantity|persian_number:2|default:"—" }}</td>
                     <td>{{ rmi.get_weight_unit_display|default:"—" }}</td>
+                    <td>{{ rmi.allocated_quantity|persian_number:2|default:"—" }}</td>
+                    <td>
+                        {% if rmi.waybill_weight %}
+                            <strong style="color: #0b74c7;">{{ rmi.waybill_weight|persian_number:2 }}</strong>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>
                         {% if rmi.net_weight %}
                             <strong style="color: var(--primary-green);">{{ rmi.net_weight|persian_number:3 }}</strong>
@@ -399,6 +407,7 @@
             <tfoot>
                 <tr style="background: var(--light-green); border-top: 2px solid var(--primary-green);">
                     <td style="font-weight: 600; padding: 15px;"><strong>جمع کل</strong></td>
+                    <td style="padding: 15px;">—</td>
                     <td style="font-weight: 600; padding: 15px;">
                         {% if total_allocated %}
                             <strong>{{ total_allocated|persian_number:2 }}</strong>
@@ -406,7 +415,13 @@
                             —
                         {% endif %}
                     </td>
-                    <td style="padding: 15px;">—</td>
+                    <td style="font-weight: 600; padding: 15px;">
+                        {% if total_waybill_weight %}
+                            <strong style="color: #0b74c7; font-size: 1.1rem;">{{ total_waybill_weight|persian_number:2 }}</strong>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td style="font-weight: 600; padding: 15px;">
                         {% if total_net_weight %}
                             <strong style="color: var(--primary-green); font-size: 1.1rem;">{{ total_net_weight|persian_number:3 }}</strong>

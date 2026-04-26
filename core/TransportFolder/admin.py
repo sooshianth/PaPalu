@@ -36,7 +36,12 @@ class FareAdmin(admin.ModelAdmin):
 
 @admin.register(RawMaterialInfo)
 class RawMaterialInfoAdmin(admin.ModelAdmin):
-    list_display = ['transport', 'raw_material', 'allocated_quantity', 'net_weight', 'weight_unit', 'created_at']
+    list_display = [
+        'transport', 'raw_material', 'allocated_quantity', 'net_weight',
+        'unloading_weight_before', 'unloading_weight_after',
+        'waybill_gross_weight', 'waybill_tare_weight', 'waybill_weight',
+        'scale_serial', 'weight_unit', 'created_at'
+    ]
     list_filter = ['weight_unit', 'transport__status', 'created_at']
     search_fields = ['transport__transport_number', 'transport__waybill_number', 'raw_material__name']
     readonly_fields = ['created_at', 'updated_at']
@@ -45,7 +50,13 @@ class RawMaterialInfoAdmin(admin.ModelAdmin):
             'fields': ('transport', 'order_item', 'raw_material')
         }),
         ('اطلاعات وزن', {
-            'fields': ('allocated_quantity', 'net_weight', 'weight_unit')
+            'fields': (
+                'allocated_quantity', 'net_weight', 'unloading_weight_before',
+                'unloading_weight_after', 'scale_serial', 'weight_unit'
+            )
+        }),
+        ('اطلاعات وزن بارنامه', {
+            'fields': ('waybill_gross_weight', 'waybill_tare_weight', 'waybill_weight')
         }),
         ('اطلاعات بسته‌بندی', {
             'fields': ('packaging_type', 'number_of_packages'),

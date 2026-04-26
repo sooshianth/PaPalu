@@ -186,6 +186,9 @@
         <div style="margin-top: 6px; font-size: 0.9rem; color: #546e7a;">
           <span>وزن خالص (کیلوگرم):</span>
           {% if item.net_kg is not None %}{{ item.net_kg|persian_number:3 }} کیلوگرم{% else %}—{% endif %}
+          <span style="margin-right: 12px;">|</span>
+          <span>سریال باسکول:</span>
+          {% if item.scale_serial is not None %}{{ item.scale_serial|persian_number:0 }}{% else %}—{% endif %}
           {% if item.secondary_value is not None and item.secondary_unit_display %}
           <span style="margin-right: 12px;">|</span>
           <span>وزن خالص ({{ item.secondary_unit_display }}):</span> {{ item.secondary_value|persian_number:3 }} {{ item.secondary_unit_display }}

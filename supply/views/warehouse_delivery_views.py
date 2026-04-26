@@ -148,6 +148,7 @@ def _guard_exit_delivery_items(pt):
             'net_kg': net_kg,
             'secondary_value': secondary_value,
             'secondary_unit_display': secondary_unit_display,
+            'scale_serial': getattr(rmi, 'scale_serial', None),
         })
     return items
 
@@ -155,19 +156,20 @@ def _guard_exit_delivery_items(pt):
 def _comparison_totals_from_order_items(order_items, pt=None):
     """محاسبه جمع کل تخصیص، وزن خالص محاسبه‌شده و اختلاف برای جدول مقایسه وزن‌ها"""
     total_allocated = sum((item.get('allocated_quantity') or Decimal('0')) for item in order_items)
+    total_waybill = sum((item.get('waybill_weight') or Decimal('0')) for item in order_items if item.get('waybill_weight') is not None)
     # فقط آیتم‌هایی که وزن خالص واقعی دارند حساب می‌شوند
     items_with_net = [item for item in order_items if item.get('calculated_net_weight') is not None]
     total_calculated = sum((item.get('calculated_net_weight') or Decimal('0')) for item in items_with_net)
     out = {
         'total_allocated': total_allocated,
+        'total_waybill': total_waybill,
         'total_calculated': total_calculated,
         'total_diff': total_calculated - total_allocated,
     }
     if pt is not None:
-        waybill = pt.waybill_weight or Decimal('0')
         # اختلاف بارنامه و خالص فقط وقتی حداقل یک آیتم وزن خالص دارد معنادار است
         if items_with_net:
-            out['total_waybill_net_diff'] = waybill - total_calculated
+            out['total_waybill_net_diff'] = total_calculated - total_waybill
         else:
             out['total_waybill_net_diff'] = None
     return out
@@ -191,15 +193,20 @@ def _initial_stages_from_order_items(pt, order_items):
         net_f = float(net)
         if net_f <= 0:
             continue
-        weight_after = gross - cum - net_f
+        saved_weight_before = item_data.get('unloading_weight_before')
+        saved_weight_after = item_data.get('unloading_weight_after')
+        weight_before = float(saved_weight_before) if saved_weight_before is not None else gross - cum
+        weight_after = float(saved_weight_after) if saved_weight_after is not None else gross - cum - net_f
         cum += net_f
         wh_id = item_data.get('destination_warehouse_id')
         out.append({
             'id': i + 1,
             'item_id': item_data['item'].id,
             'net_weight': round(net_f, 6),
+            'weight_before': round(weight_before, 6),
             'weight_after': round(weight_after, 6),
             'warehouse_id': int(wh_id) if wh_id else None,
+            'scale_serial': item_data.get('scale_serial'),
         })
     return out
 
@@ -374,15 +381,19 @@ def warehouse_delivery_detail_view(request, transport_number):
                 if info.order_item and info.order_item.raw_material:
                     net = info.net_weight or Decimal('0')
                     alloc = info.allocated_quantity or Decimal('0')
-                    waybill = pt.waybill_weight or Decimal('0')
+                    waybill = info.waybill_weight
                     order_items.append({
                         'item': info.order_item,
                         'raw_material': info.raw_material,
                         'allocated_quantity': info.allocated_quantity,
+                        'waybill_weight': info.waybill_weight,
                         'calculated_net_weight': info.net_weight,
+                        'unloading_weight_before': info.unloading_weight_before,
+                        'unloading_weight_after': info.unloading_weight_after,
                         'weight_diff': (net - alloc) if info.net_weight is not None else None,
-                        'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
+                        'waybill_net_diff': (net - waybill) if info.net_weight is not None else None,
                         'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
+                        'scale_serial': getattr(info, 'scale_serial', None),
                     })
         
         comparison_totals = _comparison_totals_from_order_items(order_items, pt)
@@ -438,12 +449,16 @@ def warehouse_delivery_detail_view(request, transport_number):
                         if info.order_item and info.order_item.raw_material:
                             net = info.net_weight or Decimal('0')
                             alloc = info.allocated_quantity or Decimal('0')
-                            waybill = pt.waybill_weight or Decimal('0')
+                            waybill = info.waybill_weight
                             order_items.append({
                                 'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
+                                'waybill_weight': info.waybill_weight,
                                 'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
-                                'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
+                                'unloading_weight_before': info.unloading_weight_before,
+                                'unloading_weight_after': info.unloading_weight_after,
+                                'waybill_net_diff': (net - waybill) if info.net_weight is not None else None,
                                 'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
+                                'scale_serial': getattr(info, 'scale_serial', None),
                             })
                 comparison_totals = _comparison_totals_from_order_items(order_items, pt)
                 initial_stages = _initial_stages_from_order_items(pt, order_items)
@@ -488,7 +503,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                         return redirect(request.path)
                     
                     # پردازش داده‌های مرحله‌ای تخلیه
-                    # فرمت: unloading_stages[0][item_id]=X&unloading_stages[0][weight]=Y
+                    # فرمت: unloading_stages[0][item_id]=X&unloading_stages[0][weight]=Y&unloading_stages[0][scale_serial]=Z
                     # فقط order_items مربوط به این حمل (که در RawMaterialInfo ثبت شده‌اند) را بررسی می‌کنیم
                     po = pt.allocation.order if pt.allocation else None
                     existing_infos = RawMaterialInfo.objects.filter(transport=pt).select_related('order_item', 'raw_material')
@@ -507,23 +522,27 @@ def warehouse_delivery_detail_view(request, transport_number):
                         item_id_key = f'unloading_stages[{stage_index}][item_id]'
                         weight_key = f'unloading_stages[{stage_index}][weight]'
                         warehouse_id_key = f'unloading_stages[{stage_index}][warehouse_id]'
+                        scale_serial_key = f'unloading_stages[{stage_index}][scale_serial]'
                         
                         item_id = request.POST.get(item_id_key)
                         weight = request.POST.get(weight_key)
                         warehouse_id = request.POST.get(warehouse_id_key)
+                        scale_serial = request.POST.get(scale_serial_key)
                         
-                        if not item_id or not weight or not warehouse_id:
+                        if not item_id or not weight or not warehouse_id or not scale_serial:
                             break
                         
                         try:
                             item_id = int(item_id)
                             weight = Decimal(str(weight))
                             warehouse_id = int(warehouse_id)
+                            scale_serial = int(scale_serial)
                             if weight > 0:
                                 unloading_stages.append({
                                     'item_id': item_id,
                                     'weight': weight,
-                                    'warehouse_id': warehouse_id
+                                    'warehouse_id': warehouse_id,
+                                    'scale_serial': scale_serial,
                                 })
                         except (ValueError, TypeError):
                             pass
@@ -563,12 +582,16 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # محاسبه وزن‌های خالص هر محصول و وزن خالی نهایی
                     item_weights = {}
                     item_warehouses = {}
+                    item_scale_serials = {}
+                    item_unloading_weight_before = {}
+                    item_unloading_weight_after = {}
                     current_weight = gross
                     
                     for stage in unloading_stages:
                         item_id = stage['item_id']
                         weight_after_unloading = stage['weight']
                         warehouse_id = stage.get('warehouse_id')
+                        scale_serial = stage.get('scale_serial')
                         
                         # وزن خالص این محصول = وزن قبلی - وزن بعد از تخلیه
                         net_item_weight = current_weight - weight_after_unloading
@@ -581,8 +604,15 @@ def warehouse_delivery_detail_view(request, transport_number):
                         if item_id in item_weights:
                             messages.error(request, 'هر محصول فقط یک بار می‌تواند تخلیه شود.')
                             return redirect(request.path)
+
+                        if scale_serial is None or scale_serial < 0:
+                            messages.error(request, 'سریال باسکول هر مرحله باید مقدار معتبر داشته باشد.')
+                            return redirect(request.path)
                         
                         item_weights[item_id] = net_item_weight
+                        item_scale_serials[item_id] = scale_serial
+                        item_unloading_weight_before[item_id] = current_weight
+                        item_unloading_weight_after[item_id] = weight_after_unloading
                         if warehouse_id:
                             try:
                                 warehouse = Warehouse.objects.get(pk=warehouse_id)
@@ -653,9 +683,14 @@ def warehouse_delivery_detail_view(request, transport_number):
                     # Save RawMaterialInfo records
                     valid_raw_material_infos = [] # To be used for StockEntry
                     if items_qs:
-                        # دریافت allocated_quantity از RawMaterialInfo قبلی (اگر وجود دارد)
+                        # دریافت مقادیر قبلی RawMaterialInfo تا هنگام بازسازی رکوردها از بین نروند
                         existing_infos = RawMaterialInfo.objects.filter(transport=pt)
                         allocated_map = {info.order_item_id: info.allocated_quantity for info in existing_infos}
+                        waybill_gross_map = {info.order_item_id: info.waybill_gross_weight for info in existing_infos}
+                        waybill_tare_map = {info.order_item_id: info.waybill_tare_weight for info in existing_infos}
+                        waybill_weight_map = {info.order_item_id: info.waybill_weight for info in existing_infos}
+                        unloading_weight_before_map = {info.order_item_id: info.unloading_weight_before for info in existing_infos}
+                        unloading_weight_after_map = {info.order_item_id: info.unloading_weight_after for info in existing_infos}
                         
                         # Clear old ones to avoid duplicates if re-submitting
                         RawMaterialInfo.objects.filter(transport=pt).delete()
@@ -672,8 +707,14 @@ def warehouse_delivery_detail_view(request, transport_number):
                                     order_item=item,
                                     raw_material=item.raw_material,
                                     allocated_quantity=allocated_qty,  # وزن تخصیص یافته قبلی (یا وزن خالص برای اولین بار)
+                                    waybill_gross_weight=waybill_gross_map.get(item.id),
+                                    waybill_tare_weight=waybill_tare_map.get(item.id),
+                                    waybill_weight=waybill_weight_map.get(item.id),
+                                    unloading_weight_before=item_unloading_weight_before.get(item.id, unloading_weight_before_map.get(item.id)),
+                                    unloading_weight_after=item_unloading_weight_after.get(item.id, unloading_weight_after_map.get(item.id)),
                                     net_weight=w,  # وزن خالص محاسبه شده از تخلیه
                                     destination_warehouse=dest_warehouse,  # انبار مقصد این مرحله تخلیه
+                                    scale_serial=item_scale_serials.get(item.id),
                                     weight_unit='kg' # Unloading is usually in KG
                                 )
                                 valid_raw_material_infos.append(rmi)
@@ -686,8 +727,6 @@ def warehouse_delivery_detail_view(request, transport_number):
                         try:
                             if valid_raw_material_infos:
                                 raw_material_content_type = ContentType.objects.get_for_model(RawMaterial)
-                                total_allocated = sum((rmi.allocated_quantity or Decimal('0')) for rmi in valid_raw_material_infos)
-                                waybill_total = (pt.waybill_weight or Decimal('0'))
                                 
                                 # برای هر ماده اولیه یک StockEntry جداگانه ایجاد می‌کنیم (چون انبار مقصد متفاوت است)
                                 for rmi in valid_raw_material_infos:
@@ -706,15 +745,12 @@ def warehouse_delivery_detail_view(request, transport_number):
                                         )
                                         continue
                                     
-                                    # مقدار کم‌شده از تامین‌کننده = سهم این ماده از وزن بارنامه (نسبت تخصیص). در صورت نبود وزن بارنامه از تخصیص استفاده می‌شود.
-                                    if waybill_total and total_allocated and total_allocated > 0:
-                                        waybill_portion = waybill_total * (rmi.allocated_quantity or Decimal('0')) / total_allocated
-                                    else:
-                                        waybill_portion = rmi.allocated_quantity or Decimal('0')
+                                    # مقدار کم‌شده از تامین‌کننده باید دقیقاً برابر وزن بارنامه همان ماده اولیه باشد.
+                                    waybill_portion = rmi.waybill_weight
                                     
                                     if not waybill_portion or waybill_portion <= 0:
                                         bug_logger.warning(
-                                            f"رد شد: ماده اولیه {rmi.raw_material.name} - سهم وزن بارنامه نامعتبر. از انبار تامین‌کننده کم نمی‌شود."
+                                            f"رد شد: ماده اولیه {rmi.raw_material.name} - وزن بارنامه این ردیف نامعتبر است. از انبار تامین‌کننده کم نمی‌شود."
                                         )
                                         continue
                                     
@@ -829,12 +865,16 @@ def warehouse_delivery_detail_view(request, transport_number):
                     if info.order_item and info.order_item.raw_material:
                         net = info.net_weight or Decimal('0')
                         alloc = info.allocated_quantity or Decimal('0')
-                        waybill = pt.waybill_weight or Decimal('0')
+                        waybill = info.waybill_weight
                         order_items.append({
                             'item': info.order_item, 'raw_material': info.raw_material, 'allocated_quantity': info.allocated_quantity,
+                            'waybill_weight': info.waybill_weight,
                             'calculated_net_weight': info.net_weight, 'weight_diff': (net - alloc) if info.net_weight is not None else None,
-                            'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
+                            'unloading_weight_before': info.unloading_weight_before,
+                            'unloading_weight_after': info.unloading_weight_after,
+                            'waybill_net_diff': (net - waybill) if info.net_weight is not None else None,
                             'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
+                            'scale_serial': getattr(info, 'scale_serial', None),
                         })
             comparison_totals = _comparison_totals_from_order_items(order_items, pt)
             initial_stages = _initial_stages_from_order_items(pt, order_items)
@@ -883,15 +923,19 @@ def warehouse_delivery_detail_view(request, transport_number):
             if info.order_item and info.order_item.raw_material:
                 net = info.net_weight or Decimal('0')
                 alloc = info.allocated_quantity or Decimal('0')
-                waybill = pt.waybill_weight or Decimal('0')
+                waybill = info.waybill_weight
                 order_items.append({
                     'item': info.order_item,
                     'raw_material': info.raw_material,
                     'allocated_quantity': info.allocated_quantity,
+                    'waybill_weight': info.waybill_weight,
                     'calculated_net_weight': info.net_weight,
+                    'unloading_weight_before': info.unloading_weight_before,
+                    'unloading_weight_after': info.unloading_weight_after,
                     'weight_diff': (net - alloc) if info.net_weight is not None else None,
-                    'waybill_net_diff': (waybill - net) if info.net_weight is not None else None,
+                    'waybill_net_diff': (net - waybill) if info.net_weight is not None else None,
                     'destination_warehouse_id': getattr(info, 'destination_warehouse_id', None),
+                    'scale_serial': getattr(info, 'scale_serial', None),
                 })
     
     comparison_totals = _comparison_totals_from_order_items(order_items, pt)

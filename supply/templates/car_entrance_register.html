@@ -376,6 +376,9 @@
         max-width: 380px;
         margin-bottom: 0;
     }
+    .car-entrance-table-box.table-main {
+        max-width: 100%;
+    }
     .car-entrance-table-box .table-title {
         font-size: 0.95rem;
         font-weight: 600;
@@ -391,6 +394,9 @@
         border-radius: 8px;
         border: 1px solid #dee2e6;
         background: #fff;
+    }
+    .car-entrance-table-box.table-main .car-entrance-table-wrap {
+        max-width: 100%;
     }
     .car-entrance-table {
         width: 100%;
@@ -420,6 +426,47 @@
     }
     .car-entrance-table tbody tr:hover {
         background: #f0f7f0;
+    }
+    .car-entrance-weight-row td {
+        background: #fbfcfd;
+        padding: 14px;
+    }
+    .car-entrance-weight-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(170px, 1fr));
+        gap: 12px;
+    }
+    .car-entrance-weight-field label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 6px;
+    }
+    .car-entrance-weight-field input {
+        width: 100%;
+    }
+    .car-entrance-weight-help,
+    .car-entrance-weight-check {
+        font-size: 0.75rem;
+        margin-top: 6px;
+        display: block;
+    }
+    .car-entrance-weight-help {
+        color: #6c757d;
+    }
+    .car-entrance-weight-check {
+        grid-column: 1 / -1;
+        color: #6c757d;
+        margin-top: -2px;
+    }
+    .car-entrance-weight-check.is-error {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    .car-entrance-weight-field input.is-invalid {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, 0.15);
     }
     .car-entrance-table-box.table-main .car-entrance-table th {
         background: var(--primary-green);
@@ -454,6 +501,9 @@
         }
         .btn {
             width: 100%;
+        }
+        .car-entrance-weight-grid {
+            grid-template-columns: 1fr;
         }
     }
 </style>
@@ -538,6 +588,88 @@
                                                     <td>{{ material.name }}</td>
                                                     <td class="col-index">{% if material.allocated_quantity %}{{ material.allocated_quantity|add_commas }}{% else %}—{% endif %}</td>
                                                     <td class="col-index">{{ material.weight_unit|default:"—" }}</td>
+                                                </tr>
+                                                <tr class="car-entrance-weight-row">
+                                                    <td colspan="4">
+                                                        <div class="car-entrance-weight-grid" data-rmi-row="{{ material.raw_material_info_id }}">
+                                                            <div class="car-entrance-weight-field">
+                                                                <label for="id_raw_material_{{ material.raw_material_info_id }}_waybill_gross_weight">وزن پر</label>
+                                                                <input
+                                                                    type="number"
+                                                                    id="id_raw_material_{{ material.raw_material_info_id }}_waybill_gross_weight"
+                                                                    name="raw_material_{{ material.raw_material_info_id }}_waybill_gross_weight"
+                                                                    class="form-control{% if material.errors.waybill_gross_weight %} is-invalid{% endif %}"
+                                                                    value="{{ material.waybill_gross_weight }}"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    inputmode="decimal"
+                                                                    data-waybill-weight="true"
+                                                                    data-weight-role="gross"
+                                                                    data-rmi-id="{{ material.raw_material_info_id }}"
+                                                                    placeholder="0.00"
+                                                                >
+                                                                {% if material.errors.waybill_gross_weight %}
+                                                                    <span class="text-danger">{{ material.errors.waybill_gross_weight }}</span>
+                                                                {% else %}
+                                                                    <span class="car-entrance-weight-help">با دو رقم اعشار وارد شود.</span>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="car-entrance-weight-field">
+                                                                <label for="id_raw_material_{{ material.raw_material_info_id }}_waybill_tare_weight">وزن خالی</label>
+                                                                <input
+                                                                    type="number"
+                                                                    id="id_raw_material_{{ material.raw_material_info_id }}_waybill_tare_weight"
+                                                                    name="raw_material_{{ material.raw_material_info_id }}_waybill_tare_weight"
+                                                                    class="form-control{% if material.errors.waybill_tare_weight %} is-invalid{% endif %}"
+                                                                    value="{{ material.waybill_tare_weight }}"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    inputmode="decimal"
+                                                                    data-waybill-weight="true"
+                                                                    data-weight-role="tare"
+                                                                    data-rmi-id="{{ material.raw_material_info_id }}"
+                                                                    placeholder="0.00"
+                                                                >
+                                                                {% if material.errors.waybill_tare_weight %}
+                                                                    <span class="text-danger">{{ material.errors.waybill_tare_weight }}</span>
+                                                                {% else %}
+                                                                    <span class="car-entrance-weight-help">با دو رقم اعشار وارد شود.</span>
+                                                                {% endif %}
+                                                            </div>
+                                                            <div class="car-entrance-weight-field">
+                                                                <label for="id_raw_material_{{ material.raw_material_info_id }}_waybill_weight">وزن خالص</label>
+                                                                <input
+                                                                    type="number"
+                                                                    id="id_raw_material_{{ material.raw_material_info_id }}_waybill_weight"
+                                                                    name="raw_material_{{ material.raw_material_info_id }}_waybill_weight"
+                                                                    class="form-control{% if material.errors.waybill_weight %} is-invalid{% endif %}"
+                                                                    value="{{ material.waybill_weight }}"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    inputmode="decimal"
+                                                                    data-waybill-weight="true"
+                                                                    data-weight-role="net"
+                                                                    data-rmi-id="{{ material.raw_material_info_id }}"
+                                                                    placeholder="0.00"
+                                                                >
+                                                                {% if material.errors.waybill_weight %}
+                                                                    <span class="text-danger">{{ material.errors.waybill_weight }}</span>
+                                                                {% else %}
+                                                                    <span class="car-entrance-weight-help">باید برابر وزن پر منهای وزن خالی باشد.</span>
+                                                                {% endif %}
+                                                            </div>
+                                                            <span
+                                                                id="rmi-check-{{ material.raw_material_info_id }}"
+                                                                class="car-entrance-weight-check{% if material.errors.row_error %} is-error{% endif %}"
+                                                            >
+                                                                {% if material.errors.row_error %}
+                                                                    {{ material.errors.row_error }}
+                                                                {% else %}
+                                                                    وزن پر - وزن خالی باید دقیقاً برابر وزن خالص باشد.
+                                                                {% endif %}
+                                                            </span>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                                 {% endif %}
                                             {% endfor %}
@@ -997,6 +1129,96 @@
       if(el) el.addEventListener('input',updateSupplyPlatePreview);
     });
     updateSupplyPlatePreview();
+
+    function parseWeightValue(value) {
+      var normalized = normalizeDigits(String(value || '')).replace(/،/g, '').replace(/,/g, '').trim();
+      if (!normalized) return null;
+      var parsed = parseFloat(normalized);
+      return isNaN(parsed) ? null : parsed;
+    }
+
+    function formatWeightInput(input) {
+      if (!input) return;
+      var parsed = parseWeightValue(input.value);
+      if (parsed === null) return;
+      input.value = parsed.toFixed(2);
+    }
+
+    function validateRawMaterialWaybillRows() {
+      var grouped = {};
+      document.querySelectorAll('input[data-waybill-weight="true"]').forEach(function(input) {
+        var rowId = input.getAttribute('data-rmi-id');
+        if (!rowId) return;
+        if (!grouped[rowId]) grouped[rowId] = {};
+        grouped[rowId][input.getAttribute('data-weight-role')] = input;
+      });
+
+      var hasError = false;
+      Object.keys(grouped).forEach(function(rowId) {
+        var row = grouped[rowId];
+        var grossInput = row.gross;
+        var tareInput = row.tare;
+        var netInput = row.net;
+        var checkEl = document.getElementById('rmi-check-' + rowId);
+        [grossInput, tareInput, netInput].forEach(function(input) {
+          if (input) input.classList.remove('is-invalid');
+        });
+
+        var grossValue = parseWeightValue(grossInput && grossInput.value);
+        var tareValue = parseWeightValue(tareInput && tareInput.value);
+        var netValue = parseWeightValue(netInput && netInput.value);
+
+        if (grossValue === null || tareValue === null || netValue === null) {
+          hasError = true;
+          [grossInput, tareInput, netInput].forEach(function(input) {
+            if (input && !String(input.value || '').trim()) input.classList.add('is-invalid');
+          });
+          if (checkEl) {
+            checkEl.textContent = 'وزن پر، وزن خالی و وزن خالص را برای این ماده اولیه کامل کنید.';
+            checkEl.classList.add('is-error');
+          }
+          return;
+        }
+
+        var expectedNet = (grossValue - tareValue).toFixed(2);
+        var actualNet = netValue.toFixed(2);
+        if (expectedNet !== actualNet) {
+          hasError = true;
+          [grossInput, tareInput, netInput].forEach(function(input) {
+            if (input) input.classList.add('is-invalid');
+          });
+          if (checkEl) {
+            checkEl.textContent = 'وزن پر منهای وزن خالی باید دقیقاً برابر وزن خالص باشد.';
+            checkEl.classList.add('is-error');
+          }
+        } else if (checkEl) {
+          checkEl.textContent = 'تطبیق وزن‌ها درست است.';
+          checkEl.classList.remove('is-error');
+        }
+      });
+
+      return !hasError;
+    }
+
+    document.querySelectorAll('input[data-waybill-weight="true"]').forEach(function(input) {
+      input.addEventListener('blur', function() {
+        formatWeightInput(input);
+        validateRawMaterialWaybillRows();
+      });
+      input.addEventListener('input', function() {
+        var rowId = input.getAttribute('data-rmi-id');
+        var checkEl = document.getElementById('rmi-check-' + rowId);
+        input.classList.remove('is-invalid');
+        if (checkEl) {
+          checkEl.textContent = 'وزن پر - وزن خالی باید دقیقاً برابر وزن خالص باشد.';
+          checkEl.classList.remove('is-error');
+        }
+      });
+      formatWeightInput(input);
+    });
+
+    window.validateRawMaterialWaybillRows = validateRawMaterialWaybillRows;
+    validateRawMaterialWaybillRows();
     
     // مدیریت submit فرم - ذخیره پلاک
     const form = document.querySelector('form[method="post"]');
@@ -1028,13 +1250,19 @@
               e.preventDefault();
               return false;
             }
-          } else {
-            // چون پلاک required است، باید بررسی کنیم که آیا همه فیلدها خالی هستند
-            // اگر همه خالی هستند، خطا بده
-            alert('لطفاً شماره پلاک را وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
-            e.preventDefault();
-            return false;
+            } else {
+              // چون پلاک required است، باید بررسی کنیم که آیا همه فیلدها خالی هستند
+              // اگر همه خالی هستند، خطا بده
+              alert('لطفاً شماره پلاک را وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
+              e.preventDefault();
+              return false;
+            }
           }
+
+        if (!validateRawMaterialWaybillRows()) {
+          alert('وزن‌های بارنامه هر ماده اولیه را با دو رقم اعشار و به‌صورت صحیح وارد کنید.');
+          e.preventDefault();
+          return false;
         }
       }, true); // استفاده از capture phase
     }
@@ -1091,6 +1319,10 @@
         }
         if (!serializePlateToHidden()) {
           alert('لطفاً شماره پلاک را کامل وارد کنید.\nفرمت صحیح: 11 - 345 - ب - 12');
+          return;
+        }
+        if (typeof window.validateRawMaterialWaybillRows === 'function' && !window.validateRawMaterialWaybillRows()) {
+          alert('وزن‌های بارنامه هر ماده اولیه را با دو رقم اعشار و به‌صورت صحیح وارد کنید.');
           return;
         }
         if (hidRefer) hidRefer.value = '1';

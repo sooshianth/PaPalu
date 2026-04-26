@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .AllocationModel import Allocation
@@ -11,10 +12,13 @@ def create_allocation_scheduling_info(sender, instance, created, **kwargs):
     هنگام ایجاد یک Allocation جدید
     """
     if created:
-        # ایجاد AllocationSchedulingInfo برای تخصیص جدید
-        # allocation_received_time با created_at تخصیص تنظیم می‌شود
-        AllocationSchedulingInfo.objects.create(
-            allocation=instance,
-            allocation_received_time=instance.created_at
-        )
+        def _create_scheduling_info():
+            AllocationSchedulingInfo.objects.get_or_create(
+                allocation=instance,
+                defaults={'allocation_received_time': instance.created_at}
+            )
+
+        # در برخی دیتابیس‌ها مثل SQLite، ایجاد رکورد وابسته داخل همان post_save
+        # در اولین ثبت می‌تواند به FK race بخورد. ایجاد را تا بعد از commit عقب می‌اندازیم.
+        transaction.on_commit(_create_scheduling_info)
 

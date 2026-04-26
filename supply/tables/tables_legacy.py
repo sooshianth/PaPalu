@@ -1707,7 +1707,7 @@ class PurchaseOrderMaterialTable(tables.Table):
     )
     
     quantity = tables.Column(
-        verbose_name='مقدار',
+        verbose_name='وزن خرید',
         orderable=False,
         attrs={
             'td': {'class': 'text-center'},
@@ -1718,6 +1718,24 @@ class PurchaseOrderMaterialTable(tables.Table):
     weight_unit = tables.Column(
         verbose_name='واحد',
         accessor='get_weight_unit_display',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+
+    total_net_weight = tables.Column(
+        verbose_name='مجموع وزن خالص حمل‌ها',
+        orderable=False,
+        attrs={
+            'td': {'class': 'text-center'},
+            'th': {'class': 'text-center'}
+        }
+    )
+
+    total_waybill_weight = tables.Column(
+        verbose_name='مجموع وزن بارنامه حمل‌ها',
         orderable=False,
         attrs={
             'td': {'class': 'text-center'},
@@ -1784,17 +1802,19 @@ class PurchaseOrderMaterialTable(tables.Table):
         model = OrderItem
         template_name = 'django_tables2/bootstrap4.html'
         fields = ('raw_material_id', 'raw_material_name', 'physical_form', 'technical_description', 
-                  'quantity', 'weight_unit', 'unit_price', 'vat_percent', 'freight_cost', 
+                  'weight_unit', 'quantity', 'total_waybill_weight', 'total_net_weight',
+                  'unit_price', 'vat_percent', 'freight_cost', 
                   'total_purchase_cost', 'external_allocation_id', 'notes')
         attrs = {
             'class': 'table table-hover table-bordered',
-            'style': 'border-collapse:collapse;font-size:.88rem;min-width: 1800px;'
+            'style': 'border-collapse:collapse;font-size:.88rem;min-width: 2050px;'
         }
         row_attrs = {
             'style': 'transition: background-color 0.2s ease;'
         }
         sequence = ('raw_material_id', 'raw_material_name', 'physical_form', 'technical_description', 
-                    'quantity', 'weight_unit', 'unit_price', 'vat_percent', 'freight_cost', 
+                    'weight_unit', 'quantity', 'total_waybill_weight', 'total_net_weight',
+                    'unit_price', 'vat_percent', 'freight_cost', 
                     'total_purchase_cost', 'external_allocation_id', 'notes')
     
     def render_raw_material_name(self, value):
@@ -1820,6 +1840,18 @@ class PurchaseOrderMaterialTable(tables.Table):
         if value:
             formatted_value = format_number_persian(value, decimal_places=3)
             return format_html('{}', formatted_value)
+        return '—'
+
+    def render_total_net_weight(self, record):
+        value = getattr(record, 'total_net_weight', None)
+        if value is not None:
+            return format_html('{}', format_number_persian(value, decimal_places=3))
+        return '—'
+
+    def render_total_waybill_weight(self, record):
+        value = getattr(record, 'total_waybill_weight', None)
+        if value is not None:
+            return format_html('{}', format_number_persian(value, decimal_places=2))
         return '—'
     
     def render_unit_price(self, value):

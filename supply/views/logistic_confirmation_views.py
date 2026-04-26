@@ -354,24 +354,16 @@ def logistic_confirmation_detail_view(request, transport_number):
                             status=Transport.STATUS_COMPLETED
                         ).exists()
                         
-                        # بررسی اینکه آیا تمام وزن سفارش تخصیص یافته است
-                        remaining_weight = po.get_remaining_weight()
-                        
-                        # اگر تمام وزن تخصیص یافته و تمام حمل‌ها تکمیل شده‌اند، سفارش را تکمیل کن
-                        if remaining_weight <= 0 and all_completed:
-                            if po.status != Order.STATUS_COMPLETED:
-                                try:
-                                    po.transition(Order.STATUS_COMPLETED, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند و تمام وزن تخصیص یافت.')
-                                    bug_logger.info(f"وضعیت سفارش {po.order_number} به 'تکمیل شده' تغییر یافت - تمام حمل‌ها تکمیل شدند")
-                                    audit_logger.info(f"سفارش {po.order_number} به صورت خودکار تکمیل شد - تمام حمل‌ها تکمیل شدند")
-                                except Exception as order_transition_err:
-                                    bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number} به تکمیل شده: {order_transition_err}")
-                        elif all_completed:
-                            # اگر تمام حمل‌ها تکمیل شده‌اند اما وزن هنوز تخصیص نیافته، به awaiting_final_settlement ببر
-                            if po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
-                                po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note=f"تمام حمل‌های سفارش تکمیل شدند.")
-                                bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
-                                audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تسویه همه حمل‌ها به‌روزرسانی شد")
+                        # تکمیل سفارش خرید فقط باید بعد از تسویه کسری/سرک انجام شود؛
+                        # تایید لجستیک نباید سفارش را از چرخه تسویه خارج کند.
+                        if all_completed and po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                            po.transition(
+                                Order.STATUS_AWAITING_FINAL_SETTLEMENT,
+                                user=request.user,
+                                note="تمام حمل‌های سفارش تکمیل شدند."
+                            )
+                            bug_logger.info(f"وضعیت سفارش {po.order_number} به 'در انتظار تسویه نهایی' تغییر یافت")
+                            audit_logger.info(f"وضعیت سفارش {po.order_number} به دنبال تکمیل همه حمل‌ها به‌روزرسانی شد")
                     
                     # Log successful completion
                     audit_logger.info(
@@ -697,15 +689,7 @@ def rejected_transport_detail_view(request, transport_number):
                         all_completed = not all_transports.exclude(
                             status=Transport.STATUS_COMPLETED
                         ).exists()
-                        remaining_weight = po.get_remaining_weight()
-                        if remaining_weight <= 0 and all_completed:
-                            if po.status != Order.STATUS_COMPLETED:
-                                try:
-                                    po.transition(Order.STATUS_COMPLETED, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند و تمام وزن تخصیص یافت.')
-                                    bug_logger.info(f"وضعیت سفارش {po.order_number} به 'تکمیل شده' تغییر یافت - تمام حمل‌ها تکمیل شدند")
-                                except Exception as order_transition_err:
-                                    bug_logger.warning(f"خطا در تغییر وضعیت سفارش {po.order_number}: {order_transition_err}")
-                        elif all_completed and po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
+                        if all_completed and po.status == Order.STATUS_AWAITING_WAREHOUSE_RECONCILIATION:
                             try:
                                 po.transition(Order.STATUS_AWAITING_FINAL_SETTLEMENT, user=request.user, note='تمام حمل‌های سفارش تکمیل شدند.')
                             except Exception:

@@ -40,7 +40,14 @@ class CarEntranceDriverForm(forms.Form):
     national_id = forms.CharField(
         label='کد ملی راننده',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'کد ملی 10 رقمی'})
+        max_length=10,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'کد ملی 10 رقمی',
+            'maxlength': '10',
+            'inputmode': 'numeric',
+            'pattern': '\\d{0,10}'
+        })
     )
     plate_number = forms.CharField(
         label='پلاک',

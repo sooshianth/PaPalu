@@ -296,7 +296,7 @@
 
     .stage-item-content {
         display: grid;
-        grid-template-columns: repeat(5, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 15px;
     }
 
@@ -978,7 +978,7 @@
                                 <td id="allocated-{{ item_data.item.id }}">
                                     {{ item_data.allocated_quantity|persian_number:3|default:"—" }}
                                 </td>
-                                <td id="waybill-{{ item_data.item.id }}">{% if pt.waybill_weight is not None %}{{ pt.waybill_weight|persian_number:3 }}{% else %}—{% endif %}</td>
+                                <td id="waybill-{{ item_data.item.id }}">{% if item_data.waybill_weight is not None %}{{ item_data.waybill_weight|persian_number:3 }}{% else %}—{% endif %}</td>
                                 <td id="calculated-{{ item_data.item.id }}">{% if item_data.calculated_net_weight is not None %}{{ item_data.calculated_net_weight|persian_number:3 }}{% else %}—{% endif %}</td>
                                 <td id="waybill-net-diff-{{ item_data.item.id }}">{% if item_data.waybill_net_diff is not None %}{{ item_data.waybill_net_diff|persian_number:3 }}{% else %}—{% endif %}</td>
                                 <td id="diff-{{ item_data.item.id }}">{% if item_data.weight_diff is not None %}{{ item_data.weight_diff|persian_number:3 }}{% else %}—{% endif %}</td>
@@ -987,7 +987,7 @@
                             <tr class="total-row">
                                 <td><strong>جمع کل</strong></td>
                                 <td id="total-allocated"><strong>{% if comparison_totals %}{{ comparison_totals.total_allocated|persian_number:3 }}{% else %}—{% endif %}</strong></td>
-                                <td id="total-waybill"><strong>{% if pt.waybill_weight is not None %}{{ pt.waybill_weight|persian_number:3 }}{% else %}—{% endif %}</strong></td>
+                                <td id="total-waybill"><strong>{% if comparison_totals and comparison_totals.total_waybill is not None %}{{ comparison_totals.total_waybill|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                                 <td id="total-calculated"><strong>{% if comparison_totals %}{{ comparison_totals.total_calculated|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                                 <td id="total-waybill-net-diff"><strong>{% if comparison_totals and comparison_totals.total_waybill_net_diff is not None %}{{ comparison_totals.total_waybill_net_diff|persian_number:3 }}{% else %}—{% endif %}</strong></td>
                                 <td id="total-diff"><strong>{% if comparison_totals %}{{ comparison_totals.total_diff|persian_number:3 }}{% else %}—{% endif %}</strong></td>
@@ -1292,7 +1292,8 @@
                 id: {{ item_data.item.id }},
                 name: "{{ item_data.raw_material.name|escapejs }}",
                 unit: "{{ item_data.item.get_weight_unit_display|escapejs }}",
-                allocated: {{ item_data.allocated_quantity|default:0 }}
+                allocated: {{ item_data.allocated_quantity|default:0 }},
+                waybillWeight: {% if item_data.waybill_weight is not None %}{{ item_data.waybill_weight }}{% else %}null{% endif %}
             }{% if not forloop.last %},{% endif %}
             {% endfor %}
         ];
@@ -1320,6 +1321,7 @@
         //  پاپ‌آپ مقایسه وزن پر بارنامه با وزن پر باسکول
         // ==========================================
         const waybillGrossWeight = {{ pt.waybill_gross_weight|default:"0" }};
+        const waybillNetWeight = {{ pt.waybill_weight|default:"0" }};
         let weightPopupShown = false;  // برای جلوگیری از نمایش مکرر
 
         window.closeWeightPopup = function() {
@@ -1490,13 +1492,16 @@
             });
 
             let totalAllocated = 0;
+            let totalWaybill = 0;
             let totalCalculated = 0;
 
             // Update each row in comparison table
             orderItemsData.forEach(item => {
                 const allocatedWeight = parseFloat(item.allocated) || 0;
                 const calculatedWeight = calculatedWeights[item.id] || 0;
+                const waybillWeight = item.waybillWeight !== null ? (parseFloat(item.waybillWeight) || 0) : null;
                 const diff = calculatedWeight - allocatedWeight;
+                const waybillNetDiff = waybillWeight !== null ? (calculatedWeight - waybillWeight) : null;
 
                 // Update allocated weight display
                 const allocatedCell = document.getElementById(`allocated-${item.id}`);
@@ -1508,6 +1513,11 @@
                 const calculatedCell = document.getElementById(`calculated-${item.id}`);
                 if (calculatedCell) {
                     calculatedCell.textContent = calculatedWeight > 0 ? persianNumber(calculatedWeight.toFixed(3)) : '—';
+                }
+
+                const waybillCell = document.getElementById(`waybill-${item.id}`);
+                if (waybillCell) {
+                    waybillCell.textContent = waybillWeight !== null ? persianNumber(waybillWeight.toFixed(3)) : '—';
                 }
 
                 // Update difference display
@@ -1529,12 +1539,33 @@
                     }
                 }
 
+                const waybillNetDiffCell = document.getElementById(`waybill-net-diff-${item.id}`);
+                if (waybillNetDiffCell) {
+                    if (waybillWeight !== null && (calculatedWeight > 0 || waybillWeight > 0)) {
+                        waybillNetDiffCell.textContent = persianNumber(waybillNetDiff.toFixed(3));
+                        if (Math.abs(waybillNetDiff) < 0.01) {
+                            waybillNetDiffCell.className = 'diff-zero';
+                        } else if (waybillNetDiff > 0) {
+                            waybillNetDiffCell.className = 'diff-positive';
+                        } else {
+                            waybillNetDiffCell.className = 'diff-negative';
+                        }
+                    } else {
+                        waybillNetDiffCell.textContent = '—';
+                        waybillNetDiffCell.className = '';
+                    }
+                }
+
                 totalAllocated += allocatedWeight;
+                if (waybillWeight !== null) {
+                    totalWaybill += waybillWeight;
+                }
                 totalCalculated += calculatedWeight;
             });
 
             // Update total row
             const totalAllocatedCell = document.getElementById('total-allocated');
+            const totalWaybillCell = document.getElementById('total-waybill');
             const totalCalculatedCell = document.getElementById('total-calculated');
             const totalDiffCell = document.getElementById('total-diff');
 
@@ -1544,6 +1575,10 @@
 
             if (totalCalculatedCell) {
                 totalCalculatedCell.innerHTML = totalCalculated > 0 ? `<strong>${persianNumber(totalCalculated.toFixed(3))}</strong>` : '<strong>—</strong>';
+            }
+
+            if (totalWaybillCell) {
+                totalWaybillCell.innerHTML = totalWaybill > 0 ? `<strong>${persianNumber(totalWaybill.toFixed(3))}</strong>` : '<strong>—</strong>';
             }
 
             if (totalDiffCell) {
@@ -1561,6 +1596,24 @@
                 } else {
                     totalDiffCell.innerHTML = '<strong>—</strong>';
                     totalDiffCell.className = '';
+                }
+            }
+
+            const totalWaybillNetDiffCell = document.getElementById('total-waybill-net-diff');
+            if (totalWaybillNetDiffCell) {
+                const totalWaybillNetDiff = totalCalculated - totalWaybill;
+                if (totalCalculated > 0 || totalWaybill > 0) {
+                    totalWaybillNetDiffCell.innerHTML = `<strong>${persianNumber(totalWaybillNetDiff.toFixed(3))}</strong>`;
+                    if (Math.abs(totalWaybillNetDiff) < 0.01) {
+                        totalWaybillNetDiffCell.className = 'diff-zero';
+                    } else if (totalWaybillNetDiff > 0) {
+                        totalWaybillNetDiffCell.className = 'diff-positive';
+                    } else {
+                        totalWaybillNetDiffCell.className = 'diff-negative';
+                    }
+                } else {
+                    totalWaybillNetDiffCell.innerHTML = '<strong>—</strong>';
+                    totalWaybillNetDiffCell.className = '';
                 }
             }
         }
@@ -1642,6 +1695,13 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label class="form-label required">سریال باسکول</label>
+                        <input type="number" class="form-control" id="stage-${stage.id}-scale-serial" 
+                               placeholder="شماره سریال..." 
+                               value="${stage.scaleSerial || ''}"
+                               ${readOnly ? 'readonly' : ''} required>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label required">انبار مقصد</label>
                         ${readOnly ? `
                         <input type="text" class="form-control" id="stage-${stage.id}-warehouse" value="${warehouseName}" readonly>
@@ -1686,6 +1746,13 @@
                         if (stageObj && value) {
                             stageObj.weightAfter = value;
                         }
+                    });
+                }
+
+                const scaleSerialInput = stageDiv.querySelector(`#stage-${stage.id}-scale-serial`);
+                if (scaleSerialInput) {
+                    scaleSerialInput.addEventListener('input', function() {
+                        updateStageScaleSerial(stage.id, this.value);
                     });
                 }
             }
@@ -1760,7 +1827,8 @@
                 itemId: null,
                 weightAfter: '',
                 netWeight: 0,
-                warehouseId: null
+                warehouseId: null,
+                scaleSerial: ''
             });
 
             renderAllStages();
@@ -1797,6 +1865,12 @@
                     stage.warehouseId = null;
                 }
             }
+        };
+
+        window.updateStageScaleSerial = function(stageId, scaleSerial) {
+            const stage = stages.find(s => s.id === stageId);
+            if (!stage) return;
+            stage.scaleSerial = String(scaleSerial || '').trim();
         };
 
         window.updateStageWeight = function(stageId, weight) {
@@ -1971,13 +2045,16 @@
                     if (!stageContainer) return;
                     const itemSelect = document.getElementById(`stage-${stage.id}-item`);
                     const weightInput = document.getElementById(`stage-${stage.id}-after`);
+                    const scaleSerialInput = document.getElementById(`stage-${stage.id}-scale-serial`);
                     const warehouseSelect = document.getElementById(`stage-${stage.id}-warehouse`);
                     if (itemSelect) stage.itemId = itemSelect.value ? parseInt(itemSelect.value) : null;
                     if (weightInput) stage.weightAfter = weightInput.value.trim();
+                    if (scaleSerialInput) stage.scaleSerial = scaleSerialInput.value.trim();
                     if (warehouseSelect) stage.warehouseId = warehouseSelect.value ? parseInt(warehouseSelect.value) : null;
                     const itemId = parseInt(stage.itemId);
                     const warehouseId = parseInt(stage.warehouseId);
-                    if (stage.itemId && !isNaN(itemId) && itemId > 0 && stage.warehouseId && !isNaN(warehouseId) && warehouseId > 0) {
+                    const scaleSerial = parseInt(stage.scaleSerial);
+                    if (stage.itemId && !isNaN(itemId) && itemId > 0 && stage.warehouseId && !isNaN(warehouseId) && warehouseId > 0 && stage.scaleSerial && !isNaN(scaleSerial) && scaleSerial >= 0) {
                         validStages.push(stage);
                     }
                 });
@@ -1985,7 +2062,7 @@
                 let errorMessage = '';
                 if (validStages.length === 0) {
                     hasError = true;
-                    errorMessage = 'حداقل یک مرحله تخلیه باید ثبت شود. لطفاً مراحل را پر کنید (محصول، انبار مقصد و وزن بعد از تخلیه).';
+                    errorMessage = 'حداقل یک مرحله تخلیه باید ثبت شود. لطفاً مراحل را کامل پر کنید (محصول، انبار مقصد، سریال باسکول و وزن بعد از تخلیه).';
                 } else {
                     validStages.forEach((stage, index) => {
                         if (!stage.itemId || isNaN(parseInt(stage.itemId)) || parseInt(stage.itemId) <= 0) {
@@ -2000,6 +2077,13 @@
                             if (!weightAfterStr || isNaN(weightAfter) || weightAfter <= 0) {
                                 hasError = true;
                                 errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً وزن بعد از تخلیه را وارد کنید.`;
+                            } else {
+                                const scaleSerialStr = String(stage.scaleSerial || '').trim();
+                                const scaleSerial = parseInt(scaleSerialStr);
+                                if (!scaleSerialStr || isNaN(scaleSerial) || scaleSerial < 0) {
+                                    hasError = true;
+                                    errorMessage = `مرحله ${persianNumber(index + 1)}: لطفاً سریال باسکول معتبر وارد کنید.`;
+                                }
                             }
                         }
                     });
@@ -2021,6 +2105,11 @@
                     warehouseInput.name = `unloading_stages[${index}][warehouse_id]`;
                     warehouseInput.value = stage.warehouseId;
                     form.appendChild(warehouseInput);
+                    const scaleSerialInput = document.createElement('input');
+                    scaleSerialInput.type = 'hidden';
+                    scaleSerialInput.name = `unloading_stages[${index}][scale_serial]`;
+                    scaleSerialInput.value = stage.scaleSerial;
+                    form.appendChild(scaleSerialInput);
                 });
                 return { ok: true };
             };
@@ -2133,8 +2222,10 @@
                     id: s.id,
                     itemId: s.item_id,
                     netWeight: s.net_weight,
+                    weightBefore: (s.weight_before === null || s.weight_before === undefined) ? '' : String(s.weight_before),
                     weightAfter: String(s.weight_after),
-                    warehouseId: s.warehouse_id
+                    warehouseId: s.warehouse_id,
+                    scaleSerial: (s.scale_serial === null || s.scale_serial === undefined) ? '' : String(s.scale_serial)
                 };
             });
             stageCounter = Math.max.apply(null, stages.map(function(s) { return s.id; })) || 0;

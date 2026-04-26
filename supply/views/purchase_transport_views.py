@@ -584,11 +584,14 @@ def purchase_transport_detail_view(request, transport_number):
     # محاسبه مجموع مقادیر
     total_allocated = Decimal('0')
     total_net_weight = Decimal('0')
+    total_waybill_weight = Decimal('0')
     for rmi in raw_material_infos:
         if rmi.allocated_quantity:
             total_allocated += rmi.allocated_quantity
         if rmi.net_weight:
             total_net_weight += rmi.net_weight
+        if rmi.waybill_weight:
+            total_waybill_weight += rmi.waybill_weight
     
     # لیست تمام وضعیت‌های ممکن
     next_status_choices = pt.STATUS_CHOICES
@@ -601,6 +604,7 @@ def purchase_transport_detail_view(request, transport_number):
         'raw_material_infos': raw_material_infos,
         'total_allocated': total_allocated,
         'total_net_weight': total_net_weight,
+        'total_waybill_weight': total_waybill_weight,
     })
 
 

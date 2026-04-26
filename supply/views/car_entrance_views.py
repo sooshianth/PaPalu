@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib import messages
@@ -30,6 +31,7 @@ from supply.tables import TransportTable
 import django_tables2 as tables
 
 User = get_user_model()
+TWO_DECIMAL_PLACES = Decimal('0.01')
 
 
 # ==================== Field Access Helper Functions ====================
@@ -165,6 +167,7 @@ def get_accessible_raw_material_fields_for_carentrance(user):
         'name': user_can_access_field(user, RawMaterial, 'name', 'view'),
         'material_code': user_can_access_field(user, RawMaterial, 'material_code', 'view'),
         'unit': user_can_access_field(user, RawMaterial, 'unit', 'view'),
+        'supplier': user_can_access_field(user, RawMaterial, 'main_supplier', 'view'),
     }
 
 
@@ -210,6 +213,17 @@ class CarEntranceTable(TransportTable):
             'th': {'class': 'text-right'}
         }
     )
+
+    supplier = tables.Column(
+        verbose_name='تامین کننده',
+        empty_values=(),
+        orderable=False,
+        visible=True,
+        attrs={
+            'td': {'class': 'text-right'},
+            'th': {'class': 'text-right'}
+        }
+    )
     
     driver_name = tables.Column(
         verbose_name='اسم راننده',
@@ -226,7 +240,7 @@ class CarEntranceTable(TransportTable):
         super().__init__(*args, **kwargs)
         
         # ستون‌های مورد نیاز برای نگهبان: شماره حمل، نوع ماشین، پلاک، اسم راننده، نام ماده اولیه، زمان ثبت، وضعیت، عملیات
-        required_columns = ['transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'expected_arrival_date', 'actions']
+        required_columns = ['transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'supplier', 'expected_arrival_date', 'actions']
         
         # همیشه ستون‌های مورد نیاز را نمایش بده
         for col_name in required_columns:
@@ -253,6 +267,14 @@ class CarEntranceTable(TransportTable):
                     ))
                 return format_html('<div style="display: flex; gap: 5px; flex-wrap: wrap;">{}</div>', mark_safe(' '.join(badges)))
             return '—'
+        return '—'
+    
+    def render_supplier(self, record):
+        """نمایش نام تامین کننده از سفارش خرید"""
+        # Assuming the Transport record has a purchase_order relationship
+        # and the purchase_order has a supplier field.
+        if record.purchase_order and record.purchase_order.supplier:
+            return record.purchase_order.supplier.name
         return '—'
     
     def render_vehicle_type(self, record):
@@ -294,12 +316,173 @@ class CarEntranceTable(TransportTable):
     
     class Meta(TransportTable.Meta):
         template_name = 'django_tables2/bootstrap.html'
-        fields = ('transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'expected_arrival_date', 'actions')
+        fields = ('transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'supplier', 'expected_arrival_date', 'actions')
         attrs = {
             'class': 'data-table',
             'thead': {'class': ''}
         }
-        sequence = ('transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'expected_arrival_date', 'actions')
+        sequence = ('transport_number', 'vehicle_type', 'plate_number', 'driver_name', 'raw_materials', 'supplier', 'expected_arrival_date', 'actions')
+
+
+def _format_decimal_for_input(value, places=2):
+    if value is None or value == '':
+        return ''
+    return f"{Decimal(value):.{places}f}"
+
+
+def _parse_two_decimal_weight(value, field_label):
+    raw_value = (value or '').strip().replace(',', '').replace('،', '')
+    if not raw_value:
+        return None, f'{field_label} را وارد کنید.'
+    try:
+        parsed_value = Decimal(raw_value)
+    except (InvalidOperation, TypeError, ValueError):
+        return None, f'{field_label} معتبر نیست.'
+    if parsed_value < 0:
+        return None, f'{field_label} نمی‌تواند منفی باشد.'
+    return parsed_value.quantize(TWO_DECIMAL_PLACES, rounding=ROUND_HALF_UP), None
+
+
+def _collect_raw_material_waybill_data(post_data, pt):
+    updates = []
+    field_errors = {}
+
+    for raw_material_info in pt.raw_material_infos.select_related('raw_material').all():
+        if not raw_material_info.raw_material:
+            continue
+
+        gross_weight, gross_error = _parse_two_decimal_weight(
+            post_data.get(f'raw_material_{raw_material_info.id}_waybill_gross_weight'),
+            'وزن پر'
+        )
+        tare_weight, tare_error = _parse_two_decimal_weight(
+            post_data.get(f'raw_material_{raw_material_info.id}_waybill_tare_weight'),
+            'وزن خالی'
+        )
+        net_weight, net_error = _parse_two_decimal_weight(
+            post_data.get(f'raw_material_{raw_material_info.id}_waybill_weight'),
+            'وزن خالص'
+        )
+
+        row_errors = {}
+        if gross_error:
+            row_errors['waybill_gross_weight'] = gross_error
+        if tare_error:
+            row_errors['waybill_tare_weight'] = tare_error
+        if net_error:
+            row_errors['waybill_weight'] = net_error
+
+        if not row_errors:
+            expected_net = (gross_weight - tare_weight).quantize(TWO_DECIMAL_PLACES, rounding=ROUND_HALF_UP)
+            if expected_net != net_weight:
+                row_errors['row_error'] = 'وزن پر منهای وزن خالی باید دقیقاً برابر وزن خالص باشد.'
+
+        if row_errors:
+            field_errors[raw_material_info.id] = row_errors
+        else:
+            updates.append({
+                'instance': raw_material_info,
+                'waybill_gross_weight': gross_weight,
+                'waybill_tare_weight': tare_weight,
+                'waybill_weight': net_weight,
+            })
+
+    return updates, field_errors
+
+
+def _build_transport_raw_materials_list(pt, posted_data=None, field_errors=None):
+    transport_raw_materials_list = []
+    for raw_material_info in pt.raw_material_infos.select_related('raw_material').all():
+        if not raw_material_info.raw_material:
+            continue
+
+        try:
+            weight_unit_display = raw_material_info.get_weight_unit_display()
+        except Exception:
+            weight_unit_display = raw_material_info.weight_unit or 'کیلوگرم'
+
+        row_errors = (field_errors or {}).get(raw_material_info.id, {})
+        if posted_data is not None:
+            waybill_gross_weight = (posted_data.get(f'raw_material_{raw_material_info.id}_waybill_gross_weight') or '').strip()
+            waybill_tare_weight = (posted_data.get(f'raw_material_{raw_material_info.id}_waybill_tare_weight') or '').strip()
+            waybill_weight = (posted_data.get(f'raw_material_{raw_material_info.id}_waybill_weight') or '').strip()
+        else:
+            waybill_gross_weight = _format_decimal_for_input(raw_material_info.waybill_gross_weight)
+            waybill_tare_weight = _format_decimal_for_input(raw_material_info.waybill_tare_weight)
+            waybill_weight = _format_decimal_for_input(raw_material_info.waybill_weight)
+
+        transport_raw_materials_list.append({
+            'id': raw_material_info.raw_material.id,
+            'raw_material_info_id': raw_material_info.id,
+            'name': raw_material_info.raw_material.name,
+            'allocated_quantity': raw_material_info.allocated_quantity,
+            'weight_unit': weight_unit_display,
+            'waybill_gross_weight': waybill_gross_weight,
+            'waybill_tare_weight': waybill_tare_weight,
+            'waybill_weight': waybill_weight,
+            'errors': row_errors,
+        })
+
+    return transport_raw_materials_list
+
+
+def _build_all_order_items_list(pt):
+    purchase_order = pt.purchase_order
+    if not purchase_order:
+        return []
+
+    try:
+        order_items_data = purchase_order.order_items.filter(
+            raw_material__isnull=False
+        ).values('id', 'raw_material__id', 'raw_material__name')
+
+        class SimpleOrderItem:
+            def __init__(self, raw_material_id, raw_material_name):
+                self.raw_material = type('RawMaterial', (), {'id': raw_material_id, 'name': raw_material_name})()
+
+        return [
+            SimpleOrderItem(item_data['raw_material__id'], item_data['raw_material__name'])
+            for item_data in order_items_data
+        ]
+    except Exception as exc:
+        bug_logger.error(f"خطا در خواندن order_items برای حمل {pt.transport_number}: {exc}", exc_info=True)
+        return []
+
+
+def _build_register_context(
+    pt,
+    form,
+    accessible_transport_fields,
+    accessible_po_fields,
+    accessible_raw_material_fields,
+    accessible_person_fields,
+    posted_data=None,
+    raw_material_errors=None,
+    refer_modal_open=False,
+    show_refer_button=None,
+):
+    is_carentrance_referred = getattr(pt, 'carentrance_referred_to_manager', False)
+    if show_refer_button is None:
+        show_refer_button = not is_carentrance_referred
+
+    return {
+        'form': form,
+        'pt': pt,
+        'transport_raw_materials_list': _build_transport_raw_materials_list(
+            pt,
+            posted_data=posted_data,
+            field_errors=raw_material_errors,
+        ),
+        'all_order_items_list': _build_all_order_items_list(pt),
+        'accessible_transport_fields': accessible_transport_fields,
+        'accessible_po_fields': accessible_po_fields,
+        'accessible_raw_material_fields': accessible_raw_material_fields,
+        'accessible_person_fields': accessible_person_fields,
+        'is_carentrance_referred': is_carentrance_referred,
+        'show_refer_button': show_refer_button,
+        'refer_modal_open': refer_modal_open,
+        'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
+    }
 
 
 @login_required
@@ -479,80 +662,47 @@ def register_driver_for_transport_view(request, transport_number):
             driver=driver,
             has_existing_waybill=bool(getattr(pt, 'bill_of_lading_file', None)),
         )
+        raw_material_updates, raw_material_errors = _collect_raw_material_waybill_data(request.POST, pt)
 
         # ارجاع به مدیر: دلیل اجباری است و فرم باید معتبر و ذخیره شود
         if is_refer_to_manager:
             if not referral_reason:
                 messages.error(request, 'لطفاً دلیل ارجاع به مدیر را وارد کنید.')
-                context_refer = {
-                    'form': form, 'pt': pt, 'transport_raw_materials_list': [], 'all_order_items_list': [],
-                    'accessible_transport_fields': accessible_transport_fields, 'accessible_po_fields': accessible_po_fields,
-                    'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
-                    'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
-                    'show_refer_button': not getattr(pt, 'carentrance_referred_to_manager', False) and not request.user.is_superuser,
-                    'refer_modal_open': True,
-                    'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
-                }
-                # لیست مواد و سفارش را پر کن
-                transport_raw_materials_list = []
-                try:
-                    raw_material_infos = pt.raw_material_infos.select_related('raw_material').all()
-                    for rmi in raw_material_infos:
-                        if rmi.raw_material:
-                            class SimpleRawMaterial:
-                                def __init__(self, raw_material_id, raw_material_name, allocated_quantity, weight_unit):
-                                    self.id, self.name, self.allocated_quantity, self.weight_unit = raw_material_id, raw_material_name, allocated_quantity, weight_unit
-                            try:
-                                wud = rmi.get_weight_unit_display()
-                            except Exception:
-                                wud = rmi.weight_unit or 'کیلوگرم'
-                            transport_raw_materials_list.append(SimpleRawMaterial(rmi.raw_material.id, rmi.raw_material.name, rmi.allocated_quantity, wud))
-                except Exception:
-                    pass
-                all_order_items_list = []
-                if pt.purchase_order:
-                    try:
-                        order_items_data = pt.purchase_order.order_items.filter(raw_material__isnull=False).values('id', 'raw_material__id', 'raw_material__name')
-                        class SimpleOrderItem:
-                            def __init__(self, raw_material_id, raw_material_name):
-                                self.raw_material = type('RM', (), {'id': raw_material_id, 'name': raw_material_name})()
-                        all_order_items_list = [SimpleOrderItem(d['raw_material__id'], d['raw_material__name']) for d in order_items_data]
-                    except Exception:
-                        pass
-                context_refer['transport_raw_materials_list'] = transport_raw_materials_list
-                context_refer['all_order_items_list'] = all_order_items_list
-                return render(request, 'car_entrance_register.html', context_refer)
-            if not form.is_valid():
-                context_refer = {
-                    'form': form, 'pt': pt, 'transport_raw_materials_list': [], 'all_order_items_list': [],
-                    'accessible_transport_fields': accessible_transport_fields, 'accessible_po_fields': accessible_po_fields,
-                    'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
-                    'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
-                    'show_refer_button': True, 'refer_modal_open': True,
-                    'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
-                }
-                try:
-                    transport_raw_materials_list = []
-                    for rmi in pt.raw_material_infos.select_related('raw_material').all():
-                        if rmi.raw_material:
-                            class SimpleRawMaterial:
-                                def __init__(self, a, b, c, d): self.id, self.name, self.allocated_quantity, self.weight_unit = a, b, c, d
-                            transport_raw_materials_list.append(SimpleRawMaterial(rmi.raw_material.id, rmi.raw_material.name, rmi.allocated_quantity, getattr(rmi, 'get_weight_unit_display', lambda: 'kg')() or 'kg'))
-                    context_refer['transport_raw_materials_list'] = transport_raw_materials_list
-                except Exception:
-                    pass
-                try:
-                    all_order_items_list = [type('O', (), {'raw_material': type('R', (), {'id': d['raw_material__id'], 'name': d['raw_material__name']})()})().raw_material for d in (pt.purchase_order.order_items.filter(raw_material__isnull=False).values('raw_material__id', 'raw_material__name') if pt.purchase_order else [])]
-                    context_refer['all_order_items_list'] = []
-                    if pt.purchase_order:
-                        for d in pt.purchase_order.order_items.filter(raw_material__isnull=False).values('raw_material__id', 'raw_material__name'):
-                            class SimpleOrderItem:
-                                def __init__(self, rid, rname):
-                                    self.raw_material = type('R', (), {'id': rid, 'name': rname})()
-                            context_refer['all_order_items_list'].append(SimpleOrderItem(d['raw_material__id'], d['raw_material__name']))
-                except Exception:
-                    pass
-                return render(request, 'car_entrance_register.html', context_refer)
+                return render(
+                    request,
+                    'car_entrance_register.html',
+                    _build_register_context(
+                        pt,
+                        form,
+                        accessible_transport_fields,
+                        accessible_po_fields,
+                        accessible_raw_material_fields,
+                        accessible_person_fields,
+                        posted_data=request.POST,
+                        raw_material_errors=raw_material_errors,
+                        refer_modal_open=True,
+                        show_refer_button=not getattr(pt, 'carentrance_referred_to_manager', False) and not request.user.is_superuser,
+                    )
+                )
+            if not form.is_valid() or raw_material_errors:
+                if raw_material_errors:
+                    messages.error(request, 'وزن‌های بارنامه هر ماده اولیه را کامل و صحیح وارد کنید.')
+                return render(
+                    request,
+                    'car_entrance_register.html',
+                    _build_register_context(
+                        pt,
+                        form,
+                        accessible_transport_fields,
+                        accessible_po_fields,
+                        accessible_raw_material_fields,
+                        accessible_person_fields,
+                        posted_data=request.POST,
+                        raw_material_errors=raw_material_errors,
+                        refer_modal_open=True,
+                        show_refer_button=True,
+                    )
+                )
 
             # فرم معتبر است: ذخیره اطلاعات (راننده، پلاک، بارنامه، فایل) بدون تغییر وضعیت، سپس ارجاع
             data = form.cleaned_data
@@ -601,38 +751,36 @@ def register_driver_for_transport_view(request, transport_number):
                     pt.carentrance_referred_at = timezone.now()
                     pt.carentrance_referral_reason = referral_reason
                     pt.save()
+                    for raw_material_update in raw_material_updates:
+                        raw_material_info = raw_material_update['instance']
+                        raw_material_info.waybill_gross_weight = raw_material_update['waybill_gross_weight']
+                        raw_material_info.waybill_tare_weight = raw_material_update['waybill_tare_weight']
+                        raw_material_info.waybill_weight = raw_material_update['waybill_weight']
+                        raw_material_info.save()
                     audit_logger.activity(f"ثبت ورود خودرو برای حمل {transport_number} به مدیر ارجاع داده شد توسط {request.user.username} - دلیل: {referral_reason[:100]}")
                 messages.warning(request, 'اطلاعات ذخیره شد و این مورد به مدیر ارجاع داده شد. فقط مدیر می‌تواند از صفحه ارجاعات آن را باز کرده و تایید کند.')
                 return redirect(reverse('supply:carentrance'))
             except Exception as e:
                 bug_logger.error(f"خطا در ارجاع به مدیر برای حمل {transport_number}: {e}", exc_info=True)
                 messages.error(request, f'خطا در ذخیره یا ارجاع: {str(e)}')
-                context_refer = {
-                    'form': form, 'pt': pt, 'transport_raw_materials_list': [], 'all_order_items_list': [],
-                    'accessible_transport_fields': accessible_transport_fields, 'accessible_po_fields': accessible_po_fields,
-                    'accessible_raw_material_fields': accessible_raw_material_fields, 'accessible_person_fields': accessible_person_fields,
-                    'is_carentrance_referred': getattr(pt, 'carentrance_referred_to_manager', False),
-                    'show_refer_button': True, 'refer_modal_open': True,
-                    'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
-                }
-                try:
-                    context_refer['transport_raw_materials_list'] = [
-                        type('S', (), {'id': r.raw_material.id, 'name': r.raw_material.name, 'allocated_quantity': r.allocated_quantity, 'weight_unit': getattr(r, 'get_weight_unit_display', lambda: 'kg')() or 'kg'})()
-                        for r in pt.raw_material_infos.select_related('raw_material').all() if r.raw_material
-                    ]
-                except Exception:
-                    pass
-                try:
-                    if pt.purchase_order:
-                        context_refer['all_order_items_list'] = [
-                            type('O', (), {'raw_material': type('R', (), {'id': d['raw_material__id'], 'name': d['raw_material__name']})()})()
-                            for d in pt.purchase_order.order_items.filter(raw_material__isnull=False).values('raw_material__id', 'raw_material__name')
-                        ]
-                except Exception:
-                    pass
-                return render(request, 'car_entrance_register.html', context_refer)
+                return render(
+                    request,
+                    'car_entrance_register.html',
+                    _build_register_context(
+                        pt,
+                        form,
+                        accessible_transport_fields,
+                        accessible_po_fields,
+                        accessible_raw_material_fields,
+                        accessible_person_fields,
+                        posted_data=request.POST,
+                        raw_material_errors=raw_material_errors,
+                        refer_modal_open=True,
+                        show_refer_button=True,
+                    )
+                )
 
-        if form.is_valid():
+        if form.is_valid() and not raw_material_errors:
             data = form.cleaned_data
             phone = data.get('phone')
             audit_logger.info(f"شروع ثبت راننده برای حمل {transport_number}")
@@ -744,6 +892,12 @@ def register_driver_for_transport_view(request, transport_number):
                     today_jalali = jdatetime.date.today()
                     pt.actual_arrival_date = today_jalali
                     pt.save()
+                    for raw_material_update in raw_material_updates:
+                        raw_material_info = raw_material_update['instance']
+                        raw_material_info.waybill_gross_weight = raw_material_update['waybill_gross_weight']
+                        raw_material_info.waybill_tare_weight = raw_material_update['waybill_tare_weight']
+                        raw_material_info.waybill_weight = raw_material_update['waybill_weight']
+                        raw_material_info.save()
                     
                     bug_logger.info(f"اطلاعات راننده و زمان ورود برای حمل {transport_number} ثبت شد")
                     
@@ -778,6 +932,8 @@ def register_driver_for_transport_view(request, transport_number):
                 bug_logger.error(f"خطا در ثبت راننده برای حمل {transport_number}: {e}", exc_info=True)
                 messages.error(request, f'خطا در ثبت اطلاعات راننده: {str(e)}')
         else:
+            if raw_material_errors:
+                messages.error(request, 'وزن‌های بارنامه هر ماده اولیه را کامل و صحیح وارد کنید.')
             bug_logger.warning(f"فرم ثبت راننده نامعتبر برای حمل {transport_number}: {form.errors}")
             audit_logger.activity(f"فرم نامعتبر برای ثبت راننده حمل {transport_number}")
     else:
@@ -829,81 +985,22 @@ def register_driver_for_transport_view(request, transport_number):
             has_existing_waybill=bool(getattr(pt, 'bill_of_lading_file', None)),
         )
 
-    # لیست مواد اولیه که در این ماشین (transport) هستند
-    transport_raw_materials_list = []
-    try:
-        # دریافت مواد اولیه از RawMaterialInfo های این transport
-        raw_material_infos = pt.raw_material_infos.select_related('raw_material').all()
-        for rmi in raw_material_infos:
-            if rmi.raw_material:
-                # ساخت یک object ساده برای template
-                class SimpleRawMaterial:
-                    def __init__(self, raw_material_id, raw_material_name, allocated_quantity, weight_unit):
-                        self.id = raw_material_id
-                        self.name = raw_material_name
-                        self.allocated_quantity = allocated_quantity
-                        self.weight_unit = weight_unit
-                
-                # دریافت واحد وزن (نمایشی)
-                try:
-                    weight_unit_display = rmi.get_weight_unit_display()
-                except:
-                    weight_unit_display = rmi.weight_unit or 'کیلوگرم'
-                
-                transport_raw_materials_list.append(
-                    SimpleRawMaterial(
-                        rmi.raw_material.id,
-                        rmi.raw_material.name,
-                        rmi.allocated_quantity,
-                        weight_unit_display
-                    )
-                )
-    except Exception as e:
-        bug_logger.error(f"خطا در خواندن raw_material_infos برای حمل {transport_number}: {e}", exc_info=True)
-        transport_raw_materials_list = []
-    
-    # لیست کل سفارش (برای نمایش در بخش جداگانه)
-    all_order_items_list = []
-    purchase_order = pt.purchase_order  # استفاده از property
-    if purchase_order:
-        try:
-            # استفاده از values برای انتخاب فقط فیلدهای مورد نیاز
-            order_items_data = purchase_order.order_items.filter(
-                raw_material__isnull=False
-            ).values('id', 'raw_material__id', 'raw_material__name')
-            
-            # ساخت یک list ساده از داده‌ها برای template
-            class SimpleOrderItem:
-                def __init__(self, raw_material_id, raw_material_name):
-                    self.raw_material = type('RawMaterial', (), {'id': raw_material_id, 'name': raw_material_name})()
-            
-            all_order_items_list = [
-                SimpleOrderItem(item_data['raw_material__id'], item_data['raw_material__name'])
-                for item_data in order_items_data
-            ]
-        except Exception as e:
-            bug_logger.error(f"خطا در خواندن order_items برای حمل {transport_number}: {e}", exc_info=True)
-            # در صورت خطا، list خالی برمی‌گردانیم
-            all_order_items_list = []
-
-    is_carentrance_referred = getattr(pt, 'carentrance_referred_to_manager', False)
-    show_refer_button = not is_carentrance_referred and not request.user.is_superuser
-
-    context = {
-        'form': form,
-        'pt': pt,
-        'transport_raw_materials_list': transport_raw_materials_list,  # مواد اولیه این ماشین
-        'all_order_items_list': all_order_items_list,  # کل سفارش
-        'accessible_transport_fields': accessible_transport_fields,
-        'accessible_po_fields': accessible_po_fields,
-        'accessible_raw_material_fields': accessible_raw_material_fields,
-        'accessible_person_fields': accessible_person_fields,
-        'is_carentrance_referred': is_carentrance_referred,
-        'show_refer_button': show_refer_button,
-        'refer_modal_open': False,
-        'carentrance_referral_reason': getattr(pt, 'carentrance_referral_reason', '') or '',
-    }
-    return render(request, 'car_entrance_register.html', context)
+    return render(
+        request,
+        'car_entrance_register.html',
+        _build_register_context(
+            pt,
+            form,
+            accessible_transport_fields,
+            accessible_po_fields,
+            accessible_raw_material_fields,
+            accessible_person_fields,
+            posted_data=request.POST if request.method == 'POST' else None,
+            raw_material_errors=raw_material_errors if request.method == 'POST' else None,
+            refer_modal_open=False,
+            show_refer_button=not getattr(pt, 'carentrance_referred_to_manager', False) and not request.user.is_superuser,
+        )
+    )
 
 
 

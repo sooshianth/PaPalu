@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.core.validators import MinValueValidator
 from .TransportModel import Transport
@@ -64,6 +66,56 @@ class RawMaterialInfo(models.Model):
         blank=True,
         help_text='وزن خالص محاسبه شده این ماده اولیه در تخلیه'
     )
+
+    unloading_weight_before = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن قبل از تخلیه (کیلوگرم)',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن خودرو پیش از این مرحله از تخلیه'
+    )
+
+    unloading_weight_after = models.DecimalField(
+        max_digits=15,
+        decimal_places=3,
+        verbose_name='وزن بعد از تخلیه (کیلوگرم)',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن خودرو پس از این مرحله از تخلیه'
+    )
+
+    waybill_gross_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='وزن پر بارنامه (کیلوگرم)',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن پر ثبت شده در بارنامه برای این ماده اولیه'
+    )
+
+    waybill_tare_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='وزن خالی بارنامه (کیلوگرم)',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن خالی ثبت شده در بارنامه برای این ماده اولیه'
+    )
+
+    waybill_weight = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        verbose_name='وزن خالص بارنامه (کیلوگرم)',
+        validators=[MinValueValidator(0)],
+        null=True,
+        blank=True,
+        help_text='وزن خالص ثبت شده در بارنامه برای این ماده اولیه'
+    )
     
     destination_warehouse = models.ForeignKey(
         'core.Warehouse',
@@ -103,6 +155,14 @@ class RawMaterialInfo(models.Model):
         null=True,
         blank=True
     )
+
+    scale_serial = models.IntegerField(
+        verbose_name='سریال باسکول',
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text='سریال باسکول'
+    )
     
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -126,7 +186,6 @@ class RawMaterialInfo(models.Model):
     def clean(self):
         """اعتبارسنجی: مقدار تخصیص یافته نباید بیشتر از مقدار باقیمانده در سفارش باشد"""
         from django.core.exceptions import ValidationError
-        from decimal import Decimal
         
         if not self.order_item:
             raise ValidationError('باید یک ماده اولیه از سفارش انتخاب شود.')
@@ -150,6 +209,20 @@ class RawMaterialInfo(models.Model):
             raise ValidationError(
                 f'مقدار تخصیص یافته ({self.allocated_quantity} {unit_display}) نمی‌تواند بیشتر از مقدار باقیمانده ({remaining_in_order_unit} {unit_display}) باشد.'
             )
+
+        waybill_values = [
+            self.waybill_gross_weight,
+            self.waybill_tare_weight,
+            self.waybill_weight,
+        ]
+        if any(value is not None for value in waybill_values):
+            if any(value is None for value in waybill_values):
+                raise ValidationError('برای وزن‌های بارنامه هر ماده اولیه، وزن پر، وزن خالی و وزن خالص باید همگی تکمیل شوند.')
+
+            expected_net = (self.waybill_gross_weight - self.waybill_tare_weight).quantize(Decimal('0.01'))
+            entered_net = self.waybill_weight.quantize(Decimal('0.01'))
+            if expected_net != entered_net:
+                raise ValidationError('وزن پر منهای وزن خالی باید برابر وزن خالص بارنامه باشد.')
     
     def save(self, *args, **kwargs):
         self.clean()
