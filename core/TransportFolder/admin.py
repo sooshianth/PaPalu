@@ -5,7 +5,7 @@ from .RawMaterialInfoModel import RawMaterialInfo
 
 @admin.register(Transport)
 class TransportAdmin(admin.ModelAdmin):
-    list_display = ['waybill_number', 'driver']
+    list_display = ['id', 'waybill_number', 'driver']
     search_fields = ['waybill_number']
 
 
