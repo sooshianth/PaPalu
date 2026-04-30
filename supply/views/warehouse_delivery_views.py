@@ -733,6 +733,18 @@ def warehouse_delivery_detail_view(request, transport_number):
                                 )
                                 valid_raw_material_infos.append(rmi)
 
+                    if valid_raw_material_infos:
+                        total_transport_waybill_weight = sum(
+                            (rmi.waybill_weight or Decimal('0')) for rmi in valid_raw_material_infos
+                        )
+                        gross_candidates = [
+                            rmi.waybill_gross_weight for rmi in valid_raw_material_infos
+                            if rmi.waybill_gross_weight is not None
+                        ]
+                        pt.waybill_weight = total_transport_waybill_weight
+                        pt.waybill_gross_weight = max(gross_candidates) if gross_candidates else None
+                        pt.save(update_fields=['waybill_weight', 'waybill_gross_weight'])
+
                     bug_logger.info(f"اطلاعات تخلیه برای حمل {transport_number} ثبت شد - وزن خالص: {net_weight}")
                     
                     # ایجاد لاگ موجودیت: از انبار مبدأ (تامین‌کننده) به انبار مقصد (کارخانه)

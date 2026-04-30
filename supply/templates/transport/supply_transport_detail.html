@@ -321,14 +321,22 @@
         </div>
         <div class="kv">
             <span>تاریخ صدور بارنامه</span>
-            <strong>{{ pt.bill_of_lading_date|default:"—" }}</strong>
+            <strong>{{ pt.waybill_date|default:"—" }}</strong>
         </div>
-        {% if pt.bill_of_lading_file %}
         <div class="kv">
-            <span>فایل بارنامه</span>
-            <strong><a href="{{ pt.bill_of_lading_file.url }}" target="_blank" rel="noopener" style="color: var(--primary-green); font-weight: 600;">📄 مشاهده بارنامه</a></strong>
+            <span>فایل‌های بارنامه</span>
+            <strong>
+                {% if waybill_attachments %}
+                    {% for attachment in waybill_attachments %}
+                        <a href="{{ attachment.url }}" target="_blank" rel="noopener" style="color: var(--primary-green); font-weight: 600; display: inline-block; margin-left: 10px;">
+                            📄 {{ attachment.name }}
+                        </a>
+                    {% endfor %}
+                {% else %}
+                    —
+                {% endif %}
+            </strong>
         </div>
-        {% endif %}
     </div>
     
     <h3 class="section-title">سایر اطلاعات</h3>

@@ -86,6 +86,17 @@ class CarEntranceDriverForm(forms.Form):
             'autocomplete': 'off',
         })
     )
+    actual_arrival_date = forms.DateField(
+        label='تاریخ واقعی ورود',
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control',
+            'type': 'text',
+            'placeholder': '1403/09/15',
+            'id': 'id_actual_arrival_date',
+            'autocomplete': 'off',
+        })
+    )
     bill_of_lading_files = MultipleFileField(
         label='تصاویر بارنامه',
         required=False,

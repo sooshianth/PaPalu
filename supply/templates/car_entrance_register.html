@@ -924,6 +924,16 @@
                         {% endif %}
                     </div>
                     {% endif %}
+
+                    {% if accessible_transport_fields.actual_arrival_date %}
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.actual_arrival_date.label }}</label>
+                        {{ form.actual_arrival_date }}
+                        {% if form.actual_arrival_date.errors %}
+                            <div class="text-danger">{{ form.actual_arrival_date.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                     
                     {% if accessible_transport_fields.bill_of_lading_file %}
                     <div class="col-md-6 mb-3" id="waybill-file-wrap">
@@ -1569,6 +1579,38 @@
 
     // هر بار که تاریخ انتخاب شد، مقدار میلادی رو به hidden منتقل کن
     waybillDateEl.addEventListener('jdp:change', function (e) {
+      hiddenInput.value = e.detail.gregorian;
+    });
+  })();
+
+  (function () {
+    const arrivalDateEl = document.getElementById('id_actual_arrival_date');
+    if (!arrivalDateEl) return;
+
+    arrivalDateEl.type = 'text';
+    arrivalDateEl.readOnly = true;
+    arrivalDateEl.style.cursor = 'pointer';
+
+    const originalName = arrivalDateEl.name;
+    let hiddenInput = document.getElementById('id_actual_arrival_date_hidden');
+    if (!hiddenInput) {
+      hiddenInput = document.createElement('input');
+      hiddenInput.type = 'hidden';
+      hiddenInput.id = 'id_actual_arrival_date_hidden';
+      hiddenInput.name = originalName || 'actual_arrival_date';
+      arrivalDateEl.parentNode.insertBefore(hiddenInput, arrivalDateEl.nextSibling);
+      arrivalDateEl.removeAttribute('name');
+    }
+
+    const initVal = arrivalDateEl.value;
+    if (initVal && initVal.includes('-')) {
+      arrivalDateEl.setAttribute('data-gdate', initVal);
+      hiddenInput.value = initVal;
+    }
+
+    JalaliDatepicker.init('#id_actual_arrival_date');
+
+    arrivalDateEl.addEventListener('jdp:change', function (e) {
       hiddenInput.value = e.detail.gregorian;
     });
   })();

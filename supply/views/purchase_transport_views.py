@@ -29,6 +29,34 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 
+def _get_waybill_attachments(pt):
+    attachments = []
+    primary_file = getattr(pt, 'bill_of_lading_file', None)
+    if primary_file:
+        try:
+            attachments.append({
+                'name': primary_file.name.split('/')[-1],
+                'url': primary_file.url,
+                'is_primary': True,
+            })
+        except Exception:
+            pass
+
+    for attachment in pt.attachments.filter(description='bill_of_lading').order_by('-created_at'):
+        if not attachment.file:
+            continue
+        try:
+            attachments.append({
+                'name': attachment.file.name.split('/')[-1],
+                'url': attachment.file.url,
+                'is_primary': False,
+            })
+        except Exception:
+            continue
+
+    return attachments
+
+
 def _log_purchase_transport_post_snapshot(request):
     material_keys = sorted(key for key in request.POST.keys() if key.startswith('materials-'))
     material_payload = {key: request.POST.get(key) for key in material_keys}
@@ -748,6 +776,7 @@ def purchase_transport_detail_view(request, transport_number):
         'total_allocated': total_allocated,
         'total_net_weight': total_net_weight,
         'total_waybill_weight': total_waybill_weight,
+        'waybill_attachments': _get_waybill_attachments(pt),
     })
 
 

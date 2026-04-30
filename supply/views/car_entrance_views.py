@@ -377,6 +377,14 @@ def _format_decimal_for_input(value, places=2):
     return f"{Decimal(value):.{places}f}"
 
 
+def _normalize_picker_date(value):
+    if not value:
+        return None
+    if hasattr(value, 'togregorian'):
+        return value.togregorian()
+    return value
+
+
 def _parse_two_decimal_weight(value, field_label):
     raw_value = (value or '').strip().replace(',', '').replace('،', '')
     if not raw_value:
@@ -796,6 +804,8 @@ def register_driver_for_transport_view(request, transport_number):
                         pt.waybill_number = data.get('waybill_number')
                     if data.get('waybill_date'):
                         pt.waybill_date = data.get('waybill_date')
+                    if data.get('actual_arrival_date'):
+                        pt.actual_arrival_date = data.get('actual_arrival_date')
                     _store_waybill_uploads(pt, uploaded_waybill_files)
                     freight_payment_type = pt.allocation.order.freight_payment_type if pt.allocation and pt.allocation.order else pt.freight_payment_type
                     if freight_payment_type == 'pay_to_driver':
@@ -824,7 +834,8 @@ def register_driver_for_transport_view(request, transport_number):
                             pt.driver_bank_account = None
                     else:
                         pt.driver_bank_account = None
-                    pt.actual_arrival_date = jdatetime.date.today()
+                    if not pt.actual_arrival_date:
+                        pt.actual_arrival_date = jdatetime.date.today()
                     pt.carentrance_referred_to_manager = True
                     pt.carentrance_referred_at = timezone.now()
                     pt.carentrance_referral_reason = referral_reason
@@ -900,6 +911,8 @@ def register_driver_for_transport_view(request, transport_number):
                     # ثبت تاریخ بارنامه
                     if data.get('waybill_date'):
                         pt.waybill_date = data.get('waybill_date')
+                    if data.get('actual_arrival_date'):
+                        pt.actual_arrival_date = data.get('actual_arrival_date')
 
                     _store_waybill_uploads(pt, uploaded_waybill_files)
                     
@@ -969,8 +982,8 @@ def register_driver_for_transport_view(request, transport_number):
                         pt.driver_bank_account = None
                     
                     # ثبت زمان ورود خودرو (GateEntryTime)
-                    today_jalali = jdatetime.date.today()
-                    pt.actual_arrival_date = today_jalali
+                    if not pt.actual_arrival_date:
+                        pt.actual_arrival_date = jdatetime.date.today()
                     pt.save()
                     for raw_material_update in raw_material_updates:
                         raw_material_info = raw_material_update['instance']
@@ -1026,7 +1039,10 @@ def register_driver_for_transport_view(request, transport_number):
         
         if pt.waybill_number:
             initial['waybill_number'] = pt.waybill_number
-        
+        if pt.waybill_date:
+            initial['waybill_date'] = _normalize_picker_date(pt.waybill_date)
+        initial['actual_arrival_date'] = _normalize_picker_date(pt.actual_arrival_date) or jdatetime.date.today().togregorian()
+
         if pt.driver:
             initial['phone'] = pt.driver.phone_number
             initial['name'] = pt.driver.name
