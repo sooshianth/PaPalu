@@ -706,24 +706,29 @@ def register_driver_for_transport_view(request, transport_number):
 
             # فرم معتبر است: ذخیره اطلاعات (راننده، پلاک، بارنامه، فایل) بدون تغییر وضعیت، سپس ارجاع
             data = form.cleaned_data
-            phone = data.get('phone')
+            phone = (data.get('phone') or '').strip()
             try:
                 with transaction.atomic():
-                    driver = Person.objects.filter(phone_number=phone, type='driver').first()
+                    driver = Person.objects.filter(phone_number=phone, type='driver').first() if phone else pt.driver
                     if not driver:
-                        driver = Person.objects.create(name=data.get('name'), phone_number=phone, national_id=data.get('national_id') or '', type='driver')
+                        driver = Person.objects.create(
+                            name=data.get('name'),
+                            phone_number=phone or None,
+                            national_id=data.get('national_id') or '',
+                            type='driver'
+                        )
                     else:
                         if driver.name != data.get('name'):
                             driver.name = data.get('name')
                         if driver.national_id != data.get('national_id'):
                             driver.national_id = data.get('national_id') or ''
+                        if phone and driver.phone_number != phone:
+                            driver.phone_number = phone
                         driver.save()
                     pt.driver = driver
                     pt.plate_number = data.get('plate_number')
-                    if data.get('waybill_weight'):
-                        pt.waybill_weight = data.get('waybill_weight')
-                    if data.get('waybill_gross_weight'):
-                        pt.waybill_gross_weight = data.get('waybill_gross_weight')
+                    if data.get('waybill_number'):
+                        pt.waybill_number = data.get('waybill_number')
                     if data.get('waybill_date'):
                         pt.waybill_date = data.get('waybill_date')
                     if 'bill_of_lading_file' in request.FILES:
@@ -782,18 +787,18 @@ def register_driver_for_transport_view(request, transport_number):
 
         if form.is_valid() and not raw_material_errors:
             data = form.cleaned_data
-            phone = data.get('phone')
+            phone = (data.get('phone') or '').strip()
             audit_logger.info(f"شروع ثبت راننده برای حمل {transport_number}")
             try:
                 with transaction.atomic():
                     # جستجوی راننده با شماره تلفن
-                    driver = Person.objects.filter(phone_number=phone, type='driver').first()
+                    driver = Person.objects.filter(phone_number=phone, type='driver').first() if phone else pt.driver
                     if not driver:
-                        bug_logger.info(f"ایجاد راننده جدید با شماره تلفن {phone} برای حمل {transport_number}")
+                        bug_logger.info(f"ایجاد راننده جدید برای حمل {transport_number}")
                         # ایجاد رکورد راننده جدید
                         driver = Person.objects.create(
                             name=data.get('name'),
-                            phone_number=phone,
+                            phone_number=phone or None,
                             national_id=data.get('national_id'),
                             type='driver'
                         )
@@ -805,19 +810,17 @@ def register_driver_for_transport_view(request, transport_number):
                             driver.name = data.get('name')
                         if driver.national_id != data.get('national_id'):
                             driver.national_id = data.get('national_id')
+                        if phone and driver.phone_number != phone:
+                            driver.phone_number = phone
                         driver.save()
                     
                     # به‌روزرسانی فیلدهای حمل
                     pt.driver = driver
                     pt.plate_number = data.get('plate_number')
                     
-                    # ثبت وزن بارنامه (خالص)
-                    if data.get('waybill_weight'):
-                        pt.waybill_weight = data.get('waybill_weight')
-                    
-                    # ثبت وزن پر بارنامه (ناخالص)
-                    if data.get('waybill_gross_weight'):
-                        pt.waybill_gross_weight = data.get('waybill_gross_weight')
+                    # ثبت شماره بارنامه
+                    if data.get('waybill_number'):
+                        pt.waybill_number = data.get('waybill_number')
                     
                     # ثبت تاریخ بارنامه
                     if data.get('waybill_date'):
@@ -943,13 +946,8 @@ def register_driver_for_transport_view(request, transport_number):
         if pt.plate_number:
             initial['plate_number'] = pt.plate_number
         
-        # پیش‌پر کردن وزن بارنامه
-        if pt.waybill_weight:
-            initial['waybill_weight'] = pt.waybill_weight
-        
-        # پیش‌پر کردن وزن پر بارنامه
-        if pt.waybill_gross_weight:
-            initial['waybill_gross_weight'] = pt.waybill_gross_weight
+        if pt.waybill_number:
+            initial['waybill_number'] = pt.waybill_number
         
         if pt.driver:
             initial['phone'] = pt.driver.phone_number

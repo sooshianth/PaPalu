@@ -21,15 +21,13 @@ class CarEntranceDriverForm(forms.Form):
 
     فیلدهای اجباری:
     - نام راننده
-    - شماره تلفن راننده
     - پلاک
-    - وزن بارنامه
     - تصویر بارنامه
     - حداقل یکی از شماره حساب یا شماره شبا راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
     """
     phone = forms.CharField(
         label='شماره تلفن راننده',
-        required=True,
+        required=False,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '09123456789'})
     )
     name = forms.CharField(
@@ -54,30 +52,13 @@ class CarEntranceDriverForm(forms.Form):
         required=True,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12الف34567'})
     )
-    waybill_weight = forms.DecimalField(
-        label='وزن بارنامه (کیلوگرم)',
-        required=True,
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={
+    waybill_number = forms.CharField(
+        label='شماره بارنامه',
+        required=False,
+        widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': '0.000',
-            'step': '0.001',
-            'min': '0'
+            'placeholder': 'شماره بارنامه'
         })
-    )
-    waybill_gross_weight = forms.DecimalField(
-        label='وزن پر بارنامه (کیلوگرم)',
-        required=True,
-        max_digits=15,
-        decimal_places=3,
-        widget=forms.NumberInput(attrs={
-            'class': 'form-control',
-            'placeholder': '0.000',
-            'step': '0.001',
-            'min': '0'
-        }),
-        help_text='وزن پر (ناخالص) که روی بارنامه ثبت شده - برای مقایسه با باسکول کارخانه'
     )
     waybill_date = forms.DateField(
         label='تاریخ بارنامه',
