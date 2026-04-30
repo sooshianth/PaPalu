@@ -820,23 +820,20 @@ def create_driver_api(request):
         phone = request.POST.get('phone', '').strip()
         national_id = request.POST.get('national_id', '').strip()
         
-        if not name or not phone:
-            error_fields = []
-            if not name:
-                error_fields.append('نام راننده')
-            if not phone:
-                error_fields.append('شماره تلفن')
-            return JsonResponse({'error': f'فیلدهای اجباری زیر را پر کنید: {", ".join(error_fields)}'}, status=400)
+        if not name:
+            return JsonResponse({'error': 'فیلد اجباری نام راننده را پر کنید'}, status=400)
         
         # بررسی صحت کد ملی (باید 10 رقم باشد، اگر وارد شده باشد)
         if national_id and (len(national_id) != 10 or not national_id.isdigit()):
             return JsonResponse({'error': 'کد ملی باید دقیقاً 10 رقم باشد'}, status=400)
         
-        # بررسی تکراری نبودن (فقط بر اساس تلفن، یا کد ملی اگر وارد شده باشد)
-        duplicate_filter = Q(phone_number=phone)
+        # بررسی تکراری نبودن فقط بر اساس فیلدهای واردشده
+        duplicate_filter = Q()
+        if phone:
+            duplicate_filter |= Q(phone_number=phone)
         if national_id:
-            duplicate_filter = duplicate_filter | Q(national_id=national_id)
-        existing = Person.objects.filter(duplicate_filter).filter(type='driver').first()
+            duplicate_filter |= Q(national_id=national_id)
+        existing = Person.objects.filter(duplicate_filter, type='driver').first() if duplicate_filter.children else None
         
         if existing:
             return JsonResponse({
@@ -866,7 +863,7 @@ def create_driver_api(request):
                     'name': driver.name,
                     'phone': driver.phone_number,
                     'national_id': driver.national_id or '',
-                    'text': f"{driver.name} - {driver.phone_number}",
+                    'text': f"{driver.name} - {driver.phone_number or 'بدون تلفن'}",
                 }
             })
     except Exception as e:

@@ -1083,7 +1083,7 @@
             <input type="text" id="new-driver-name" placeholder="نام و نام خانوادگی">
           </div>
           <div class="mb-3">
-            <label>شماره تلفن <span style="color:#d32f2f">*</span></label>
+            <label>شماره تلفن</label>
             <input type="text" id="new-driver-phone" placeholder="09123456789" maxlength="11">
           </div>
           <div class="mb-3">
@@ -2418,10 +2418,9 @@
     const phone = document.getElementById('new-driver-phone').value.trim();
     const nationalId = document.getElementById('new-driver-national-id').value.trim();
 
-    if (!name || !phone) {
+    if (!name) {
       let errorMsg = 'لطفاً فیلدهای اجباری زیر را پر کنید:\n';
       if (!name) errorMsg += '- نام راننده\n';
-      if (!phone) errorMsg += '- شماره تلفن\n';
       alert(errorMsg);
       return;
     }
@@ -2434,7 +2433,9 @@
 
     const formData = new FormData();
     formData.append('name', name);
-    formData.append('phone', phone);
+    if (phone) {
+      formData.append('phone', phone);
+    }
     if (nationalId) {
       formData.append('national_id', nationalId);
     }
