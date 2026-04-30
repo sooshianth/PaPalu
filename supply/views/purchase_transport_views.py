@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django import forms
 from django.forms import ModelForm, inlineformset_factory, BaseInlineFormSet
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import Q
 from django.http import HttpResponseForbidden
 from decimal import Decimal
@@ -27,6 +27,59 @@ User = get_user_model()
 
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
+
+
+def _log_purchase_transport_post_snapshot(request):
+    material_keys = sorted(key for key in request.POST.keys() if key.startswith('materials-'))
+    material_payload = {key: request.POST.get(key) for key in material_keys}
+    bug_logger.info(
+        "DEBUG_POST_SNAPSHOT_1: purchase_order=%s allocation=%s driver=%s "
+        "driver_bank_account=%s supplier_bank_account=%s plate_number=%s material_keys=%s material_payload=%s",
+        request.POST.get('purchase_order'),
+        request.POST.get('allocation'),
+        request.POST.get('driver'),
+        request.POST.get('driver_bank_account'),
+        request.POST.get('supplier_bank_account'),
+        request.POST.get('plate_number'),
+        material_keys,
+        material_payload,
+    )
+
+
+def _log_formset_fk_snapshot(formset, label):
+    for index, form in enumerate(formset.forms):
+        posted_order_item = form.data.get(f'{form.prefix}-order_item') if hasattr(form, 'data') else None
+        posted_raw_material = form.data.get(f'{form.prefix}-raw_material') if hasattr(form, 'data') else None
+        cleaned_data = getattr(form, 'cleaned_data', None) or {}
+        bug_logger.info(
+            "%s: index=%s prefix=%s posted_order_item=%s posted_raw_material=%s "
+            "cleaned_order_item_id=%s cleaned_raw_material_id=%s allocated_quantity=%s delete=%s errors=%s",
+            label,
+            index,
+            form.prefix,
+            posted_order_item,
+            posted_raw_material,
+            getattr(cleaned_data.get('order_item'), 'pk', None),
+            getattr(cleaned_data.get('raw_material'), 'pk', None),
+            cleaned_data.get('allocated_quantity'),
+            cleaned_data.get('DELETE', False),
+            dict(form.errors) if form.errors else 'none',
+        )
+
+
+def _log_fk_check_on_exception():
+    try:
+        if connection.vendor != 'sqlite':
+            bug_logger.info("DEBUG_FK_CHECK_1: skipped vendor=%s", connection.vendor)
+            return
+
+        with connection.cursor() as cursor:
+            cursor.execute("PRAGMA foreign_key_check")
+            rows = cursor.fetchall()
+
+        bug_logger.error("DEBUG_FK_CHECK_2: sqlite foreign_key_check rows=%s", rows if rows else 'none')
+    except Exception as fk_check_error:
+        bug_logger.warning("DEBUG_FK_CHECK_3: foreign_key_check_failed error=%s", fk_check_error)
 
 
 def get_accessible_purchase_transport_fields(user):
@@ -338,6 +391,7 @@ def create_purchase_transport_view(request):
     
     try:
         if request.method == 'POST':
+            _log_purchase_transport_post_snapshot(request)
             # وقتی از صفحه با ?order=PO-xxx می‌آییم، فیلد purchase_order در قالب ممکن است غیرفعال یا فقط hidden باشد.
             # برای اطمینان از اینکه فرم allocation را تنظیم کند، در صورت امکان initial را از POST یا GET پر کن.
             post_initial = {}
@@ -360,15 +414,30 @@ def create_purchase_transport_view(request):
             bug_logger.info(f"DEBUG_STEP_2: form.is_valid()={form_valid}, errors={form.errors if not form_valid else 'none'}")
             if form_valid:
                 bug_logger.info(f"DEBUG_STEP_3: cleaned_data keys={list(form.cleaned_data.keys())}")
-                bug_logger.info(f"DEBUG_STEP_4: allocation={form.cleaned_data.get('allocation')}, driver={form.cleaned_data.get('driver')}, driver_bank_account={form.cleaned_data.get('driver_bank_account')}")
+                bug_logger.info(
+                    "DEBUG_STEP_4: allocation=%s, driver=%s, driver_bank_account=%s, "
+                    "supplier_bank_account=%s, purchase_order=%s",
+                    form.cleaned_data.get('allocation'),
+                    form.cleaned_data.get('driver'),
+                    form.cleaned_data.get('driver_bank_account'),
+                    form.cleaned_data.get('supplier_bank_account'),
+                    form.cleaned_data.get('purchase_order'),
+                )
             formset_valid = raw_material_formset.is_valid()
             bug_logger.info(f"DEBUG_STEP_5: raw_material_formset.is_valid()={formset_valid}, errors={raw_material_formset.errors if not formset_valid else 'none'}")
+            _log_formset_fk_snapshot(raw_material_formset, "DEBUG_FORMSET_SNAPSHOT_1")
             
             if form_valid and formset_valid:
                 try:
                     with transaction.atomic():
                         purchase_order = form.cleaned_data.get('purchase_order')
                         allocation = form.cleaned_data.get('allocation')
+                        bug_logger.info(
+                            "DEBUG_STEP_TX_1: purchase_order_id=%s allocation_id=%s user_id=%s",
+                            getattr(purchase_order, 'pk', None),
+                            getattr(allocation, 'pk', None),
+                            getattr(request.user, 'pk', None),
+                        )
                         if purchase_order:
                             from core.AllocationFolder.AllocationModel import Allocation
                             from core.AllocationFolder.AllocationSchedulingInfoModel import AllocationSchedulingInfo
@@ -404,7 +473,15 @@ def create_purchase_transport_view(request):
                         pt = form.save(commit=False)
                         if allocation:
                             pt.allocation = allocation
-                        bug_logger.info(f"DEBUG_STEP_7: pt ساخته شد - allocation={pt.allocation_id}, driver={pt.driver_id}, driver_bank_account={pt.driver_bank_account_id}")
+                        bug_logger.info(
+                            "DEBUG_STEP_7: pt ساخته شد - allocation=%s, driver=%s, driver_bank_account=%s, "
+                            "supplier_bank_account=%s, created_by_before_set=%s",
+                            pt.allocation_id,
+                            pt.driver_id,
+                            pt.driver_bank_account_id,
+                            pt.supplier_bank_account_id,
+                            pt.created_by_id,
+                        )
                         pt.created_by = request.user
                         # تنظیم خودکار transport_type و direction به inbound
                         pt.transport_type = 'inbound'
@@ -470,13 +547,35 @@ def create_purchase_transport_view(request):
                         
                         # ذخیره مواد اولیه
                         raw_material_formset.instance = pt
+                        _log_formset_fk_snapshot(raw_material_formset, "DEBUG_FORMSET_SNAPSHOT_2_BEFORE_SAVE")
                         bug_logger.info(f"DEBUG_STEP_10: raw_material_formset.save() شروع شد - تعداد فرم‌ها={len(raw_material_formset.forms)}")
                         raw_material_formset.save()
                         bug_logger.info(f"DEBUG_STEP_11: raw_material_formset.save() موفق شد")
+                        for material_index, raw_material_info in enumerate(pt.raw_material_infos.all()):
+                            bug_logger.info(
+                                "DEBUG_STEP_12: saved_raw_material index=%s id=%s transport_id=%s order_item_id=%s "
+                                "raw_material_id=%s allocated_quantity=%s",
+                                material_index,
+                                raw_material_info.pk,
+                                raw_material_info.transport_id,
+                                raw_material_info.order_item_id,
+                                raw_material_info.raw_material_id,
+                                raw_material_info.allocated_quantity,
+                            )
                         
                         # تغییر وضعیت از پیش‌نویس به "در انتظار ورود خودرو"
                         pt.status = Transport.STATUS_AWAITING_VEHICLE_ENTRY
+                        bug_logger.info(
+                            "DEBUG_STEP_13: pt.status update before second save - pt.pk=%s status=%s",
+                            pt.pk,
+                            pt.status,
+                        )
                         pt.save()
+                        bug_logger.info(
+                            "DEBUG_STEP_14: pt second save successful - pt.pk=%s status=%s",
+                            pt.pk,
+                            pt.status,
+                        )
                         
                         # بررسی وضعیت سفارش و تغییر آن در صورت نیاز
                         if pt.allocation and pt.allocation.order:
@@ -514,6 +613,11 @@ def create_purchase_transport_view(request):
                         if pt.allocation and pt.allocation.order:
                             order_for_redirect = pt.allocation.order
                             remaining_weight = order_for_redirect.get_remaining_weight()
+                            bug_logger.info(
+                                "DEBUG_STEP_15: redirect_decision order_id=%s remaining_weight=%s",
+                                order_for_redirect.pk,
+                                remaining_weight,
+                            )
                     
                     messages.success(request, f'حمل {pt.transport_number} ثبت شد و اعلان به نگهبان ارسال شد.')
                     
@@ -525,12 +629,16 @@ def create_purchase_transport_view(request):
                         # اگر وزن باقیمانده صفر شد، به لیست برو
                         return redirect(reverse('supply:purchase_transport_list'))
                 except ValueError as ve:
+                    _log_fk_check_on_exception()
                     bug_logger.error(f"خطا در ایجاد حمل: {ve}", exc_info=True)
                     messages.error(request, f'خطا در ایجاد حمل: {str(ve)}')
                 except Exception as e:
+                    _log_formset_fk_snapshot(raw_material_formset, "DEBUG_FORMSET_SNAPSHOT_3_ON_EXCEPTION")
+                    _log_fk_check_on_exception()
                     bug_logger.error(f"خطا در ایجاد حمل: {e}", exc_info=True)
                     messages.error(request, f'خطا در ایجاد حمل: {str(e)}')
             else:
+                _log_formset_fk_snapshot(raw_material_formset, "DEBUG_FORMSET_SNAPSHOT_4_INVALID")
                 bug_logger.warning(f"Purchase transport form invalid: form={form.errors}, materials={raw_material_formset.errors}")
                 audit_logger.activity(f"فرم نامعتبر برای ایجاد حمل")
                 # اگر فرم نامعتبر است، حمل‌های موجود را برای نمایش دوباره پیدا کن

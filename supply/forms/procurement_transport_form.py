@@ -22,6 +22,8 @@ from core.PersonFolder.BankAccountModel import BankAccount
 from core.PersonFolder.FinancialBankingModel import FinancialBanking
 from django.contrib.auth import get_user_model
 
+bug_logger = logging.getLogger("bugs")
+
 
 class RawMaterialInfoForm(ModelForm):
     """فرم برای انتخاب و تخصیص مواد اولیه به حمل"""
@@ -94,20 +96,45 @@ class RawMaterialInfoForm(ModelForm):
     
     def clean(self):
         cleaned_data = super().clean()
+        form_prefix = self.prefix or 'materials'
+        posted_order_item = self.data.get(f'{form_prefix}-order_item') if hasattr(self, 'data') else None
+        posted_raw_material = self.data.get(f'{form_prefix}-raw_material') if hasattr(self, 'data') else None
+
+        bug_logger.info(
+            "DEBUG_MATERIAL_FORM_1: prefix=%s posted_order_item=%s posted_raw_material=%s "
+            "instance_pk=%s current_errors=%s",
+            form_prefix,
+            posted_order_item,
+            posted_raw_material,
+            getattr(self.instance, 'pk', None),
+            dict(self.errors) if self.errors else 'none',
+        )
         
         # بررسی اینکه آیا فرم برای حذف علامت خورده است
         if self.cleaned_data.get('DELETE', False):
+            bug_logger.info("DEBUG_MATERIAL_FORM_2: prefix=%s marked_for_delete=True", form_prefix)
             return cleaned_data
         
         order_item = cleaned_data.get('order_item')
+        raw_material = cleaned_data.get('raw_material')
         allocated_quantity = cleaned_data.get('allocated_quantity')
         
         # اگر فرم خالی است، آن را نادیده بگیر
         if not order_item and not allocated_quantity:
+            bug_logger.info(
+                "DEBUG_MATERIAL_FORM_3: prefix=%s ignored_empty_form=True raw_material=%s",
+                form_prefix,
+                getattr(raw_material, 'pk', raw_material),
+            )
             return cleaned_data
         
         if not order_item:
             self.add_error('order_item', 'این فیلد الزامی است.')
+            bug_logger.warning(
+                "DEBUG_MATERIAL_FORM_4: prefix=%s missing_order_item posted_order_item=%s",
+                form_prefix,
+                posted_order_item,
+            )
             return cleaned_data
         
         # تبدیل مقدار به Decimal با حفظ دقت
@@ -123,6 +150,12 @@ class RawMaterialInfoForm(ModelForm):
         
         if not allocated_quantity or allocated_quantity <= 0:
             self.add_error('allocated_quantity', 'مقدار تخصیص یافته باید بیشتر از صفر باشد.')
+            bug_logger.warning(
+                "DEBUG_MATERIAL_FORM_5: prefix=%s invalid_allocated_quantity=%s order_item_id=%s",
+                form_prefix,
+                allocated_quantity,
+                getattr(order_item, 'pk', None),
+            )
             return cleaned_data
         
         # بررسی که مقدار تخصیص یافته بیشتر از مقدار باقیمانده نباشد
@@ -137,12 +170,36 @@ class RawMaterialInfoForm(ModelForm):
                 'allocated_quantity',
                 f'مقدار تخصیص یافته ({allocated_quantity}) نمی‌تواند بیشتر از مقدار باقیمانده ({remaining}) باشد.'
             )
+            bug_logger.warning(
+                "DEBUG_MATERIAL_FORM_6: prefix=%s allocated_quantity_exceeds_remaining "
+                "order_item_id=%s allocated_quantity=%s remaining=%s",
+                form_prefix,
+                getattr(order_item, 'pk', None),
+                allocated_quantity,
+                remaining,
+            )
         
         # تنظیم raw_material از order_item
         if order_item and order_item.raw_material:
             cleaned_data['raw_material'] = order_item.raw_material
             # تنظیم واحد از order_item
             cleaned_data['weight_unit'] = order_item.weight_unit
+            bug_logger.info(
+                "DEBUG_MATERIAL_FORM_7: prefix=%s cleaned_order_item_id=%s cleaned_raw_material_id=%s "
+                "posted_raw_material=%s allocated_quantity=%s weight_unit=%s",
+                form_prefix,
+                getattr(order_item, 'pk', None),
+                getattr(order_item.raw_material, 'pk', None),
+                posted_raw_material,
+                allocated_quantity,
+                order_item.weight_unit,
+            )
+        else:
+            bug_logger.warning(
+                "DEBUG_MATERIAL_FORM_8: prefix=%s order_item_without_raw_material order_item_id=%s",
+                form_prefix,
+                getattr(order_item, 'pk', None),
+            )
         
         return cleaned_data
 
@@ -153,11 +210,36 @@ class RawMaterialInfoFormSetBase(BaseInlineFormSet):
     def clean(self):
         """اعتبارسنجی کلی formset"""
         if any(self.errors):
+            bug_logger.warning(
+                "DEBUG_MATERIAL_FORMSET_1: formset_has_errors total_forms=%s errors=%s non_form_errors=%s",
+                self.total_form_count(),
+                self.errors,
+                self.non_form_errors(),
+            )
             return
         
         # بررسی اینکه حداقل یک ماده اولیه وارد شده باشد
         valid_forms = 0
-        for form in self.forms:
+        for index, form in enumerate(self.forms):
+            if form.cleaned_data:
+                bug_logger.info(
+                    "DEBUG_MATERIAL_FORMSET_2: index=%s cleaned_order_item_id=%s cleaned_raw_material_id=%s "
+                    "allocated_quantity=%s delete=%s instance_pk=%s",
+                    index,
+                    getattr(form.cleaned_data.get('order_item'), 'pk', None),
+                    getattr(form.cleaned_data.get('raw_material'), 'pk', None),
+                    form.cleaned_data.get('allocated_quantity'),
+                    form.cleaned_data.get('DELETE', False),
+                    getattr(form.instance, 'pk', None),
+                )
+            else:
+                bug_logger.info(
+                    "DEBUG_MATERIAL_FORMSET_3: index=%s cleaned_data_empty posted_order_item=%s "
+                    "posted_raw_material=%s",
+                    index,
+                    form.data.get(f'{form.prefix}-order_item') if hasattr(form, 'data') else None,
+                    form.data.get(f'{form.prefix}-raw_material') if hasattr(form, 'data') else None,
+                )
             if form.cleaned_data and not form.cleaned_data.get('DELETE', False):
                 order_item = form.cleaned_data.get('order_item')
                 allocated_quantity = form.cleaned_data.get('allocated_quantity')
@@ -165,7 +247,19 @@ class RawMaterialInfoFormSetBase(BaseInlineFormSet):
                     valid_forms += 1
         
         if valid_forms == 0:
+            bug_logger.warning(
+                "DEBUG_MATERIAL_FORMSET_4: no_valid_forms total_forms=%s non_form_errors=%s",
+                self.total_form_count(),
+                self.non_form_errors(),
+            )
             raise forms.ValidationError('حداقل یک ماده اولیه باید تخصیص داده شود.')
+
+        bug_logger.info(
+            "DEBUG_MATERIAL_FORMSET_5: valid_forms=%s total_forms=%s initial_forms=%s",
+            valid_forms,
+            self.total_form_count(),
+            self.initial_form_count(),
+        )
 
 
 # ایجاد formset برای مواد اولیه
