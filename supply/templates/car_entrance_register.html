@@ -267,6 +267,65 @@
     .waybill-upload-area {
         margin-top: 8px;
     }
+    .waybill-existing-files,
+    .waybill-selected-files {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .waybill-file-chip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 12px;
+        border: 1px solid #d7e3ea;
+        border-radius: 8px;
+        background: #f8fbfc;
+    }
+    .waybill-file-chip-name {
+        color: #31525b;
+        font-size: 0.88rem;
+        word-break: break-word;
+    }
+    .waybill-file-chip-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+    .waybill-file-remove {
+        border: none;
+        background: #fff1f1;
+        color: #c62828;
+        border-radius: 6px;
+        padding: 6px 10px;
+        cursor: pointer;
+        font-size: 0.8rem;
+    }
+    .sheba-input-wrap {
+        display: flex;
+        align-items: stretch;
+        direction: ltr;
+    }
+    .sheba-prefix {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 46px;
+        padding: 0 12px;
+        border: 1px solid var(--gray-300);
+        border-right: none;
+        border-radius: 8px 0 0 8px;
+        background: #eef3f5;
+        color: #455a64;
+        font-weight: 700;
+    }
+    .sheba-input-wrap .form-control {
+        border-radius: 0 8px 8px 0;
+        direction: ltr;
+    }
 
     /* مودال ارجاع به مدیر */
     .refer-modal {
@@ -436,6 +495,34 @@
         grid-template-columns: repeat(3, minmax(170px, 1fr));
         gap: 12px;
     }
+    .car-entrance-waybill-toggle,
+    .car-entrance-waybill-fields,
+    .car-entrance-waybill-empty {
+        grid-column: 1 / -1;
+    }
+    .car-entrance-waybill-toggle-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #2f4f4f;
+        margin-bottom: 4px;
+    }
+    .car-entrance-waybill-fields {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(170px, 1fr));
+        gap: 12px;
+    }
+    .car-entrance-waybill-empty {
+        display: none;
+        font-size: 0.82rem;
+        color: #6c757d;
+        background: #f4f7f8;
+        border: 1px dashed #c7d1d6;
+        border-radius: 8px;
+        padding: 10px 12px;
+    }
     .car-entrance-weight-field label {
         display: block;
         font-size: 0.82rem;
@@ -503,6 +590,9 @@
             width: 100%;
         }
         .car-entrance-weight-grid {
+            grid-template-columns: 1fr;
+        }
+        .car-entrance-waybill-fields {
             grid-template-columns: 1fr;
         }
     }
@@ -592,6 +682,21 @@
                                                 <tr class="car-entrance-weight-row">
                                                     <td colspan="4">
                                                         <div class="car-entrance-weight-grid" data-rmi-row="{{ material.raw_material_info_id }}">
+                                                            <div class="car-entrance-waybill-toggle">
+                                                                <label class="car-entrance-waybill-toggle-label" for="id_raw_material_{{ material.raw_material_info_id }}_has_waybill">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        id="id_raw_material_{{ material.raw_material_info_id }}_has_waybill"
+                                                                        name="raw_material_{{ material.raw_material_info_id }}_has_waybill"
+                                                                        value="1"
+                                                                        data-has-waybill-toggle="true"
+                                                                        data-rmi-id="{{ material.raw_material_info_id }}"
+                                                                        {% if material.has_waybill %}checked{% endif %}
+                                                                    >
+                                                                    بارنامه وجود دارد؟
+                                                                </label>
+                                                            </div>
+                                                            <div class="car-entrance-waybill-fields" data-waybill-fields="{{ material.raw_material_info_id }}">
                                                             <div class="car-entrance-weight-field">
                                                                 <label for="id_raw_material_{{ material.raw_material_info_id }}_waybill_gross_weight">وزن پر</label>
                                                                 <input
@@ -668,6 +773,10 @@
                                                                     وزن پر - وزن خالی باید دقیقاً برابر وزن خالص باشد.
                                                                 {% endif %}
                                                             </span>
+                                                            </div>
+                                                            <div class="car-entrance-waybill-empty" id="rmi-empty-{{ material.raw_material_info_id }}">
+                                                                برای این ماده اولیه وزن های بارنامه در مرحله تحویل انبار از روی باسکول ثبت می شوند.
+                                                            </div>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -818,22 +927,28 @@
                     
                     {% if accessible_transport_fields.bill_of_lading_file %}
                     <div class="col-md-6 mb-3" id="waybill-file-wrap">
-                        <label class="form-label {% if not pt.bill_of_lading_file %}required-field{% endif %}">{{ form.bill_of_lading_file.label }}</label>
-                        {% if pt.bill_of_lading_file %}
-                        <div id="waybill-current-display" class="waybill-current-box">
-                            <a href="{{ pt.bill_of_lading_file.url }}" target="_blank" rel="noopener" class="btn-view-waybill" title="باز کردن تصویر بارنامه">📄 مشاهده تصویر بارنامه</a>
-                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="waybill-edit-btn" style="margin-right: 8px;">ویرایش و آپلود تصویر دیگر</button>
+                        <label class="form-label">{{ form.bill_of_lading_files.label }}</label>
+                        {% if waybill_attachments %}
+                        <div class="waybill-existing-files">
+                            {% for attachment in waybill_attachments %}
+                            <div class="waybill-file-chip">
+                                <span class="waybill-file-chip-name">
+                                    {% if attachment.is_primary %}فایل اصلی:{% else %}فایل پیوست:{% endif %}
+                                    {{ attachment.name }}
+                                </span>
+                                <div class="waybill-file-chip-actions">
+                                    <a href="{{ attachment.url }}" target="_blank" rel="noopener" class="btn-view-waybill" title="باز کردن تصویر بارنامه">📄 مشاهده</a>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
-                        <div id="waybill-upload-area" class="waybill-upload-area" style="display: none;">
-                            {{ form.bill_of_lading_file }}
-                            <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">فرمت‌های مجاز: تصویر (JPG, PNG) یا PDF</small>
-                        </div>
-                        {% else %}
-                        {{ form.bill_of_lading_file }}
-                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">فرمت‌های مجاز: تصویر (JPG, PNG) یا PDF</small>
                         {% endif %}
-                        {% if form.bill_of_lading_file.errors %}
-                            <div class="text-danger">{{ form.bill_of_lading_file.errors.0 }}</div>
+                        {{ form.bill_of_lading_files }}
+                        <div id="selected-waybill-files" class="waybill-selected-files" style="display:none;"></div>
+                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">فرمت‌های مجاز: تصویر (JPG, PNG) یا PDF</small>
+                        <small class="form-text text-muted" style="font-size:0.75rem;color:#666;margin-top:4px;display:block">این بخش اختیاری است و می‌توانید چند فایل انتخاب کنید.</small>
+                        {% if form.bill_of_lading_files.errors %}
+                            <div class="text-danger">{{ form.bill_of_lading_files.errors.0 }}</div>
                         {% endif %}
                     </div>
                     {% endif %}
@@ -853,6 +968,14 @@
             <div class="form-section-content">
                 <div class="row">
                     <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.bank_name.label }}</label>
+                        {{ form.bank_name }}
+                        {% if form.bank_name.errors %}
+                            <div class="text-danger">{{ form.bank_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6 mb-3">
                         <label class="form-label">{{ form.account.label }}</label>
                         {{ form.account }}
                         {% if form.account.errors %}
@@ -862,7 +985,10 @@
                     
                     <div class="col-md-6 mb-3">
                         <label class="form-label">{{ form.sheba.label }}</label>
-                        {{ form.sheba }}
+                        <div class="sheba-input-wrap">
+                            <span class="sheba-prefix">IR</span>
+                            {{ form.sheba }}
+                        </div>
                         {% if form.sheba.errors %}
                             <div class="text-danger">{{ form.sheba.errors.0 }}</div>
                         {% endif %}
@@ -1010,11 +1136,13 @@
             // پر کردن فیلدها در صورت خالی بودن
             const nameEl = document.getElementById('id_name');
             const nidEl = document.getElementById('id_national_id');
+            const bankNameEl = document.getElementById('id_bank_name');
             const accountEl = document.getElementById('id_account');
             const shebaEl = document.getElementById('id_sheba');
             
             if (nameEl && !nameEl.value) nameEl.value = data.name || '';
             if (nidEl && !nidEl.value) nidEl.value = data.national_id || '';
+            if (bankNameEl && data.bank_name && !bankNameEl.value) bankNameEl.value = data.bank_name || '';
             
             // پر کردن حساب بانکی اگر وجود داشته باشد (فقط اگر فیلدها خالی باشند)
             if (accountEl && data.account_number && !accountEl.value) {
@@ -1037,15 +1165,54 @@
         });
     });
 
-    // دکمه ویرایش تصویر بارنامه: نمایش فیلد آپلود وقتی بارنامه از قبل وجود دارد
-    var waybillEditBtn = document.getElementById('waybill-edit-btn');
-    var waybillUploadArea = document.getElementById('waybill-upload-area');
-    var waybillCurrentDisplay = document.getElementById('waybill-current-display');
-    if (waybillEditBtn && waybillUploadArea && waybillCurrentDisplay) {
-        waybillEditBtn.addEventListener('click', function() {
-            waybillCurrentDisplay.style.display = 'none';
-            waybillUploadArea.style.display = 'block';
+    var waybillInput = document.getElementById('id_bill_of_lading_files');
+    var selectedFilesWrap = document.getElementById('selected-waybill-files');
+    if (waybillInput && selectedFilesWrap && window.DataTransfer) {
+        var waybillFilesBuffer = new DataTransfer();
+
+        function renderSelectedWaybillFiles() {
+            selectedFilesWrap.innerHTML = '';
+            var files = Array.from(waybillFilesBuffer.files || []);
+            selectedFilesWrap.style.display = files.length ? 'flex' : 'none';
+            waybillInput.files = waybillFilesBuffer.files;
+            files.forEach(function(file, index) {
+                var row = document.createElement('div');
+                row.className = 'waybill-file-chip';
+
+                var name = document.createElement('span');
+                name.className = 'waybill-file-chip-name';
+                name.textContent = file.name;
+
+                var actions = document.createElement('div');
+                actions.className = 'waybill-file-chip-actions';
+
+                var removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'waybill-file-remove';
+                removeBtn.textContent = 'حذف';
+                removeBtn.addEventListener('click', function() {
+                    var dt = new DataTransfer();
+                    files.forEach(function(existingFile, fileIndex) {
+                        if (fileIndex !== index) dt.items.add(existingFile);
+                    });
+                    waybillFilesBuffer = dt;
+                    renderSelectedWaybillFiles();
+                });
+
+                actions.appendChild(removeBtn);
+                row.appendChild(name);
+                row.appendChild(actions);
+                selectedFilesWrap.appendChild(row);
+            });
+        }
+
+        waybillInput.addEventListener('change', function() {
+            Array.from(waybillInput.files || []).forEach(function(file) {
+                waybillFilesBuffer.items.add(file);
+            });
+            renderSelectedWaybillFiles();
         });
+        renderSelectedWaybillFiles();
     }
     
     // اگر پلاک از قبل وجود دارد، آن را parse و نمایش بده
@@ -1149,10 +1316,19 @@
         var grossInput = row.gross;
         var tareInput = row.tare;
         var netInput = row.net;
+        var hasWaybillInput = document.getElementById('id_raw_material_' + rowId + '_has_waybill');
         var checkEl = document.getElementById('rmi-check-' + rowId);
         [grossInput, tareInput, netInput].forEach(function(input) {
           if (input) input.classList.remove('is-invalid');
         });
+
+        if (hasWaybillInput && !hasWaybillInput.checked) {
+          if (checkEl) {
+            checkEl.textContent = 'برای این ماده اولیه، وزن های بارنامه بعداً از باسکول تکمیل می شوند.';
+            checkEl.classList.remove('is-error');
+          }
+          return;
+        }
 
         var grossValue = parseWeightValue(grossInput && grossInput.value);
         var tareValue = parseWeightValue(tareInput && tareInput.value);
@@ -1190,6 +1366,31 @@
       return !hasError;
     }
 
+    function syncWaybillRowVisibility(rowId) {
+      var hasWaybillInput = document.getElementById('id_raw_material_' + rowId + '_has_waybill');
+      var fieldsWrap = document.querySelector('[data-waybill-fields="' + rowId + '"]');
+      var emptyState = document.getElementById('rmi-empty-' + rowId);
+      var checkEl = document.getElementById('rmi-check-' + rowId);
+      if (!hasWaybillInput || !fieldsWrap) return;
+
+      var enabled = hasWaybillInput.checked;
+      fieldsWrap.style.display = enabled ? 'grid' : 'none';
+      if (emptyState) emptyState.style.display = enabled ? 'none' : 'block';
+
+      fieldsWrap.querySelectorAll('input[data-waybill-weight="true"]').forEach(function(input) {
+        input.disabled = !enabled;
+        input.classList.remove('is-invalid');
+      });
+
+      if (checkEl && !enabled) {
+        checkEl.textContent = 'برای این ماده اولیه، وزن های بارنامه بعداً از باسکول تکمیل می شوند.';
+        checkEl.classList.remove('is-error');
+      }
+      if (enabled && checkEl && !checkEl.classList.contains('is-error')) {
+        checkEl.textContent = 'وزن پر - وزن خالی باید دقیقاً برابر وزن خالص باشد.';
+      }
+    }
+
     document.querySelectorAll('input[data-waybill-weight="true"]').forEach(function(input) {
       input.addEventListener('blur', function() {
         formatWeightInput(input);
@@ -1205,6 +1406,17 @@
         }
       });
       formatWeightInput(input);
+    });
+
+    document.querySelectorAll('input[data-has-waybill-toggle="true"]').forEach(function(input) {
+      var rowId = input.getAttribute('data-rmi-id');
+      if (rowId) syncWaybillRowVisibility(rowId);
+      input.addEventListener('change', function() {
+        if (rowId) {
+          syncWaybillRowVisibility(rowId);
+          validateRawMaterialWaybillRows();
+        }
+      });
     });
 
     window.validateRawMaterialWaybillRows = validateRawMaterialWaybillRows;

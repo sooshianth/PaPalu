@@ -116,6 +116,12 @@ class RawMaterialInfo(models.Model):
         blank=True,
         help_text='وزن خالص ثبت شده در بارنامه برای این ماده اولیه'
     )
+
+    has_waybill = models.BooleanField(
+        default=True,
+        verbose_name='بارنامه وجود دارد؟',
+        help_text='اگر غیرفعال باشد، وزن های بارنامه در مرحله تحویل انبار از باسکول تکمیل می شوند.'
+    )
     
     destination_warehouse = models.ForeignKey(
         'core.Warehouse',

@@ -18,6 +18,7 @@ bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
 from core.TransportFolder.TransportModel import Transport
+from core.TransportFolder.TransportAttachmentModel import TransportAttachment
 from core.OrderFolder.OrderModel import Order
 from core.OrderFolder.OrderItemModel import OrderItem
 from core.RawMaterialFolder.RawMaterialModel import RawMaterial
@@ -32,6 +33,52 @@ import django_tables2 as tables
 
 User = get_user_model()
 TWO_DECIMAL_PLACES = Decimal('0.01')
+
+
+def _get_waybill_attachments(pt):
+    attachments = []
+    primary_file = getattr(pt, 'bill_of_lading_file', None)
+    if primary_file:
+        try:
+            attachments.append({
+                'name': primary_file.name.split('/')[-1],
+                'url': primary_file.url,
+                'is_primary': True,
+            })
+        except Exception:
+            pass
+
+    for attachment in pt.attachments.filter(description='bill_of_lading').order_by('-created_at'):
+        if not attachment.file:
+            continue
+        try:
+            attachments.append({
+                'name': attachment.file.name.split('/')[-1],
+                'url': attachment.file.url,
+                'is_primary': False,
+            })
+        except Exception:
+            continue
+    return attachments
+
+
+def _store_waybill_uploads(pt, uploaded_files):
+    uploaded_files = list(uploaded_files or [])
+    if not uploaded_files:
+        return
+
+    files_for_attachments = uploaded_files
+    if not getattr(pt, 'bill_of_lading_file', None):
+        pt.bill_of_lading_file = uploaded_files[0]
+        files_for_attachments = uploaded_files[1:]
+
+    for uploaded_file in files_for_attachments:
+        TransportAttachment.objects.create(
+            transport=pt,
+            attachment_type='other',
+            file=uploaded_file,
+            description='bill_of_lading',
+        )
 
 
 # ==================== Field Access Helper Functions ====================
@@ -351,6 +398,18 @@ def _collect_raw_material_waybill_data(post_data, pt):
         if not raw_material_info.raw_material:
             continue
 
+        has_waybill = post_data.get(f'raw_material_{raw_material_info.id}_has_waybill') == '1'
+
+        if not has_waybill:
+            updates.append({
+                'instance': raw_material_info,
+                'has_waybill': False,
+                'waybill_gross_weight': None,
+                'waybill_tare_weight': None,
+                'waybill_weight': None,
+            })
+            continue
+
         gross_weight, gross_error = _parse_two_decimal_weight(
             post_data.get(f'raw_material_{raw_material_info.id}_waybill_gross_weight'),
             'وزن پر'
@@ -382,6 +441,7 @@ def _collect_raw_material_waybill_data(post_data, pt):
         else:
             updates.append({
                 'instance': raw_material_info,
+                'has_waybill': True,
                 'waybill_gross_weight': gross_weight,
                 'waybill_tare_weight': tare_weight,
                 'waybill_weight': net_weight,
@@ -403,10 +463,12 @@ def _build_transport_raw_materials_list(pt, posted_data=None, field_errors=None)
 
         row_errors = (field_errors or {}).get(raw_material_info.id, {})
         if posted_data is not None:
+            has_waybill = posted_data.get(f'raw_material_{raw_material_info.id}_has_waybill') == '1'
             waybill_gross_weight = (posted_data.get(f'raw_material_{raw_material_info.id}_waybill_gross_weight') or '').strip()
             waybill_tare_weight = (posted_data.get(f'raw_material_{raw_material_info.id}_waybill_tare_weight') or '').strip()
             waybill_weight = (posted_data.get(f'raw_material_{raw_material_info.id}_waybill_weight') or '').strip()
         else:
+            has_waybill = getattr(raw_material_info, 'has_waybill', True)
             waybill_gross_weight = _format_decimal_for_input(raw_material_info.waybill_gross_weight)
             waybill_tare_weight = _format_decimal_for_input(raw_material_info.waybill_tare_weight)
             waybill_weight = _format_decimal_for_input(raw_material_info.waybill_weight)
@@ -417,6 +479,7 @@ def _build_transport_raw_materials_list(pt, posted_data=None, field_errors=None)
             'name': raw_material_info.raw_material.name,
             'allocated_quantity': raw_material_info.allocated_quantity,
             'weight_unit': weight_unit_display,
+            'has_waybill': has_waybill,
             'waybill_gross_weight': waybill_gross_weight,
             'waybill_tare_weight': waybill_tare_weight,
             'waybill_weight': waybill_weight,
@@ -478,6 +541,7 @@ def _build_register_context(
         'accessible_po_fields': accessible_po_fields,
         'accessible_raw_material_fields': accessible_raw_material_fields,
         'accessible_person_fields': accessible_person_fields,
+        'waybill_attachments': _get_waybill_attachments(pt),
         'is_carentrance_referred': is_carentrance_referred,
         'show_refer_button': show_refer_button,
         'refer_modal_open': refer_modal_open,
@@ -707,6 +771,7 @@ def register_driver_for_transport_view(request, transport_number):
             # فرم معتبر است: ذخیره اطلاعات (راننده، پلاک، بارنامه، فایل) بدون تغییر وضعیت، سپس ارجاع
             data = form.cleaned_data
             phone = (data.get('phone') or '').strip()
+            uploaded_waybill_files = request.FILES.getlist('bill_of_lading_files')
             try:
                 with transaction.atomic():
                     driver = Person.objects.filter(phone_number=phone, type='driver').first() if phone else pt.driver
@@ -731,10 +796,10 @@ def register_driver_for_transport_view(request, transport_number):
                         pt.waybill_number = data.get('waybill_number')
                     if data.get('waybill_date'):
                         pt.waybill_date = data.get('waybill_date')
-                    if 'bill_of_lading_file' in request.FILES:
-                        pt.bill_of_lading_file = request.FILES['bill_of_lading_file']
+                    _store_waybill_uploads(pt, uploaded_waybill_files)
                     freight_payment_type = pt.allocation.order.freight_payment_type if pt.allocation and pt.allocation.order else pt.freight_payment_type
                     if freight_payment_type == 'pay_to_driver':
+                        bank_name = data.get('bank_name', '').strip()
                         account_number = data.get('account', '').strip()
                         sheba_number = data.get('sheba', '').strip()
                         if account_number or sheba_number:
@@ -745,7 +810,15 @@ def register_driver_for_transport_view(request, transport_number):
                             if not bank_account and sheba_number:
                                 bank_account = BankAccount.objects.filter(financial_banking=financial_banking, shaba_number=sheba_number).first()
                             if not bank_account:
-                                bank_account = BankAccount.objects.create(financial_banking=financial_banking, account_number=account_number or None, shaba_number=sheba_number or None, bank_name=None)
+                                bank_account = BankAccount.objects.create(
+                                    financial_banking=financial_banking,
+                                    account_number=account_number or None,
+                                    shaba_number=sheba_number or None,
+                                    bank_name=bank_name or None
+                                )
+                            elif bank_name and bank_account.bank_name != bank_name:
+                                bank_account.bank_name = bank_name
+                                bank_account.save(update_fields=['bank_name'])
                             pt.driver_bank_account = bank_account
                         else:
                             pt.driver_bank_account = None
@@ -758,6 +831,7 @@ def register_driver_for_transport_view(request, transport_number):
                     pt.save()
                     for raw_material_update in raw_material_updates:
                         raw_material_info = raw_material_update['instance']
+                        raw_material_info.has_waybill = raw_material_update['has_waybill']
                         raw_material_info.waybill_gross_weight = raw_material_update['waybill_gross_weight']
                         raw_material_info.waybill_tare_weight = raw_material_update['waybill_tare_weight']
                         raw_material_info.waybill_weight = raw_material_update['waybill_weight']
@@ -788,6 +862,7 @@ def register_driver_for_transport_view(request, transport_number):
         if form.is_valid() and not raw_material_errors:
             data = form.cleaned_data
             phone = (data.get('phone') or '').strip()
+            uploaded_waybill_files = request.FILES.getlist('bill_of_lading_files')
             audit_logger.info(f"شروع ثبت راننده برای حمل {transport_number}")
             try:
                 with transaction.atomic():
@@ -825,10 +900,8 @@ def register_driver_for_transport_view(request, transport_number):
                     # ثبت تاریخ بارنامه
                     if data.get('waybill_date'):
                         pt.waybill_date = data.get('waybill_date')
-                    
-                    # ثبت تصویر بارنامه
-                    if 'bill_of_lading_file' in request.FILES:
-                        pt.bill_of_lading_file = request.FILES['bill_of_lading_file']
+
+                    _store_waybill_uploads(pt, uploaded_waybill_files)
                     
                     # دریافت freight_payment_type از سفارش خرید
                     freight_payment_type = None
@@ -839,6 +912,7 @@ def register_driver_for_transport_view(request, transport_number):
                     
                     # فقط اگر نوع کرایه "پرداخت به راننده" باشد، حساب بانکی را ثبت می‌کنیم
                     if freight_payment_type == 'pay_to_driver':
+                        bank_name = data.get('bank_name', '').strip()
                         account_number = data.get('account', '').strip()
                         sheba_number = data.get('sheba', '').strip()
                         
@@ -878,10 +952,13 @@ def register_driver_for_transport_view(request, transport_number):
                                     financial_banking=financial_banking,
                                     account_number=account_number if account_number else None,
                                     shaba_number=sheba_number if sheba_number else None,
-                                    bank_name=None  # می‌تواند بعداً پر شود
+                                    bank_name=bank_name if bank_name else None
                                 )
                                 bug_logger.info(f"حساب بانکی جدید برای راننده {driver.name} ایجاد شد - حساب: {account_number}, شبا: {sheba_number}")
                             else:
+                                if bank_name and bank_account.bank_name != bank_name:
+                                    bank_account.bank_name = bank_name
+                                    bank_account.save(update_fields=['bank_name'])
                                 bug_logger.info(f"حساب بانکی موجود برای راننده {driver.name} پیدا شد - حساب: {bank_account.account_number}")
                             
                             pt.driver_bank_account = bank_account
@@ -897,6 +974,7 @@ def register_driver_for_transport_view(request, transport_number):
                     pt.save()
                     for raw_material_update in raw_material_updates:
                         raw_material_info = raw_material_update['instance']
+                        raw_material_info.has_waybill = raw_material_update['has_waybill']
                         raw_material_info.waybill_gross_weight = raw_material_update['waybill_gross_weight']
                         raw_material_info.waybill_tare_weight = raw_material_update['waybill_tare_weight']
                         raw_material_info.waybill_weight = raw_material_update['waybill_weight']
@@ -960,6 +1038,7 @@ def register_driver_for_transport_view(request, transport_number):
             if pt.driver_bank_account:
                 initial['account'] = pt.driver_bank_account.account_number or ''
                 initial['sheba'] = pt.driver_bank_account.shaba_number or ''
+                initial['bank_name'] = pt.driver_bank_account.bank_name or ''
             else:
                 # اگر حساب بانکی در حمل وجود نداشت، از حساب بانکی راننده استفاده کن
                 financial_banking = FinancialBanking.objects.filter(person=pt.driver).first()
@@ -968,6 +1047,7 @@ def register_driver_for_transport_view(request, transport_number):
                     if bank_account:
                         initial['account'] = bank_account.account_number or ''
                         initial['sheba'] = bank_account.shaba_number or ''
+                        initial['bank_name'] = bank_account.bank_name or ''
         # دریافت freight_payment_type از سفارش خرید (نه از transport)
         freight_payment_type = None
         if pt.allocation and pt.allocation.order and pt.allocation.order.freight_payment_type:
@@ -1020,12 +1100,14 @@ def driver_lookup_api(request):
         # دریافت حساب بانکی راننده (اولین حساب بانکی)
         account_number = ''
         sheba_number = ''
+        bank_name = ''
         financial_banking = FinancialBanking.objects.filter(person=driver).first()
         if financial_banking:
             bank_account = BankAccount.objects.filter(financial_banking=financial_banking).first()
             if bank_account:
                 account_number = bank_account.account_number or ''
                 sheba_number = bank_account.shaba_number or ''
+                bank_name = bank_account.bank_name or ''
         
         data = {
             'found': True,
@@ -1035,6 +1117,7 @@ def driver_lookup_api(request):
             'phone': driver.phone_number or '',
             'account_number': account_number,
             'sheba_number': sheba_number,
+            'bank_name': bank_name,
         }
         
         bug_logger.debug(f"Driver lookup successful for phone {phone}: {data.get('name')}")

@@ -1,5 +1,5 @@
 import logging
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from django.contrib import messages
@@ -38,6 +38,7 @@ from django.utils import timezone
 from distribution.plate_display import render_iran_plate_html
 
 User = get_user_model()
+TWO_DECIMAL_PLACES = Decimal('0.01')
 
 
 # ==================== Field Access Helper Functions ====================
@@ -686,6 +687,7 @@ def warehouse_delivery_detail_view(request, transport_number):
                         # دریافت مقادیر قبلی RawMaterialInfo تا هنگام بازسازی رکوردها از بین نروند
                         existing_infos = RawMaterialInfo.objects.filter(transport=pt)
                         allocated_map = {info.order_item_id: info.allocated_quantity for info in existing_infos}
+                        has_waybill_map = {info.order_item_id: getattr(info, 'has_waybill', True) for info in existing_infos}
                         waybill_gross_map = {info.order_item_id: info.waybill_gross_weight for info in existing_infos}
                         waybill_tare_map = {info.order_item_id: info.waybill_tare_weight for info in existing_infos}
                         waybill_weight_map = {info.order_item_id: info.waybill_weight for info in existing_infos}
@@ -702,14 +704,26 @@ def warehouse_delivery_detail_view(request, transport_number):
                                 # اگر وجود نداشت، از وزن خالص استفاده می‌کنیم (برای اولین بار)
                                 allocated_qty = allocated_map.get(item.id, w)
                                 dest_warehouse = item_warehouses.get(item.id)
+                                has_waybill = has_waybill_map.get(item.id, True)
+                                waybill_gross = waybill_gross_map.get(item.id)
+                                waybill_tare = waybill_tare_map.get(item.id)
+                                waybill_weight = waybill_weight_map.get(item.id)
+                                if not has_waybill:
+                                    weight_before = item_unloading_weight_before.get(item.id, unloading_weight_before_map.get(item.id))
+                                    weight_after = item_unloading_weight_after.get(item.id, unloading_weight_after_map.get(item.id))
+                                    if weight_before is not None and weight_after is not None:
+                                        waybill_gross = Decimal(str(weight_before)).quantize(TWO_DECIMAL_PLACES, rounding=ROUND_HALF_UP)
+                                        waybill_tare = Decimal(str(weight_after)).quantize(TWO_DECIMAL_PLACES, rounding=ROUND_HALF_UP)
+                                        waybill_weight = (waybill_gross - waybill_tare).quantize(TWO_DECIMAL_PLACES, rounding=ROUND_HALF_UP)
                                 rmi = RawMaterialInfo.objects.create(
                                     transport=pt,
                                     order_item=item,
                                     raw_material=item.raw_material,
                                     allocated_quantity=allocated_qty,  # وزن تخصیص یافته قبلی (یا وزن خالص برای اولین بار)
-                                    waybill_gross_weight=waybill_gross_map.get(item.id),
-                                    waybill_tare_weight=waybill_tare_map.get(item.id),
-                                    waybill_weight=waybill_weight_map.get(item.id),
+                                    has_waybill=has_waybill,
+                                    waybill_gross_weight=waybill_gross,
+                                    waybill_tare_weight=waybill_tare,
+                                    waybill_weight=waybill_weight,
                                     unloading_weight_before=item_unloading_weight_before.get(item.id, unloading_weight_before_map.get(item.id)),
                                     unloading_weight_after=item_unloading_weight_after.get(item.id, unloading_weight_after_map.get(item.id)),
                                     net_weight=w,  # وزن خالص محاسبه شده از تخلیه

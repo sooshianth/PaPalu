@@ -16,13 +16,28 @@ from core.logging_levels import *
 bug_logger = logging.getLogger("bugs")
 audit_logger = logging.getLogger("audit")
 
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class MultipleFileField(forms.FileField):
+    widget = MultipleFileInput
+
+    def clean(self, data, initial=None):
+        if not data:
+            return []
+        if not isinstance(data, (list, tuple)):
+            data = [data]
+        single_file_clean = super().clean
+        return [single_file_clean(item, initial) for item in data]
+
+
 class CarEntranceDriverForm(forms.Form):
     """فرم ثبت اطلاعات راننده برای ورود خودرو
 
     فیلدهای اجباری:
     - نام راننده
     - پلاک
-    - تصویر بارنامه
     - حداقل یکی از شماره حساب یا شماره شبا راننده (فقط اگر نوع کرایه "پرداخت به راننده" باشد)
     """
     phone = forms.CharField(
@@ -71,15 +86,22 @@ class CarEntranceDriverForm(forms.Form):
             'autocomplete': 'off',
         })
     )
-    bill_of_lading_file = forms.FileField(
-        label='تصویر بارنامه',
-        required=True,
-        widget=forms.FileInput(attrs={
+    bill_of_lading_files = MultipleFileField(
+        label='تصاویر بارنامه',
+        required=False,
+        widget=MultipleFileInput(attrs={
             'class': 'form-control',
-            'accept': 'image/*,.pdf'
+            'accept': 'image/*,.pdf',
+            'multiple': True
         })
     )
 
+    bank_name = forms.CharField(
+        label='بانک مقصد',
+        required=False,
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'نام بانک'})
+    )
     account = forms.CharField(
         label='شماره حساب راننده',
         required=False,
@@ -88,7 +110,15 @@ class CarEntranceDriverForm(forms.Form):
     sheba = forms.CharField(
         label='شماره شبا راننده',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'IR123456789012345678901234'})
+        max_length=24,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': '123456789012345678901234',
+            'dir': 'ltr',
+            'maxlength': '24',
+            'inputmode': 'numeric',
+            'pattern': '\\d{24}'
+        })
     )
     
     def __init__(self, *args, freight_payment_type=None, driver=None, has_existing_waybill=False, **kwargs):
@@ -98,9 +128,6 @@ class CarEntranceDriverForm(forms.Form):
         self.has_existing_waybill = has_existing_waybill
 
         # اگر حمل از قبل تصویر بارنامه دارد، آپلود مجدد اجباری نیست
-        if has_existing_waybill:
-            self.fields['bill_of_lading_file'].required = False
-
         # اگر نوع کرایه "پرداخت به راننده" باشد، حداقل یکی از شماره حساب یا شبا الزامی است (هر دو اجباری نیستند)
         if freight_payment_type == 'pay_to_driver':
             self.fields['account'].required = False
@@ -115,4 +142,17 @@ class CarEntranceDriverForm(forms.Form):
             if not account and not sheba:
                 self.add_error('account', 'برای نوع کرایه «پرداخت به راننده» حداقل یکی از شماره حساب یا شماره شبا را وارد کنید.')
                 self.add_error('sheba', 'برای نوع کرایه «پرداخت به راننده» حداقل یکی از شماره حساب یا شماره شبا را وارد کنید.')
+        if cleaned_data.get('bank_name'):
+            cleaned_data['bank_name'] = cleaned_data['bank_name'].strip()
+        if cleaned_data.get('account'):
+            cleaned_data['account'] = cleaned_data['account'].strip()
+        sheba = (cleaned_data.get('sheba') or '').replace(' ', '').replace('-', '')
+        if sheba.upper().startswith('IR'):
+            sheba = sheba[2:]
+        if sheba:
+            if len(sheba) != 24:
+                self.add_error('sheba', 'شماره شبا باید دقیقاً 24 رقم باشد.')
+            elif not sheba.isdigit():
+                self.add_error('sheba', 'شماره شبا باید فقط شامل عدد باشد.')
+        cleaned_data['sheba'] = sheba
         return cleaned_data
