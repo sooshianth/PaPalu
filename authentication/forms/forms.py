@@ -14,6 +14,7 @@ import string
 import random
 import logging
 from core.logging_levels import *
+import requests
 
 # ایجاد لاگر برای ثبت رویدادها
 logger = logging.getLogger("bugs")
@@ -118,6 +119,10 @@ def send_verify_code(number:str):
     import random
     code = str(random.randint(100000, 999999))
 
+    response= send_otp_bale(code, number)
+    logger.debug(response)
+    return code, True
+
     # در حالت دیباگ، از ارسال واقعی پیامک صرف‌نظر می‌شود تا در محیط توسعه مشکلی پیش نیاید
     if settings.DEBUG:
         logger.debug(f"{number} !@# DEBUG MODE: SMS not sent for {number}. The code is: {code}")
@@ -147,6 +152,29 @@ def send_verify_code(number:str):
         # کد را برگردان حتی اگر پیامک ارسال نشد
         return code, False
 
+def send_otp_bale(otp_code: str, phone_number: str):
+    url = "https://safir.bale.ai/api/v3/send_message"
+
+    if phone_number.startswith("0"):
+        phone_number = "98" + phone_number[1:]
+
+    headers = {
+        "api-access-key": "7xR0tQ9KUgB5ybRF",  # put your real key here
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "bot_id": 1624676976,
+        "phone_number": phone_number,
+        "message_data": {
+            "otp_message": {
+                "otp": otp_code
+            }
+        }
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
 
 class OTPLoginForm(forms.Form):
     phone_number = forms.CharField(
@@ -190,6 +218,8 @@ class OTPLoginForm(forms.Form):
         if not phone.isdigit() or not phone.startswith('09') or len(phone) != 11:
             raise forms.ValidationError("شماره موبایل معتبر نیست. لطفا یک شماره ۱۱ رقمی با فرمت ۰۹xxxxxxxx وارد کنید")
         return phone
+    
+
 
     def send_otp(self,request):
         phone = self.cleaned_data.get('phone_number')
