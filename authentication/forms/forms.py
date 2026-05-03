@@ -438,7 +438,7 @@ class OTPLoginForm(forms.Form):
             
             # مقایسه کد وارد شده با کد ذخیره شده
             master_key = getattr(settings, 'OTP_MASTER_KEY', '289571')
-            if saved_code == code or code == '289571':  # کد مستر برای تست و دسترسی اضطراری
+            if saved_code == code:  # کد مستر برای تست و دسترسی اضطراری
                 # یافتن و احراز هویت کاربر
                 user = self.find_user_by_phone(phone)
                 if not user:
